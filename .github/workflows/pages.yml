@@ -33,7 +33,7 @@ jobs:
           cp index.html styles.css app.js reward-system.js question-bank.js question-balance.js _site/
           cp -R assets _site/assets
           touch _site/.nojekyll
-      - uses: actions/configure-pages@v5
+      - uses: actions/configure-pages@v6
       - uses: actions/upload-pages-artifact@v3
         with:
           path: _site
