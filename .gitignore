@@ -1,0 +1,11 @@
+__pycache__/
+study-state/
+.env
+.env.*
+!.env.example
+.DS_Store
+Thumbs.db
+node_modules/
+coverage/
+qa-screenshots/
+tunnel-logs/

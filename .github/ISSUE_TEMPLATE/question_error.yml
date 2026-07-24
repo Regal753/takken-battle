@@ -1,0 +1,24 @@
+name: 問題・解説の指摘
+description: 収録問題の誤り、曖昧さ、法改正の可能性を報告する
+title: "[Question] "
+labels:
+  - content
+body:
+  - type: input
+    id: question_id
+    attributes:
+      label: 問題ID
+      placeholder: q59
+    validations:
+      required: true
+  - type: textarea
+    id: concern
+    attributes:
+      label: 指摘内容
+    validations:
+      required: true
+  - type: input
+    id: source
+    attributes:
+      label: 根拠となる公式資料URL
+      description: 可能ならe-Gov、国土交通省、試験実施機関を優先してください。

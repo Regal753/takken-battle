@@ -1,0 +1,36 @@
+name: 不具合報告
+description: 宅建バトルの表示・操作・問題データの不具合を報告する
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: 個人情報や学習ログ全文は貼らず、再現に必要な範囲だけ記載してください。
+  - type: textarea
+    id: symptom
+    attributes:
+      label: 症状
+      description: 何が起きたかを簡潔に記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 再現手順
+      placeholder: |
+        1. 公開URLを開く
+        2. ...
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: 環境
+      placeholder: Windows 11 / Chrome など
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待する動作
+    validations:
+      required: true

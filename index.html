@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="宅建業法のオリジナル100問を、1問1敵のバトル形式で学べる無料の公開ベータ版です。">
+    <meta name="theme-color" content="#17261f">
+    <meta name="takken-runtime" content="public-static">
+    <meta property="og:title" content="宅建バトル Study Quest">
+    <meta property="og:description" content="宅建業法100問を、ゲーム感覚で一周する公開ベータ版。">
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://regal753.github.io/takken-battle/">
+    <link rel="canonical" href="https://regal753.github.io/takken-battle/">
+    <title>宅建バトル Study Quest</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="./styles.css?v=20260713-confidence-v14">
+  </head>
+  <body>
+    <div class="app-root">
+      <header class="app-header">
+        <div class="brand">
+          <span class="brand-mark" aria-hidden="true">宅</span>
+          <div>
+            <h1>宅建バトル</h1>
+            <p>第1分冊 宅建業法 / 本試験寄せ100問</p>
+          </div>
+        </div>
+        <div class="header-actions">
+          <a class="ghost-button link-button" href="#radioPanel">ラジオ</a>
+          <button id="resetButton" class="ghost-button" type="button">最初から</button>
+        </div>
+      </header>
+
+      <section class="public-mode-note" aria-label="公開版の保存と利用上の注意">
+        <strong>公開β</strong>
+        <span>進捗はこの端末のブラウザ内だけに保存されます。法改正を含む最新情報は、必ず公式資料でも確認してください。</span>
+      </section>
+
+      <nav id="themeBar" class="theme-toolbar" aria-label="テーマ操作">
+        <select id="chapterSelect" class="chapter-select" aria-label="テーマを選択"></select>
+        <button id="adaptiveButton" class="quick-button adaptive-button is-active" type="button">自動補強 ON</button>
+        <button id="weakButton" class="quick-button" type="button" disabled>弱点 0</button>
+      </nav>
+
+      <section class="quest-card" aria-label="今日のクエスト">
+        <div class="quest-main">
+          <div>
+            <span id="questLabel" class="section-label">今日のクエスト</span>
+            <strong id="dailyQuestTitle">0 / 10撃破</strong>
+            <small id="dailyQuestSource" class="quest-source">固定10問: 読込中</small>
+          </div>
+          <div class="quest-meter" aria-hidden="true">
+            <div id="dailyQuestFill"></div>
+          </div>
+        </div>
+        <div class="campaign-route-wrap" aria-label="現在の攻略ルート">
+          <div class="route-heading">
+            <strong id="routeSectorLabel">免許・免許換え / 区画1</strong>
+            <span>最終門まで進め</span>
+          </div>
+          <div id="campaignRoute" class="campaign-route"></div>
+        </div>
+        <div id="questRewardRail" class="quest-reward-rail" aria-label="固定10問の戦果報酬">
+          <span>戦果報酬</span>
+          <div id="questRewardTrack" class="quest-reward-track"></div>
+          <strong id="questRewardNext">3問で補給</strong>
+        </div>
+        <div class="quest-stats">
+          <div>
+            <span id="dailyAnswerLabel">今日</span>
+            <strong id="dailyAnswerText">0問</strong>
+          </div>
+          <div>
+            <span id="dailyCorrectLabel">正解</span>
+            <strong id="dailyCorrectText">0問</strong>
+          </div>
+          <div>
+            <span id="dailyWeakLabel">弱点</span>
+            <strong id="dailyWeakText">0件</strong>
+          </div>
+        </div>
+        <div class="quest-actions">
+          <button id="dailyQuestButton" class="quick-button quest-button" type="button">今日の10問</button>
+          <button id="passQuestButton" class="quick-button quest-button pass-button" type="button">一周</button>
+          <button id="weakQuestButton" class="quick-button quest-button" type="button" disabled>弱点狩り</button>
+          <button id="sprintButton" class="quick-button quest-button sprint-button" type="button">25分開始</button>
+        </div>
+        <div class="sprint-line" aria-live="polite">
+          <span>集中</span>
+          <strong id="sprintTimer">25:00</strong>
+          <small id="sprintStatus">停止中</small>
+        </div>
+      </section>
+
+      <section id="dailyCompletePanel" class="daily-complete-panel" aria-live="polite" hidden>
+        <div class="daily-complete-copy">
+          <span>DAILY QUEST CLEAR</span>
+          <strong>今日の固定10問、完了。</strong>
+          <p id="dailyCompleteSummary">ここで終了してOK。続けたい日だけ一周へ進む。</p>
+        </div>
+        <button id="dailyContinueButton" class="daily-continue-button" type="button">未接触を続ける</button>
+      </section>
+
+      <main class="study-shell">
+        <section class="battle-card" aria-label="戦闘">
+          <div class="battle-copy">
+            <div>
+              <span id="enemyClassLabel" class="enemy-class-label">NORMAL ENCOUNTER</span>
+              <h2 id="enemyName">免許の番人</h2>
+              <p id="sourceLabel">2026年度版 / 第1分冊 宅建業法</p>
+            </div>
+            <div class="battle-score">
+              <span id="comboText">COMBO 0</span>
+              <strong id="enemyStateLabel">一撃で倒せ</strong>
+            </div>
+          </div>
+          <div class="battle-hud-line">
+            <div class="enemy-hud">
+              <div class="hp-line">
+                <span>ENEMY</span>
+                <strong id="enemyHpText">420 / 420</strong>
+              </div>
+              <div class="hp-track" aria-hidden="true">
+                <div id="enemyHpFill" class="hp-fill"></div>
+              </div>
+            </div>
+            <div class="focus-hud">
+              <div class="focus-copy">
+                <span>FOCUS</span>
+                <strong id="focusText">0%</strong>
+              </div>
+              <div class="focus-track" aria-hidden="true"><div id="focusFill"></div></div>
+            </div>
+          </div>
+          <div class="progression-hud" aria-label="プレイヤー成長">
+            <div class="level-copy">
+              <strong id="playerLevelText">Lv.1 見習い</strong>
+              <span id="xpText">0 / 260 EXP</span>
+            </div>
+            <div class="xp-track" aria-hidden="true"><div id="xpFill"></div></div>
+            <div class="chest-copy">
+              <strong id="chestText">宝箱まで 5体</strong>
+              <span id="adventureDaysText">冒険1日目</span>
+            </div>
+            <div id="chestPips" class="chest-pips" aria-hidden="true"></div>
+          </div>
+          <div id="battleField" class="battle-field">
+            <div class="battle-vignette battle-vignette-left">
+              <span id="playerTitleText">見習い</span>
+              <strong id="fieldLevelText">Lv.1</strong>
+              <strong id="crystalText">知識C 0</strong>
+            </div>
+            <div class="battle-vignette battle-vignette-right">
+              <span>特性</span>
+              <strong id="enemyTraitText">主体を見抜け</strong>
+            </div>
+            <img id="playerVisual" class="player-visual" src="./assets/characters/study-knight.webp" alt="" draggable="false">
+            <img id="enemyVisual" class="enemy-visual" src="./assets/characters/license-sentinel.webp" alt="" draggable="false">
+            <div id="hitEffect" class="hit-effect" aria-hidden="true"></div>
+            <div id="damageNumber" class="damage-number" aria-hidden="true">420</div>
+            <div id="rewardBurst" class="reward-burst" aria-live="polite"></div>
+            <div id="chestBurst" class="chest-burst" aria-live="polite">
+              <strong id="chestBurstTitle"></strong>
+              <span id="chestBurstText"></span>
+            </div>
+            <div id="marchSignal" class="march-signal" aria-hidden="true">NEXT ENCOUNTER</div>
+          </div>
+          <div class="battle-footer">
+            <strong id="battleAnnouncement">正解で一撃。連勝で攻撃演出が強化される。</strong>
+            <span id="rewardBreakdown" class="reward-breakdown">正答・初見・翌日弱点克服で報酬増加</span>
+            <span id="comboSubtext">3連正解で連撃、5連正解で奥義</span>
+          </div>
+          <details class="collection-drawer">
+            <summary>
+              <span>戦利品コレクション</span>
+              <strong id="lootSummary">0種 / 宝箱0個</strong>
+            </summary>
+            <div id="lootCollection" class="loot-collection"></div>
+            <section class="armory-panel" aria-label="装備鍛造">
+              <div class="armory-copy">
+                <span>装備鍛造</span>
+                <strong id="armoryName">見習い装備</strong>
+                <small id="armoryProgress">次 調査騎士装 / 500C</small>
+              </div>
+              <button id="armoryButton" class="armory-button" type="button">500Cで鍛造</button>
+            </section>
+            <div id="continuityText" class="continuity-line">継続 0日 / 次の勲章 3日</div>
+          </details>
+        </section>
+
+        <section id="quizCard" class="quiz-card" aria-live="polite">
+          <div class="quiz-meta">
+            <strong id="roundLabel">1 / 100</strong>
+            <span id="tagBadge">免許</span>
+            <button id="markButton" class="mark-button" type="button">要復習</button>
+          </div>
+          <p id="questionText" class="question-text"></p>
+          <div id="choices" class="choice-list" aria-label="選択肢"></div>
+
+          <section id="feedbackBox" class="feedback" hidden>
+            <h3 id="feedbackTitle"></h3>
+            <dl class="answer-grid">
+              <div>
+                <dt>正解肢</dt>
+                <dd id="correctAnswer"></dd>
+              </div>
+              <div>
+                <dt>ひっかけ</dt>
+                <dd id="trapText"></dd>
+              </div>
+              <div>
+                <dt>確認</dt>
+                <dd id="bookRef"></dd>
+              </div>
+            </dl>
+            <p id="explainText" class="explain-text"></p>
+            <button id="nextButton" class="next-button" type="button">次の一問へ</button>
+          </section>
+        </section>
+
+        <aside class="progress-panel" aria-label="学習記録">
+          <div class="panel-head">
+            <div>
+              <span>学習記録</span>
+              <strong id="studyTitle">宅建業法</strong>
+            </div>
+            <small id="todayLabel">今日の演習</small>
+          </div>
+
+          <div class="stats-grid">
+            <div>
+              <span>解答</span>
+              <strong id="attemptCount">0</strong>
+            </div>
+            <div>
+              <span>正答率</span>
+              <strong id="accuracyText">-</strong>
+            </div>
+            <div>
+              <span>連続正解</span>
+              <strong id="streakText">0</strong>
+            </div>
+            <div>
+              <span>要復習</span>
+              <strong id="markedText">0</strong>
+            </div>
+          </div>
+
+          <div id="adaptiveCoach" class="adaptive-coach" aria-live="polite">
+            <span>自動補強</span>
+            <strong id="coachTitle">弱点なし</strong>
+            <p id="coachText">間違えた論点が出たら、復習候補と次の一問に自動で反映する。</p>
+            <small id="logStatus" class="log-status">Codexログ: 確認中</small>
+            <div class="codex-actions">
+              <button id="codexBriefButton" class="quick-button codex-button" type="button">Codex診断</button>
+              <a id="codexBriefLink" class="brief-link" href="./study-state/codex-weakness-brief.md" target="_blank" rel="noopener" hidden>ブリーフを開く</a>
+            </div>
+          </div>
+
+          <section id="radioPanel" class="radio-panel" aria-label="YouTubeラジオ">
+            <div class="radio-head">
+              <div>
+                <span>ラジオ</span>
+                <strong>移動中の耳勉</strong>
+              </div>
+              <small>YouTube</small>
+            </div>
+            <div class="radio-links">
+              <a href="https://www.youtube.com/watch?v=Tdh971tnNoM" target="_blank" rel="noopener">業法Q&amp;A</a>
+              <a href="https://www.youtube.com/playlist?list=PLLQL-84oxXlDssWpxG1J6yqT9kC1p_Jst" target="_blank" rel="noopener">一問一答</a>
+              <a href="https://www.youtube.com/playlist?list=PLthNnJTp6AOdCxtlP7ZvK7Ux0RwgBCRl2" target="_blank" rel="noopener">ゆーき業法</a>
+              <a href="https://www.youtube.com/@fudousandaigaku" target="_blank" rel="noopener">棚田業法</a>
+            </div>
+          </section>
+
+          <div class="chapter-head">
+            <strong>テーマ進捗</strong>
+            <span id="chapterProgressText">0 / 100問</span>
+          </div>
+          <div id="chapterList" class="chapter-list"></div>
+        </aside>
+      </main>
+
+      <footer class="app-footer">
+        <p>宅建試験の非公式学習補助ツールです。問題は市販教材・公式過去問を転載せず、論点に基づいて独自作成しています。</p>
+        <a href="https://github.com/Regal753/takken-battle" target="_blank" rel="noopener">GitHubで更新履歴を見る</a>
+      </footer>
+    </div>
+
+    <aside id="answerDock" class="answer-dock" aria-label="解答後の操作" aria-live="polite" hidden>
+      <div class="answer-dock-inner">
+        <button id="dockExplainButton" class="dock-explain-button" type="button">
+          <span class="dock-explain-mark" aria-hidden="true">解</span>
+          <span>全肢解説</span>
+        </button>
+        <div class="dock-status">
+          <span id="dockResultText">撃破</span>
+          <strong id="dockTargetText">次の問題を確認中</strong>
+          <button id="dockUnsureButton" class="dock-unsure-button" type="button" aria-label="正解したが勘や迷いがあったので弱点に残す">勘・迷い</button>
+        </div>
+        <button id="dockNextButton" class="dock-next-button" type="button">
+          <span id="dockNextLabel">次の敵へ</span>
+          <span class="dock-next-arrow" aria-hidden="true">›</span>
+        </button>
+      </div>
+    </aside>
+
+    <script src="./question-bank.js?v=20260723-ops-v15"></script>
+    <script src="./question-balance.js?v=20260711-feedback-v8"></script>
+    <script src="./reward-system.js?v=20260713-confidence-v14"></script>
+    <script src="./app.js?v=20260723-ops-v15"></script>
+    <noscript>宅建バトルを利用するにはJavaScriptを有効にしてください。</noscript>
+  </body>
+</html>
