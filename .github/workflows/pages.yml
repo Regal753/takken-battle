@@ -47,6 +47,12 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v5
+      - name: Verify deployed page
+        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260726-mock-v2"

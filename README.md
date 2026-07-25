@@ -41,6 +41,7 @@ node .\scripts\validate-public.mjs
 ```
 
 GitHub Actionsでも同じ検証を行い、成功した`main`だけをGitHub Pagesへ配信します。
+Pages配信後は公開HTMLを最大12回再取得し、模試A/Bボタンと配信バージョンが実際に反映されたことまで自動確認します。
 
 `Audit-TakkenFullExamUi.cjs`はChromeを使うローカル実ブラウザ監査です。固定10問、模試50問、途中の正誤非表示、終了後採点、分野別結果、再読込、スマートフォン幅を通しで確認します。
 

@@ -20,6 +20,7 @@ const required = [
   "exam-questions-restrictions.js",
   "exam-questions-tax-other.js",
   "exam-questions-business.js",
+  "scripts/verify-deployed-page.mjs",
   "README.md",
 ];
 
@@ -55,6 +56,7 @@ assert.match(readme, /localStorage/);
 assert.match(readme, /URLフラグメント/);
 assert.match(pagesWorkflow, /node Audit-TakkenSaveTransfer\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenFullExam\.js/);
+assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
 assert.match(pagesWorkflow, /cp [^\n]*save-transfer\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*exam-blueprint\.js[^\n]*_site\//);
 
