@@ -13,7 +13,7 @@
     <link rel="canonical" href="https://regal753.github.io/takken-battle/">
     <title>宅建バトル Study Quest</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./styles.css?v=20260713-confidence-v14">
+    <link rel="stylesheet" href="./styles.css?v=20260725-save-v1">
   </head>
   <body>
     <div class="app-root">
@@ -33,7 +33,15 @@
 
       <section class="public-mode-note" aria-label="公開版の保存と利用上の注意">
         <strong>公開β</strong>
-        <span>進捗はこの端末のブラウザ内だけに保存されます。法改正を含む最新情報は、必ず公式資料でも確認してください。</span>
+        <span class="public-mode-copy">進捗はこの端末のブラウザ内だけに保存されます。法改正を含む最新情報は、必ず公式資料でも確認してください。</span>
+        <div class="save-transfer-actions" aria-label="セーブデータ管理">
+          <button id="saveExportButton" class="save-transfer-button" type="button">バックアップ</button>
+          <label class="save-transfer-button" for="saveImportInput">
+            読み込む
+            <input id="saveImportInput" type="file" accept=".json,application/json" hidden>
+          </label>
+          <small id="saveTransferStatus" class="save-transfer-status" aria-live="polite"></small>
+        </div>
       </section>
 
       <nav id="themeBar" class="theme-toolbar" aria-label="テーマ操作">
@@ -308,7 +316,8 @@
     <script src="./question-bank.js?v=20260723-ops-v15"></script>
     <script src="./question-balance.js?v=20260711-feedback-v8"></script>
     <script src="./reward-system.js?v=20260713-confidence-v14"></script>
-    <script src="./app.js?v=20260723-ops-v15"></script>
+    <script src="./save-transfer.js?v=20260725-save-v1"></script>
+    <script src="./app.js?v=20260725-save-v1"></script>
     <noscript>宅建バトルを利用するにはJavaScriptを有効にしてください。</noscript>
   </body>
 </html>

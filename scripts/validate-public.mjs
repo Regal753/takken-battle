@@ -10,6 +10,7 @@ const required = [
   "index.html",
   "styles.css",
   "app.js",
+  "save-transfer.js",
   "reward-system.js",
   "question-bank.js",
   "question-balance.js",
@@ -28,8 +29,13 @@ assert.match(index, /name="takken-runtime" content="public-static"/);
 assert.match(app, /const PUBLIC_STATIC_MODE/);
 assert.match(app, /function publicTodayQuest/);
 assert.match(app, /この端末に保存/);
+assert.match(app, /consumeSaveTransferHash/);
+assert.match(index, /id="saveExportButton"/);
+assert.match(index, /id="saveImportInput"/);
+assert.match(index, /save-transfer\.js/);
 assert.match(readme, /市販教材本文・市販問題文・公式過去問本文は転載していません/);
 assert.match(readme, /localStorage/);
+assert.match(readme, /URLフラグメント/);
 
 const forbiddenNames = new Set([
   ".env",

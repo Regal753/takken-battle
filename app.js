@@ -18,6 +18,7 @@
   const FIRST_PASS_DEADLINE = "2026-07-14";
   const FIRST_PASS_DEADLINE_LABEL = "7/14";
   const REWARD_SYSTEM = window.TAKKEN_REWARDS;
+  const SAVE_TRANSFER = window.TAKKEN_SAVE_TRANSFER;
   const PROGRESSION_VERSION = REWARD_SYSTEM?.VERSION || 2;
   const QUESTION_BALANCE_VERSION = window.TAKKEN_BALANCE?.VERSION || 0;
   const MISTAKE_CAUSES = [
@@ -266,7 +267,10 @@
     weakQuestButton: $("#weakQuestButton"),
     sprintButton: $("#sprintButton"),
     sprintTimer: $("#sprintTimer"),
-    sprintStatus: $("#sprintStatus")
+    sprintStatus: $("#sprintStatus"),
+    saveExportButton: $("#saveExportButton"),
+    saveImportInput: $("#saveImportInput"),
+    saveTransferStatus: $("#saveTransferStatus")
   };
 
   const createState = () => ({
@@ -528,6 +532,99 @@
 
   function saveState() {
     localStorage.setItem(STORAGE_ID, JSON.stringify(state));
+  }
+
+  function setSaveTransferStatus(message, isError = false) {
+    if (!elements.saveTransferStatus) return;
+    elements.saveTransferStatus.textContent = message;
+    elements.saveTransferStatus.classList.toggle("is-error", isError);
+  }
+
+  function savePackageSummary(parsed) {
+    if (parsed.format === SAVE_TRANSFER.PROGRESS_FORMAT) {
+      const contacted = Object.keys(parsed.progress.perQuestion).length;
+      const weak = parsed.progress.weakIds.length;
+      return `${contacted}/100問・弱点${weak}問・中央台帳${parsed.progress.answers}解答`;
+    }
+    const stats = parsed.state.questionStats || {};
+    const contacted = Object.values(stats).filter((item) =>
+      Math.max(Number(item?.attempts) || 0, Number(item?.centralAttempts) || 0) > 0
+    ).length;
+    return `${contacted}/100問・端末${Number(parsed.state.attempts) || 0}解答`;
+  }
+
+  function importSavePackage(input, sourceLabel = "セーブファイル") {
+    if (!SAVE_TRANSFER) throw new Error("セーブ移行機能を読み込めませんでした。");
+    const parsed = SAVE_TRANSFER.validatePackage(input, ORDER);
+    const summary = savePackageSummary(parsed);
+    const confirmed = window.confirm(
+      `${sourceLabel}から ${summary} を引き継ぎます。\n` +
+      "現在の端末セーブは自動バックアップしてから置き換えます。"
+    );
+    if (!confirmed) {
+      setSaveTransferStatus("引継ぎをキャンセルしました。");
+      return false;
+    }
+
+    localStorage.setItem(
+      `${STORAGE_ID}-before-import-${Date.now()}`,
+      JSON.stringify(state)
+    );
+    const imported = parsed.format === SAVE_TRANSFER.PROGRESS_FORMAT
+      ? SAVE_TRANSFER.stateFromProgressPackage(parsed, createState(), ORDER)
+      : parsed.state;
+    state = normalizeState(imported);
+    applyQuestionBalance();
+    saveState();
+    setSaveTransferStatus(`引継ぎ完了: ${summary}`);
+    render();
+    return true;
+  }
+
+  function downloadSaveBackup() {
+    try {
+      const savePackage = SAVE_TRANSFER.createSavePackage(state);
+      const blob = new Blob([JSON.stringify(savePackage, null, 2)], {
+        type: "application/json;charset=utf-8"
+      });
+      const link = document.createElement("a");
+      const day = todayKey().replace(/-/g, "");
+      link.href = URL.createObjectURL(blob);
+      link.download = `takken-battle-save-${day}.json`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(link.href);
+      setSaveTransferStatus("セーブのバックアップを保存しました。");
+    } catch (error) {
+      setSaveTransferStatus(error?.message || "バックアップに失敗しました。", true);
+    }
+  }
+
+  async function importSaveFile(event) {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
+    try {
+      if (file.size > 1_000_000) throw new Error("セーブファイルが大きすぎます。");
+      importSavePackage(JSON.parse(await file.text()), "選択したファイル");
+    } catch (error) {
+      setSaveTransferStatus(error?.message || "セーブを読み込めませんでした。", true);
+    }
+  }
+
+  function consumeSaveTransferHash() {
+    if (!PUBLIC_STATIC_MODE || !SAVE_TRANSFER || !window.location.hash) return;
+    const hashParams = new URLSearchParams(window.location.hash.slice(1));
+    const token = hashParams.get("save");
+    if (!token) return;
+    window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
+    try {
+      importSavePackage(SAVE_TRANSFER.decodePackage(token), "旧ローカル版");
+    } catch (error) {
+      setSaveTransferStatus(error?.message || "移行リンクを読み込めませんでした。", true);
+    }
   }
 
   function applyQuestionBalance() {
@@ -3359,6 +3456,8 @@
     elements.sprintButton?.addEventListener("click", toggleSprint);
     elements.codexBriefButton?.addEventListener("click", requestCodexBrief);
     elements.armoryButton?.addEventListener("click", forgeNextArmoryRank);
+    elements.saveExportButton?.addEventListener("click", downloadSaveBackup);
+    elements.saveImportInput?.addEventListener("change", importSaveFile);
     elements.chapterSelect?.addEventListener("change", (event) => {
       selectChapter(Number(event.target.value));
     });
@@ -3392,6 +3491,7 @@
 
   bindEvents();
   configurePublicStaticMode();
+  consumeSaveTransferHash();
   window.setInterval(() => {
     tickSprint();
     checkDayRollover();
