@@ -20,4 +20,5 @@ jobs:
           node-version: "22"
       - run: node Audit-TakkenQuestionBank.js
       - run: node Audit-TakkenRewardSystem.js
+      - run: node Audit-TakkenSaveTransfer.js
       - run: node scripts/validate-public.mjs
