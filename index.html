@@ -3,17 +3,17 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="宅建業法のオリジナル100問を、1問1敵のバトル形式で学べる無料の公開ベータ版です。">
+    <meta name="description" content="権利関係・法令上の制限・税その他・宅建業法を本試験配分で学べる、令和8年度向け全分野コア100問の公開ベータ版です。">
     <meta name="theme-color" content="#17261f">
     <meta name="takken-runtime" content="public-static">
     <meta property="og:title" content="宅建バトル Study Quest">
-    <meta property="og:description" content="宅建業法100問を、ゲーム感覚で一周する公開ベータ版。">
+    <meta property="og:description" content="宅建全分野コア100問を、本試験配分の固定ロードで一周する公開ベータ版。">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://regal753.github.io/takken-battle/">
     <link rel="canonical" href="https://regal753.github.io/takken-battle/">
     <title>宅建バトル Study Quest</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./styles.css?v=20260725-save-v1">
+    <link rel="stylesheet" href="./styles.css?v=20260726-full-v1">
   </head>
   <body>
     <div class="app-root">
@@ -22,7 +22,7 @@
           <span class="brand-mark" aria-hidden="true">宅</span>
           <div>
             <h1>宅建バトル</h1>
-            <p>第1分冊 宅建業法 / 本試験寄せ100問</p>
+            <p>令和8年度 / 全分野コア100 / 本試験配分</p>
           </div>
         </div>
         <div class="header-actions">
@@ -33,7 +33,7 @@
 
       <section class="public-mode-note" aria-label="公開版の保存と利用上の注意">
         <strong>公開β</strong>
-        <span class="public-mode-copy">進捗はこの端末のブラウザ内だけに保存されます。法改正を含む最新情報は、必ず公式資料でも確認してください。</span>
+        <span class="public-mode-copy">進捗はこの端末のブラウザ内だけに保存されます。法令基準日は2026年4月1日。統計問題は公開日を確認し、最新の公式資料でも再確認してください。</span>
         <div class="save-transfer-actions" aria-label="セーブデータ管理">
           <button id="saveExportButton" class="save-transfer-button" type="button">バックアップ</button>
           <label class="save-transfer-button" for="saveImportInput">
@@ -46,7 +46,7 @@
 
       <nav id="themeBar" class="theme-toolbar" aria-label="テーマ操作">
         <select id="chapterSelect" class="chapter-select" aria-label="テーマを選択"></select>
-        <button id="adaptiveButton" class="quick-button adaptive-button is-active" type="button">自動補強 ON</button>
+        <button id="adaptiveButton" class="quick-button adaptive-button" type="button" disabled>固定ロード</button>
         <button id="weakButton" class="quick-button" type="button" disabled>弱点 0</button>
       </nav>
 
@@ -89,7 +89,7 @@
         </div>
         <div class="quest-actions">
           <button id="dailyQuestButton" class="quick-button quest-button" type="button">今日の10問</button>
-          <button id="passQuestButton" class="quick-button quest-button pass-button" type="button">一周</button>
+          <button id="passQuestButton" class="quick-button quest-button pass-button" type="button">全分野一周</button>
           <button id="weakQuestButton" class="quick-button quest-button" type="button" disabled>弱点狩り</button>
           <button id="sprintButton" class="quick-button quest-button sprint-button" type="button">25分開始</button>
         </div>
@@ -115,7 +115,7 @@
             <div>
               <span id="enemyClassLabel" class="enemy-class-label">NORMAL ENCOUNTER</span>
               <h2 id="enemyName">免許の番人</h2>
-              <p id="sourceLabel">2026年度版 / 第1分冊 宅建業法</p>
+              <p id="sourceLabel">令和8年度 / 全分野 / 法令基準日 2026-04-01</p>
             </div>
             <div class="battle-score">
               <span id="comboText">COMBO 0</span>
@@ -230,7 +230,7 @@
           <div class="panel-head">
             <div>
               <span>学習記録</span>
-              <strong id="studyTitle">宅建業法</strong>
+              <strong id="studyTitle">宅建 全分野</strong>
             </div>
             <small id="todayLabel">今日の演習</small>
           </div>
@@ -255,9 +255,9 @@
           </div>
 
           <div id="adaptiveCoach" class="adaptive-coach" aria-live="polite">
-            <span>自動補強</span>
-            <strong id="coachTitle">弱点なし</strong>
-            <p id="coachText">間違えた論点が出たら、復習候補と次の一問に自動で反映する。</p>
+            <span>合格ロード</span>
+            <strong id="coachTitle">固定ロード進行中</strong>
+            <p id="coachText">本試験配分の固定順で全分野を進み、弱点は別枠で復習します。</p>
             <small id="logStatus" class="log-status">Codexログ: 確認中</small>
             <div class="codex-actions">
               <button id="codexBriefButton" class="quick-button codex-button" type="button">Codex診断</button>
@@ -274,10 +274,10 @@
               <small>YouTube</small>
             </div>
             <div class="radio-links">
-              <a href="https://www.youtube.com/watch?v=Tdh971tnNoM" target="_blank" rel="noopener">業法Q&amp;A</a>
-              <a href="https://www.youtube.com/playlist?list=PLLQL-84oxXlDssWpxG1J6yqT9kC1p_Jst" target="_blank" rel="noopener">一問一答</a>
-              <a href="https://www.youtube.com/playlist?list=PLthNnJTp6AOdCxtlP7ZvK7Ux0RwgBCRl2" target="_blank" rel="noopener">ゆーき業法</a>
-              <a href="https://www.youtube.com/@fudousandaigaku" target="_blank" rel="noopener">棚田業法</a>
+              <a href="https://www.youtube.com/results?search_query=%E5%AE%85%E5%BB%BA+%E6%A8%A9%E5%88%A9%E9%96%A2%E4%BF%82+2026" target="_blank" rel="noopener">権利関係</a>
+              <a href="https://www.youtube.com/results?search_query=%E5%AE%85%E5%BB%BA+%E6%B3%95%E4%BB%A4%E4%B8%8A%E3%81%AE%E5%88%B6%E9%99%90+2026" target="_blank" rel="noopener">法令上の制限</a>
+              <a href="https://www.youtube.com/results?search_query=%E5%AE%85%E5%BB%BA+%E7%A8%8E%E3%81%9D%E3%81%AE%E4%BB%96+2026" target="_blank" rel="noopener">税・その他</a>
+              <a href="https://www.youtube.com/results?search_query=%E5%AE%85%E5%BB%BA%E6%A5%AD%E6%B3%95+2026" target="_blank" rel="noopener">宅建業法</a>
             </div>
           </section>
 
@@ -290,7 +290,7 @@
       </main>
 
       <footer class="app-footer">
-        <p>宅建試験の非公式学習補助ツールです。問題は市販教材・公式過去問を転載せず、論点に基づいて独自作成しています。</p>
+        <p>宅建試験の非公式学習補助ツールです。問題は公式過去問を転載せず、法令・公式資料の論点に基づいて独自作成しています。</p>
         <a href="https://github.com/Regal753/takken-battle" target="_blank" rel="noopener">GitHubで更新履歴を見る</a>
       </footer>
     </div>
@@ -313,11 +313,17 @@
       </div>
     </aside>
 
+    <script src="./exam-blueprint.js?v=20260726-full-v1"></script>
+    <script src="./exam-question-core.js?v=20260726-full-v1"></script>
+    <script src="./exam-questions-rights.js?v=20260726-full-v1"></script>
+    <script src="./exam-questions-restrictions.js?v=20260726-full-v1"></script>
+    <script src="./exam-questions-tax-other.js?v=20260726-full-v1"></script>
+    <script src="./exam-questions-business.js?v=20260726-full-v1"></script>
     <script src="./question-bank.js?v=20260723-ops-v15"></script>
     <script src="./question-balance.js?v=20260711-feedback-v8"></script>
     <script src="./reward-system.js?v=20260713-confidence-v14"></script>
     <script src="./save-transfer.js?v=20260725-save-v1"></script>
-    <script src="./app.js?v=20260725-save-v1"></script>
+    <script src="./app.js?v=20260726-full-v1"></script>
     <noscript>宅建バトルを利用するにはJavaScriptを有効にしてください。</noscript>
   </body>
 </html>

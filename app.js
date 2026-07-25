@@ -15,8 +15,10 @@
   const TODAY_QUEST_PARAM = URL_PARAMS.has("today") || URL_PARAMS.has("quest");
   const FIRST_PASS_PARAM = URL_PARAMS.has("pass") || URL_PARAMS.has("firstpass") || URL_PARAMS.has("onepass");
   const RUN_MODE_FIRST_PASS = "first-pass";
-  const FIRST_PASS_DEADLINE = "2026-07-14";
-  const FIRST_PASS_DEADLINE_LABEL = "7/14";
+  const FIRST_PASS_DEADLINE = "2026-10-18";
+  const FIRST_PASS_DEADLINE_LABEL = "10/18";
+  const EXAM_BLUEPRINT = window.TAKKEN_EXAM_BLUEPRINT;
+  const EXAM_CONTENT_VERSION = EXAM_BLUEPRINT?.version || 0;
   const REWARD_SYSTEM = window.TAKKEN_REWARDS;
   const SAVE_TRANSFER = window.TAKKEN_SAVE_TRANSFER;
   const PROGRESSION_VERSION = REWARD_SYSTEM?.VERSION || 2;
@@ -33,10 +35,10 @@
   const PLAYER_RANKS = [
     { level: 1, title: "見習い" },
     { level: 3, title: "調査騎士" },
-    { level: 5, title: "免許攻略兵" },
-    { level: 8, title: "業法剣士" },
-    { level: 12, title: "重要事項の守人" },
-    { level: 18, title: "契約執行官" },
+    { level: 5, title: "権利攻略兵" },
+    { level: 8, title: "法令剣士" },
+    { level: 12, title: "四分野の守人" },
+    { level: 18, title: "合格執行官" },
     { level: 25, title: "宅建英雄" },
     { level: 35, title: "合格圏の覇者" }
   ];
@@ -118,7 +120,7 @@
     name: profile.lootName,
     color: profile.lootColor
   }));
-  const ORDER = [
+  const LEGACY_ORDER = [
     "q116", "q117", "q118", "q119", "q120", "q121", "q122", "q123", "q124",
     "q125", "q126", "q127", "q128", "q129", "q130", "q131", "q132", "q133", "q134", "q135", "q136",
     "q6", "q7", "q8", "q9", "q41", "q42", "q43", "q44", "q45", "q88", "q89", "q90", "q91",
@@ -130,16 +132,27 @@
     "q17", "q18", "q19", "q20", "q71", "q72", "q73", "q74", "q75", "q112", "q113", "q114", "q115"
   ];
 
-  const CHAPTERS = [
-    { label: "免許・免許換え", ids: ["q116", "q117", "q118", "q119", "q120", "q121", "q122", "q123", "q124", "q125", "q126", "q127", "q128", "q129", "q130", "q131", "q132", "q133", "q134", "q135", "q136"] },
-    { label: "宅建士・従業者", ids: ["q6", "q7", "q8", "q9", "q41", "q42", "q43", "q44", "q45", "q88", "q89", "q90", "q91"] },
-    { label: "標識・案内所・広告", ids: ["q4", "q10", "q46", "q47", "q48", "q49", "q50", "q92", "q93", "q94", "q95"] },
-    { label: "35条 重要事項説明", ids: ["q11", "q13", "q51", "q52", "q53", "q54", "q55", "q96", "q97", "q98", "q99"] },
-    { label: "37条・契約制限", ids: ["q12", "q56", "q57", "q58", "q59", "q60", "q100", "q101", "q102", "q103"] },
-    { label: "媒介契約", ids: ["q14", "q15", "q61", "q62", "q63", "q64", "q65", "q104", "q105", "q106", "q107"] },
-    { label: "報酬・金銭", ids: ["q16", "q66", "q67", "q68", "q69", "q70", "q108", "q109", "q110", "q111"] },
-    { label: "保証金・監督処分", ids: ["q17", "q18", "q19", "q20", "q71", "q72", "q73", "q74", "q75", "q112", "q113", "q114", "q115"] }
+  const LEGACY_CHAPTERS = [
+    { label: "旧・業法 / 免許・免許換え", ids: ["q116", "q117", "q118", "q119", "q120", "q121", "q122", "q123", "q124", "q125", "q126", "q127", "q128", "q129", "q130", "q131", "q132", "q133", "q134", "q135", "q136"] },
+    { label: "旧・業法 / 宅建士・従業者", ids: ["q6", "q7", "q8", "q9", "q41", "q42", "q43", "q44", "q45", "q88", "q89", "q90", "q91"] },
+    { label: "旧・業法 / 標識・案内所・広告", ids: ["q4", "q10", "q46", "q47", "q48", "q49", "q50", "q92", "q93", "q94", "q95"] },
+    { label: "旧・業法 / 35条 重要事項説明", ids: ["q11", "q13", "q51", "q52", "q53", "q54", "q55", "q96", "q97", "q98", "q99"] },
+    { label: "旧・業法 / 37条・契約制限", ids: ["q12", "q56", "q57", "q58", "q59", "q60", "q100", "q101", "q102", "q103"] },
+    { label: "旧・業法 / 媒介契約", ids: ["q14", "q15", "q61", "q62", "q63", "q64", "q65", "q104", "q105", "q106", "q107"] },
+    { label: "旧・業法 / 報酬・金銭", ids: ["q16", "q66", "q67", "q68", "q69", "q70", "q108", "q109", "q110", "q111"] },
+    { label: "旧・業法 / 保証金・監督処分", ids: ["q17", "q18", "q19", "q20", "q71", "q72", "q73", "q74", "q75", "q112", "q113", "q114", "q115"] }
   ];
+
+  const CURRICULUM_ORDER = EXAM_BLUEPRINT?.curriculumOrder || [];
+  const CURRICULUM_CHAPTERS = (EXAM_BLUEPRINT?.sections || []).flatMap((section) =>
+    section.chapters.map((chapter) => ({
+      ...chapter,
+      sectionId: section.id,
+      label: `${section.shortLabel} / ${chapter.label}`
+    }))
+  );
+  const ORDER = [...CURRICULUM_ORDER, ...LEGACY_ORDER];
+  const CHAPTERS = [...CURRICULUM_CHAPTERS, ...LEGACY_CHAPTERS];
 
   const TOPIC_REFS = {
     "免許": "第1分冊 宅建業法 / 免許",
@@ -159,7 +172,10 @@
     "監督処分": "第1分冊 宅建業法 / 監督処分"
   };
 
-  const QUESTIONS = window.TAKKEN_QUESTIONS || {};
+  const QUESTIONS = {
+    ...(window.TAKKEN_QUESTIONS || {}),
+    ...(window.TAKKEN_EXAM_QUESTIONS || {})
+  };
   const idToChapter = new Map();
   CHAPTERS.forEach((chapter, chapterIndex) => {
     chapter.ids.forEach((id) => idToChapter.set(id, { ...chapter, chapterIndex }));
@@ -284,6 +300,7 @@
     crystals: 0,
     victories: 0,
     progressionVersion: PROGRESSION_VERSION,
+    examContentVersion: EXAM_CONTENT_VERSION,
     questionBalanceVersion: QUESTION_BALANCE_VERSION,
     questionChoiceOrders: {},
     questionBalanceAudit: {},
@@ -300,7 +317,7 @@
     step: 0,
     sessionId: `session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     runMode: FIRST_PASS_PARAM ? RUN_MODE_FIRST_PASS : "quest",
-    adaptive: true,
+    adaptive: false,
     questionStats: {},
     centralMarked: {},
     centralProgress: {},
@@ -357,7 +374,9 @@
       correct: 0,
       wrong: 0,
       weakAdded: 0,
-      target: DAILY_TARGET
+      target: DAILY_TARGET,
+      planIds: [],
+      planVersion: EXAM_CONTENT_VERSION
     };
   }
 
@@ -373,7 +392,11 @@
       answers: Number(input.answers) || 0,
       correct: Number(input.correct) || 0,
       wrong: Number(input.wrong) || 0,
-      weakAdded: Number(input.weakAdded) || 0
+      weakAdded: Number(input.weakAdded) || 0,
+      planIds: Array.isArray(input.planIds)
+        ? input.planIds.filter((id) => CURRICULUM_ORDER.includes(id)).slice(0, DAILY_TARGET)
+        : [],
+      planVersion: Number(input.planVersion) || 0
     };
   }
 
@@ -412,13 +435,14 @@
 
   function normalizeState(input) {
     const previousProgressionVersion = Number(input?.progressionVersion) || 0;
+    const previousExamContentVersion = Number(input?.examContentVersion) || 0;
     const hasProgressionV1 = previousProgressionVersion >= 1;
     const next = { ...createState(), ...input };
     next.index = Math.min(Math.max(Number(next.index) || 0, 0), ORDER.length - 1);
     next.step = Number(next.step) || next.attempts || 0;
     next.sessionId = next.sessionId || `session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     next.runMode = FIRST_PASS_PARAM || next.runMode === RUN_MODE_FIRST_PASS ? RUN_MODE_FIRST_PASS : "quest";
-    next.adaptive = next.adaptive !== false;
+    next.adaptive = false;
     next.questionStats = next.questionStats || {};
     next.centralMarked = next.centralMarked || {};
     next.centralProgress = next.centralProgress || {};
@@ -504,6 +528,17 @@
       if (migratedIds.length) next.analysisRewardClaims[todayKey()] = migratedIds;
     }
     next.progressionVersion = PROGRESSION_VERSION;
+    next.examContentVersion = EXAM_CONTENT_VERSION;
+    if (previousExamContentVersion < EXAM_CONTENT_VERSION) {
+      next.index = 0;
+      next.answered = null;
+      next.activeCutCheck = null;
+      next.finished = false;
+      next.runMode = "quest";
+      next.adaptive = false;
+      next.dailyFinishedDate = "";
+      next.daily = createDailyState();
+    }
     next.activeCutCheck = next.activeCutCheck && next.activeCutCheck.id === ORDER[next.index] && !next.answered
       ? { id: next.activeCutCheck.id, answers: next.activeCutCheck.answers || {} }
       : null;
@@ -544,13 +579,13 @@
     if (parsed.format === SAVE_TRANSFER.PROGRESS_FORMAT) {
       const contacted = Object.keys(parsed.progress.perQuestion).length;
       const weak = parsed.progress.weakIds.length;
-      return `${contacted}/100問・弱点${weak}問・中央台帳${parsed.progress.answers}解答`;
+      return `旧業法${contacted}/100問・弱点${weak}問・中央台帳${parsed.progress.answers}解答`;
     }
     const stats = parsed.state.questionStats || {};
     const contacted = Object.values(stats).filter((item) =>
       Math.max(Number(item?.attempts) || 0, Number(item?.centralAttempts) || 0) > 0
     ).length;
-    return `${contacted}/100問・端末${Number(parsed.state.attempts) || 0}解答`;
+    return `${contacted}問接触・端末${Number(parsed.state.attempts) || 0}解答`;
   }
 
   function importSavePackage(input, sourceLabel = "セーブファイル") {
@@ -571,7 +606,10 @@
       JSON.stringify(state)
     );
     const imported = parsed.format === SAVE_TRANSFER.PROGRESS_FORMAT
-      ? SAVE_TRANSFER.stateFromProgressPackage(parsed, createState(), ORDER)
+      ? {
+          ...SAVE_TRANSFER.stateFromProgressPackage(parsed, createState(), ORDER),
+          examContentVersion: 0
+        }
       : parsed.state;
     state = normalizeState(imported);
     applyQuestionBalance();
@@ -634,7 +672,7 @@
       .map(([id]) => id);
     const result = window.TAKKEN_BALANCE.rebalanceQuestions({
       questions: QUESTIONS,
-      order: ORDER,
+      order: LEGACY_ORDER,
       choiceOrders: state.questionChoiceOrders,
       lockedIds,
       currentAnsweredId: state.answered?.id || null
@@ -745,7 +783,7 @@
             source === "api"
               ? "自動生成"
               : source === "browser"
-                ? "ブラウザ生成"
+                ? "合格ロード"
                 : "前回生成"
           }`
         : "固定10問: 未生成"
@@ -754,22 +792,23 @@
 
   function publicTodayQuest() {
     const date = todayKey();
-    let seed = 2166136261;
-    for (const char of date) {
-      seed ^= char.charCodeAt(0);
-      seed = Math.imul(seed, 16777619);
-    }
-    const ids = ORDER.filter((id) => QUESTIONS[id]);
-    for (let index = ids.length - 1; index > 0; index -= 1) {
-      seed = Math.imul(seed ^ (seed >>> 15), 2246822519);
-      seed ^= seed >>> 13;
-      const swapIndex = Math.abs(seed) % (index + 1);
-      [ids[index], ids[swapIndex]] = [ids[swapIndex], ids[index]];
-    }
+    const savedPlan = state.daily.planVersion === EXAM_CONTENT_VERSION
+      ? state.daily.planIds.filter((id) => CURRICULUM_ORDER.includes(id) && QUESTIONS[id])
+      : [];
+    const blocks = EXAM_BLUEPRINT?.dailyBlocks || [];
+    const firstOpenBlock = blocks.find((block) => block.some((id) => !isContacted(id)));
+    const completedDays = Object.keys(state.adventureDays || {}).length;
+    const fallbackBlock = blocks[completedDays % Math.max(1, blocks.length)] || CURRICULUM_ORDER.slice(0, DAILY_TARGET);
+    const ids = savedPlan.length === DAILY_TARGET
+      ? savedPlan
+      : [...(firstOpenBlock || fallbackBlock)];
+    state.daily.planIds = ids.slice(0, DAILY_TARGET);
+    state.daily.planVersion = EXAM_CONTENT_VERSION;
+    saveState();
     return normalizeTodayQuestPayload({
       date,
       questId: `public-${date}`,
-      ids: ids.slice(0, DAILY_TARGET),
+      ids: state.daily.planIds,
       target: DAILY_TARGET
     }, "browser");
   }
@@ -1000,6 +1039,15 @@
     return ORDER[state.index];
   }
 
+  function questionPositionText(id) {
+    const curriculumIndex = CURRICULUM_ORDER.indexOf(id);
+    if (curriculumIndex >= 0) {
+      return `${curriculumIndex + 1}/${CURRICULUM_ORDER.length}`;
+    }
+    const legacyIndex = LEGACY_ORDER.indexOf(id);
+    return legacyIndex >= 0 ? `旧業法${legacyIndex + 1}/${LEGACY_ORDER.length}` : "補助問題";
+  }
+
   function currentQuestion() {
     const id = currentId();
     const question = QUESTIONS[id];
@@ -1057,7 +1105,7 @@
   function renderCampaignRoute(question) {
     if (!elements.campaignRoute) return;
     const position = chapterPosition(question);
-    elements.routeSectorLabel.textContent = `${question.chapter?.label || "宅建業法"} / 区画${position.sectorNumber}`;
+    elements.routeSectorLabel.textContent = `${question.chapter?.label || "宅建全分野"} / 区画${position.sectorNumber}`;
     elements.campaignRoute.replaceChildren();
     position.sectorIds.forEach((id, offset) => {
       const stats = statsFor(id);
@@ -1256,11 +1304,11 @@
   }
 
   function contactedCount() {
-    return ORDER.filter(isContacted).length;
+    return CURRICULUM_ORDER.filter(isContacted).length;
   }
 
   function remainingFirstPassCount() {
-    return Math.max(0, ORDER.length - contactedCount());
+    return Math.max(0, CURRICULUM_ORDER.length - contactedCount());
   }
 
   function firstPassDaysLeft() {
@@ -1287,7 +1335,7 @@
 
   function firstPassRemainingText() {
     if (PUBLIC_STATIC_MODE) {
-      return `全100問のうち残り${remainingFirstPassCount()}問`;
+      return `全分野コア100のうち残り${remainingFirstPassCount()}問`;
     }
     if (firstPassDaysLeft() === 0 && remainingFirstPassCount() > 0) {
       return `期限超過・残り${remainingFirstPassCount()}問`;
@@ -1318,9 +1366,10 @@
   }
 
   function nextFirstPassId() {
-    for (let offset = 1; offset <= ORDER.length; offset += 1) {
-      const index = (state.index + offset) % ORDER.length;
-      const id = ORDER[index];
+    const currentCurriculumIndex = CURRICULUM_ORDER.indexOf(currentId());
+    for (let offset = 1; offset <= CURRICULUM_ORDER.length; offset += 1) {
+      const index = (Math.max(-1, currentCurriculumIndex) + offset) % CURRICULUM_ORDER.length;
+      const id = CURRICULUM_ORDER[index];
       if (!isContacted(id)) {
         return id;
       }
@@ -1329,10 +1378,10 @@
   }
 
   function firstPassStartId() {
-    if (!state.answered && !isContacted(currentId())) {
+    if (!state.answered && CURRICULUM_ORDER.includes(currentId()) && !isContacted(currentId())) {
       return currentId();
     }
-    return nextFirstPassId() || ORDER.find((id) => !isContacted(id)) || currentId();
+    return nextFirstPassId() || CURRICULUM_ORDER.find((id) => !isContacted(id)) || CURRICULUM_ORDER[0];
   }
 
   function weaknessScore(id) {
@@ -1365,22 +1414,6 @@
       });
   }
 
-  function adaptiveCandidates({ currentChapterOnly = false } = {}) {
-    const question = currentQuestion();
-    const currentChapter = question.chapter;
-    return weakIds().filter((id) => {
-      if (id === currentId()) return false;
-      if (currentChapterOnly && !currentChapter?.ids.includes(id)) return false;
-      const stats = statsFor(id);
-      return localDateKey(latestAt(stats.lastAnsweredAt, stats.centralLastAnsweredAt)) !== todayKey();
-    });
-  }
-
-  function nextAdaptiveId() {
-    if (!state.adaptive || isFirstPassMode()) return null;
-    return adaptiveCandidates({ currentChapterOnly: true })[0] || adaptiveCandidates()[0] || null;
-  }
-
   function nextTargetId() {
     if (isFirstPassMode()) {
       return nextFirstPassId();
@@ -1396,10 +1429,6 @@
       if (dailyQuestDoneCount() >= dailyQuestIds().length) {
         return null;
       }
-    }
-    const adaptiveId = nextAdaptiveId();
-    if (adaptiveId) {
-      return adaptiveId;
     }
     if (isChapterEnd()) {
       return null;
@@ -1422,9 +1451,6 @@
     }
     if (state.index >= ORDER.length - 1) {
       return "結果を見る";
-    }
-    if (nextAdaptiveId()) {
-      return state.answered?.correct ? "弱点の敵へ" : "復習候補へ";
     }
     if (isChapterEnd()) {
       return nextFirstPassId() ? "次の未接触へ" : "全問接触完了";
@@ -1462,11 +1488,11 @@
     } else if (dailyComplete) {
       elements.dockTargetText.textContent = nextFirstPassId()
         ? "固定10問完走・今日はここまででOK"
-        : "固定10問完走・宅建業法100問に接触完了";
+        : "固定10問完走・全分野コア100に接触完了";
     } else if (targetQuestion) {
-      elements.dockTargetText.textContent = `次 ${ORDER.indexOf(targetId) + 1}/${ORDER.length} ・ ${targetQuestion.tag}`;
+      elements.dockTargetText.textContent = `次 ${questionPositionText(targetId)} ・ ${targetQuestion.tag}`;
     } else if (isFirstPassMode()) {
-      elements.dockTargetText.textContent = "宅建業法100問に接触完了";
+      elements.dockTargetText.textContent = "全分野コア100に接触完了";
     } else if (isChapterEnd()) {
       elements.dockTargetText.textContent = `${question.chapter?.label || "現在のテーマ"}を完了`;
     } else {
@@ -1538,14 +1564,16 @@
     const answered = state.answered;
     const isCorrect = answered?.correct === true;
     const isWrong = answered?.correct === false;
-    const chapterText = question.chapter?.label || "宅建業法";
+    const chapterText = question.chapter?.label || "宅建全分野";
     const enemyType = ((question.chapter?.chapterIndex ?? 0) % CHAPTERS.length) + 1;
     const battleProfile = enemyProfileFor(question);
     const attackTier = isCorrect ? (answered.attackTier || attackTierFor(state.streak, answered.overdrive)) : 0;
 
     elements.enemyName.textContent = battleProfile.name;
     elements.enemyClassLabel.textContent = battleProfile.classLabel;
-    elements.sourceLabel.textContent = `2026年度版 / 第1分冊 宅建業法 / ${chapterText} / ${question.level || "本試験寄せ"}`;
+    elements.sourceLabel.textContent = question.sourceRef
+      ? `令和8年度 / ${question.sourceRef} / ${chapterText} / 基準日 ${question.legalBaseline}`
+      : `旧問題 / 第1分冊 宅建業法 / ${chapterText} / ${question.level || "本試験寄せ"}`;
     elements.enemyStateLabel.textContent = answered ? (isCorrect ? "ONE HIT CLEAR" : "FOCUS BREAK") : "一撃で倒せ";
     elements.enemyHpText.textContent = isCorrect ? `0 / ${battleProfile.maxHp}` : `${battleProfile.maxHp} / ${battleProfile.maxHp}`;
     elements.enemyHpFill.style.width = isCorrect ? "0%" : "100%";
@@ -1631,7 +1659,10 @@
     renderProgression();
     renderCampaignRoute(question);
 
-    elements.roundLabel.textContent = `${state.index + 1} / ${ORDER.length}`;
+    const curriculumIndex = CURRICULUM_ORDER.indexOf(question.id);
+    elements.roundLabel.textContent = curriculumIndex >= 0
+      ? `${curriculumIndex + 1} / ${CURRICULUM_ORDER.length}`
+      : `旧業法 ${LEGACY_ORDER.indexOf(question.id) + 1} / ${LEGACY_ORDER.length}`;
     elements.tagBadge.textContent = question.format ? `${question.tag}・${question.format}` : question.tag;
     elements.markButton.classList.toggle("is-marked", Boolean(state.marked[question.id]));
     elements.markButton.textContent = state.marked[question.id] ? "復習中" : "要復習";
@@ -1905,7 +1936,9 @@
       : "反撃。誤りの肢を確認";
     elements.correctAnswer.textContent = `${question.answer + 1}. ${question.choices[question.answer]}`;
     elements.trapText.textContent = question.trap || "正解肢だけでなく、他の肢を切れる理由まで確認する。";
-    elements.bookRef.textContent = TOPIC_REFS[question.tag] || `第1分冊 宅建業法 / ${question.tag}`;
+    elements.bookRef.textContent = question.sourceRef
+      ? `${question.sourceRef}（基準日 ${question.legalBaseline}）`
+      : TOPIC_REFS[question.tag] || `旧・第1分冊 宅建業法 / ${question.tag}`;
     elements.explainText.textContent = question.explain;
     renderConfidenceCheck(question);
     renderChoiceExplanations(question);
@@ -2231,7 +2264,7 @@
     elements.dockNextLabel.textContent = nextActionLabel();
     if (mistakeRecorded()) {
       elements.dockTargetText.textContent = nextTargetId()
-        ? `次 ${ORDER.indexOf(nextTargetId()) + 1}/${ORDER.length} ・ ${QUESTIONS[nextTargetId()].tag}`
+        ? `次 ${questionPositionText(nextTargetId())} ・ ${QUESTIONS[nextTargetId()].tag}`
         : "次の進行先を確認";
     } else {
       elements.dockTargetText.textContent = mistakeRequirementText();
@@ -2292,29 +2325,25 @@
     note.className = "adaptive-note";
 
     const title = document.createElement("strong");
-    title.textContent = isFirstPassMode() ? "一周モード" : "自動補強";
+    title.textContent = isFirstPassMode() ? "全分野一周" : "固定合格ロード";
 
     const text = document.createElement("p");
     if (isFirstPassMode()) {
       const remaining = remainingFirstPassCount();
       text.textContent = remaining > 0
         ? `誤答・迷いは弱点に記録するが、次問は未接触へ進む。残り${remaining}問、${firstPassPaceText()}。`
-        : "宅建業法100問に一通り接触。弱点回収は日次クエストへ戻して処理する。";
+        : "全分野コア100に一通り接触。弱点は弱点ボタンから手動で回収する。";
       note.append(title, text);
       elements.feedbackBox.insertBefore(note, elements.nextButton);
       return;
     }
 
-    const nextId = nextAdaptiveId();
     if (state.answered?.correct === false) {
-      text.textContent = `${question.tag}を弱点に登録。同日の自動再出題はせず、翌日以降に戻す。`;
-    } else if (nextId) {
-      const nextQuestion = QUESTIONS[nextId];
-      text.textContent = `次は過去に落とした「${nextQuestion.tag}」を優先して確認する。`;
+      text.textContent = `${question.tag}を弱点に登録。合格ロードには割り込ませず、弱点ボタンから復習する。`;
     } else if (weakIds().length > 0) {
-      text.textContent = "弱点は保持中。同日の自動再出題はせず、翌日以降に戻す。";
+      text.textContent = "弱点は記録中。次は固定ロード上の未接触問題へ進む。";
     } else {
-      text.textContent = "この論点は処理済み。未解答問題を進める。";
+      text.textContent = "この論点は処理済み。固定ロード上の次問へ進む。";
     }
 
     note.append(title, text);
@@ -2328,9 +2357,9 @@
     elements.accuracyText.textContent = attempts ? `${Math.round((correct / attempts) * 100)}%` : "-";
     elements.streakText.textContent = state.bestStreak ? `${state.streak}/${state.bestStreak}` : String(state.streak);
     elements.markedText.textContent = String(weakIds().length);
-    elements.chapterProgressText.textContent = `${contactedCount()} / ${ORDER.length}問接触`;
+    elements.chapterProgressText.textContent = `${contactedCount()} / ${CURRICULUM_ORDER.length}問接触`;
     if (elements.studyTitle) {
-      elements.studyTitle.textContent = isFirstPassMode() ? "宅建業法 一周" : "宅建業法";
+      elements.studyTitle.textContent = isFirstPassMode() ? "宅建 全分野一周" : "宅建 全分野";
     }
     if (elements.todayLabel) {
       elements.todayLabel.textContent = isFirstPassMode() ? firstPassRemainingText() : "今日の演習";
@@ -2351,7 +2380,7 @@
     const progressBase = isFirstPassMode()
       ? firstPassDone
       : dailyProgressBase;
-    const progressTarget = isFirstPassMode() ? ORDER.length : fixedTarget;
+    const progressTarget = isFirstPassMode() ? CURRICULUM_ORDER.length : fixedTarget;
     const progress = Math.min(100, Math.round((progressBase / progressTarget) * 100));
     const firstPassRemaining = remainingFirstPassCount();
     renderQuestRewards(fixedClear, fixedIds.length > 0);
@@ -2360,9 +2389,9 @@
       const chapter = currentChapterContactSummary();
       const paceText = firstPassPaceText();
       if (elements.questLabel) {
-        elements.questLabel.textContent = "一周モード";
+        elements.questLabel.textContent = "全分野一周";
       }
-      elements.dailyQuestTitle.textContent = `${firstPassDone} / ${ORDER.length}接触`;
+      elements.dailyQuestTitle.textContent = `${firstPassDone} / ${CURRICULUM_ORDER.length}接触`;
       if (elements.dailyAnswerLabel) elements.dailyAnswerLabel.textContent = "接触";
       if (elements.dailyCorrectLabel) elements.dailyCorrectLabel.textContent = "残り";
       if (elements.dailyWeakLabel) elements.dailyWeakLabel.textContent = "要復習";
@@ -2403,8 +2432,8 @@
     }
     if (elements.passQuestButton) {
       elements.passQuestButton.textContent = isFirstPassMode()
-        ? (firstPassRemaining > 0 ? "一周中" : "完了")
-        : "一周";
+        ? (firstPassRemaining > 0 ? "全分野一周中" : "完了")
+        : "全分野一周";
       elements.passQuestButton.classList.toggle("is-active", isFirstPassMode());
     }
     if (isFirstPassMode()) elements.dailyQuestButton.disabled = false;
@@ -2578,10 +2607,9 @@
     elements.weakButton.textContent = `弱点 ${targets.length}`;
     elements.weakButton.disabled = targets.length === 0;
     if (elements.adaptiveButton) {
-      elements.adaptiveButton.textContent = isFirstPassMode()
-        ? "補強は記録のみ"
-        : (state.adaptive ? "自動補強 ON" : "自動補強 OFF");
-      elements.adaptiveButton.classList.toggle("is-active", state.adaptive && !isFirstPassMode());
+      elements.adaptiveButton.textContent = "固定ロード";
+      elements.adaptiveButton.disabled = true;
+      elements.adaptiveButton.classList.remove("is-active");
     }
   }
 
@@ -2591,38 +2619,22 @@
     if (isFirstPassMode()) {
       const remaining = remainingFirstPassCount();
       const chapter = currentChapterContactSummary();
-      elements.coachTitle.textContent = `一周 ${contactedCount()}/${ORDER.length}接触`;
+      elements.coachTitle.textContent = `全分野一周 ${contactedCount()}/${CURRICULUM_ORDER.length}接触`;
       elements.coachText.textContent = remaining > 0
         ? `弱点は記録だけ。${chapter ? `${chapter.label}は残り${chapter.remaining}問。` : ""}全体は残り${remaining}問。${firstPassPaceText()}。`
-        : "宅建業法100問は接触済み。日次クエストへ戻して弱点回収に入る。";
+        : "全分野コア100は接触済み。弱点ボタンから苦手論点を手動で回収できる。";
       return;
     }
 
     const topic = weakestTopic();
-    const nextId = nextAdaptiveId();
     if (!topic) {
-      elements.coachTitle.textContent = "弱点なし";
-      elements.coachText.textContent = state.adaptive
-        ? "間違えた論点が出たら、復習候補と次の一問に自動で反映する。"
-        : "自動補強はOFF。弱点ボタンから手動で復習できる。";
+      elements.coachTitle.textContent = "固定ロード進行中";
+      elements.coachText.textContent = "本試験配分の固定順で全分野を進む。誤答は記録し、弱点ボタンから別枠で復習する。";
       return;
     }
 
-    if (!state.adaptive) {
-      elements.coachTitle.textContent = `${topic.label}を手動復習`;
-      elements.coachText.textContent = `${topic.chapter}で弱点${topic.count}問。自動補強をONにすると次問候補へ混ぜる。`;
-      return;
-    }
-
-    if (nextId) {
-      const nextQuestion = QUESTIONS[nextId];
-      elements.coachTitle.textContent = `次は${nextQuestion.tag}を補強`;
-      elements.coachText.textContent = `${topic.chapter}で弱点${topic.count}問。通常問題を挟みながら、落とした論点へ戻す。`;
-      return;
-    }
-
-    elements.coachTitle.textContent = `${topic.label}を保持中`;
-    elements.coachText.textContent = `${question.tag}の解答後、間隔を空けて復習候補に戻す。`;
+    elements.coachTitle.textContent = `${topic.label}は手動復習`;
+    elements.coachText.textContent = `${topic.chapter}で弱点${topic.count}問。固定ロードを崩さず、弱点ボタンから別枠で潰す。`;
   }
 
   function renderChapters(activeId) {
@@ -2678,7 +2690,7 @@
   }
 
   function nextUnsolvedId() {
-    return ORDER.find((id) => effectiveCorrectCount(statsFor(id)) === 0);
+    return CURRICULUM_ORDER.find((id) => effectiveCorrectCount(statsFor(id)) === 0);
   }
 
   function answeredToday(id) {
@@ -2725,8 +2737,7 @@
       return;
     }
     const fixedQuestId = nextDailyQuestId();
-    const adaptiveId = fixedQuestId ? null : nextAdaptiveId();
-    const targetId = fixedQuestId || adaptiveId || nextUnsolvedId() || ORDER[(state.index + 1) % ORDER.length];
+    const targetId = fixedQuestId || nextUnsolvedId() || CURRICULUM_ORDER[0];
     if (!targetId) return;
     logStudyEvent("daily-quest", {
       targetId,
@@ -3327,11 +3338,6 @@
         return;
       }
     }
-    const adaptiveId = nextAdaptiveId();
-    if (adaptiveId) {
-      goToQuestion(adaptiveId);
-      return;
-    }
     if (isChapterEnd()) {
       const nextId = nextFirstPassId();
       if (nextId) {
@@ -3358,13 +3364,13 @@
     saveState();
     const accuracy = state.attempts ? `${Math.round((state.correct / state.attempts) * 100)}%` : "-";
     const contacted = contactedCount();
-    const firstPassComplete = contacted >= ORDER.length;
+    const firstPassComplete = contacted >= CURRICULUM_ORDER.length;
     const finishText = firstPassComplete
-      ? `宅建業法${ORDER.length}問に一通り接触。`
-      : `宅建業法${ORDER.length}問を完走。`;
+      ? `宅建全分野コア${CURRICULUM_ORDER.length}問に一通り接触。`
+      : `宅建全分野コア${CURRICULUM_ORDER.length}問の今回ルートを完走。`;
     const nextText = firstPassComplete
-      ? "次は法令上の制限へ進める。要復習に残した論点は日次クエストで回収する。"
-      : "要復習に残した論点と誤答した論点を、次の周回で先に潰す。";
+      ? "本試験配分のフォームA・Bで50問演習へ進み、要復習は弱点ボタンから別枠で回収する。"
+      : "固定ロードの未接触問題を先に進め、誤答は弱点ボタンから別枠で潰す。";
     const finishActions = firstPassComplete
       ? `<div class="finish-actions">
           <button id="finishDailyButton" class="next-button" type="button">日課で弱点回収</button>
@@ -3373,7 +3379,7 @@
       : `<button id="finishResetButton" class="next-button" type="button">全記録リセット</button>`;
     elements.quizCard.innerHTML = `
       <div class="quiz-meta">
-        <strong id="roundLabel">${ORDER.length} / ${ORDER.length}</strong>
+        <strong id="roundLabel">${CURRICULUM_ORDER.length} / ${CURRICULUM_ORDER.length}</strong>
         <span id="tagBadge">完了</span>
       </div>
       <p class="question-text">${finishText}</p>
@@ -3443,12 +3449,6 @@
     });
     elements.resetButton.addEventListener("click", resetAll);
     elements.markButton.addEventListener("click", toggleMarked);
-    elements.adaptiveButton?.addEventListener("click", () => {
-      state.adaptive = !state.adaptive;
-      saveState();
-      logStudyEvent("adaptive-toggle", { adaptive: state.adaptive });
-      render();
-    });
     elements.dailyQuestButton?.addEventListener("click", startDailyQuest);
     elements.dailyContinueButton?.addEventListener("click", continueAfterDailyQuest);
     elements.passQuestButton?.addEventListener("click", startFirstPass);
