@@ -36,6 +36,9 @@ assert.match(index, /name="takken-runtime" content="public-static"/);
 assert.match(app, /const PUBLIC_STATIC_MODE/);
 assert.match(app, /function publicTodayQuest/);
 assert.match(app, /const CURRICULUM_ORDER/);
+assert.match(app, /const RUN_MODE_MOCK = "mock"/);
+assert.match(app, /function showMockFinished/);
+assert.match(app, /正誤・正解肢・解説は50問終了後/);
 assert.doesNotMatch(
   app.match(/function publicTodayQuest\(\) \{[\s\S]*?\n  \}/)?.[0] || "",
   /Math\.random|seed|shuffle/i,
@@ -44,6 +47,8 @@ assert.match(app, /この端末に保存/);
 assert.match(app, /consumeSaveTransferHash/);
 assert.match(index, /id="saveExportButton"/);
 assert.match(index, /id="saveImportInput"/);
+assert.match(index, /id="mockAButton"/);
+assert.match(index, /id="mockBButton"/);
 assert.match(index, /save-transfer\.js/);
 assert.match(readme, /市販教材本文・市販問題文・公式過去問本文は転載していません/);
 assert.match(readme, /localStorage/);

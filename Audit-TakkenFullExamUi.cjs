@@ -22,8 +22,10 @@ async function main() {
     });
     page.on("pageerror", (error) => pageErrors.push(String(error)));
 
+    const reviewNamespace = `fullui${Date.now().toString(36)}`;
+    const storageId = `takken-battle-study-clean-v2-hard-review-${reviewNamespace}`;
     const url = new URL(baseUrl);
-    url.searchParams.set("review", `fullui${Date.now().toString(36)}`);
+    url.searchParams.set("review", reviewNamespace);
     url.searchParams.set("today", "1");
     await page.goto(url.toString(), { waitUntil: "domcontentloaded", timeout: 15000 });
     await page.waitForFunction(() => {
@@ -103,6 +105,168 @@ async function main() {
     if (desktopOverflow || mobileOverflow) {
       throw new Error(`Horizontal overflow: desktop=${desktopOverflow}, mobile=${mobileOverflow}`);
     }
+
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.locator("#mockAButton").click();
+    await page.waitForFunction(() => {
+      const text = document.querySelector("#questionText")?.textContent || "";
+      return Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
+        .find((candidate) => candidate.text === text)?.id === "r001";
+    });
+    const mockStart = await page.evaluate((id) => {
+      const saved = JSON.parse(localStorage.getItem(id) || "{}");
+      return {
+        runMode: saved.runMode,
+        formId: saved.mock?.formId,
+        position: saved.mock?.position,
+        attempts: saved.attempts,
+        source: document.querySelector("#dailyQuestSource")?.textContent || "",
+        timer: document.querySelector("#dailyWeakText")?.textContent || ""
+      };
+    }, storageId);
+    if (
+      mockStart.runMode !== "mock" ||
+      mockStart.formId !== "form-a" ||
+      mockStart.position !== 0 ||
+      !mockStart.source.includes("終了後に採点") ||
+      !/^\d{2,3}:\d{2}$/.test(mockStart.timer)
+    ) {
+      throw new Error(`Mock A did not start correctly: ${JSON.stringify(mockStart)}`);
+    }
+
+    let noLeakAudit = null;
+    for (let index = 0; index < 50; index += 1) {
+      const question = await page.evaluate(() => {
+        const text = document.querySelector("#questionText")?.textContent || "";
+        const item = Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
+          .find((candidate) => candidate.text === text);
+        if (!item) throw new Error(`Mock question not found: ${text.slice(0, 60)}`);
+        return { id: item.id, answer: item.answer };
+      });
+      const selected = index % 5 === 0 ? (question.answer + 1) % 4 : question.answer;
+      await page.locator(`.choice-button[data-index="${selected}"]`).click();
+      await page.locator("#feedbackBox").waitFor({ state: "visible" });
+      if (index === 0) {
+        noLeakAudit = await page.evaluate((id) => {
+          const saved = JSON.parse(localStorage.getItem(id) || "{}");
+          const answerGrid = document.querySelector("#feedbackBox .answer-grid");
+          return {
+            correctWrongClasses: document.querySelectorAll(".choice-button.is-correct, .choice-button.is-wrong").length,
+            selectedClasses: document.querySelectorAll(".choice-button.is-mock-selected").length,
+            answerGridHidden: Boolean(answerGrid?.hidden),
+            feedback: document.querySelector("#explainText")?.textContent || "",
+            correctAnswer: document.querySelector("#correctAnswer")?.textContent || "",
+            attempts: saved.attempts,
+            mockResults: saved.mock?.results?.length || 0
+          };
+        }, storageId);
+        if (
+          noLeakAudit.correctWrongClasses !== 0 ||
+          noLeakAudit.selectedClasses !== 1 ||
+          !noLeakAudit.answerGridHidden ||
+          !noLeakAudit.feedback.includes("50問終了後") ||
+          noLeakAudit.correctAnswer ||
+          noLeakAudit.attempts !== mockStart.attempts ||
+          noLeakAudit.mockResults !== 1
+        ) {
+          throw new Error(`Mock answer leaked correctness: ${JSON.stringify(noLeakAudit)}`);
+        }
+        await page.reload({ waitUntil: "domcontentloaded" });
+        await page.locator("#feedbackBox").waitFor({ state: "visible" });
+        const resumed = await page.evaluate(() => ({
+          selectedClasses: document.querySelectorAll(".choice-button.is-mock-selected").length,
+          correctWrongClasses: document.querySelectorAll(".choice-button.is-correct, .choice-button.is-wrong").length,
+          feedback: document.querySelector("#explainText")?.textContent || ""
+        }));
+        if (
+          resumed.selectedClasses !== 1 ||
+          resumed.correctWrongClasses !== 0 ||
+          !resumed.feedback.includes("50問終了後")
+        ) {
+          throw new Error(`Mock reload did not preserve hidden result: ${JSON.stringify(resumed)}`);
+        }
+      }
+      await page.locator("#dockNextButton").click();
+      if (index < 49) {
+        await page.waitForFunction(
+          (id) => {
+            const text = document.querySelector("#questionText")?.textContent || "";
+            const item = Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
+              .find((candidate) => candidate.text === text);
+            return item?.id && item.id !== id;
+          },
+          question.id
+        );
+      }
+    }
+    await page.locator('[data-mock-result="form-a"]').waitFor({ state: "visible" });
+    const mockResult = await page.evaluate((id) => {
+      const saved = JSON.parse(localStorage.getItem(id) || "{}");
+      const sections = Object.fromEntries(
+        [...document.querySelectorAll(".mock-section-card")].map((card) => [
+          card.dataset.section,
+          card.querySelector("strong")?.textContent?.trim() || ""
+        ])
+      );
+      return {
+        scoreText: document.querySelector(".mock-score-hero > strong")?.textContent?.replace(/\s+/g, " ").trim() || "",
+        targetText: document.querySelector(".mock-score-hero > p")?.textContent || "",
+        wrongItems: document.querySelectorAll(".mock-wrong-item").length,
+        sections,
+        finalized: Boolean(saved.mock?.finalized),
+        history: saved.mockHistory?.length || 0,
+        attempts: saved.attempts,
+        weakWrongCount: (saved.mock?.results || []).filter((result) => !result.correct && saved.marked?.[result.id]).length
+      };
+    }, storageId);
+    const expectedSections = {
+      rights: "11 / 14",
+      restrictions: "6 / 8",
+      tax: "3 / 3",
+      business: "16 / 20",
+      other: "4 / 5"
+    };
+    if (
+      !mockResult.scoreText.includes("40 / 50") ||
+      !mockResult.targetText.includes("安全圏目標40点を達成") ||
+      mockResult.wrongItems !== 10 ||
+      JSON.stringify(mockResult.sections) !== JSON.stringify(expectedSections) ||
+      !mockResult.finalized ||
+      mockResult.history !== 1 ||
+      mockResult.attempts !== mockStart.attempts + 50 ||
+      mockResult.weakWrongCount !== 10
+    ) {
+      throw new Error(`Mock result mismatch: ${JSON.stringify(mockResult)}`);
+    }
+
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.locator('[data-mock-result="form-a"]').waitFor({ state: "visible" });
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(100);
+    const mockMobileOverflow = await page.evaluate(() =>
+      Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
+    );
+    if (mockMobileOverflow) {
+      throw new Error(`Mock result horizontal overflow: mobile=${mockMobileOverflow}`);
+    }
+    await page.locator("#mockOtherButton").click();
+    await page.waitForFunction(() => {
+      const text = document.querySelector("#questionText")?.textContent || "";
+      return Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
+        .find((candidate) => candidate.text === text)?.id === "r015";
+    });
+    const formBStart = await page.evaluate((id) => {
+      const saved = JSON.parse(localStorage.getItem(id) || "{}");
+      return {
+        formId: saved.mock?.formId,
+        position: saved.mock?.position,
+        current: document.querySelector("#roundLabel")?.textContent?.trim() || ""
+      };
+    }, storageId);
+    if (formBStart.formId !== "form-b" || formBStart.position !== 0 || formBStart.current !== "1 / 50") {
+      throw new Error(`Mock B did not start correctly: ${JSON.stringify(formBStart)}`);
+    }
+
     if (consoleErrors.length || pageErrors.length) {
       throw new Error(`Browser errors: ${JSON.stringify({ consoleErrors, pageErrors })}`);
     }
@@ -167,9 +331,14 @@ async function main() {
       visitedIds,
       visitedSections: [...new Set(visitedSections)],
       fixedSource: blueprintAudit.sourceLabel,
+      mockStart,
+      noLeakAudit,
+      mockResult,
+      formBStart,
       migration,
       desktopOverflow,
       mobileOverflow,
+      mockMobileOverflow,
       consoleErrors,
       pageErrors
     })}\n`);

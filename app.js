@@ -15,6 +15,10 @@
   const TODAY_QUEST_PARAM = URL_PARAMS.has("today") || URL_PARAMS.has("quest");
   const FIRST_PASS_PARAM = URL_PARAMS.has("pass") || URL_PARAMS.has("firstpass") || URL_PARAMS.has("onepass");
   const RUN_MODE_FIRST_PASS = "first-pass";
+  const RUN_MODE_MOCK = "mock";
+  const MOCK_DURATION_MINUTES = 120;
+  const MOCK_DURATION_MS = MOCK_DURATION_MINUTES * 60 * 1000;
+  const MOCK_SAFE_TARGET = 40;
   const FIRST_PASS_DEADLINE = "2026-10-18";
   const FIRST_PASS_DEADLINE_LABEL = "10/18";
   const EXAM_BLUEPRINT = window.TAKKEN_EXAM_BLUEPRINT;
@@ -276,6 +280,8 @@
     dailyWeakLabel: $("#dailyWeakLabel"),
     dailyWeakText: $("#dailyWeakText"),
     dailyQuestButton: $("#dailyQuestButton"),
+    mockAButton: $("#mockAButton"),
+    mockBButton: $("#mockBButton"),
     dailyCompletePanel: $("#dailyCompletePanel"),
     dailyCompleteSummary: $("#dailyCompleteSummary"),
     dailyContinueButton: $("#dailyContinueButton"),
@@ -326,6 +332,8 @@
     activeCutCheck: null,
     dailyFinishedDate: "",
     daily: createDailyState(),
+    mock: createMockState(),
+    mockHistory: [],
     sprint: {
       endsAt: null,
       completed: 0
@@ -407,6 +415,71 @@
     };
   }
 
+  function mockFormById(formId) {
+    return (EXAM_BLUEPRINT?.mockForms || []).find((form) => form.id === formId) || null;
+  }
+
+  function createMockState(formId = "") {
+    return {
+      formId,
+      position: 0,
+      startedAt: "",
+      finishedAt: "",
+      elapsedMs: 0,
+      results: [],
+      finalized: false
+    };
+  }
+
+  function normalizeMockState(input) {
+    const form = mockFormById(String(input?.formId || ""));
+    if (!form) return createMockState();
+    const sourceResults = Array.isArray(input?.results) ? input.results : [];
+    const results = [];
+    for (const id of form.ids) {
+      const source = sourceResults[results.length];
+      if (!source || source.id !== id) break;
+      const selected = Number(source.selected);
+      if (!Number.isInteger(selected) || selected < 0 || selected > 3 || !QUESTIONS[id]) break;
+      const question = QUESTIONS[id];
+      results.push({
+        id,
+        selected,
+        correct: selected === question.answer,
+        sectionId: question.sectionId || "",
+        tag: question.tag || ""
+      });
+    }
+    const finalized = Boolean(input?.finalized) && results.length === form.ids.length;
+    return {
+      formId: form.id,
+      position: Math.min(
+        form.ids.length - 1,
+        Math.max(0, Number(input?.position) || 0)
+      ),
+      startedAt: String(input?.startedAt || ""),
+      finishedAt: finalized ? String(input?.finishedAt || "") : "",
+      elapsedMs: finalized ? Math.max(0, Number(input?.elapsedMs) || 0) : 0,
+      results,
+      finalized
+    };
+  }
+
+  function normalizeMockHistory(input) {
+    return (Array.isArray(input) ? input : [])
+      .filter((item) => mockFormById(String(item?.formId || "")))
+      .map((item) => ({
+        formId: String(item.formId),
+        completedAt: String(item.completedAt || ""),
+        score: Math.min(50, Math.max(0, Number(item.score) || 0)),
+        elapsedMs: Math.max(0, Number(item.elapsedMs) || 0),
+        sectionScores: item.sectionScores && typeof item.sectionScores === "object"
+          ? { ...item.sectionScores }
+          : {}
+      }))
+      .slice(-10);
+  }
+
   function inferredMistakeCause(answered) {
     const note = String(answered?.mistakeNote || "");
     if (/読み|見落と|見間違/.test(note)) return "reading";
@@ -441,7 +514,14 @@
     next.index = Math.min(Math.max(Number(next.index) || 0, 0), ORDER.length - 1);
     next.step = Number(next.step) || next.attempts || 0;
     next.sessionId = next.sessionId || `session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
-    next.runMode = FIRST_PASS_PARAM || next.runMode === RUN_MODE_FIRST_PASS ? RUN_MODE_FIRST_PASS : "quest";
+    next.mock = normalizeMockState(input?.mock);
+    next.mockHistory = normalizeMockHistory(input?.mockHistory);
+    const requestedMock = input?.runMode === RUN_MODE_MOCK && mockFormById(next.mock.formId);
+    next.runMode = FIRST_PASS_PARAM || next.runMode === RUN_MODE_FIRST_PASS
+      ? RUN_MODE_FIRST_PASS
+      : requestedMock
+        ? RUN_MODE_MOCK
+        : "quest";
     next.adaptive = false;
     next.questionStats = next.questionStats || {};
     next.centralMarked = next.centralMarked || {};
@@ -538,6 +618,7 @@
       next.adaptive = false;
       next.dailyFinishedDate = "";
       next.daily = createDailyState();
+      next.mock = createMockState();
     }
     next.activeCutCheck = next.activeCutCheck && next.activeCutCheck.id === ORDER[next.index] && !next.answered
       ? { id: next.activeCutCheck.id, answers: next.activeCutCheck.answers || {} }
@@ -545,6 +626,13 @@
     next.dailyFinishedDate = String(next.dailyFinishedDate || "");
     next.daily = normalizeDailyState(next.daily);
     next.sprint = normalizeSprintState(next.sprint);
+    if (next.runMode === RUN_MODE_MOCK) {
+      const form = mockFormById(next.mock.formId);
+      const mockId = form?.ids[next.mock.position];
+      const mockIndex = ORDER.indexOf(mockId);
+      if (mockIndex >= 0) next.index = mockIndex;
+      next.finished = Boolean(next.mock.finalized);
+    }
     if (next.answered && next.answered.id !== ORDER[next.index]) {
       next.answered = null;
       next.activeCutCheck = null;
@@ -867,6 +955,7 @@
     if (
       firstQuestId &&
       !isFirstPassMode() &&
+      !isMockMode() &&
       (TODAY_QUEST_PARAM || state.daily.answers === 0) &&
       !state.answered &&
       currentId() !== firstQuestId
@@ -933,7 +1022,7 @@
         wrong: Number(payload.wrong) || 0
       };
       saveState();
-      render();
+      renderCurrentView();
       return true;
     } catch {
       return false;
@@ -1299,6 +1388,64 @@
     return state.runMode === RUN_MODE_FIRST_PASS;
   }
 
+  function isMockMode() {
+    return state.runMode === RUN_MODE_MOCK && Boolean(mockFormById(state.mock?.formId));
+  }
+
+  function currentMockForm() {
+    return isMockMode() ? mockFormById(state.mock.formId) : null;
+  }
+
+  function mockFormShortLabel(form = currentMockForm()) {
+    if (!form) return "模試";
+    return form.id === "form-a" ? "フォームA" : "フォームB";
+  }
+
+  function mockQuestionIds() {
+    return currentMockForm()?.ids || [];
+  }
+
+  function mockAnsweredCount() {
+    return Math.min(mockQuestionIds().length, state.mock?.results?.length || 0);
+  }
+
+  function mockElapsedMs() {
+    if (state.mock?.finalized) return Math.max(0, Number(state.mock.elapsedMs) || 0);
+    const startedAt = Date.parse(state.mock?.startedAt || "");
+    return Number.isFinite(startedAt) ? Math.max(0, Date.now() - startedAt) : 0;
+  }
+
+  function formatElapsed(ms) {
+    const totalSeconds = Math.floor(Math.max(0, ms) / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return hours > 0
+      ? `${hours}:${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`
+      : `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+  }
+
+  function mockTimeText() {
+    const delta = MOCK_DURATION_MS - mockElapsedMs();
+    return delta >= 0
+      ? formatTimer(delta)
+      : `超過 +${formatElapsed(Math.abs(delta))}`;
+  }
+
+  function mockSectionScores(results = state.mock?.results || []) {
+    return Object.fromEntries((EXAM_BLUEPRINT?.sections || []).map((section) => {
+      const sectionResults = results.filter((result) => result.sectionId === section.id);
+      return [
+        section.id,
+        {
+          label: section.label,
+          correct: sectionResults.filter((result) => result.correct).length,
+          total: section.examQuestions
+        }
+      ];
+    }));
+  }
+
   function isContacted(id) {
     return effectiveAttempts(statsFor(id)) > 0;
   }
@@ -1415,6 +1562,9 @@
   }
 
   function nextTargetId() {
+    if (isMockMode()) {
+      return mockQuestionIds()[state.mock.position + 1] || null;
+    }
     if (isFirstPassMode()) {
       return nextFirstPassId();
     }
@@ -1437,6 +1587,9 @@
   }
 
   function nextActionLabel() {
+    if (isMockMode()) {
+      return state.mock.position >= mockQuestionIds().length - 1 ? "採点結果を見る" : "次の問題へ";
+    }
     if (state.answered?.correct === false && !mistakeRecorded()) {
       return "ミス入力へ";
     }
@@ -1466,6 +1619,21 @@
     document.body.classList.toggle("has-answer-dock", visible);
     if (!visible) return;
 
+    if (isMockMode()) {
+      const targetId = nextTargetId();
+      const targetQuestion = targetId ? QUESTIONS[targetId] : null;
+      elements.dockResultText.textContent = "解答を記録";
+      elements.dockTargetText.textContent = targetQuestion
+        ? `次 ${state.mock.position + 2}/50 ・ ${targetQuestion.tag}`
+        : "50問終了・採点へ";
+      elements.dockNextLabel.textContent = nextActionLabel();
+      elements.dockExplainButton.hidden = true;
+      elements.dockUnsureButton.hidden = true;
+      elements.dockNextButton.classList.remove("is-reward", "is-near-reward");
+      return;
+    }
+
+    elements.dockExplainButton.hidden = false;
     const resultParts = [answered.correct ? "撃破" : "要復習"];
     if (answered.levelUp) resultParts.push(`Lv.${answered.newLevel}`);
     if (answered.chestOpened) resultParts.push(`${answered.chestTier?.label || "銅"}宝箱`);
@@ -1559,6 +1727,14 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function renderCurrentView() {
+    if (isMockMode() && state.mock.finalized) {
+      showMockFinished();
+      return;
+    }
+    render();
+  }
+
   function render() {
     const question = currentQuestion();
     const answered = state.answered;
@@ -1574,7 +1750,11 @@
     elements.sourceLabel.textContent = question.sourceRef
       ? `令和8年度 / ${question.sourceRef} / ${chapterText} / 基準日 ${question.legalBaseline}`
       : `旧問題 / 第1分冊 宅建業法 / ${chapterText} / ${question.level || "本試験寄せ"}`;
-    elements.enemyStateLabel.textContent = answered ? (isCorrect ? "ONE HIT CLEAR" : "FOCUS BREAK") : "一撃で倒せ";
+    elements.enemyStateLabel.textContent = isMockMode() && answered
+      ? "ANSWER LOCKED"
+      : answered
+        ? (isCorrect ? "ONE HIT CLEAR" : "FOCUS BREAK")
+        : "一撃で倒せ";
     elements.enemyHpText.textContent = isCorrect ? `0 / ${battleProfile.maxHp}` : `${battleProfile.maxHp} / ${battleProfile.maxHp}`;
     elements.enemyHpFill.style.width = isCorrect ? "0%" : "100%";
     elements.battleField.classList.toggle("is-hit", isCorrect);
@@ -1630,7 +1810,9 @@
     } else if (isWrong) {
       elements.battleAnnouncement.textContent = `反撃を受けた。FOCUS ${answered.focusDelta}`;
     } else {
-      elements.battleAnnouncement.textContent = `${battleProfile.trait}。正解で一撃撃破。`;
+      elements.battleAnnouncement.textContent = isMockMode() && answered
+        ? "解答を記録。正誤は50問終了後にまとめて採点。"
+        : `${battleProfile.trait}。正解で一撃撃破。`;
     }
     elements.comboSubtext.textContent = state.streak >= 5
       ? "奥義圏内。次の正解も最大演出"
@@ -1660,10 +1842,13 @@
     renderCampaignRoute(question);
 
     const curriculumIndex = CURRICULUM_ORDER.indexOf(question.id);
-    elements.roundLabel.textContent = curriculumIndex >= 0
-      ? `${curriculumIndex + 1} / ${CURRICULUM_ORDER.length}`
-      : `旧業法 ${LEGACY_ORDER.indexOf(question.id) + 1} / ${LEGACY_ORDER.length}`;
+    elements.roundLabel.textContent = isMockMode()
+      ? `${state.mock.position + 1} / ${mockQuestionIds().length}`
+      : curriculumIndex >= 0
+        ? `${curriculumIndex + 1} / ${CURRICULUM_ORDER.length}`
+        : `旧業法 ${LEGACY_ORDER.indexOf(question.id) + 1} / ${LEGACY_ORDER.length}`;
     elements.tagBadge.textContent = question.format ? `${question.tag}・${question.format}` : question.tag;
+    elements.markButton.hidden = isMockMode();
     elements.markButton.classList.toggle("is-marked", Boolean(state.marked[question.id]));
     elements.markButton.textContent = state.marked[question.id] ? "復習中" : "要復習";
     elements.questionText.textContent = question.text;
@@ -1757,7 +1942,7 @@
   }
 
   function shouldCutCheck(id) {
-    if (isFirstPassMode()) {
+    if (isFirstPassMode() || isMockMode()) {
       return false;
     }
     const stats = statsFor(id);
@@ -1905,8 +2090,12 @@
       }
       button.dataset.index = String(index);
       if (answered) {
-        if (index === question.answer) button.classList.add("is-correct");
-        if (index === answered.selected && index !== question.answer) button.classList.add("is-wrong");
+        if (answered.mock) {
+          if (index === answered.selected) button.classList.add("is-mock-selected");
+        } else {
+          if (index === question.answer) button.classList.add("is-correct");
+          if (index === answered.selected && index !== question.answer) button.classList.add("is-wrong");
+        }
       }
 
       const number = document.createElement("span");
@@ -1931,6 +2120,22 @@
     if (!answered) {
       return;
     }
+    const answerGrid = elements.feedbackBox.querySelector(".answer-grid");
+    if (answered.mock) {
+      elements.feedbackBox
+        .querySelectorAll(".cut-list, .verdict-board, .mistake-capture, .memory-rule, .confidence-check, .adaptive-note")
+        .forEach((node) => node.remove());
+      if (answerGrid) answerGrid.hidden = true;
+      elements.feedbackTitle.textContent = "解答を記録しました";
+      elements.correctAnswer.textContent = "";
+      elements.trapText.textContent = "";
+      elements.bookRef.textContent = "";
+      elements.explainText.textContent =
+        "正誤・正解肢・解説は50問終了後にまとめて表示します。途中で答え合わせはしません。";
+      elements.nextButton.textContent = nextActionLabel();
+      return;
+    }
+    if (answerGrid) answerGrid.hidden = false;
     elements.feedbackTitle.textContent = answered.correct
       ? "撃破。4肢の判定を確認"
       : "反撃。誤りの肢を確認";
@@ -2351,6 +2556,16 @@
   }
 
   function renderStats() {
+    if (isMockMode()) {
+      elements.attemptCount.textContent = String(mockAnsweredCount());
+      elements.accuracyText.textContent = "採点後";
+      elements.streakText.textContent = mockTimeText();
+      elements.markedText.textContent = String(weakIds().length);
+      elements.chapterProgressText.textContent = `${state.mock.position + 1} / 50問`;
+      if (elements.studyTitle) elements.studyTitle.textContent = `宅建 ${mockFormShortLabel()}`;
+      if (elements.todayLabel) elements.todayLabel.textContent = "本試験50問・120分";
+      return;
+    }
     const attempts = Math.max(state.attempts, Number(state.centralProgress?.answers) || 0);
     const correct = Math.max(state.correct, Number(state.centralProgress?.correct) || 0);
     elements.attemptCount.textContent = String(attempts);
@@ -2369,6 +2584,42 @@
   function renderQuestPanel() {
     if (!elements.dailyQuestTitle) return;
     state.daily = normalizeDailyState(state.daily);
+    elements.questCard?.classList.toggle("is-mock", isMockMode());
+    elements.questCard?.classList.toggle("is-first-pass", isFirstPassMode());
+    [elements.mockAButton, elements.mockBButton].forEach((button) => {
+      if (!button) return;
+      button.disabled = false;
+      button.classList.remove("is-active");
+    });
+    if (isMockMode()) {
+      const form = currentMockForm();
+      const answered = mockAnsweredCount();
+      const remaining = Math.max(0, form.ids.length - answered);
+      if (elements.questLabel) elements.questLabel.textContent = "本試験模試";
+      elements.dailyQuestTitle.textContent = `${mockFormShortLabel(form)} ${state.mock.position + 1} / ${form.ids.length}`;
+      if (elements.dailyAnswerLabel) elements.dailyAnswerLabel.textContent = "解答";
+      if (elements.dailyCorrectLabel) elements.dailyCorrectLabel.textContent = "未回答";
+      if (elements.dailyWeakLabel) elements.dailyWeakLabel.textContent = "残り時間";
+      elements.dailyAnswerText.textContent = `${answered}問`;
+      elements.dailyCorrectText.textContent = `${remaining}問`;
+      elements.dailyWeakText.textContent = mockTimeText();
+      elements.dailyQuestFill.style.width = `${Math.round((answered / form.ids.length) * 100)}%`;
+      if (elements.dailyQuestSource) {
+        elements.dailyQuestSource.textContent = "50問・120分・正誤は終了後に採点";
+      }
+      if (elements.questRewardRail) elements.questRewardRail.hidden = true;
+      elements.dailyQuestButton.textContent = "模試を中断";
+      elements.dailyQuestButton.disabled = false;
+      elements.passQuestButton.disabled = true;
+      elements.weakQuestButton.disabled = true;
+      elements.sprintButton.disabled = true;
+      const activeButton = form.id === "form-a" ? elements.mockAButton : elements.mockBButton;
+      activeButton?.classList.add("is-active");
+      return;
+    }
+    elements.dailyQuestButton.disabled = false;
+    elements.passQuestButton.disabled = false;
+    elements.sprintButton.disabled = false;
     const target = state.daily.target || DAILY_TARGET;
     const fixedIds = dailyQuestIds();
     const fixedTarget = fixedIds.length || target;
@@ -2384,7 +2635,6 @@
     const progress = Math.min(100, Math.round((progressBase / progressTarget) * 100));
     const firstPassRemaining = remainingFirstPassCount();
     renderQuestRewards(fixedClear, fixedIds.length > 0);
-    elements.questCard?.classList.toggle("is-first-pass", isFirstPassMode());
     if (isFirstPassMode()) {
       const chapter = currentChapterContactSummary();
       const paceText = firstPassPaceText();
@@ -2446,7 +2696,7 @@
   }
 
   function isDailyQuestPaused() {
-    return !isFirstPassMode() && dailyQuestIsComplete() && state.dailyFinishedDate === todayKey();
+    return !isFirstPassMode() && !isMockMode() && dailyQuestIsComplete() && state.dailyFinishedDate === todayKey();
   }
 
   function renderDailyCompletionPanel() {
@@ -2541,7 +2791,7 @@
 
   function renderQuestRewards(done, hasFixedQuest) {
     if (!elements.questRewardRail || !elements.questRewardTrack || !elements.questRewardNext) return;
-    const hidden = isFirstPassMode() || !hasFixedQuest;
+    const hidden = isFirstPassMode() || isMockMode() || !hasFixedQuest;
     elements.questRewardRail.hidden = hidden;
     if (hidden) return;
 
@@ -2605,7 +2855,8 @@
 
     const targets = weakIds();
     elements.weakButton.textContent = `弱点 ${targets.length}`;
-    elements.weakButton.disabled = targets.length === 0;
+    elements.weakButton.disabled = isMockMode() || targets.length === 0;
+    elements.chapterSelect.disabled = isMockMode();
     if (elements.adaptiveButton) {
       elements.adaptiveButton.textContent = "固定ロード";
       elements.adaptiveButton.disabled = true;
@@ -2615,6 +2866,13 @@
 
   function renderAdaptiveCoach(question) {
     if (!elements.coachTitle || !elements.coachText) return;
+
+    if (isMockMode()) {
+      elements.coachTitle.textContent = `${mockFormShortLabel()}・安全圏目標${MOCK_SAFE_TARGET}点`;
+      elements.coachText.textContent =
+        "本試験と同じ50問を120分で解く。途中の正誤・解説は隠し、終了後に分野別得点と誤答をまとめて復習する。";
+      return;
+    }
 
     if (isFirstPassMode()) {
       const remaining = remainingFirstPassCount();
@@ -2649,6 +2907,7 @@
       const row = document.createElement("button");
       row.type = "button";
       row.className = "chapter-row";
+      row.disabled = isMockMode();
       row.classList.toggle("is-active", chapter.ids.includes(activeId));
       row.classList.toggle("is-done", (isFirstPassMode() ? contacted : solved) === chapter.ids.length);
       row.setAttribute("aria-label", `${chapter.label}を選択 ${isFirstPassMode() ? contacted : solved}/${chapter.ids.length}`);
@@ -2782,6 +3041,52 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function startMock(formId) {
+    const form = mockFormById(formId);
+    if (!form) return;
+    const activeAttempt = isMockMode() && !state.mock.finalized && mockAnsweredCount() > 0;
+    if (
+      activeAttempt &&
+      !window.confirm(`${mockFormShortLabel()}の途中結果を破棄して${form.label}を最初から開始する？`)
+    ) {
+      return;
+    }
+    state.runMode = RUN_MODE_MOCK;
+    state.mock = {
+      ...createMockState(form.id),
+      startedAt: new Date().toISOString()
+    };
+    state.index = ORDER.indexOf(form.ids[0]);
+    state.answered = null;
+    state.activeCutCheck = null;
+    state.dailyFinishedDate = "";
+    state.finished = false;
+    setFirstPassUrl(false);
+    saveState();
+    logStudyEvent("mock-start", {
+      formId: form.id,
+      questionCount: form.ids.length,
+      durationMinutes: MOCK_DURATION_MINUTES
+    });
+    render();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function leaveMockForDailyQuest() {
+    if (!isMockMode()) {
+      startDailyQuest();
+      return;
+    }
+    if (!window.confirm("この模試の途中結果を破棄して日課へ戻る？")) return;
+    state.runMode = "quest";
+    state.mock = createMockState();
+    state.answered = null;
+    state.activeCutCheck = null;
+    state.finished = false;
+    saveState();
+    startDailyQuest();
+  }
+
   function toggleSprint() {
     state.sprint = normalizeSprintState(state.sprint);
     if (sprintRemainingMs() > 0) {
@@ -2818,8 +3123,45 @@
     renderSprint();
   }
 
+  function tickMockTimer() {
+    if (!isMockMode() || state.mock.finalized) return;
+    if (elements.dailyWeakText) elements.dailyWeakText.textContent = mockTimeText();
+    if (elements.streakText) elements.streakText.textContent = mockTimeText();
+  }
+
+  function answerMock(index) {
+    const question = currentQuestion();
+    const ids = mockQuestionIds();
+    if (!ids.length || question.id !== ids[state.mock.position]) return;
+    const result = {
+      id: question.id,
+      selected: index,
+      correct: index === question.answer,
+      sectionId: question.sectionId || "",
+      tag: question.tag || ""
+    };
+    state.mock.results = [
+      ...state.mock.results.filter((item) => item.id !== question.id),
+      result
+    ];
+    state.answered = {
+      id: question.id,
+      selected: index,
+      correct: null,
+      mock: true,
+      at: new Date().toISOString()
+    };
+    state.activeCutCheck = null;
+    saveState();
+    render();
+  }
+
   function answer(index) {
     if (state.answered) {
+      return;
+    }
+    if (isMockMode()) {
+      answerMock(index);
       return;
     }
     const question = currentQuestion();
@@ -3220,6 +3562,14 @@
 
   function nextQuestion() {
     if (!state.answered || isAdvancing) return;
+    if (isMockMode()) {
+      setAdvanceBusy(true);
+      window.setTimeout(() => {
+        setAdvanceBusy(false);
+        advanceQuestion();
+      }, 120);
+      return;
+    }
     if (!state.answered.correct) {
       if (!mistakeRecorded()) {
         showMistakeCapture();
@@ -3310,6 +3660,21 @@
   }
 
   function advanceQuestion() {
+    if (isMockMode()) {
+      const ids = mockQuestionIds();
+      if (state.mock.position >= ids.length - 1) {
+        finishMock();
+        return;
+      }
+      state.mock.position += 1;
+      state.index = ORDER.indexOf(ids[state.mock.position]);
+      state.answered = null;
+      state.activeCutCheck = null;
+      saveState();
+      render();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      return;
+    }
     if (isFirstPassMode()) {
       const nextId = nextFirstPassId();
       if (nextId) {
@@ -3353,6 +3718,179 @@
     saveState();
     render();
     window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  function finishMock() {
+    const form = currentMockForm();
+    if (!form || state.mock.finalized || state.mock.results.length !== form.ids.length) return;
+    const finishedAt = new Date().toISOString();
+    const elapsedMs = mockElapsedMs();
+    const results = state.mock.results.map((result) => ({ ...result }));
+    const score = results.filter((result) => result.correct).length;
+
+    results.forEach((result) => {
+      const previous = state.questionStats[result.id] || { attempts: 0, correct: 0, wrong: 0 };
+      state.step = (state.step || 0) + 1;
+      state.questionStats[result.id] = {
+        ...previous,
+        attempts: (Number(previous.attempts) || 0) + 1,
+        correct: (Number(previous.correct) || 0) + (result.correct ? 1 : 0),
+        wrong: (Number(previous.wrong) || 0) + (result.correct ? 0 : 1),
+        lastStep: state.step,
+        lastAnsweredAt: finishedAt,
+        lastWrongStep: result.correct ? previous.lastWrongStep : state.step,
+        lastCorrectStep: result.correct ? state.step : previous.lastCorrectStep,
+        lastWrongAt: result.correct ? previous.lastWrongAt : finishedAt,
+        lastCorrectAt: result.correct ? finishedAt : previous.lastCorrectAt,
+        lastRunMode: RUN_MODE_MOCK,
+        lastMockFormId: form.id
+      };
+      if (!result.correct && !state.marked[result.id]) {
+        state.marked[result.id] = true;
+        state.autoMarked[result.id] = true;
+      }
+    });
+
+    state.attempts += results.length;
+    state.correct += score;
+    if (score > 0) state.adventureDays[todayKey()] = true;
+    const sectionScores = mockSectionScores(results);
+    state.mock = {
+      ...state.mock,
+      finishedAt,
+      elapsedMs,
+      finalized: true
+    };
+    state.mockHistory = [
+      ...(state.mockHistory || []),
+      {
+        formId: form.id,
+        completedAt: finishedAt,
+        score,
+        elapsedMs,
+        sectionScores
+      }
+    ].slice(-10);
+    state.answered = null;
+    state.activeCutCheck = null;
+    state.finished = true;
+    saveState();
+    logStudyEvent("mock-complete", {
+      formId: form.id,
+      score,
+      target: MOCK_SAFE_TARGET,
+      elapsedMs,
+      sectionScores,
+      wrongIds: results.filter((result) => !result.correct).map((result) => result.id)
+    });
+    showMockFinished();
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#039;");
+  }
+
+  function showMockFinished() {
+    const form = currentMockForm();
+    if (!form || !state.mock.finalized) return;
+    state.finished = true;
+    renderStats();
+    renderQuestPanel();
+    renderDailyCompletionPanel();
+    renderSprint();
+    if (elements.answerDock) {
+      elements.answerDock.hidden = true;
+      document.body.classList.remove("has-answer-dock");
+    }
+    const results = state.mock.results;
+    const score = results.filter((result) => result.correct).length;
+    const sectionScores = mockSectionScores(results);
+    const wrongResults = results.filter((result) => !result.correct);
+    const targetReached = score >= MOCK_SAFE_TARGET;
+    const otherFormId = form.id === "form-a" ? "form-b" : "form-a";
+    const sectionCards = (EXAM_BLUEPRINT?.sections || []).map((section) => {
+      const sectionScore = sectionScores[section.id];
+      return `
+        <div class="mock-section-card" data-section="${escapeHtml(section.id)}">
+          <span>${escapeHtml(section.label)}</span>
+          <strong>${sectionScore.correct} / ${sectionScore.total}</strong>
+        </div>`;
+    }).join("");
+    const wrongReview = wrongResults.length
+      ? wrongResults.map((result) => {
+          const question = QUESTIONS[result.id];
+          const position = form.ids.indexOf(result.id) + 1;
+          return `
+            <details class="mock-wrong-item">
+              <summary>問${position} ${escapeHtml(question.tag)}：選択${result.selected + 1} → 正解${question.answer + 1}</summary>
+              <p>${escapeHtml(question.text)}</p>
+              <dl>
+                <div><dt>あなたの解答</dt><dd>${result.selected + 1}. ${escapeHtml(question.choices[result.selected])}</dd></div>
+                <div><dt>正解</dt><dd>${question.answer + 1}. ${escapeHtml(question.choices[question.answer])}</dd></div>
+              </dl>
+              <p>${escapeHtml(question.explain)}</p>
+            </details>`;
+        }).join("")
+      : `<p class="mock-perfect">全50問正解。誤答レビューはありません。</p>`;
+
+    elements.quizCard.innerHTML = `
+      <div class="quiz-meta">
+        <strong>${escapeHtml(mockFormShortLabel(form))}</strong>
+        <span>模試完了</span>
+      </div>
+      <section class="mock-results" data-mock-result="${escapeHtml(form.id)}">
+        <div class="mock-score-hero ${targetReached ? "is-target" : "is-below"}">
+          <span>得点</span>
+          <strong>${score}<small> / 50</small></strong>
+          <p>${targetReached ? `安全圏目標${MOCK_SAFE_TARGET}点を達成` : `安全圏目標${MOCK_SAFE_TARGET}点まであと${MOCK_SAFE_TARGET - score}点`}</p>
+        </div>
+        <div class="mock-result-meta">
+          <span>所要時間 <strong>${formatElapsed(state.mock.elapsedMs)}</strong></span>
+          <span>誤答 <strong>${wrongResults.length}問</strong></span>
+          <span>弱点へ登録 <strong>${wrongResults.length}問</strong></span>
+        </div>
+        <h3>分野別得点</h3>
+        <div class="mock-section-grid">${sectionCards}</div>
+        <section class="mock-wrong-review">
+          <h3>誤答レビュー</h3>
+          <p>誤答は弱点リストへ登録済み。各問を開くと正解と解説を確認できます。</p>
+          ${wrongReview}
+        </section>
+        <div class="finish-actions mock-finish-actions">
+          <button id="mockRetryButton" class="next-button" type="button">同じフォームを再挑戦</button>
+          <button id="mockOtherButton" class="ghost-button" type="button">${otherFormId === "form-a" ? "フォームA" : "フォームB"}へ</button>
+          <button id="mockDailyButton" class="ghost-button" type="button">日課へ戻る</button>
+        </div>
+      </section>
+    `;
+    const reloadIntoMock = (targetFormId) => {
+      const targetForm = mockFormById(targetFormId);
+      state.runMode = RUN_MODE_MOCK;
+      state.mock = {
+        ...createMockState(targetForm.id),
+        startedAt: new Date().toISOString()
+      };
+      state.index = ORDER.indexOf(targetForm.ids[0]);
+      state.answered = null;
+      state.finished = false;
+      saveState();
+      window.location.reload();
+    };
+    $("#mockRetryButton")?.addEventListener("click", () => reloadIntoMock(form.id));
+    $("#mockOtherButton")?.addEventListener("click", () => reloadIntoMock(otherFormId));
+    $("#mockDailyButton")?.addEventListener("click", () => {
+      state.runMode = "quest";
+      state.finished = false;
+      state.answered = null;
+      setFirstPassUrl(false);
+      saveState();
+      window.location.reload();
+    });
   }
 
   function showFinished() {
@@ -3449,9 +3987,11 @@
     });
     elements.resetButton.addEventListener("click", resetAll);
     elements.markButton.addEventListener("click", toggleMarked);
-    elements.dailyQuestButton?.addEventListener("click", startDailyQuest);
+    elements.dailyQuestButton?.addEventListener("click", leaveMockForDailyQuest);
     elements.dailyContinueButton?.addEventListener("click", continueAfterDailyQuest);
     elements.passQuestButton?.addEventListener("click", startFirstPass);
+    elements.mockAButton?.addEventListener("click", () => startMock("form-a"));
+    elements.mockBButton?.addEventListener("click", () => startMock("form-b"));
     elements.weakQuestButton?.addEventListener("click", jumpToWeakPoint);
     elements.sprintButton?.addEventListener("click", toggleSprint);
     elements.codexBriefButton?.addEventListener("click", requestCodexBrief);
@@ -3494,18 +4034,20 @@
   consumeSaveTransferHash();
   window.setInterval(() => {
     tickSprint();
+    tickMockTimer();
     checkDayRollover();
   }, 1000);
-  if (state.finished) {
+  const hasMockResult = isMockMode() && state.mock.finalized;
+  if (state.finished && !hasMockResult) {
     state.finished = false;
     saveState();
   }
-  render();
+  renderCurrentView();
   void (async () => {
     await checkStudyServer();
     await syncCentralProgress();
     await loadTodayQuest();
     grantQuestCompletionIfEarned();
-    render();
+    renderCurrentView();
   })();
 })();
