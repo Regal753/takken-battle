@@ -24,6 +24,7 @@ for (const path of required) {
 const index = text("index.html");
 const app = text("app.js");
 const readme = text("README.md");
+const pagesWorkflow = text(".github/workflows/pages.yml");
 
 assert.match(index, /name="takken-runtime" content="public-static"/);
 assert.match(app, /const PUBLIC_STATIC_MODE/);
@@ -36,6 +37,8 @@ assert.match(index, /save-transfer\.js/);
 assert.match(readme, /市販教材本文・市販問題文・公式過去問本文は転載していません/);
 assert.match(readme, /localStorage/);
 assert.match(readme, /URLフラグメント/);
+assert.match(pagesWorkflow, /node Audit-TakkenSaveTransfer\.js/);
+assert.match(pagesWorkflow, /cp [^\n]*save-transfer\.js[^\n]*_site\//);
 
 const forbiddenNames = new Set([
   ".env",

@@ -25,12 +25,13 @@ jobs:
           node-version: "22"
       - run: node Audit-TakkenQuestionBank.js
       - run: node Audit-TakkenRewardSystem.js
+      - run: node Audit-TakkenSaveTransfer.js
       - run: node scripts/validate-public.mjs
       - name: Assemble static site
         shell: bash
         run: |
           mkdir _site
-          cp index.html styles.css app.js reward-system.js question-bank.js question-balance.js _site/
+          cp index.html styles.css app.js save-transfer.js reward-system.js question-bank.js question-balance.js _site/
           cp -R assets _site/assets
           touch _site/.nojekyll
       - uses: actions/configure-pages@v6
