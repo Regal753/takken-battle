@@ -51,6 +51,20 @@ assert.match(index, /id="saveImportInput"/);
 assert.match(index, /id="mockAButton"/);
 assert.match(index, /id="mockBButton"/);
 assert.match(index, /save-transfer\.js/);
+assert.doesNotMatch(index, /href="\.\/study-state\//);
+
+const localReferencePattern = /\b(?:href|src)="([^"]+)"/g;
+for (const [, reference] of index.matchAll(localReferencePattern)) {
+  if (!reference || reference.startsWith("#") || /^[a-z]+:/i.test(reference)) {
+    continue;
+  }
+  const localPath = reference.split(/[?#]/, 1)[0];
+  assert.ok(
+    existsSync(new URL(localPath, root)),
+    `missing local href/src target: ${reference}`,
+  );
+}
+
 assert.match(readme, /市販教材本文・市販問題文・公式過去問本文は転載していません/);
 assert.match(readme, /localStorage/);
 assert.match(readme, /URLフラグメント/);
