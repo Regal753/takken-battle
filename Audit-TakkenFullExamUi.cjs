@@ -325,6 +325,132 @@ async function main() {
       throw new Error(`Legacy save migration failed: ${JSON.stringify(migration)}`);
     }
 
+    const handoffContext = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      reducedMotion: "reduce",
+      locale: "ja-JP",
+      timezoneId: "Asia/Tokyo"
+    });
+    const handoffPage = await handoffContext.newPage();
+    const handoffNamespace = `handoff${Date.now().toString(36)}`;
+    const handoffStorageId = `takken-battle-study-clean-v2-hard-review-${handoffNamespace}`;
+    await handoffPage.addInitScript(({ storageId }) => {
+      localStorage.setItem(storageId, JSON.stringify({
+        index: 0,
+        attempts: 65,
+        correct: 50,
+        totalXp: 4631,
+        progressionVersion: 4,
+        examContentVersion: 1,
+        crystals: 1160,
+        centralProgress: { answers: 162, correct: 120, wrong: 42 },
+        marked: { q127: true },
+        questionStats: {
+          q127: { attempts: 3, correct: 1, wrong: 2, lastStep: 65 }
+        }
+      }));
+      Object.defineProperty(navigator, "share", {
+        configurable: true,
+        value: async (payload) => {
+          window.__takkenSharedPayload = payload;
+        }
+      });
+    }, { storageId: handoffStorageId });
+    const handoffSenderUrl = new URL(baseUrl);
+    handoffSenderUrl.searchParams.set("review", handoffNamespace);
+    await handoffPage.goto(handoffSenderUrl.toString(), {
+      waitUntil: "domcontentloaded",
+      timeout: 15000
+    });
+    await handoffPage.locator("#saveShareButton").click();
+    await handoffPage.waitForFunction(() => Boolean(window.__takkenSharedPayload?.url));
+    const sharedPayload = await handoffPage.evaluate(() => window.__takkenSharedPayload);
+    if (
+      !sharedPayload.url.includes("#save=") ||
+      sharedPayload.url.includes('"totalXp"') ||
+      !sharedPayload.title.includes("セーブ引継ぎ")
+    ) {
+      throw new Error(`Manual handoff payload invalid: ${JSON.stringify(sharedPayload)}`);
+    }
+    const senderStatus = ((await handoffPage.locator("#saveTransferStatus").textContent()) || "").trim();
+    if (!senderStatus.includes("共有しました")) {
+      throw new Error(`Manual handoff sender status missing: ${senderStatus}`);
+    }
+    await handoffPage.evaluate(() => {
+      Object.defineProperty(navigator, "share", {
+        configurable: true,
+        value: undefined
+      });
+      Object.defineProperty(navigator, "clipboard", {
+        configurable: true,
+        value: {
+          writeText: async (value) => {
+            window.__takkenCopiedUrl = value;
+          }
+        }
+      });
+    });
+    await handoffPage.locator("#saveShareButton").click();
+    await handoffPage.waitForFunction(() => Boolean(window.__takkenCopiedUrl));
+    const copiedUrl = await handoffPage.evaluate(() => window.__takkenCopiedUrl);
+    const copiedStatus = ((await handoffPage.locator("#saveTransferStatus").textContent()) || "").trim();
+    if (!copiedUrl.includes("#save=") || !copiedStatus.includes("コピーしました")) {
+      throw new Error(`Manual handoff copy fallback failed: ${JSON.stringify({
+        copiedUrl: copiedUrl.slice(0, 100),
+        copiedStatus
+      })}`);
+    }
+
+    const receiverContext = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      reducedMotion: "reduce",
+      locale: "ja-JP",
+      timezoneId: "Asia/Tokyo"
+    });
+    const receiverPage = await receiverContext.newPage();
+    const receiverRequests = [];
+    receiverPage.on("request", (request) => receiverRequests.push(request.url()));
+    receiverPage.on("dialog", (dialog) => dialog.accept());
+    await receiverPage.goto(sharedPayload.url, {
+      waitUntil: "domcontentloaded",
+      timeout: 15000
+    });
+    await receiverPage.waitForFunction(() =>
+      (document.querySelector("#saveTransferStatus")?.textContent || "").includes("引継ぎ完了")
+    );
+    const handoff = await receiverPage.evaluate((storageId) => {
+      const saved = JSON.parse(localStorage.getItem(storageId) || "{}");
+      return {
+        hash: window.location.hash,
+        attempts: saved.attempts,
+        totalXp: saved.totalXp,
+        crystals: saved.crystals,
+        centralAnswers: saved.centralProgress?.answers,
+        legacyWeakKept: Boolean(saved.marked?.q127),
+        legacyStatsKept: Number(saved.questionStats?.q127?.attempts) || 0,
+        status: document.querySelector("#saveTransferStatus")?.textContent?.trim() || "",
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth
+      };
+    }, handoffStorageId);
+    await receiverContext.close();
+    await handoffContext.close();
+    if (
+      handoff.hash ||
+      handoff.attempts !== 65 ||
+      handoff.totalXp !== 4631 ||
+      handoff.crystals !== 1160 ||
+      handoff.centralAnswers !== 162 ||
+      !handoff.legacyWeakKept ||
+      handoff.legacyStatsKept !== 3 ||
+      handoff.overflow > 1 ||
+      receiverRequests.some((urlValue) => urlValue.includes("save="))
+    ) {
+      throw new Error(`Manual phone handoff failed: ${JSON.stringify({
+        handoff,
+        requestsWithSave: receiverRequests.filter((urlValue) => urlValue.includes("save="))
+      })}`);
+    }
+
     process.stdout.write(`${JSON.stringify({
       ok: true,
       total: blueprintAudit.total,
@@ -336,6 +462,7 @@ async function main() {
       mockResult,
       formBStart,
       migration,
+      handoff,
       desktopOverflow,
       mobileOverflow,
       mockMobileOverflow,

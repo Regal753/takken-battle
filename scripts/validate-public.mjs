@@ -46,14 +46,18 @@ assert.doesNotMatch(
 );
 assert.match(app, /この端末に保存/);
 assert.match(app, /consumeSaveTransferHash/);
+assert.match(app, /shareSaveTransfer/);
 assert.match(index, /id="saveExportButton"/);
+assert.match(index, /id="saveShareButton"/);
 assert.match(index, /id="saveImportInput"/);
+assert.match(index, /スマホへ渡す/);
 assert.match(index, /id="mockAButton"/);
 assert.match(index, /id="mockBButton"/);
 assert.match(index, /save-transfer\.js/);
 assert.match(readme, /市販教材本文・市販問題文・公式過去問本文は転載していません/);
 assert.match(readme, /localStorage/);
 assert.match(readme, /URLフラグメント/);
+assert.match(readme, /スマホへ渡す/);
 assert.match(pagesWorkflow, /node Audit-TakkenSaveTransfer\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenFullExam\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);

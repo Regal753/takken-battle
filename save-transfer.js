@@ -4,6 +4,7 @@
   const SAVE_FORMAT = "takken-battle-save-v1";
   const PROGRESS_FORMAT = "takken-battle-progress-v1";
   const MAX_PACKAGE_CHARS = 750_000;
+  const MAX_TRANSFER_URL_CHARS = 180_000;
   const MAX_COUNTER = 1_000_000;
 
   function plainObject(value) {
@@ -278,10 +279,27 @@
     return JSON.parse(json);
   }
 
+  function createTransferUrl(input, baseUrl) {
+    if (!plainObject(input) || input.format !== SAVE_FORMAT) {
+      throw new Error("本人用引継ぎリンクには端末セーブ形式が必要です。");
+    }
+    const url = new URL(String(baseUrl || ""));
+    if (!["https:", "http:"].includes(url.protocol)) {
+      throw new Error("引継ぎリンクの公開URLが正しくありません。");
+    }
+    url.hash = new URLSearchParams({ save: encodePackage(input) }).toString();
+    const output = url.toString();
+    if (output.length > MAX_TRANSFER_URL_CHARS) {
+      throw new Error("セーブが大きいためリンク化できません。JSONバックアップを使ってください。");
+    }
+    return output;
+  }
+
   const api = {
     SAVE_FORMAT,
     PROGRESS_FORMAT,
     createSavePackage,
+    createTransferUrl,
     decodePackage,
     encodePackage,
     stateFromProgressPackage,
