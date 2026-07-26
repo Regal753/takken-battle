@@ -1,0 +1,22 @@
+name: Pages smoke and internal-link check
+
+on:
+  workflow_run:
+    workflows: ["Deploy to GitHub Pages"]
+    types: [completed]
+    branches: [main]
+  schedule:
+    - cron: "57 18 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  smoke:
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    uses: Regal753/.github/.github/workflows/reusable-pages-smoke.yml@b256fcb7fc8de83327fca0f0b037d8af13bb587c
+    with:
+      site_url: https://regal753.github.io/takken-battle/
+      crawl_same_origin: true
+      max_links: 30
