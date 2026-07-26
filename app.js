@@ -291,6 +291,7 @@
     sprintTimer: $("#sprintTimer"),
     sprintStatus: $("#sprintStatus"),
     saveExportButton: $("#saveExportButton"),
+    saveShareButton: $("#saveShareButton"),
     saveImportInput: $("#saveImportInput"),
     saveTransferStatus: $("#saveTransferStatus")
   };
@@ -727,6 +728,54 @@
     }
   }
 
+  async function copyTransferUrl(value) {
+    if (navigator.clipboard?.writeText) {
+      try {
+        await navigator.clipboard.writeText(value);
+        return;
+      } catch {
+        // Permission may be unavailable on older or non-secure browsers.
+      }
+    }
+    const input = document.createElement("textarea");
+    input.value = value;
+    input.setAttribute("readonly", "");
+    input.style.position = "fixed";
+    input.style.opacity = "0";
+    document.body.append(input);
+    input.select();
+    const copied = document.execCommand("copy");
+    input.remove();
+    if (!copied) throw new Error("リンクをコピーできませんでした。");
+  }
+
+  async function shareSaveTransfer() {
+    try {
+      const savePackage = SAVE_TRANSFER.createSavePackage(state);
+      const transferUrl = SAVE_TRANSFER.createTransferUrl(savePackage, window.location.href);
+      if (typeof navigator.share === "function") {
+        try {
+          await navigator.share({
+            title: "宅建バトル セーブ引継ぎ",
+            text: "本人用の宅建バトル引継ぎリンクです。次の端末で開いてください。",
+            url: transferUrl
+          });
+          setSaveTransferStatus("本人用引継ぎリンクを共有しました。");
+          return;
+        } catch (error) {
+          if (error?.name === "AbortError") {
+            setSaveTransferStatus("共有をキャンセルしました。");
+            return;
+          }
+        }
+      }
+      await copyTransferUrl(transferUrl);
+      setSaveTransferStatus("本人用引継ぎリンクをコピーしました。次の端末で開いてください。");
+    } catch (error) {
+      setSaveTransferStatus(error?.message || "引継ぎリンクを作れませんでした。", true);
+    }
+  }
+
   async function importSaveFile(event) {
     const input = event.currentTarget;
     const file = input.files?.[0];
@@ -747,7 +796,7 @@
     if (!token) return;
     window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
     try {
-      importSavePackage(SAVE_TRANSFER.decodePackage(token), "旧ローカル版");
+      importSavePackage(SAVE_TRANSFER.decodePackage(token), "本人用引継ぎリンク");
     } catch (error) {
       setSaveTransferStatus(error?.message || "移行リンクを読み込めませんでした。", true);
     }
@@ -3997,6 +4046,7 @@
     elements.codexBriefButton?.addEventListener("click", requestCodexBrief);
     elements.armoryButton?.addEventListener("click", forgeNextArmoryRank);
     elements.saveExportButton?.addEventListener("click", downloadSaveBackup);
+    elements.saveShareButton?.addEventListener("click", shareSaveTransfer);
     elements.saveImportInput?.addEventListener("change", importSaveFile);
     elements.chapterSelect?.addEventListener("change", (event) => {
       selectChapter(Number(event.target.value));

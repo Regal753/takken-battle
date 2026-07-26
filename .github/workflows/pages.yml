@@ -55,4 +55,4 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@v5
       - name: Verify deployed page
-        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260726-mock-v2"
+        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260726-handoff-v1"

@@ -4044,6 +4044,18 @@ body {
   color: #ffb3a9;
 }
 
+.save-transfer-help {
+  flex: 1 0 100%;
+  max-width: 760px;
+  color: #aebfb6;
+  line-height: 1.45;
+}
+
+.save-share-button {
+  border-color: rgba(227, 189, 88, 0.66);
+  background: rgba(227, 189, 88, 0.1);
+}
+
 .app-footer {
   display: flex;
   justify-content: space-between;
