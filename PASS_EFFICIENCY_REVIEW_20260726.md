@@ -79,6 +79,8 @@
 - PC 1440pxとスマートフォン390pxで横スクロールがない。
 - 既存セーブを壊さず、古い正答履歴から存在しない複数日正答を捏造しない。
 
-## 公開境界
+## 公開結果
 
-この再監査版は既存の公開版を途中で変更せず、別ブランチとPull Requestで検証する。公開反映は、現在の演習が終わった後に別途判断する。
+本人の演習中は公開版を変更せず、修正版を別ブランチへ固定した。その後、本人の明示指示を受けてPR [#11](https://github.com/Regal753/takken-battle/pull/11)を全CI、Dependency review、CodeQL成功後にsquash mergeした。
+
+Pages検証が旧キャッシュ識別子だけでも成功できる穴を公開前の最終監査で検出したため、PR [#12](https://github.com/Regal753/takken-battle/pull/12)で、新しい`app.js`と`styles.css`を実際に取得し、学習段階、定着判定、対応CSSの内容まで照合するよう修正した。main `2aa1682`のPages deploy、Pages smoke、main CodeQL、[公開URL](https://regal753.github.io/takken-battle/)のPC 1440px／スマートフォン390px全操作、セーブ引継ぎ、横溢れ0、console error 0、page error 0を確認した。
