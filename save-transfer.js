@@ -50,6 +50,9 @@
         attempts: Math.max(integer(raw.attempts), correct + wrong),
         correct,
         wrong,
+        correctDayKeys: [...new Set((Array.isArray(raw.correctDayKeys) ? raw.correctDayKeys : [])
+          .map((day) => text(day, 10))
+          .filter((day) => /^\d{4}-\d{2}-\d{2}$/.test(day)))].slice(-8),
         lastAnsweredAt: text(raw.lastAnsweredAt, 64),
         lastCorrectAt: text(raw.lastCorrectAt, 64),
         lastWrongAt: text(raw.lastWrongAt, 64),
@@ -182,6 +185,7 @@
         lastAnsweredAt: stats.lastAnsweredAt,
         lastCorrectAt: stats.lastCorrectAt,
         lastWrongAt: stats.lastWrongAt,
+        correctDayKeys: stats.correctDayKeys,
         lastSelected: stats.lastSelected,
         centralAttempts: stats.attempts,
         centralCorrect: stats.correct,

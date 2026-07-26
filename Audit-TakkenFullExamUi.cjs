@@ -50,19 +50,33 @@ async function main() {
       const questions = window.TAKKEN_EXAM_QUESTIONS;
       return {
         total: blueprint.curriculumOrder.length,
-        firstBlock: blueprint.dailyBlocks[0],
+        firstBusinessBlock: blueprint.curriculumOrder
+          .filter((id) => questions[id]?.sectionId === "business")
+          .slice(0, 10),
         missing: blueprint.curriculumOrder.filter((id) => !questions[id]),
         sourceLabel: document.querySelector("#dailyQuestSource")?.textContent || "",
-        coachTitle: document.querySelector("#coachTitle")?.textContent || ""
+        coachTitle: document.querySelector("#coachTitle")?.textContent || "",
+        coachText: document.querySelector("#coachText")?.textContent || "",
+        scopeValue: document.querySelector("#studyScopeSelect")?.value || "",
+        mockDisabled: Boolean(document.querySelector("#mockAButton")?.disabled),
+        mockTitle: document.querySelector("#mockAButton")?.title || "",
+        roundLabel: document.querySelector("#roundLabel")?.textContent?.trim() || ""
       };
     });
     if (blueprintAudit.total !== 100 || blueprintAudit.missing.length) {
       throw new Error(`Curriculum not ready: ${JSON.stringify(blueprintAudit)}`);
     }
-    if (!blueprintAudit.sourceLabel.includes("合格ロード")) {
+    if (!blueprintAudit.sourceLabel.includes("宅建業法") || !blueprintAudit.sourceLabel.includes("新規＋復習")) {
       throw new Error(`Random-style source label remained: ${blueprintAudit.sourceLabel}`);
     }
-    if (!blueprintAudit.coachTitle.includes("第1段階・全分野一周")) {
+    if (
+      !blueprintAudit.coachTitle.includes("宅建業法") ||
+      !blueprintAudit.coachText.includes("未学習分野は出さない") ||
+      blueprintAudit.scopeValue !== "business" ||
+      !blueprintAudit.mockDisabled ||
+      !blueprintAudit.mockTitle.includes("全100問接触後") ||
+      blueprintAudit.roundLabel !== "今日 1 / 10"
+    ) {
       throw new Error(`Coverage coach missing: ${blueprintAudit.coachTitle}`);
     }
 
@@ -99,6 +113,35 @@ async function main() {
     ) {
       throw new Error(`Theme hierarchy details mismatch: ${JSON.stringify(themeHierarchy)}`);
     }
+    await capture(page, "business-scope-desktop.png");
+    await page.setViewportSize({ width: 390, height: 844 });
+    await capture(page, "business-scope-mobile.png");
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.locator("#studyScopeSelect").selectOption("law-other");
+    await page.waitForFunction(() =>
+      (document.querySelector("#dailyQuestSource")?.textContent || "").includes("法令・税その他")
+    );
+    const scopeSwitchAudit = await page.evaluate((id) => {
+      const saved = JSON.parse(localStorage.getItem(id) || "{}");
+      return {
+        scope: saved.studyScope,
+        planScope: saved.daily?.planScope,
+        sections: [...new Set((saved.daily?.planIds || [])
+          .map((questionId) => window.TAKKEN_EXAM_QUESTIONS?.[questionId]?.sectionId))]
+      };
+    }, storageId);
+    if (
+      scopeSwitchAudit.scope !== "law-other" ||
+      scopeSwitchAudit.planScope !== "law-other" ||
+      scopeSwitchAudit.sections.includes("rights") ||
+      scopeSwitchAudit.sections.includes("business")
+    ) {
+      throw new Error(`Study scope switch failed: ${JSON.stringify(scopeSwitchAudit)}`);
+    }
+    await page.locator("#studyScopeSelect").selectOption("business");
+    await page.waitForFunction(() =>
+      (document.querySelector("#dailyQuestSource")?.textContent || "").includes("宅建業法")
+    );
 
     const visitedIds = [];
     const visitedSections = [];
@@ -143,13 +186,11 @@ async function main() {
         );
       }
     }
-    if (JSON.stringify(visitedIds) !== JSON.stringify(blueprintAudit.firstBlock)) {
+    if (JSON.stringify(visitedIds) !== JSON.stringify(blueprintAudit.firstBusinessBlock)) {
       throw new Error(`Daily fixed order drift: ${visitedIds.join(",")}`);
     }
-    for (const sectionId of ["rights", "business", "restrictions", "tax"]) {
-      if (!visitedSections.includes(sectionId)) {
-        throw new Error(`First daily block lacks ${sectionId}: ${visitedSections.join(",")}`);
-      }
+    if (new Set(visitedSections).size !== 1 || visitedSections[0] !== "business") {
+      throw new Error(`Unstudied section leaked into business scope: ${visitedSections.join(",")}`);
     }
     const allowedSourceHosts = new Set([
       "elaws.e-gov.go.jp",
@@ -169,6 +210,13 @@ async function main() {
     }
     await page.locator("#dockNextButton").click();
     await page.locator("#dailyCompletePanel").waitFor({ state: "visible" });
+    const sameDayRetention = await page.evaluate(() => ({
+      progress: document.querySelector("#chapterProgressText")?.textContent || "",
+      coach: document.querySelector("#coachTitle")?.textContent || ""
+    }));
+    if (!sameDayRetention.progress.includes("定着0/100")) {
+      throw new Error(`One-day answers counted as retained: ${JSON.stringify(sameDayRetention)}`);
+    }
 
     const desktopOverflow = await page.evaluate(() =>
       Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
@@ -183,6 +231,28 @@ async function main() {
     }
 
     await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.evaluate((id) => {
+      const saved = JSON.parse(localStorage.getItem(id) || "{}");
+      const now = new Date().toISOString();
+      saved.studyScope = "all";
+      saved.dailyFinishedDate = "";
+      saved.daily = { ...(saved.daily || {}), planVersion: 0, planIds: [] };
+      saved.questionStats = saved.questionStats || {};
+      for (const questionId of window.TAKKEN_EXAM_BLUEPRINT.curriculumOrder) {
+        if (saved.questionStats[questionId]?.attempts) continue;
+        saved.questionStats[questionId] = {
+          attempts: 1,
+          correct: 0,
+          wrong: 1,
+          lastStep: 1,
+          lastAnsweredAt: now,
+          lastWrongAt: now
+        };
+      }
+      localStorage.setItem(id, JSON.stringify(saved));
+    }, storageId);
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => !document.querySelector("#mockAButton")?.disabled);
     await page.locator("#mockAButton").click();
     await page.waitForFunction(() => {
       const text = document.querySelector("#questionText")?.textContent || "";
@@ -423,7 +493,10 @@ async function main() {
           correct: weakIds.has(id) ? 0 : 1,
           wrong: weakIds.has(id) ? 1 : 0,
           lastStep: index + 1,
-          lastAnsweredAt: "2026-06-01T00:00:00.000Z"
+          lastAnsweredAt: "2026-06-01T00:00:00.000Z",
+          lastCorrectAt: weakIds.has(id) ? "" : "2026-06-01T00:00:00.000Z",
+          lastWrongAt: weakIds.has(id) ? "2026-06-01T00:00:00.000Z" : "",
+          correctDayKeys: weakIds.has(id) ? [] : ["2026-05-31", "2026-06-01"]
         }
       ]));
       localStorage.setItem(storageId, JSON.stringify({
@@ -433,6 +506,7 @@ async function main() {
         totalXp: 6000,
         progressionVersion: 4,
         examContentVersion: 1,
+        studyScope: "all",
         marked: Object.fromEntries([...weakIds].map((id) => [id, true])),
         questionStats
       }));
@@ -445,7 +519,7 @@ async function main() {
       timeout: 15000
     });
     await masteryPage.waitForFunction(() =>
-      (document.querySelector("#dailyQuestSource")?.textContent || "").includes("定着ロード")
+      (document.querySelector("#dailyQuestSource")?.textContent || "").includes("全分野・定着")
     );
     const readMastery = () => masteryPage.evaluate((storageId) => {
       const saved = JSON.parse(localStorage.getItem(storageId) || "{}");
@@ -485,11 +559,11 @@ async function main() {
       masteryAudit.planIds[4] !== "t001" ||
       JSON.stringify(masteryAudit.groupCounts) !== JSON.stringify(expectedMasteryGroups) ||
       masteryAudit.planMode !== "mastery" ||
-      !masteryAudit.source.includes("定着ロード") ||
-      !masteryAudit.coachTitle.includes("第2段階・定着ロード 弱点4問") ||
-      !masteryAudit.coachText.includes("業法4・権利3・法令2・税その他1") ||
-      masteryAudit.questLabel.trim() !== "定着クエスト" ||
-      masteryAudit.passLabel.trim() !== "一周完了" ||
+      !masteryAudit.source.includes("全分野・定着") ||
+      !masteryAudit.coachTitle.includes("全分野 8割定着・弱点4問") ||
+      !masteryAudit.coachText.includes("全100問接触後") ||
+      masteryAudit.questLabel.trim() !== "全分野・定着" ||
+      masteryAudit.passLabel.trim() !== "範囲接触済み" ||
       masteryAudit.overflow
     ) {
       throw new Error(`Mastery quest mismatch: ${JSON.stringify(masteryAudit)}`);
@@ -497,7 +571,7 @@ async function main() {
     await capture(masteryPage, "mastery-quest-mobile.png");
     await masteryPage.reload({ waitUntil: "domcontentloaded" });
     await masteryPage.waitForFunction(() =>
-      (document.querySelector("#dailyQuestSource")?.textContent || "").includes("定着ロード")
+      (document.querySelector("#dailyQuestSource")?.textContent || "").includes("全分野・定着")
     );
     const masteryReload = await readMastery();
     await masteryContext.close();
@@ -507,6 +581,71 @@ async function main() {
       masteryErrors.length
     ) {
       throw new Error(`Mastery quest reload drift: ${JSON.stringify({ masteryAudit, masteryReload, masteryErrors })}`);
+    }
+
+    const reviewMixContext = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      reducedMotion: "reduce",
+      locale: "ja-JP",
+      timezoneId: "Asia/Tokyo"
+    });
+    const reviewMixPage = await reviewMixContext.newPage();
+    const reviewMixNamespace = `reviewmix${Date.now().toString(36)}`;
+    const reviewMixStorageId = `takken-battle-study-clean-v2-hard-review-${reviewMixNamespace}`;
+    await reviewMixPage.addInitScript(({ storageId }) => {
+      const reviewedIds = ["b001", "b002", "b003", "b004"];
+      const questionStats = Object.fromEntries(reviewedIds.map((id, index) => [
+        id,
+        {
+          attempts: 1,
+          correct: 0,
+          wrong: 1,
+          lastStep: index + 1,
+          lastAnsweredAt: "2026-06-01T00:00:00.000Z",
+          lastWrongAt: "2026-06-01T00:00:00.000Z"
+        }
+      ]));
+      localStorage.setItem(storageId, JSON.stringify({
+        studyScope: "business",
+        attempts: 4,
+        correct: 0,
+        marked: Object.fromEntries(reviewedIds.map((id) => [id, true])),
+        autoMarked: Object.fromEntries(reviewedIds.map((id) => [id, true])),
+        questionStats
+      }));
+    }, { storageId: reviewMixStorageId });
+    const reviewMixUrl = new URL(baseUrl);
+    reviewMixUrl.searchParams.set("review", reviewMixNamespace);
+    reviewMixUrl.searchParams.set("today", "1");
+    await reviewMixPage.goto(reviewMixUrl.toString(), {
+      waitUntil: "domcontentloaded",
+      timeout: 15000
+    });
+    await reviewMixPage.waitForFunction(() =>
+      (document.querySelector("#dailyQuestSource")?.textContent || "").includes("宅建業法・新規＋復習")
+    );
+    const reviewMixAudit = await reviewMixPage.evaluate((storageId) => {
+      const saved = JSON.parse(localStorage.getItem(storageId) || "{}");
+      const planIds = saved.daily?.planIds || [];
+      const reviewedIds = new Set(["b001", "b002", "b003", "b004"]);
+      return {
+        planIds,
+        reviewCount: planIds.filter((id) => reviewedIds.has(id)).length,
+        newCount: planIds.filter((id) => !reviewedIds.has(id)).length,
+        sections: [...new Set(planIds.map((id) => window.TAKKEN_EXAM_QUESTIONS?.[id]?.sectionId))],
+        overflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
+      };
+    }, reviewMixStorageId);
+    await reviewMixContext.close();
+    if (
+      reviewMixAudit.planIds.length !== 10 ||
+      new Set(reviewMixAudit.planIds).size !== 10 ||
+      reviewMixAudit.reviewCount !== 4 ||
+      reviewMixAudit.newCount !== 6 ||
+      JSON.stringify(reviewMixAudit.sections) !== JSON.stringify(["business"]) ||
+      reviewMixAudit.overflow
+    ) {
+      throw new Error(`New/review mix mismatch: ${JSON.stringify(reviewMixAudit)}`);
     }
 
     if (consoleErrors.length || pageErrors.length) {
@@ -556,8 +695,8 @@ async function main() {
     }, migrationStorageId);
     await migrationContext.close();
     if (
-      migration.currentId !== "r001" ||
-      migration.index !== 0 ||
+      migration.currentId !== "b001" ||
+      migration.index !== 1 ||
       migration.examContentVersion !== 1 ||
       migration.attempts !== 65 ||
       migration.totalXp !== 5000 ||
@@ -699,6 +838,7 @@ async function main() {
       ok: true,
       total: blueprintAudit.total,
       themeHierarchy,
+      scopeSwitchAudit,
       visitedIds,
       visitedSections: [...new Set(visitedSections)],
       visitedSourceHosts: [...new Set(visitedSourceHosts)],
@@ -709,6 +849,7 @@ async function main() {
       formBStart,
       masteryAudit,
       masteryReloadStable: JSON.stringify(masteryReload.planIds) === JSON.stringify(masteryAudit.planIds),
+      reviewMixAudit,
       migration,
       handoff,
       desktopOverflow,

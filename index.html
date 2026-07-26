@@ -13,7 +13,7 @@
     <link rel="canonical" href="https://regal753.github.io/takken-battle/">
     <title>宅建バトル Study Quest</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./styles.css?v=20260726-study-groups-v4">
+    <link rel="stylesheet" href="./styles.css?v=20260726-pass-efficiency-v5">
   </head>
   <body>
     <div class="app-root">
@@ -48,7 +48,11 @@
 
       <nav id="themeBar" class="theme-toolbar" aria-label="テーマ操作">
         <select id="chapterSelect" class="chapter-select" aria-label="テーマを選択"></select>
-        <button id="adaptiveButton" class="quick-button adaptive-button" type="button" disabled>固定ロード</button>
+        <select id="studyScopeSelect" class="study-scope-select" aria-label="現在の学習段階">
+          <option value="business">① 宅建業法を固める</option>
+          <option value="law-other">② 法令・税その他へ進む</option>
+          <option value="all">③ 全分野を混ぜる</option>
+        </select>
         <button id="weakButton" class="quick-button" type="button" disabled>弱点 0</button>
       </nav>
 
@@ -329,8 +333,8 @@
     <script src="./question-bank.js?v=20260723-ops-v15"></script>
     <script src="./question-balance.js?v=20260711-feedback-v8"></script>
     <script src="./reward-system.js?v=20260713-confidence-v14"></script>
-    <script src="./save-transfer.js?v=20260726-handoff-v2"></script>
-    <script src="./app.js?v=20260726-study-groups-v4"></script>
+    <script src="./save-transfer.js?v=20260726-pass-efficiency-v3"></script>
+    <script src="./app.js?v=20260726-pass-efficiency-v5"></script>
     <noscript>宅建バトルを利用するにはJavaScriptを有効にしてください。</noscript>
   </body>
 </html>

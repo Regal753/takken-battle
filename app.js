@@ -32,6 +32,35 @@
   };
   const MOCK_SAFE_TARGET = STUDY_TARGETS.safe;
   const EXAM_CONTENT_VERSION = EXAM_BLUEPRINT?.version || 0;
+  const STUDY_PLAN_VERSION = 2;
+  const DEFAULT_STUDY_SCOPE = "business";
+  const STUDY_SCOPES = [
+    {
+      id: "business",
+      label: "① 宅建業法を固める",
+      shortLabel: "宅建業法",
+      newSections: ["business"],
+      reviewSections: ["business"],
+      targetRate: 0.8
+    },
+    {
+      id: "law-other",
+      label: "② 法令・税その他へ進む",
+      shortLabel: "法令・税その他",
+      newSections: ["restrictions", "tax", "other"],
+      reviewSections: ["business", "restrictions", "tax", "other"],
+      targetRate: 0.8
+    },
+    {
+      id: "all",
+      label: "③ 全分野を混ぜる",
+      shortLabel: "全分野",
+      newSections: ["rights", "restrictions", "tax", "business", "other"],
+      reviewSections: ["rights", "restrictions", "tax", "business", "other"],
+      targetRate: 0.8
+    }
+  ];
+  const STUDY_SCOPE_IDS = new Set(STUDY_SCOPES.map((scope) => scope.id));
   const REWARD_SYSTEM = window.TAKKEN_REWARDS;
   const SAVE_TRANSFER = window.TAKKEN_SAVE_TRANSFER;
   const PROGRESSION_VERSION = REWARD_SYSTEM?.VERSION || 2;
@@ -297,7 +326,7 @@
     chapterList: $("#chapterList"),
     themeBar: $("#themeBar"),
     chapterSelect: $("#chapterSelect"),
-    adaptiveButton: $("#adaptiveButton"),
+    studyScopeSelect: $("#studyScopeSelect"),
     weakButton: $("#weakButton"),
     coachTitle: $("#coachTitle"),
     coachText: $("#coachText"),
@@ -365,6 +394,7 @@
     sessionId: `session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
     runMode: FIRST_PASS_PARAM ? RUN_MODE_FIRST_PASS : "quest",
     adaptive: false,
+    studyScope: DEFAULT_STUDY_SCOPE,
     questionStats: {},
     centralMarked: {},
     centralProgress: {},
@@ -401,6 +431,7 @@
     items: [],
     source: "loading",
     mode: "coverage",
+    scope: DEFAULT_STUDY_SCOPE,
     message: "固定10問: 読込中"
   };
 
@@ -417,6 +448,15 @@
     return localDateKey(new Date());
   }
 
+  function normalizedCorrectDayKeys(stats) {
+    const keys = [
+      ...(Array.isArray(stats?.correctDayKeys) ? stats.correctDayKeys : []),
+      localDateKey(stats?.lastCorrectAt),
+      localDateKey(stats?.centralLastCorrectAt)
+    ].filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value));
+    return [...new Set(keys)].sort().slice(-8);
+  }
+
   function createDailyState() {
     return {
       date: todayKey(),
@@ -426,8 +466,9 @@
       weakAdded: 0,
       target: DAILY_TARGET,
       planIds: [],
-      planVersion: EXAM_CONTENT_VERSION,
-      planMode: "coverage"
+      planVersion: STUDY_PLAN_VERSION,
+      planMode: "coverage",
+      planScope: DEFAULT_STUDY_SCOPE
     };
   }
 
@@ -448,7 +489,8 @@
         ? input.planIds.filter((id) => CURRICULUM_ORDER.includes(id)).slice(0, DAILY_TARGET)
         : [],
       planVersion: Number(input.planVersion) || 0,
-      planMode: input.planMode === "mastery" ? "mastery" : "coverage"
+      planMode: input.planMode === "mastery" ? "mastery" : "coverage",
+      planScope: STUDY_SCOPE_IDS.has(input.planScope) ? input.planScope : DEFAULT_STUDY_SCOPE
     };
   }
 
@@ -567,6 +609,9 @@
         ? RUN_MODE_MOCK
         : "quest";
     next.adaptive = false;
+    next.studyScope = STUDY_SCOPE_IDS.has(input?.studyScope)
+      ? input.studyScope
+      : DEFAULT_STUDY_SCOPE;
     next.questionStats = next.questionStats || {};
     next.centralMarked = next.centralMarked || {};
     next.centralProgress = next.centralProgress || {};
@@ -642,6 +687,7 @@
         if (!normalized.lastWrongAt && normalized.lastWrongStep === normalized.lastStep) {
           normalized.lastWrongAt = normalized.lastAnsweredAt;
         }
+        normalized.correctDayKeys = normalizedCorrectDayKeys(normalized);
         return [id, normalized];
       })
     );
@@ -962,13 +1008,14 @@
       items,
       source,
       mode: payload?.mode === "mastery" ? "mastery" : "coverage",
+      scope: STUDY_SCOPE_IDS.has(payload?.scope) ? payload.scope : state.studyScope,
       target: Number(payload?.target) || DAILY_TARGET,
       message: ids.length > 0
-        ? `固定10問: ${
+        ? `固定10問: ${studyScopeConfig(payload?.scope).shortLabel}・${
             source === "api"
               ? "自動生成"
               : source === "browser"
-                ? (payload?.mode === "mastery" ? "定着ロード" : "合格ロード")
+                ? (payload?.mode === "mastery" ? "定着" : "新規＋復習")
                 : "前回生成"
           }`
         : "固定10問: 未生成"
@@ -988,6 +1035,8 @@
   function compareMasteryPriority(leftId, rightId) {
     const todayDiff = Number(answeredToday(leftId)) - Number(answeredToday(rightId));
     if (todayDiff !== 0) return todayDiff;
+    const retainedDiff = Number(isRetained(leftId)) - Number(isRetained(rightId));
+    if (retainedDiff !== 0) return retainedDiff;
     const weakDiff = weaknessScore(rightId) - weaknessScore(leftId);
     if (weakDiff !== 0) return weakDiff;
     const answeredDiff = lastAnsweredTimestamp(leftId) - lastAnsweredTimestamp(rightId);
@@ -995,6 +1044,46 @@
     const attemptDiff = effectiveAttempts(statsFor(leftId)) - effectiveAttempts(statsFor(rightId));
     if (attemptDiff !== 0) return attemptDiff;
     return CURRICULUM_ORDER.indexOf(leftId) - CURRICULUM_ORDER.indexOf(rightId);
+  }
+
+  function interleaveDailyPlan(newIds, reviewIds, fallbackIds) {
+    const result = [];
+    const reviewSlots = new Set(
+      reviewIds.map((_, index) =>
+        Math.max(0, Math.floor(((index + 1) * DAILY_TARGET) / (reviewIds.length + 1)) - 1)
+      )
+    );
+    const fresh = [...newIds];
+    const review = [...reviewIds];
+    for (let index = 0; index < DAILY_TARGET; index += 1) {
+      const preferReview = reviewSlots.has(index) && review.length > 0;
+      const next = preferReview
+        ? review.shift()
+        : (fresh.shift() || review.shift());
+      if (next && !result.includes(next)) result.push(next);
+    }
+    for (const id of fallbackIds) {
+      if (result.length >= DAILY_TARGET) break;
+      if (!result.includes(id)) result.push(id);
+    }
+    return result;
+  }
+
+  function focusedQuestPlan(scopeId = state.studyScope) {
+    const newPool = scopeNewIds(scopeId).filter((id) => !isContacted(id));
+    const reviewPool = scopeReviewIds(scopeId)
+      .filter((id) => isContacted(id) && !answeredToday(id) && !isRetained(id))
+      .sort(compareMasteryPriority);
+    const maxReview = newPool.length >= 6 ? 4 : DAILY_TARGET;
+    const selectedReview = reviewPool.slice(0, maxReview);
+    const selectedNew = newPool.slice(0, DAILY_TARGET - selectedReview.length);
+    const fallback = scopeReviewIds(scopeId)
+      .filter((id) => !answeredToday(id))
+      .sort(compareMasteryPriority);
+    return {
+      ids: interleaveDailyPlan(selectedNew, selectedReview, fallback),
+      mode: newPool.length > 0 ? "coverage" : "mastery"
+    };
   }
 
   function masteryQuestPlan() {
@@ -1030,26 +1119,30 @@
 
   function publicTodayQuest() {
     const date = todayKey();
-    const savedPlan = state.daily.planVersion === EXAM_CONTENT_VERSION
+    const savedPlan = (
+      state.daily.planVersion === STUDY_PLAN_VERSION &&
+      state.daily.planScope === state.studyScope
+    )
       ? state.daily.planIds.filter((id) => CURRICULUM_ORDER.includes(id) && QUESTIONS[id])
       : [];
-    const blocks = EXAM_BLUEPRINT?.dailyBlocks || [];
-    const firstOpenBlock = blocks.find((block) => block.some((id) => !isContacted(id)));
-    const planMode = firstOpenBlock ? "coverage" : "mastery";
-    const generatedPlan = firstOpenBlock || masteryQuestPlan();
+    const focusedPlan = state.studyScope === "all" && remainingFirstPassCount() === 0
+      ? { ids: masteryQuestPlan(), mode: "mastery" }
+      : focusedQuestPlan(state.studyScope);
     const ids = savedPlan.length === DAILY_TARGET
       ? savedPlan
-      : [...generatedPlan];
+      : [...focusedPlan.ids];
     state.daily.planIds = ids.slice(0, DAILY_TARGET);
-    state.daily.planVersion = EXAM_CONTENT_VERSION;
-    state.daily.planMode = planMode;
+    state.daily.planVersion = STUDY_PLAN_VERSION;
+    state.daily.planMode = focusedPlan.mode;
+    state.daily.planScope = state.studyScope;
     saveState();
     return normalizeTodayQuestPayload({
       date,
       questId: `public-${date}`,
       ids: state.daily.planIds,
       target: DAILY_TARGET,
-      mode: state.daily.planMode
+      mode: state.daily.planMode,
+      scope: state.studyScope
     }, "browser");
   }
 
@@ -1523,6 +1616,58 @@
     return Math.max(Number(stats?.wrong) || 0, Number(stats?.centralWrong) || 0);
   }
 
+  function studyScopeConfig(scopeId = state.studyScope) {
+    return STUDY_SCOPES.find((scope) => scope.id === scopeId) || STUDY_SCOPES[0];
+  }
+
+  function curriculumIdsForSections(sectionIds) {
+    const allowed = new Set(sectionIds);
+    return CURRICULUM_ORDER.filter((id) => allowed.has(QUESTIONS[id]?.sectionId));
+  }
+
+  function scopeNewIds(scopeId = state.studyScope) {
+    return curriculumIdsForSections(studyScopeConfig(scopeId).newSections);
+  }
+
+  function scopeReviewIds(scopeId = state.studyScope) {
+    return curriculumIdsForSections(studyScopeConfig(scopeId).reviewSections);
+  }
+
+  function isRetained(id) {
+    const stats = statsFor(id);
+    if (normalizedCorrectDayKeys(stats).length < 2) return false;
+    if (weaknessScore(id) > 0) return false;
+    const lastCorrectAt = Date.parse(latestAt(stats.lastCorrectAt, stats.centralLastCorrectAt)) || 0;
+    const lastWrongAt = Date.parse(latestAt(stats.lastWrongAt, stats.centralLastWrongAt)) || 0;
+    if (lastWrongAt >= lastCorrectAt) return false;
+    if (
+      (stats.lastConfidence === "unsure" || stats.lastConfidence === "cuts") &&
+      (Date.parse(stats.lastConfidenceAt || "") || 0) >= lastCorrectAt
+    ) {
+      return false;
+    }
+    return true;
+  }
+
+  function retainedCount(ids = CURRICULUM_ORDER) {
+    return ids.filter(isRetained).length;
+  }
+
+  function scopeProgress(scopeId = state.studyScope) {
+    const scope = studyScopeConfig(scopeId);
+    const newIds = scopeNewIds(scope.id);
+    const reviewIds = scopeReviewIds(scope.id);
+    return {
+      scope,
+      ids: newIds,
+      reviewIds,
+      contacted: newIds.filter(isContacted).length,
+      retained: retainedCount(newIds),
+      total: newIds.length,
+      due: reviewIds.filter((id) => isContacted(id) && !answeredToday(id) && !isRetained(id)).length
+    };
+  }
+
   function hasNewerLocalAnswer(stats) {
     const localAt = Date.parse(stats?.lastAnsweredAt || "");
     if (!Number.isFinite(localAt)) return false;
@@ -1667,8 +1812,16 @@
     return CURRICULUM_ORDER.filter(isContacted).length;
   }
 
-  function remainingFirstPassCount() {
+  function scopeContactedCount() {
+    return scopeNewIds().filter(isContacted).length;
+  }
+
+  function remainingExamCoverageCount() {
     return Math.max(0, CURRICULUM_ORDER.length - contactedCount());
+  }
+
+  function remainingFirstPassCount() {
+    return Math.max(0, scopeNewIds().length - scopeContactedCount());
   }
 
   function firstPassDaysLeft() {
@@ -1695,7 +1848,7 @@
 
   function firstPassRemainingText() {
     if (PUBLIC_STATIC_MODE) {
-      return `全分野コア100のうち残り${remainingFirstPassCount()}問`;
+      return `${studyScopeConfig().shortLabel}の未接触は残り${remainingFirstPassCount()}問`;
     }
     if (firstPassDaysLeft() === 0 && remainingFirstPassCount() > 0) {
       return `期限超過・残り${remainingFirstPassCount()}問`;
@@ -1726,10 +1879,11 @@
   }
 
   function nextFirstPassId() {
-    const currentCurriculumIndex = CURRICULUM_ORDER.indexOf(currentId());
-    for (let offset = 1; offset <= CURRICULUM_ORDER.length; offset += 1) {
-      const index = (Math.max(-1, currentCurriculumIndex) + offset) % CURRICULUM_ORDER.length;
-      const id = CURRICULUM_ORDER[index];
+    const ids = scopeNewIds();
+    const currentCurriculumIndex = ids.indexOf(currentId());
+    for (let offset = 1; offset <= ids.length; offset += 1) {
+      const index = (Math.max(-1, currentCurriculumIndex) + offset) % ids.length;
+      const id = ids[index];
       if (!isContacted(id)) {
         return id;
       }
@@ -1738,10 +1892,10 @@
   }
 
   function firstPassStartId() {
-    if (!state.answered && CURRICULUM_ORDER.includes(currentId()) && !isContacted(currentId())) {
+    if (!state.answered && scopeNewIds().includes(currentId()) && !isContacted(currentId())) {
       return currentId();
     }
-    return nextFirstPassId() || CURRICULUM_ORDER.find((id) => !isContacted(id)) || CURRICULUM_ORDER[0];
+    return nextFirstPassId() || scopeNewIds().find((id) => !isContacted(id)) || scopeNewIds()[0];
   }
 
   function weaknessScore(id) {
@@ -2059,11 +2213,17 @@
     renderCampaignRoute(question);
 
     const curriculumIndex = CURRICULUM_ORDER.indexOf(question.id);
+    const dailyIndex = dailyQuestIds().indexOf(question.id);
+    const scopeIndex = scopeNewIds().indexOf(question.id);
     elements.roundLabel.textContent = isMockMode()
       ? `${state.mock.position + 1} / ${mockQuestionIds().length}`
-      : curriculumIndex >= 0
-        ? `${curriculumIndex + 1} / ${CURRICULUM_ORDER.length}`
-        : `旧業法 ${LEGACY_ORDER.indexOf(question.id) + 1} / ${LEGACY_ORDER.length}`;
+      : dailyIndex >= 0 && !isFirstPassMode()
+        ? `今日 ${dailyIndex + 1} / ${dailyQuestIds().length}`
+        : scopeIndex >= 0
+          ? `範囲 ${scopeIndex + 1} / ${scopeNewIds().length}`
+          : curriculumIndex >= 0
+            ? `${curriculumIndex + 1} / ${CURRICULUM_ORDER.length}`
+            : `旧業法 ${LEGACY_ORDER.indexOf(question.id) + 1} / ${LEGACY_ORDER.length}`;
     elements.tagBadge.textContent = question.format ? `${question.tag}・${question.format}` : question.tag;
     elements.markButton.hidden = isMockMode();
     elements.markButton.classList.toggle("is-marked", Boolean(state.marked[question.id]));
@@ -2762,15 +2922,15 @@
 
     const title = document.createElement("strong");
     title.textContent = isFirstPassMode()
-      ? "全分野一周"
-      : (remainingFirstPassCount() > 0 ? "第1段階・全分野一周" : "第2段階・定着ロード");
+      ? `${studyScopeConfig().shortLabel}の追加演習`
+      : `${studyScopeConfig().shortLabel}の合格ロード`;
 
     const text = document.createElement("p");
     if (isFirstPassMode()) {
       const remaining = remainingFirstPassCount();
       text.textContent = remaining > 0
-        ? `誤答・迷いは弱点に記録するが、次問は未接触へ進む。残り${remaining}問、${firstPassPaceText()}。`
-        : "全分野コア100に一通り接触。弱点は弱点ボタンから手動で回収する。";
+        ? `誤答・迷いは弱点に記録し、${studyScopeConfig().shortLabel}の未接触へ進む。残り${remaining}問。`
+        : `${studyScopeConfig().shortLabel}は全問接触済み。翌日以降の定着確認へ戻る。`;
       note.append(title, text);
       elements.feedbackBox.insertBefore(note, elements.nextButton);
       return;
@@ -2778,8 +2938,8 @@
 
     if (remainingFirstPassCount() > 0) {
       text.textContent = state.answered?.correct === false
-        ? `${question.tag}を弱点に登録。ただし一周完了までは日課へ割り込ませず、次の未接触問題へ進む。`
-        : "この論点は接触済み。次は固定ロード上の未接触問題へ進む。";
+        ? `${question.tag}を弱点に登録。今日の並びは変えず、翌日以降の固定10問で優先して再テストする。`
+        : "この論点は接触済み。一度の正解では定着にせず、翌日以降にもう一度確認する。";
     } else if (state.answered?.correct === false) {
       text.textContent = `${question.tag}を弱点に登録。本日の固定10問は変えず、翌日以降の定着ロードで優先して再テストする。`;
     } else if (curriculumWeakIds().length > 0) {
@@ -2819,12 +2979,18 @@
     elements.accuracyText.textContent = attempts ? `${Math.round((correct / attempts) * 100)}%` : "-";
     elements.streakText.textContent = state.bestStreak ? `${state.streak}/${state.bestStreak}` : String(state.streak);
     elements.markedText.textContent = String(weakIds().length);
-    elements.chapterProgressText.textContent = `${contactedCount()} / ${CURRICULUM_ORDER.length}問接触`;
+    elements.chapterProgressText.textContent =
+      `定着${retainedCount()}/${CURRICULUM_ORDER.length}・接触${contactedCount()}`;
     if (elements.studyTitle) {
-      elements.studyTitle.textContent = isFirstPassMode() ? "宅建 全分野一周" : "宅建 全分野";
+      elements.studyTitle.textContent = isFirstPassMode()
+        ? `宅建 ${studyScopeConfig().shortLabel}追加`
+        : `宅建 ${studyScopeConfig().shortLabel}`;
     }
     if (elements.todayLabel) {
-      elements.todayLabel.textContent = isFirstPassMode() ? firstPassRemainingText() : "今日の演習";
+      const progress = scopeProgress();
+      elements.todayLabel.textContent = isFirstPassMode()
+        ? firstPassRemainingText()
+        : `定着${progress.retained}/${progress.total}・復習待ち${progress.due}`;
     }
   }
 
@@ -2833,9 +2999,11 @@
     state.daily = normalizeDailyState(state.daily);
     elements.questCard?.classList.toggle("is-mock", isMockMode());
     elements.questCard?.classList.toggle("is-first-pass", isFirstPassMode());
+    const mockReady = remainingExamCoverageCount() === 0;
     [elements.mockAButton, elements.mockBButton].forEach((button) => {
       if (!button) return;
-      button.disabled = false;
+      button.disabled = !mockReady && !isMockMode();
+      button.title = mockReady ? "" : `全100問接触後に解放・残り${remainingExamCoverageCount()}問`;
       button.classList.remove("is-active");
     });
     if (isMockMode()) {
@@ -2874,11 +3042,11 @@
     const fixedClear = dailyQuestClearCount();
     const dailyProgressBase = fixedIds.length ? fixedDone : state.daily.answers;
     const dailyRemaining = Math.max(0, fixedTarget - dailyProgressBase);
-    const firstPassDone = contactedCount();
+    const firstPassDone = scopeContactedCount();
     const progressBase = isFirstPassMode()
       ? firstPassDone
       : dailyProgressBase;
-    const progressTarget = isFirstPassMode() ? CURRICULUM_ORDER.length : fixedTarget;
+    const progressTarget = isFirstPassMode() ? scopeNewIds().length : fixedTarget;
     const progress = Math.min(100, Math.round((progressBase / progressTarget) * 100));
     const firstPassRemaining = remainingFirstPassCount();
     renderQuestRewards(fixedClear, fixedIds.length > 0);
@@ -2886,9 +3054,9 @@
       const chapter = currentChapterContactSummary();
       const paceText = firstPassPaceText();
       if (elements.questLabel) {
-        elements.questLabel.textContent = "全分野一周";
+        elements.questLabel.textContent = `${studyScopeConfig().shortLabel}追加`;
       }
-      elements.dailyQuestTitle.textContent = `${firstPassDone} / ${CURRICULUM_ORDER.length}接触`;
+      elements.dailyQuestTitle.textContent = `${firstPassDone} / ${scopeNewIds().length}接触`;
       if (elements.dailyAnswerLabel) elements.dailyAnswerLabel.textContent = "接触";
       if (elements.dailyCorrectLabel) elements.dailyCorrectLabel.textContent = "残り";
       if (elements.dailyWeakLabel) elements.dailyWeakLabel.textContent = "要復習";
@@ -2904,10 +3072,11 @@
     } else {
       const masteryMode = todayQuest.mode === "mastery";
       if (elements.questLabel) {
-        elements.questLabel.textContent = masteryMode ? "定着クエスト" : "今日のクエスト";
+        elements.questLabel.textContent =
+          `${studyScopeConfig(todayQuest.scope).shortLabel}・${masteryMode ? "定着" : "今日"}`;
       }
       elements.dailyQuestTitle.textContent = fixedIds.length
-        ? `${masteryMode ? "定着" : "固定"}${fixedTarget}問 ${Math.min(fixedDone, fixedTarget)}/${fixedTarget}接触`
+        ? `${masteryMode ? "定着" : "新規＋復習"}${fixedTarget}問 ${Math.min(fixedDone, fixedTarget)}/${fixedTarget}`
         : `${Math.min(state.daily.answers, target)} / ${target}撃破`;
       if (elements.dailyAnswerLabel) elements.dailyAnswerLabel.textContent = "今日";
       if (elements.dailyCorrectLabel) elements.dailyCorrectLabel.textContent = "正解";
@@ -2930,9 +3099,10 @@
     }
     if (elements.passQuestButton) {
       elements.passQuestButton.textContent = isFirstPassMode()
-        ? (firstPassRemaining > 0 ? "全分野一周中" : "完了")
-        : (firstPassRemaining > 0 ? "全分野一周" : "一周完了");
+        ? (firstPassRemaining > 0 ? "追加演習中" : "範囲接触済み")
+        : (firstPassRemaining > 0 ? "範囲内を続ける" : "範囲接触済み");
       elements.passQuestButton.classList.toggle("is-active", isFirstPassMode());
+      elements.passQuestButton.disabled = firstPassRemaining === 0 || isMockMode();
     }
     if (isFirstPassMode()) elements.dailyQuestButton.disabled = false;
     elements.weakQuestButton.disabled = weakIds().length === 0;
@@ -2954,9 +3124,12 @@
     if (!visible) return;
     const correct = dailyQuestClearCount();
     const target = dailyQuestIds().length || DAILY_TARGET;
-    elements.dailyCompleteSummary.textContent = `${target}問接触・${correct}問正解。ここで終了してOK。続けたい日だけ未接触へ進む。`;
+    elements.dailyCompleteSummary.textContent =
+      `${target}問接触・${correct}問正解。ここで終了してOK。復習は翌日以降の固定10問へ自動で戻る。`;
     elements.dailyContinueButton.disabled = !nextFirstPassId();
-    elements.dailyContinueButton.textContent = nextFirstPassId() ? "未接触を続ける" : "全問接触完了";
+    elements.dailyContinueButton.textContent = nextFirstPassId()
+      ? `${studyScopeConfig().shortLabel}を続ける`
+      : "この範囲は全問接触";
   }
 
   function finishDailyQuest() {
@@ -3096,10 +3269,10 @@
       const optionGroup = document.createElement("optgroup");
       optionGroup.label = group.label;
       group.entries.forEach(({ chapter, chapterIndex }) => {
-        const solved = chapter.ids.filter((id) => effectiveCorrectCount(statsFor(id)) > 0).length;
+        const retained = retainedCount(chapter.ids);
         const option = document.createElement("option");
         option.value = String(chapterIndex);
-        option.textContent = `${chapter.topicLabel || chapter.label} ${solved}/${chapter.ids.length}`;
+        option.textContent = `${chapter.topicLabel || chapter.label} 定着${retained}/${chapter.ids.length}`;
         option.selected = chapterIndex === activeChapter;
         optionGroup.append(option);
       });
@@ -3108,10 +3281,10 @@
     const legacyGroup = document.createElement("optgroup");
     legacyGroup.label = "補助問題（コア40問の後・任意）";
     LEGACY_CHAPTER_ENTRIES.forEach(({ chapter, chapterIndex }) => {
-      const solved = chapter.ids.filter((id) => effectiveCorrectCount(statsFor(id)) > 0).length;
+      const retained = retainedCount(chapter.ids);
       const option = document.createElement("option");
       option.value = String(chapterIndex);
-      option.textContent = `${chapter.label.replace(/^旧・業法 \/\s*/, "")} ${solved}/${chapter.ids.length}`;
+      option.textContent = `${chapter.label.replace(/^旧・業法 \/\s*/, "")} 定着${retained}/${chapter.ids.length}`;
       option.selected = chapterIndex === activeChapter;
       legacyGroup.append(option);
     });
@@ -3121,10 +3294,9 @@
     elements.weakButton.textContent = `弱点 ${targets.length}`;
     elements.weakButton.disabled = isMockMode() || targets.length === 0;
     elements.chapterSelect.disabled = isMockMode();
-    if (elements.adaptiveButton) {
-      elements.adaptiveButton.textContent = "固定ロード";
-      elements.adaptiveButton.disabled = true;
-      elements.adaptiveButton.classList.remove("is-active");
+    if (elements.studyScopeSelect) {
+      elements.studyScopeSelect.value = state.studyScope;
+      elements.studyScopeSelect.disabled = isMockMode();
     }
   }
 
@@ -3138,32 +3310,45 @@
       return;
     }
 
-    if (!isFirstPassMode() && remainingFirstPassCount() > 0) {
-      const remaining = remainingFirstPassCount();
-      const days = Math.ceil(remaining / DAILY_TARGET);
-      elements.coachTitle.textContent = `第1段階・全分野一周 ${contactedCount()}/${CURRICULUM_ORDER.length}`;
-      elements.coachText.textContent =
-        `まず未接触${remaining}問を固定順で埋める。1日10問ならあと${days}日。弱点は保存だけ行い、一周が終わるまで日課へ割り込ませない。`;
-      return;
-    }
-
+    const scopeState = scopeProgress();
+    const targetRetained = Math.ceil(scopeState.total * scopeState.scope.targetRate);
     if (isFirstPassMode()) {
-      const remaining = remainingFirstPassCount();
-      const chapter = currentChapterContactSummary();
-      elements.coachTitle.textContent = `全分野一周 ${contactedCount()}/${CURRICULUM_ORDER.length}接触`;
-      elements.coachText.textContent = remaining > 0
-        ? `弱点は記録だけ。${chapter ? `${chapter.label}は残り${chapter.remaining}問。` : ""}全体は残り${remaining}問。${firstPassPaceText()}。`
-        : "全分野コア100は接触済み。弱点ボタンから苦手論点を手動で回収できる。";
+      elements.coachTitle.textContent =
+        `${scopeState.scope.shortLabel}の追加演習 ${scopeState.contacted}/${scopeState.total}接触`;
+      elements.coachText.textContent = remainingFirstPassCount() > 0
+        ? `日課後の任意演習。未接触は残り${remainingFirstPassCount()}問。誤答は翌日以降の固定10問へ戻す。`
+        : "この範囲は全問接触済み。今日は終了し、翌日以降の定着確認へ戻る。";
       return;
     }
 
-    const latestMock = latestMockAttempt();
+    if (scopeState.contacted < scopeState.total) {
+      elements.coachTitle.textContent =
+        `${scopeState.scope.shortLabel} 接触${scopeState.contacted}/${scopeState.total}・定着${scopeState.retained}/${scopeState.total}`;
+      elements.coachText.textContent =
+        `未接触を優先しつつ、翌日以降の要復習を最大4問混ぜる。未学習分野は出さない。一度の正解では定着に数えない。`;
+      return;
+    }
+
+    if (scopeState.retained < targetRetained) {
+      elements.coachTitle.textContent =
+        `${scopeState.scope.shortLabel} 定着${scopeState.retained}/${targetRetained}目標`;
+      elements.coachText.textContent =
+        `全問接触済み。異なる2日で正解し、最新の誤答・迷いがない問題だけを定着扱いにする。あと${targetRetained - scopeState.retained}問で次段階の目安。`;
+      return;
+    }
+
+    const latestMock = scopeState.scope.id === "all" ? latestMockAttempt() : null;
     const priority = latestMock ? mockPriorityRow(latestMock.sectionScores) : null;
     const weakCount = curriculumWeakIds().length;
-    elements.coachTitle.textContent = `第2段階・定着ロード 弱点${weakCount}問`;
+    elements.coachTitle.textContent =
+      `${scopeState.scope.shortLabel} 8割定着・弱点${weakCount}問`;
     if (!latestMock) {
-      elements.coachText.textContent =
-        "今日の10問は業法4・権利3・法令2・税その他1。弱点を先に、残りを最終接触が古い順に出す。50問模試で得点基準を作る。";
+      const nextText = scopeState.scope.id === "business"
+        ? "学習段階を②法令・税その他へ切り替え、業法の復習を4問残す。"
+        : scopeState.scope.id === "law-other"
+          ? "学習段階を③全分野へ切り替え、権利関係を追加する。"
+          : "全100問接触後に50問確認模試へ進み、初見力はRETIO公式過去問で測る。";
+      elements.coachText.textContent = nextText;
       return;
     }
     const form = mockFormById(latestMock.formId);
@@ -3182,21 +3367,24 @@
 
     const progressFor = (ids) => {
       const current = ids.filter(isFirstPassMode() ? isContacted : (id) =>
-        effectiveCorrectCount(statsFor(id)) > 0
+        isRetained(id)
       ).length;
       return { current, total: ids.length };
     };
 
     const createChapterRow = (chapter, chapterIndex) => {
-      const solved = chapter.ids.filter((id) => effectiveCorrectCount(statsFor(id)) > 0).length;
+      const retained = retainedCount(chapter.ids);
       const contacted = chapter.ids.filter(isContacted).length;
       const row = document.createElement("button");
       row.type = "button";
       row.className = "chapter-row";
       row.disabled = isMockMode();
       row.classList.toggle("is-active", chapter.ids.includes(activeId));
-      row.classList.toggle("is-done", (isFirstPassMode() ? contacted : solved) === chapter.ids.length);
-      row.setAttribute("aria-label", `${chapter.label}を選択 ${isFirstPassMode() ? contacted : solved}/${chapter.ids.length}`);
+      row.classList.toggle("is-done", (isFirstPassMode() ? contacted : retained) === chapter.ids.length);
+      row.setAttribute(
+        "aria-label",
+        `${chapter.label}を選択 ${isFirstPassMode() ? `接触${contacted}` : `定着${retained}`}/${chapter.ids.length}`
+      );
 
       const dot = document.createElement("span");
       dot.className = "chapter-dot";
@@ -3208,7 +3396,9 @@
 
       const score = document.createElement("span");
       score.className = "chapter-score";
-      score.textContent = `${isFirstPassMode() ? contacted : solved} / ${chapter.ids.length}`;
+      score.textContent = `${isFirstPassMode() ? "接触" : "定着"} ${
+        isFirstPassMode() ? contacted : retained
+      }/${chapter.ids.length}`;
 
       row.append(dot, label, score);
       row.addEventListener("click", () => selectChapter(chapterIndex));
@@ -3265,8 +3455,36 @@
     if (!chapter) return;
     state.runMode = "quest";
     setFirstPassUrl(false);
-    const nextId = chapter.ids.find((id) => effectiveCorrectCount(statsFor(id)) === 0) || chapter.ids[0];
+    const nextId = chapter.ids.find((id) => !answeredToday(id) && !isRetained(id)) || chapter.ids[0];
     goToQuestion(nextId);
+  }
+
+  function setStudyScope(scopeId) {
+    if (!STUDY_SCOPE_IDS.has(scopeId) || scopeId === state.studyScope) return;
+    state.studyScope = scopeId;
+    state.daily = createDailyState();
+    state.daily.planScope = scopeId;
+    state.dailyFinishedDate = "";
+    state.runMode = "quest";
+    state.answered = null;
+    state.activeCutCheck = null;
+    state.finished = false;
+    setFirstPassUrl(false);
+    applyTodayQuest(publicTodayQuest());
+    const targetId =
+      nextDailyQuestId() ||
+      scopeNewIds(scopeId).find((id) => !answeredToday(id) && !isRetained(id)) ||
+      scopeReviewIds(scopeId)[0];
+    logStudyEvent("study-scope", {
+      scope: scopeId,
+      targetId,
+      planIds: dailyQuestIds()
+    });
+    if (targetId) {
+      goToQuestion(targetId);
+    } else {
+      renderCurrentView();
+    }
   }
 
   function jumpToWeakPoint() {
@@ -3279,7 +3497,10 @@
   }
 
   function nextUnsolvedId() {
-    return CURRICULUM_ORDER.find((id) => effectiveCorrectCount(statsFor(id)) === 0);
+    return (
+      scopeNewIds().find((id) => !answeredToday(id) && !isContacted(id)) ||
+      scopeReviewIds().find((id) => !answeredToday(id) && !isRetained(id))
+    );
   }
 
   function answeredToday(id) {
@@ -3326,7 +3547,7 @@
       return;
     }
     const fixedQuestId = nextDailyQuestId();
-    const targetId = fixedQuestId || nextUnsolvedId() || CURRICULUM_ORDER[0];
+    const targetId = fixedQuestId || nextUnsolvedId() || scopeReviewIds()[0];
     if (!targetId) return;
     logStudyEvent("daily-quest", {
       targetId,
@@ -3722,6 +3943,9 @@
       lastCorrectStep: isCorrect ? state.step : previous.lastCorrectStep,
       lastWrongAt: isCorrect ? previous.lastWrongAt : state.answered.at,
       lastCorrectAt: isCorrect ? state.answered.at : previous.lastCorrectAt,
+      correctDayKeys: isCorrect
+        ? [...new Set([...normalizedCorrectDayKeys(previous), todayKey()])].sort().slice(-8)
+        : normalizedCorrectDayKeys(previous),
       lastCutCheckAt: cutCheck ? state.answered.at : previous.lastCutCheckAt,
       lastCutCheckAllCorrect: cutCheck ? cutCheck.allCorrect : previous.lastCutCheckAllCorrect
     };
@@ -4072,6 +4296,9 @@
         lastCorrectStep: result.correct ? state.step : previous.lastCorrectStep,
         lastWrongAt: result.correct ? previous.lastWrongAt : finishedAt,
         lastCorrectAt: result.correct ? finishedAt : previous.lastCorrectAt,
+        correctDayKeys: result.correct
+          ? [...new Set([...normalizedCorrectDayKeys(previous), todayKey()])].sort().slice(-8)
+          : normalizedCorrectDayKeys(previous),
         lastRunMode: RUN_MODE_MOCK,
         lastMockFormId: form.id
       };
@@ -4272,23 +4499,22 @@
     }
     saveState();
     const accuracy = state.attempts ? `${Math.round((state.correct / state.attempts) * 100)}%` : "-";
-    const contacted = contactedCount();
-    const firstPassComplete = contacted >= CURRICULUM_ORDER.length;
-    const finishText = firstPassComplete
-      ? `宅建全分野コア${CURRICULUM_ORDER.length}問に一通り接触。`
-      : `宅建全分野コア${CURRICULUM_ORDER.length}問の今回ルートを完走。`;
-    const nextText = firstPassComplete
-      ? "本試験配分のフォームA・Bで50問演習へ進み、要復習は弱点ボタンから別枠で回収する。"
-      : "固定ロードの未接触問題を先に進め、誤答は弱点ボタンから別枠で潰す。";
-    const finishActions = firstPassComplete
-      ? `<div class="finish-actions">
-          <button id="finishDailyButton" class="next-button" type="button">日課で弱点回収</button>
-          <button id="finishResetButton" class="ghost-button finish-reset" type="button">全記録リセット</button>
-        </div>`
-      : `<button id="finishResetButton" class="next-button" type="button">全記録リセット</button>`;
+    const scopeState = scopeProgress();
+    const allContacted = contactedCount() >= CURRICULUM_ORDER.length;
+    const scopeComplete = scopeState.contacted >= scopeState.total;
+    const finishText = scopeComplete
+      ? `${scopeState.scope.shortLabel}${scopeState.total}問に一通り接触。`
+      : `${scopeState.scope.shortLabel}の今回ルートを完走。`;
+    const nextText = allContacted
+      ? "翌日以降の固定10問で定着を確認し、全100問接触後は模試A・Bで50問演習へ進む。"
+      : `次は翌日以降の固定10問で定着を確認する。1回の正解だけでは定着扱いにしない。`;
+    const finishActions = `<div class="finish-actions">
+        <button id="finishDailyButton" class="next-button" type="button">固定10問へ戻る</button>
+        <button id="finishResetButton" class="ghost-button finish-reset" type="button">全記録リセット</button>
+      </div>`;
     elements.quizCard.innerHTML = `
       <div class="quiz-meta">
-        <strong id="roundLabel">${CURRICULUM_ORDER.length} / ${CURRICULUM_ORDER.length}</strong>
+        <strong id="roundLabel">${scopeState.contacted} / ${scopeState.total}</strong>
         <span id="tagBadge">完了</span>
       </div>
       <p class="question-text">${finishText}</p>
@@ -4296,7 +4522,8 @@
         <h3>結果</h3>
         <dl class="answer-grid">
           <div><dt>解答</dt><dd>${state.attempts}問</dd></div>
-          <div><dt>接触</dt><dd>${contacted}問</dd></div>
+          <div><dt>範囲接触</dt><dd>${scopeState.contacted}問</dd></div>
+          <div><dt>範囲定着</dt><dd>${scopeState.retained}問</dd></div>
           <div><dt>正解</dt><dd>${state.correct}問</dd></div>
           <div><dt>正答率</dt><dd>${accuracy}</dd></div>
         </dl>
@@ -4372,6 +4599,9 @@
     elements.saveImportInput?.addEventListener("change", importSaveFile);
     elements.chapterSelect?.addEventListener("change", (event) => {
       selectChapter(Number(event.target.value));
+    });
+    elements.studyScopeSelect?.addEventListener("change", (event) => {
+      setStudyScope(String(event.target.value));
     });
     elements.weakButton?.addEventListener("click", jumpToWeakPoint);
     window.addEventListener("keydown", (event) => {

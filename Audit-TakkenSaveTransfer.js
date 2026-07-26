@@ -18,7 +18,14 @@ const progressPackage = {
     weakIds: ["q2", "q999"],
     questClaims: { "2026-07-21": ["complete", "complete", "continue"] },
     perQuestion: {
-      q1: { attempts: 2, correct: 2, wrong: 0, lastSelected: "肢1", weak: false },
+      q1: {
+        attempts: 2,
+        correct: 2,
+        wrong: 0,
+        correctDayKeys: ["2026-01-01", "2026-01-03"],
+        lastSelected: "肢1",
+        weak: false
+      },
       q2: {
         attempts: 3,
         correct: 1,
@@ -61,6 +68,7 @@ assert.equal(imported.correct, 3);
 assert.equal(imported.totalXp, 475);
 assert.equal(imported.centralProgress.answers, 5);
 assert.equal(imported.questionStats.q1.attempts, 2);
+assert.deepEqual(imported.questionStats.q1.correctDayKeys, ["2026-01-01", "2026-01-03"]);
 assert.equal(imported.questionStats.q1.lastWrongStep, 0);
 assert.equal(imported.questionStats.q2.lastCorrectStep, 0);
 assert.equal(imported.questionStats.q2.centralWeak, true);

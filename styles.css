@@ -126,6 +126,7 @@ button {
 }
 
 .chapter-select,
+.study-scope-select,
 .quick-button {
   min-height: 44px;
   border: 1px solid var(--line);
@@ -140,6 +141,11 @@ button {
   width: 100%;
   min-width: 0;
   padding: 0 12px;
+}
+
+.study-scope-select {
+  min-width: 210px;
+  padding: 0 10px;
 }
 
 .quick-button {
@@ -1981,7 +1987,7 @@ body.has-answer-dock {
     position: sticky;
     top: 0;
     z-index: 20;
-    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-template-columns: minmax(0, 1fr) auto;
     gap: 5px;
     padding: 6px 0;
     margin-bottom: 8px;
@@ -1989,7 +1995,11 @@ body.has-answer-dock {
   }
 
   .chapter-select {
-    grid-column: auto;
+    grid-column: 1 / -1;
+  }
+
+  .study-scope-select {
+    grid-column: 1;
   }
 
   .quest-card {
@@ -2059,6 +2069,7 @@ body.has-answer-dock {
   }
 
   .chapter-select,
+  .study-scope-select,
   .quick-button {
     min-width: 0;
     min-height: 38px;
@@ -3367,6 +3378,7 @@ body {
 .mark-button,
 .quick-button,
 .chapter-select,
+.study-scope-select,
 .ghost-button,
 .next-button {
   border-radius: 4px;
