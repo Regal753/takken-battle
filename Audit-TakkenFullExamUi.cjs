@@ -108,8 +108,9 @@ async function main() {
       themeHierarchy.businessCoreRows !== 7 ||
       themeHierarchy.optionalRows !== 8 ||
       themeHierarchy.optionalOpen ||
-      !themeHierarchy.optionalText.includes("今は解かなくてOK") ||
-      !themeHierarchy.optionGroups.includes("補助問題（コア40問の後・任意）")
+      !themeHierarchy.optionalText.includes("以前の100問") ||
+      !themeHierarchy.optionalText.includes("解答済 0/100") ||
+      !themeHierarchy.optionGroups.includes("以前の100問（解答履歴を保持）")
     ) {
       throw new Error(`Theme hierarchy details mismatch: ${JSON.stringify(themeHierarchy)}`);
     }
@@ -678,6 +679,9 @@ async function main() {
       timeout: 15000
     });
     await migrationPage.waitForSelector("#questionText");
+    await migrationPage.locator(".chapter-optional > summary").click();
+    await migrationPage.setViewportSize({ width: 390, height: 844 });
+    await capture(migrationPage, "legacy-history-mobile.png");
     const migration = await migrationPage.evaluate((storageId) => {
       const saved = JSON.parse(localStorage.getItem(storageId) || "{}");
       const text = document.querySelector("#questionText")?.textContent || "";
@@ -690,7 +694,16 @@ async function main() {
         attempts: saved.attempts,
         totalXp: saved.totalXp,
         legacyWeakKept: Boolean(saved.marked?.q127),
-        legacyStatsKept: Number(saved.questionStats?.q127?.attempts) || 0
+        legacyStatsKept: Number(saved.questionStats?.q127?.attempts) || 0,
+        legacySummary: document.querySelector(".chapter-optional > summary")
+          ?.textContent?.replace(/\s+/g, " ").trim() || "",
+        legacyFirstChapter: document.querySelector(".chapter-optional .chapter-row")
+          ?.textContent?.replace(/\s+/g, " ").trim() || "",
+        legacySelectGroup: [...document.querySelectorAll("#chapterSelect optgroup")]
+          .find((group) => group.label.includes("以前の100問"))?.label || "",
+        legacyFirstOption: [...document.querySelectorAll("#chapterSelect optgroup option")]
+          .find((option) => option.textContent.includes("免許・免許換え"))?.textContent || "",
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth
       };
     }, migrationStorageId);
     await migrationContext.close();
@@ -701,7 +714,13 @@ async function main() {
       migration.attempts !== 65 ||
       migration.totalXp !== 5000 ||
       !migration.legacyWeakKept ||
-      migration.legacyStatsKept !== 3
+      migration.legacyStatsKept !== 3 ||
+      !migration.legacySummary.includes("問題・履歴を保持") ||
+      !migration.legacySummary.includes("解答済 1/100") ||
+      !migration.legacyFirstChapter.includes("解答済 1/21") ||
+      migration.legacySelectGroup !== "以前の100問（解答履歴を保持）" ||
+      !migration.legacyFirstOption.includes("解答済1/21") ||
+      migration.overflow
     ) {
       throw new Error(`Legacy save migration failed: ${JSON.stringify(migration)}`);
     }
