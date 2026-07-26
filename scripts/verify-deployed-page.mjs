@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260726-legacy-history-v6";
+const expectedVersion = process.argv[3] || "20260727-pass-plan-v7";
 const attempts = Math.max(1, Number(process.env.TAKKEN_DEPLOY_VERIFY_ATTEMPTS) || 12);
 const intervalMs = Math.max(0, Number(process.env.TAKKEN_DEPLOY_VERIFY_INTERVAL_MS) || 10000);
 
@@ -25,6 +25,8 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.equal(response.status, 200, `HTTP ${response.status}`);
     assert.match(html, /id="mockAButton"/, "mock A button missing");
     assert.match(html, /id="mockBButton"/, "mock B button missing");
+    assert.match(html, /id="passPlanPanel"/, "pass plan panel missing");
+    assert.match(html, /id="officialExamForm"/, "official exam ledger missing");
     const appReference = html.match(/src="([^"]*app\.js\?v=[^"]+)"/)?.[1] || "";
     const styleReference = html.match(/href="([^"]*styles\.css\?v=[^"]+)"/)?.[1] || "";
     assert.ok(appReference.includes(expectedVersion), `app version missing: ${expectedVersion}`);
@@ -44,7 +46,10 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(appCode, /function isRetained/, "retention logic missing");
     assert.match(appCode, /以前の100問（解答履歴を保持）/, "legacy question history label missing");
     assert.match(appCode, /問題・履歴を保持　解答済/, "legacy answered progress missing");
+    assert.match(appCode, /function renderPassPlan/, "pass plan renderer missing");
+    assert.match(appCode, /function normalizeOfficialExamHistory/, "official exam ledger logic missing");
     assert.match(styleCode, /\.study-scope-select/, "study scope style missing");
+    assert.match(styleCode, /\.pass-plan-panel/, "pass plan style missing");
     console.log(JSON.stringify({
       status: "ok",
       pageUrl: response.url,

@@ -59,7 +59,24 @@ const encoded = transfer.encodePackage(progressPackage);
 const decoded = transfer.decodePackage(encoded);
 const imported = transfer.stateFromProgressPackage(decoded, {
   sessionId: "fresh-session",
-  daily: { date: "2026-07-25", answers: 0, correct: 0, wrong: 0, weakAdded: 0, target: 10 }
+  daily: { date: "2026-07-25", answers: 0, correct: 0, wrong: 0, weakAdded: 0, target: 10 },
+  officialExamHistory: [{
+    year: 2025,
+    score: 37,
+    rights: 8,
+    restrictions: 6,
+    business: 18,
+    taxOther: 5,
+    elapsedMinutes: 115,
+    completedAt: "2026-07-27T00:00:00.000Z"
+  }],
+  missionLog: {
+    "2026-07-27": {
+      officialQuestions: true,
+      reviewed: true,
+      minutes: 115
+    }
+  }
 }, allowedIds);
 
 assert.equal(imported.index, 1);
@@ -78,6 +95,8 @@ assert.deepEqual(Object.keys(imported.questionStats).sort(), ["q1", "q2"]);
 assert.deepEqual(imported.marked, { q2: true });
 assert.deepEqual(imported.questRewardClaims["2026-07-21"], ["complete", "continue"]);
 assert.equal(imported.sessionId, "fresh-session");
+assert.equal(imported.officialExamHistory[0].score, 37);
+assert.equal(imported.missionLog["2026-07-27"].minutes, 115);
 
 const savePackage = transfer.createSavePackage(imported);
 const restored = transfer.validatePackage(
@@ -86,6 +105,8 @@ const restored = transfer.validatePackage(
 );
 assert.equal(restored.format, transfer.SAVE_FORMAT);
 assert.equal(restored.state.totalXp, 475);
+assert.equal(restored.state.officialExamHistory[0].business, 18);
+assert.equal(restored.state.missionLog["2026-07-27"].reviewed, true);
 
 const handoffUrl = transfer.createTransferUrl(
   savePackage,
@@ -100,6 +121,8 @@ const handoffToken = new URLSearchParams(parsedHandoffUrl.hash.slice(1)).get("sa
 const handoffState = transfer.validatePackage(transfer.decodePackage(handoffToken), allowedIds);
 assert.equal(handoffState.state.totalXp, 475);
 assert.equal(handoffState.state.centralProgress.answers, 5);
+assert.equal(handoffState.state.officialExamHistory[0].score, 37);
+assert.equal(handoffState.state.missionLog["2026-07-27"].minutes, 115);
 
 assert.throws(
   () => transfer.createTransferUrl(progressPackage, "https://regal753.github.io/takken-battle/"),
@@ -136,6 +159,8 @@ void (async () => {
   );
   assert.equal(compressedState.state.totalXp, 475);
   assert.equal(compressedState.state.centralProgress.answers, 5);
+  assert.equal(compressedState.state.officialExamHistory[0].score, 37);
+  assert.equal(compressedState.state.missionLog["2026-07-27"].officialQuestions, true);
 
   console.log(JSON.stringify({
     status: "ok",

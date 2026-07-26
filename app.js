@@ -21,6 +21,11 @@
   const OFFICIAL_PAST_EXAMS_URL = "https://www.retio.or.jp/exam/past_ques_ans/other/";
   const FIRST_PASS_DEADLINE = "2026-10-18";
   const FIRST_PASS_DEADLINE_LABEL = "10/18";
+  const JULY_GATE_DEADLINE = "2026-07-31";
+  const DAILY_STUDY_MINUTES = 90;
+  const OFFICIAL_PAST_EXAM_YEARS = new Set(
+    Array.from({ length: 10 }, (_, index) => 2025 - index)
+  );
   const EXAM_BLUEPRINT = window.TAKKEN_EXAM_BLUEPRINT;
   const STUDY_TARGETS = EXAM_BLUEPRINT?.studyTargets || {
     total: 37,
@@ -363,7 +368,34 @@
     saveExportButton: $("#saveExportButton"),
     saveShareButton: $("#saveShareButton"),
     saveImportInput: $("#saveImportInput"),
-    saveTransferStatus: $("#saveTransferStatus")
+    saveTransferStatus: $("#saveTransferStatus"),
+    passPlanPanel: $("#passPlanPanel"),
+    passPhaseTitle: $("#passPhaseTitle"),
+    passPhaseText: $("#passPhaseText"),
+    examCountdown: $("#examCountdown"),
+    julyGateStatus: $("#julyGateStatus"),
+    coreCoverageStatus: $("#coreCoverageStatus"),
+    coreRetentionStatus: $("#coreRetentionStatus"),
+    officialReadinessStatus: $("#officialReadinessStatus"),
+    dailyMissionStatus: $("#dailyMissionStatus"),
+    dailyMissionSummary: $("#dailyMissionSummary"),
+    missionBattleStep: $("#missionBattleStep"),
+    missionBattleStatus: $("#missionBattleStatus"),
+    missionOfficialButton: $("#missionOfficialButton"),
+    missionReviewButton: $("#missionReviewButton"),
+    missionMinutesInput: $("#missionMinutesInput"),
+    missionMinutesButton: $("#missionMinutesButton"),
+    officialLedgerSummary: $("#officialLedgerSummary"),
+    officialExamForm: $("#officialExamForm"),
+    officialExamYear: $("#officialExamYear"),
+    officialExamScore: $("#officialExamScore"),
+    officialRightsScore: $("#officialRightsScore"),
+    officialRestrictionsScore: $("#officialRestrictionsScore"),
+    officialBusinessScore: $("#officialBusinessScore"),
+    officialTaxOtherScore: $("#officialTaxOtherScore"),
+    officialExamMinutes: $("#officialExamMinutes"),
+    officialExamStatus: $("#officialExamStatus"),
+    officialExamHistory: $("#officialExamHistory")
   };
 
   const createState = () => ({
@@ -406,6 +438,8 @@
     daily: createDailyState(),
     mock: createMockState(),
     mockHistory: [],
+    officialExamHistory: [],
+    missionLog: {},
     sprint: {
       endsAt: null,
       completed: 0
@@ -567,6 +601,57 @@
       .slice(-10);
   }
 
+  function boundedInteger(value, maximum) {
+    return Math.min(maximum, Math.max(0, Math.trunc(Number(value) || 0)));
+  }
+
+  function normalizeOfficialExamHistory(input) {
+    const normalized = (Array.isArray(input) ? input : [])
+      .filter((item) => OFFICIAL_PAST_EXAM_YEARS.has(Number(item?.year)))
+      .map((item) => {
+        const rights = boundedInteger(item.rights, 14);
+        const restrictions = boundedInteger(item.restrictions, 8);
+        const business = boundedInteger(item.business, 20);
+        const taxOther = boundedInteger(item.taxOther, 8);
+        const score = boundedInteger(item.score, 50);
+        return {
+          year: Number(item.year),
+          score,
+          rights,
+          restrictions,
+          business,
+          taxOther,
+          elapsedMinutes: Math.max(1, boundedInteger(item.elapsedMinutes, 180)),
+          completedAt: String(item.completedAt || "")
+        };
+      })
+      .filter((item) =>
+        item.score === item.rights + item.restrictions + item.business + item.taxOther
+      )
+      .sort((left, right) =>
+        (Date.parse(left.completedAt) || 0) - (Date.parse(right.completedAt) || 0)
+      );
+    const latestByYear = new Map();
+    normalized.forEach((item) => latestByYear.set(item.year, item));
+    return [...latestByYear.values()].slice(-10);
+  }
+
+  function normalizeMissionLog(input) {
+    return Object.fromEntries(
+      Object.entries(input && typeof input === "object" && !Array.isArray(input) ? input : {})
+        .filter(([date]) => /^\d{4}-\d{2}-\d{2}$/.test(date))
+        .slice(-180)
+        .map(([date, mission]) => [
+          date,
+          {
+            officialQuestions: Boolean(mission?.officialQuestions),
+            reviewed: Boolean(mission?.reviewed),
+            minutes: boundedInteger(mission?.minutes, 600)
+          }
+        ])
+    );
+  }
+
   function inferredMistakeCause(answered) {
     const note = String(answered?.mistakeNote || "");
     if (/読み|見落と|見間違/.test(note)) return "reading";
@@ -603,6 +688,8 @@
     next.sessionId = next.sessionId || `session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     next.mock = normalizeMockState(input?.mock);
     next.mockHistory = normalizeMockHistory(input?.mockHistory);
+    next.officialExamHistory = normalizeOfficialExamHistory(input?.officialExamHistory);
+    next.missionLog = normalizeMissionLog(input?.missionLog);
     const requestedMock = input?.runMode === RUN_MODE_MOCK && mockFormById(next.mock.formId);
     next.runMode = FIRST_PASS_PARAM || next.runMode === RUN_MODE_FIRST_PASS
       ? RUN_MODE_FIRST_PASS
@@ -1291,6 +1378,7 @@
     });
     saveState();
     renderQuestPanel();
+    renderPassPlan();
     void loadTodayQuest();
   }
 
@@ -1799,6 +1887,304 @@
       )[0] || null;
   }
 
+  function latestOfficialExam() {
+    return [...(state.officialExamHistory || [])]
+      .sort((left, right) =>
+        (Date.parse(right.completedAt) || 0) - (Date.parse(left.completedAt) || 0)
+      )[0] || null;
+  }
+
+  function missionForDate(date = todayKey()) {
+    const current = state.missionLog?.[date];
+    return {
+      officialQuestions: Boolean(current?.officialQuestions),
+      reviewed: Boolean(current?.reviewed),
+      minutes: boundedInteger(current?.minutes, 600)
+    };
+  }
+
+  function setMissionForDate(date, mission) {
+    const current = missionForDate(date);
+    const hasMinutes = Object.prototype.hasOwnProperty.call(mission, "minutes");
+    state.missionLog = {
+      ...(state.missionLog || {}),
+      [date]: {
+        ...current,
+        ...mission,
+        minutes: boundedInteger(hasMinutes ? mission.minutes : current.minutes, 600)
+      }
+    };
+  }
+
+  function daysUntil(dateKey) {
+    const [year, month, day] = dateKey.split("-").map(Number);
+    const target = new Date(year, month - 1, day);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return Math.ceil((target - today) / 86400000);
+  }
+
+  function passPhaseFor(date = todayKey()) {
+    if (date <= JULY_GATE_DEADLINE) {
+      return {
+        id: "july",
+        title: "7月ゲート",
+        text: "宅建業法を固め、法令上の制限へ接触し、公式未見過去問で現在地を測る。"
+      };
+    }
+    if (date <= "2026-08-31") {
+      return {
+        id: "august",
+        title: "全分野拡張",
+        text: "権利関係を加えてコア100へ全接触。公式未見過去問を週2年分のペースで解く。"
+      };
+    }
+    if (date <= "2026-09-30") {
+      return {
+        id: "september",
+        title: "本試験演習",
+        text: "公式10年分を初見・120分で解き、37点以上を複数年度で再現する。"
+      };
+    }
+    if (date <= "2026-10-11") {
+      return {
+        id: "october",
+        title: "弱点補修",
+        text: "公式過去問の誤答、法改正、統計へ限定し、新しい教材と機能追加を止める。"
+      };
+    }
+    return {
+      id: "final",
+      title: "最終固定",
+      text: "40点の再現、受験票・会場・睡眠を固定し、10/18の13時にピークを合わせる。"
+    };
+  }
+
+  function officialScoreLabel(score) {
+    if (score >= STUDY_TARGETS.safe) return `安全圏 ${score} / 50`;
+    if (score >= STUDY_TARGETS.total) return `戦略目標 ${score} / 50`;
+    return `現在 ${score} / 50`;
+  }
+
+  function setOfficialExamStatus(message, isError = false) {
+    if (!elements.officialExamStatus) return;
+    elements.officialExamStatus.textContent = message;
+    elements.officialExamStatus.classList.toggle("is-error", isError);
+  }
+
+  function renderOfficialExamHistory() {
+    if (!elements.officialExamHistory) return;
+    elements.officialExamHistory.replaceChildren();
+    const history = [...(state.officialExamHistory || [])]
+      .sort((left, right) =>
+        (Date.parse(right.completedAt) || 0) - (Date.parse(left.completedAt) || 0)
+      );
+    if (!history.length) {
+      const empty = document.createElement("p");
+      empty.className = "official-history-empty";
+      empty.textContent = "まだ記録なし。最初の1年分は現在地の基準点として使います。";
+      elements.officialExamHistory.append(empty);
+      return;
+    }
+    history.forEach((item) => {
+      const row = document.createElement("article");
+      row.className = "official-history-row";
+      row.classList.toggle("is-safe", item.score >= STUDY_TARGETS.safe);
+      row.classList.toggle(
+        "is-target",
+        item.score >= STUDY_TARGETS.total && item.score < STUDY_TARGETS.safe
+      );
+      const heading = document.createElement("div");
+      const label = document.createElement("span");
+      label.textContent = `${item.year}年度`;
+      const score = document.createElement("strong");
+      score.textContent = `${item.score} / 50`;
+      const time = document.createElement("small");
+      time.textContent = `${item.elapsedMinutes}分`;
+      heading.append(label, score, time);
+
+      const sections = document.createElement("p");
+      sections.textContent =
+        `権利 ${item.rights}/14・法令 ${item.restrictions}/8・業法 ${item.business}/20・税他 ${item.taxOther}/8`;
+      row.append(heading, sections);
+      elements.officialExamHistory.append(row);
+    });
+  }
+
+  function renderPassPlan() {
+    if (!elements.passPlanPanel) return;
+    const phase = passPhaseFor();
+    const examDays = daysUntil(FIRST_PASS_DEADLINE);
+    const gateDays = daysUntil(JULY_GATE_DEADLINE);
+    const mission = missionForDate();
+    const latestOfficial = latestOfficialExam();
+    const businessIds = CURRICULUM_ORDER.filter((id) => QUESTIONS[id]?.sectionId === "business");
+    const restrictionIds = CURRICULUM_ORDER.filter((id) => QUESTIONS[id]?.sectionId === "restrictions");
+    const businessRetained = retainedCount(businessIds);
+    const restrictionContacted = restrictionIds.filter(isContacted).length;
+    const businessGate = businessRetained >= 32 || Number(latestOfficial?.business) >= STUDY_TARGETS.business;
+    const restrictionGate = restrictionContacted >= restrictionIds.length;
+    const officialGate = (state.officialExamHistory || []).length > 0;
+    const gateCount = [businessGate, restrictionGate, officialGate].filter(Boolean).length;
+    const battleDone = dailyQuestIsComplete();
+    const officialDone = mission.officialQuestions;
+    const reviewDone = mission.reviewed;
+    const minutesDone = mission.minutes >= DAILY_STUDY_MINUTES;
+    const missionCount = [battleDone, officialDone, reviewDone, minutesDone].filter(Boolean).length;
+
+    elements.passPhaseTitle.textContent = phase.title;
+    elements.passPhaseText.textContent = phase.text;
+    elements.examCountdown.textContent = examDays > 0
+      ? `D-${examDays}`
+      : examDays === 0
+        ? "本試験当日"
+        : "本試験終了";
+    elements.julyGateStatus.textContent = `${gateCount} / 3`;
+    elements.julyGateStatus.title = gateDays >= 0
+      ? `7/31まであと${gateDays}日`
+      : "7/31ゲート経過";
+    elements.coreCoverageStatus.textContent = `接触 ${contactedCount()} / ${CURRICULUM_ORDER.length}`;
+    elements.coreRetentionStatus.textContent = `定着 ${retainedCount()} / ${CURRICULUM_ORDER.length}`;
+    elements.officialReadinessStatus.textContent = latestOfficial
+      ? officialScoreLabel(latestOfficial.score)
+      : "未記録";
+    elements.dailyMissionStatus.textContent = `${missionCount} / 4`;
+    elements.dailyMissionSummary.textContent = missionCount === 4
+      ? `本日完了・${mission.minutes}分`
+      : battleDone
+        ? `次は${officialDone ? (reviewDone ? "90分まで記録" : "誤答を1行化") : "公式問題20問"}`
+        : `固定10問 ${dailyQuestDoneCount()} / ${dailyQuestIds().length || DAILY_TARGET}`;
+
+    elements.missionBattleStep.classList.toggle("is-done", battleDone);
+    elements.missionBattleStatus.textContent =
+      `${Math.min(dailyQuestDoneCount(), dailyQuestIds().length || DAILY_TARGET)} / ${dailyQuestIds().length || DAILY_TARGET}`;
+    [
+      [elements.missionOfficialButton, officialDone],
+      [elements.missionReviewButton, reviewDone]
+    ].forEach(([button, done]) => {
+      if (!button) return;
+      button.classList.toggle("is-done", done);
+      button.setAttribute("aria-pressed", String(done));
+    });
+    elements.missionMinutesInput?.closest(".mission-step")?.classList.toggle("is-done", minutesDone);
+    if (elements.missionMinutesInput && document.activeElement !== elements.missionMinutesInput) {
+      elements.missionMinutesInput.value = String(mission.minutes);
+    }
+    elements.officialLedgerSummary.textContent =
+      `${(state.officialExamHistory || []).length}年分`;
+    elements.passPlanPanel
+      .querySelectorAll("[data-pass-phase]")
+      .forEach((item) => item.classList.toggle("is-current", item.dataset.passPhase === phase.id));
+    renderOfficialExamHistory();
+  }
+
+  function toggleMissionFlag(field) {
+    if (!["officialQuestions", "reviewed"].includes(field)) return;
+    const mission = missionForDate();
+    const nextValue = !mission[field];
+    setMissionForDate(todayKey(), { [field]: nextValue });
+    saveState();
+    logStudyEvent("pass-mission", {
+      field,
+      completed: nextValue,
+      mission: missionForDate()
+    });
+    renderPassPlan();
+  }
+
+  function saveMissionMinutes() {
+    const value = elements.missionMinutesInput?.valueAsNumber;
+    if (!Number.isFinite(value) || value < 0 || value > 600) {
+      setOfficialExamStatus("学習時間は0〜600分で入力してください。", true);
+      return;
+    }
+    setMissionForDate(todayKey(), { minutes: value });
+    saveState();
+    logStudyEvent("pass-mission", {
+      field: "minutes",
+      minutes: boundedInteger(value, 600),
+      mission: missionForDate()
+    });
+    setOfficialExamStatus(`今日の学習時間を${boundedInteger(value, 600)}分で保存しました。`);
+    renderPassPlan();
+  }
+
+  function recordOfficialExam(event) {
+    event?.preventDefault();
+    const fields = {
+      year: elements.officialExamYear?.valueAsNumber || Number(elements.officialExamYear?.value),
+      score: elements.officialExamScore?.valueAsNumber,
+      rights: elements.officialRightsScore?.valueAsNumber,
+      restrictions: elements.officialRestrictionsScore?.valueAsNumber,
+      business: elements.officialBusinessScore?.valueAsNumber,
+      taxOther: elements.officialTaxOtherScore?.valueAsNumber,
+      elapsedMinutes: elements.officialExamMinutes?.valueAsNumber
+    };
+    if (Object.values(fields).some((value) => !Number.isFinite(value))) {
+      setOfficialExamStatus("年度・合計・4分野・時間をすべて入力してください。", true);
+      return;
+    }
+    if (Object.values(fields).some((value) => !Number.isInteger(value))) {
+      setOfficialExamStatus("得点と時間は整数で入力してください。", true);
+      return;
+    }
+    if (
+      !OFFICIAL_PAST_EXAM_YEARS.has(fields.year) ||
+      fields.score < 0 || fields.score > 50 ||
+      fields.rights < 0 || fields.rights > 14 ||
+      fields.restrictions < 0 || fields.restrictions > 8 ||
+      fields.business < 0 || fields.business > 20 ||
+      fields.taxOther < 0 || fields.taxOther > 8 ||
+      fields.elapsedMinutes < 1 || fields.elapsedMinutes > 180
+    ) {
+      setOfficialExamStatus("各欄を表示されている上限内で入力してください。", true);
+      return;
+    }
+    const sectionTotal =
+      fields.rights + fields.restrictions + fields.business + fields.taxOther;
+    if (sectionTotal !== fields.score) {
+      setOfficialExamStatus(
+        `分野別の合計${sectionTotal}点と総得点${fields.score}点が一致しません。`,
+        true
+      );
+      return;
+    }
+    if ((state.officialExamHistory || []).some((item) => item.year === fields.year)) {
+      setOfficialExamStatus(
+        `${fields.year}年度は記録済みです。初見判定を守るため別の未見年度を選んでください。`,
+        true
+      );
+      return;
+    }
+
+    const entry = {
+      ...fields,
+      completedAt: new Date().toISOString()
+    };
+    state.officialExamHistory = normalizeOfficialExamHistory([
+      ...(state.officialExamHistory || []),
+      entry
+    ]);
+    const mission = missionForDate();
+    setMissionForDate(todayKey(), {
+      officialQuestions: true,
+      minutes: Math.max(mission.minutes, boundedInteger(fields.elapsedMinutes, 180))
+    });
+    saveState();
+    logStudyEvent("official-past-exam", entry);
+    setOfficialExamStatus(
+      `${fields.year}年度 ${fields.score}/50を記録しました。次は誤答原因を1行ずつ残します。`
+    );
+    elements.officialExamForm?.reset();
+    if (elements.officialExamMinutes) elements.officialExamMinutes.value = "120";
+    const nextYear = [...OFFICIAL_PAST_EXAM_YEARS]
+      .find((year) => !(state.officialExamHistory || []).some((item) => item.year === year));
+    if (nextYear && elements.officialExamYear) {
+      elements.officialExamYear.value = String(nextYear);
+    }
+    renderPassPlan();
+  }
+
   function shortDateLabel(value) {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "日時不明";
@@ -2249,6 +2635,7 @@
     renderQuestPanel();
     renderDailyCompletionPanel();
     renderSprint();
+    renderPassPlan();
     updateLogStatusText();
   }
 
@@ -3682,12 +4069,17 @@
     }
     state.sprint.completed = (Number(state.sprint.completed) || 0) + 1;
     state.sprint.endsAt = null;
+    const mission = missionForDate();
+    setMissionForDate(todayKey(), {
+      minutes: Math.min(600, mission.minutes + SPRINT_MINUTES)
+    });
     saveState();
     logStudyEvent("sprint-complete", {
       completed: state.sprint.completed,
       daily: state.daily
     });
     renderSprint();
+    renderPassPlan();
   }
 
   function tickMockTimer() {
@@ -4376,6 +4768,7 @@
     renderQuestPanel();
     renderDailyCompletionPanel();
     renderSprint();
+    renderPassPlan();
     if (elements.answerDock) {
       elements.answerDock.hidden = true;
       document.body.classList.remove("has-answer-dock");
@@ -4613,6 +5006,20 @@
     elements.saveExportButton?.addEventListener("click", downloadSaveBackup);
     elements.saveShareButton?.addEventListener("click", shareSaveTransfer);
     elements.saveImportInput?.addEventListener("change", importSaveFile);
+    elements.missionOfficialButton?.addEventListener("click", () =>
+      toggleMissionFlag("officialQuestions")
+    );
+    elements.missionReviewButton?.addEventListener("click", () =>
+      toggleMissionFlag("reviewed")
+    );
+    elements.missionMinutesButton?.addEventListener("click", saveMissionMinutes);
+    elements.missionMinutesInput?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        saveMissionMinutes();
+      }
+    });
+    elements.officialExamForm?.addEventListener("submit", recordOfficialExam);
     elements.chapterSelect?.addEventListener("change", (event) => {
       selectChapter(Number(event.target.value));
     });

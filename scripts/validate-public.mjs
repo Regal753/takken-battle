@@ -21,6 +21,7 @@ const required = [
   "exam-questions-tax-other.js",
   "exam-questions-business.js",
   "Audit-TakkenQuestionQuality.js",
+  "Audit-TakkenPassPlanUi.cjs",
   "scripts/verify-deployed-page.mjs",
   "README.md",
 ];
@@ -48,6 +49,10 @@ assert.match(app, /const maxReview = newPool\.length >= 6 \? 4 : DAILY_TARGET/);
 assert.match(app, /const CURRICULUM_ORDER/);
 assert.match(app, /const RUN_MODE_MOCK = "mock"/);
 assert.match(app, /function showMockFinished/);
+assert.match(app, /function renderPassPlan/);
+assert.match(app, /function recordOfficialExam/);
+assert.match(app, /function normalizeOfficialExamHistory/);
+assert.match(app, /const DAILY_STUDY_MINUTES = 90/);
 assert.match(app, /正誤・正解肢・解説は50問終了後/);
 assert.doesNotMatch(
   app.match(/function publicTodayQuest\(\) \{[\s\S]*?\n  \}/)?.[0] || "",
@@ -63,11 +68,16 @@ assert.match(index, /スマホへ渡す/);
 assert.match(index, /id="mockAButton"/);
 assert.match(index, /id="mockBButton"/);
 assert.match(index, /id="studyScopeSelect"/);
+assert.match(index, /id="passPlanPanel"/);
+assert.match(index, /id="dailyMissionStatus"/);
+assert.match(index, /id="officialExamForm"/);
+assert.match(index, /id="officialExamHistory"/);
+assert.match(index, /RETIO公式過去問を開く/);
 assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 法令・税その他へ進む/);
 assert.match(index, /③ 全分野を混ぜる/);
-assert.match(index, /styles\.css\?v=20260726-legacy-history-v6/);
-assert.match(index, /app\.js\?v=20260726-legacy-history-v6/);
+assert.match(index, /styles\.css\?v=20260727-pass-plan-v7/);
+assert.match(index, /app\.js\?v=20260727-pass-plan-v7/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
 
@@ -91,7 +101,7 @@ assert.match(pagesWorkflow, /node Audit-TakkenSaveTransfer\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenFullExam\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenQuestionQuality\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
-assert.match(pagesWorkflow, /20260726-legacy-history-v6/);
+assert.match(pagesWorkflow, /20260727-pass-plan-v7/);
 assert.match(pagesWorkflow, /cp [^\n]*save-transfer\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*exam-blueprint\.js[^\n]*_site\//);
 

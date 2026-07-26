@@ -13,7 +13,7 @@
     <link rel="canonical" href="https://regal753.github.io/takken-battle/">
     <title>宅建バトル Study Quest</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./styles.css?v=20260726-legacy-history-v6">
+    <link rel="stylesheet" href="./styles.css?v=20260727-pass-plan-v7">
   </head>
   <body>
     <div class="app-root">
@@ -44,6 +44,148 @@
           <small id="saveTransferStatus" class="save-transfer-status" aria-live="polite"></small>
           <small class="save-transfer-help">「スマホへ渡す」は現在のセーブを本人用リンクにします。次の端末で開いて確認すると取込み、その後は端末内へ自動保存します。リンクは他人へ送らず、使用後に削除してください。</small>
         </div>
+      </section>
+
+      <section id="passPlanPanel" class="pass-plan-panel" aria-label="2026年宅建合格作戦">
+        <div class="pass-plan-head">
+          <div>
+            <span>2026 PASS PLAN</span>
+            <strong id="passPhaseTitle">7月ゲート</strong>
+            <p id="passPhaseText">宅建業法を固め、法令上の制限へ接触し、公式未見過去問で現在地を測る。</p>
+          </div>
+          <div class="exam-countdown">
+            <span>本試験 10/18</span>
+            <strong id="examCountdown">D-83</strong>
+            <small>13:00–15:00</small>
+          </div>
+        </div>
+
+        <div class="pass-metric-grid">
+          <div>
+            <span>7/31学習ゲート</span>
+            <strong id="julyGateStatus">0 / 3</strong>
+            <small>業法定着・法令接触・公式1年</small>
+          </div>
+          <div>
+            <span>コア100</span>
+            <strong id="coreCoverageStatus">接触 0 / 100</strong>
+            <small id="coreRetentionStatus">定着 0 / 100</small>
+          </div>
+          <div>
+            <span>公式未見過去問</span>
+            <strong id="officialReadinessStatus">未記録</strong>
+            <small>戦略目標37・安全圏40</small>
+          </div>
+          <div>
+            <span>今日の90分</span>
+            <strong id="dailyMissionStatus">0 / 4</strong>
+            <small id="dailyMissionSummary">固定10問から開始</small>
+          </div>
+        </div>
+
+        <div class="daily-mission" aria-label="今日の合格クエスト">
+          <div id="missionBattleStep" class="mission-step">
+            <span>1</span>
+            <div>
+              <strong>固定10問</strong>
+              <small id="missionBattleStatus">0 / 10</small>
+            </div>
+          </div>
+          <button id="missionOfficialButton" class="mission-step" type="button" aria-pressed="false">
+            <span>2</span>
+            <div>
+              <strong>公式問題20問</strong>
+              <small>未見年度を使う</small>
+            </div>
+          </button>
+          <button id="missionReviewButton" class="mission-step" type="button" aria-pressed="false">
+            <span>3</span>
+            <div>
+              <strong>誤答を1行化</strong>
+              <small>原因と次回ルール</small>
+            </div>
+          </button>
+          <div class="mission-step mission-minutes">
+            <span>4</span>
+            <label for="missionMinutesInput">
+              <strong>合計90分</strong>
+              <small>今日の学習時間</small>
+            </label>
+            <input id="missionMinutesInput" type="number" min="0" max="600" step="5" inputmode="numeric" value="0" aria-label="今日の学習時間（分）">
+            <button id="missionMinutesButton" type="button">保存</button>
+          </div>
+        </div>
+
+        <details class="official-ledger">
+          <summary>
+            <span>
+              <strong>公式未見過去問スコア台帳</strong>
+              <small>内蔵模試とは分けて、初見50問だけを記録</small>
+            </span>
+            <span id="officialLedgerSummary">0年分</span>
+          </summary>
+          <div class="official-ledger-body">
+            <div class="official-ledger-copy">
+              <p>RETIO公式の未見年度を120分で解き、採点後に入力します。過年度問題は法改正で現在法と異なる場合があります。</p>
+              <a href="https://www.retio.or.jp/exam/past_ques_ans/other/" target="_blank" rel="noopener noreferrer">RETIO公式過去問を開く</a>
+            </div>
+            <form id="officialExamForm" class="official-exam-form">
+              <label>
+                年度
+                <select id="officialExamYear" required>
+                  <option value="2025">令和7年度（2025）</option>
+                  <option value="2024">令和6年度（2024）</option>
+                  <option value="2023">令和5年度（2023）</option>
+                  <option value="2022">令和4年度（2022）</option>
+                  <option value="2021">令和3年度（2021）</option>
+                  <option value="2020">令和2年度（2020）</option>
+                  <option value="2019">令和元年度（2019）</option>
+                  <option value="2018">平成30年度（2018）</option>
+                  <option value="2017">平成29年度（2017）</option>
+                  <option value="2016">平成28年度（2016）</option>
+                </select>
+              </label>
+              <label>
+                合計 / 50
+                <input id="officialExamScore" type="number" min="0" max="50" inputmode="numeric" required>
+              </label>
+              <label>
+                権利 / 14
+                <input id="officialRightsScore" type="number" min="0" max="14" inputmode="numeric" required>
+              </label>
+              <label>
+                法令 / 8
+                <input id="officialRestrictionsScore" type="number" min="0" max="8" inputmode="numeric" required>
+              </label>
+              <label>
+                業法 / 20
+                <input id="officialBusinessScore" type="number" min="0" max="20" inputmode="numeric" required>
+              </label>
+              <label>
+                税・その他 / 8
+                <input id="officialTaxOtherScore" type="number" min="0" max="8" inputmode="numeric" required>
+              </label>
+              <label>
+                時間（分）
+                <input id="officialExamMinutes" type="number" min="1" max="180" value="120" inputmode="numeric" required>
+              </label>
+              <button id="officialExamSaveButton" type="submit">スコアを記録</button>
+            </form>
+            <p id="officialExamStatus" class="official-exam-status" aria-live="polite"></p>
+            <div id="officialExamHistory" class="official-exam-history" aria-label="公式過去問の記録"></div>
+          </div>
+        </details>
+
+        <details class="pass-roadmap">
+          <summary>10/18までの攻略順</summary>
+          <ol>
+            <li data-pass-phase="july"><strong>7/27–7/31</strong><span>業法定着32/40、法令16問接触、公式1年で基準点を作る</span></li>
+            <li data-pass-phase="august"><strong>8月</strong><span>全100問接触、権利を追加、公式過去問を週2年分</span></li>
+            <li data-pass-phase="september"><strong>9月</strong><span>公式10年分を初見・120分で回し、37点以上を再現</span></li>
+            <li data-pass-phase="october"><strong>10/1–10/11</strong><span>弱点・法改正・統計だけを補修し、新教材を止める</span></li>
+            <li data-pass-phase="final"><strong>10/12–10/18</strong><span>40点の再現、受験票・会場・睡眠を固定</span></li>
+          </ol>
+        </details>
       </section>
 
       <nav id="themeBar" class="theme-toolbar" aria-label="テーマ操作">
@@ -334,7 +476,7 @@
     <script src="./question-balance.js?v=20260711-feedback-v8"></script>
     <script src="./reward-system.js?v=20260713-confidence-v14"></script>
     <script src="./save-transfer.js?v=20260726-pass-efficiency-v3"></script>
-    <script src="./app.js?v=20260726-legacy-history-v6"></script>
+    <script src="./app.js?v=20260727-pass-plan-v7"></script>
     <noscript>宅建バトルを利用するにはJavaScriptを有効にしてください。</noscript>
   </body>
 </html>
