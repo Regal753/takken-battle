@@ -13,7 +13,7 @@
     <link rel="canonical" href="https://regal753.github.io/takken-battle/">
     <title>宅建バトル Study Quest</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./styles.css?v=20260726-mock-v2">
+    <link rel="stylesheet" href="./styles.css?v=20260726-handoff-v1">
   </head>
   <body>
     <div class="app-root">
@@ -33,14 +33,16 @@
 
       <section class="public-mode-note" aria-label="公開版の保存と利用上の注意">
         <strong>公開β</strong>
-        <span class="public-mode-copy">進捗はこの端末のブラウザ内だけに保存されます。法令基準日は2026年4月1日。統計問題は公開日を確認し、最新の公式資料でも再確認してください。</span>
+        <span class="public-mode-copy">進捗はこの端末へ自動保存されます。法令基準日は2026年4月1日。統計問題は公開日を確認し、最新の公式資料でも再確認してください。</span>
         <div class="save-transfer-actions" aria-label="セーブデータ管理">
           <button id="saveExportButton" class="save-transfer-button" type="button">バックアップ</button>
+          <button id="saveShareButton" class="save-transfer-button save-share-button" type="button">スマホへ渡す</button>
           <label class="save-transfer-button" for="saveImportInput">
             読み込む
             <input id="saveImportInput" type="file" accept=".json,application/json" hidden>
           </label>
           <small id="saveTransferStatus" class="save-transfer-status" aria-live="polite"></small>
+          <small class="save-transfer-help">「スマホへ渡す」は現在のセーブを本人用リンクにします。次の端末で開いて確認すると取込み、その後は端末内へ自動保存します。リンクは他人へ送らず、使用後に削除してください。</small>
         </div>
       </section>
 
@@ -324,8 +326,8 @@
     <script src="./question-bank.js?v=20260723-ops-v15"></script>
     <script src="./question-balance.js?v=20260711-feedback-v8"></script>
     <script src="./reward-system.js?v=20260713-confidence-v14"></script>
-    <script src="./save-transfer.js?v=20260725-save-v1"></script>
-    <script src="./app.js?v=20260726-mock-v2"></script>
+    <script src="./save-transfer.js?v=20260726-handoff-v1"></script>
+    <script src="./app.js?v=20260726-handoff-v1"></script>
     <noscript>宅建バトルを利用するにはJavaScriptを有効にしてください。</noscript>
   </body>
 </html>

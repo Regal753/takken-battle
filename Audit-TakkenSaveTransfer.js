@@ -79,6 +79,35 @@ const restored = transfer.validatePackage(
 assert.equal(restored.format, transfer.SAVE_FORMAT);
 assert.equal(restored.state.totalXp, 475);
 
+const handoffUrl = transfer.createTransferUrl(
+  savePackage,
+  "https://regal753.github.io/takken-battle/?v=manual#old"
+);
+const parsedHandoffUrl = new URL(handoffUrl);
+assert.equal(parsedHandoffUrl.origin, "https://regal753.github.io");
+assert.equal(parsedHandoffUrl.pathname, "/takken-battle/");
+assert.equal(parsedHandoffUrl.searchParams.get("v"), "manual");
+assert.ok(!handoffUrl.includes('"totalXp"'));
+const handoffToken = new URLSearchParams(parsedHandoffUrl.hash.slice(1)).get("save");
+const handoffState = transfer.validatePackage(transfer.decodePackage(handoffToken), allowedIds);
+assert.equal(handoffState.state.totalXp, 475);
+assert.equal(handoffState.state.centralProgress.answers, 5);
+
+assert.throws(
+  () => transfer.createTransferUrl(progressPackage, "https://regal753.github.io/takken-battle/"),
+  /端末セーブ形式/
+);
+assert.throws(
+  () => transfer.createTransferUrl(savePackage, "file:///takken-battle/index.html"),
+  /公開URL/
+);
+assert.throws(
+  () => transfer.createTransferUrl(
+    transfer.createSavePackage({ oversized: "x".repeat(140_000) }),
+    "https://regal753.github.io/takken-battle/"
+  ),
+  /JSONバックアップ/
+);
 assert.throws(
   () => transfer.validatePackage({ format: "unknown", state: {} }, allowedIds),
   /対応していない/
@@ -87,6 +116,7 @@ assert.throws(
 console.log(JSON.stringify({
   status: "ok",
   encodedChars: encoded.length,
+  handoffUrlChars: handoffUrl.length,
   migratedQuestions: Object.keys(imported.questionStats).length,
   centralAnswers: imported.centralProgress.answers
 }));
