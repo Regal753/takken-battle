@@ -5,6 +5,7 @@
   const PROGRESS_FORMAT = "takken-battle-progress-v1";
   const MAX_PACKAGE_CHARS = 750_000;
   const MAX_TRANSFER_URL_CHARS = 180_000;
+  const MAX_PACKAGE_BYTES = MAX_PACKAGE_CHARS * 4;
   const MAX_COUNTER = 1_000_000;
 
   function plainObject(value) {
@@ -279,6 +280,71 @@
     return JSON.parse(json);
   }
 
+  function base64UrlFromBytes(bytes) {
+    return bytesToBase64(bytes)
+      .replace(/\+/g, "-")
+      .replace(/\//g, "_")
+      .replace(/=+$/g, "");
+  }
+
+  function bytesFromBase64Url(token) {
+    const compact = String(token || "").trim();
+    if (!compact || compact.length > MAX_TRANSFER_URL_CHARS) {
+      throw new Error("圧縮引継ぎリンクのセーブデータが正しくありません。");
+    }
+    const padded = compact.replace(/-/g, "+").replace(/_/g, "/")
+      .padEnd(Math.ceil(compact.length / 4) * 4, "=");
+    return base64ToBytes(padded);
+  }
+
+  async function readByteStream(stream, maximumBytes) {
+    const reader = stream.getReader();
+    const chunks = [];
+    let total = 0;
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        total += value.byteLength;
+        if (total > maximumBytes) {
+          await reader.cancel();
+          throw new Error("圧縮引継ぎリンクのセーブデータが大きすぎます。");
+        }
+        chunks.push(value);
+      }
+    } finally {
+      reader.releaseLock();
+    }
+    const output = new Uint8Array(total);
+    let offset = 0;
+    chunks.forEach((chunk) => {
+      output.set(chunk, offset);
+      offset += chunk.byteLength;
+    });
+    return output;
+  }
+
+  async function encodeCompressedPackage(input) {
+    if (typeof CompressionStream !== "function") return "";
+    const bytes = new TextEncoder().encode(JSON.stringify(input));
+    const compressed = new Blob([bytes]).stream().pipeThrough(new CompressionStream("gzip"));
+    return base64UrlFromBytes(await readByteStream(compressed, MAX_PACKAGE_BYTES));
+  }
+
+  async function decodeCompressedPackage(token) {
+    if (typeof DecompressionStream !== "function") {
+      throw new Error("このブラウザは圧縮引継ぎに未対応です。最新版へ更新してください。");
+    }
+    const compressed = bytesFromBase64Url(token);
+    const decompressed = new Blob([compressed]).stream().pipeThrough(new DecompressionStream("gzip"));
+    const bytes = await readByteStream(decompressed, MAX_PACKAGE_BYTES);
+    const json = new TextDecoder().decode(bytes);
+    if (json.length > MAX_PACKAGE_CHARS) {
+      throw new Error("圧縮引継ぎリンクのセーブデータが大きすぎます。");
+    }
+    return JSON.parse(json);
+  }
+
   function createTransferUrl(input, baseUrl) {
     if (!plainObject(input) || input.format !== SAVE_FORMAT) {
       throw new Error("本人用引継ぎリンクには端末セーブ形式が必要です。");
@@ -295,11 +361,31 @@
     return output;
   }
 
+  async function createCompressedTransferUrl(input, baseUrl) {
+    if (!plainObject(input) || input.format !== SAVE_FORMAT) {
+      throw new Error("本人用引継ぎリンクには端末セーブ形式が必要です。");
+    }
+    const token = await encodeCompressedPackage(input);
+    if (!token) return createTransferUrl(input, baseUrl);
+    const url = new URL(String(baseUrl || ""));
+    if (!["https:", "http:"].includes(url.protocol)) {
+      throw new Error("引継ぎリンクの公開URLが正しくありません。");
+    }
+    url.hash = new URLSearchParams({ savegz: token }).toString();
+    const output = url.toString();
+    if (output.length > MAX_TRANSFER_URL_CHARS) {
+      throw new Error("セーブが大きいためリンク化できません。JSONバックアップを使ってください。");
+    }
+    return output;
+  }
+
   const api = {
     SAVE_FORMAT,
     PROGRESS_FORMAT,
+    createCompressedTransferUrl,
     createSavePackage,
     createTransferUrl,
+    decodeCompressedPackage,
     decodePackage,
     encodePackage,
     stateFromProgressPackage,

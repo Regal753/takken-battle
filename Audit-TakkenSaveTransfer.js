@@ -113,10 +113,31 @@ assert.throws(
   /対応していない/
 );
 
-console.log(JSON.stringify({
-  status: "ok",
-  encodedChars: encoded.length,
-  handoffUrlChars: handoffUrl.length,
-  migratedQuestions: Object.keys(imported.questionStats).length,
-  centralAnswers: imported.centralProgress.answers
-}));
+void (async () => {
+  const compressedUrl = await transfer.createCompressedTransferUrl(
+    savePackage,
+    "https://regal753.github.io/takken-battle/?v=compressed#old"
+  );
+  const parsedCompressedUrl = new URL(compressedUrl);
+  const compressedToken = new URLSearchParams(parsedCompressedUrl.hash.slice(1)).get("savegz");
+  assert.ok(compressedToken);
+  assert.ok(compressedUrl.length < handoffUrl.length);
+  const compressedState = transfer.validatePackage(
+    await transfer.decodeCompressedPackage(compressedToken),
+    allowedIds
+  );
+  assert.equal(compressedState.state.totalXp, 475);
+  assert.equal(compressedState.state.centralProgress.answers, 5);
+
+  console.log(JSON.stringify({
+    status: "ok",
+    encodedChars: encoded.length,
+    handoffUrlChars: handoffUrl.length,
+    compressedUrlChars: compressedUrl.length,
+    migratedQuestions: Object.keys(imported.questionStats).length,
+    centralAnswers: imported.centralProgress.answers
+  }));
+})().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});
