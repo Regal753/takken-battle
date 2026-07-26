@@ -173,6 +173,7 @@
     "q16", "q66", "q67", "q68", "q69", "q70", "q108", "q109", "q110", "q111",
     "q17", "q18", "q19", "q20", "q71", "q72", "q73", "q74", "q75", "q112", "q113", "q114", "q115"
   ];
+  const LEGACY_ID_SET = new Set(LEGACY_ORDER);
 
   const LEGACY_CHAPTERS = [
     { label: "旧・業法 / 免許・免許換え", ids: ["q116", "q117", "q118", "q119", "q120", "q121", "q122", "q123", "q124", "q125", "q126", "q127", "q128", "q129", "q130", "q131", "q132", "q133", "q134", "q135", "q136"] },
@@ -1808,6 +1809,13 @@
     return effectiveAttempts(statsFor(id)) > 0;
   }
 
+  function legacyProgress(ids = LEGACY_ORDER) {
+    return {
+      contacted: ids.filter(isContacted).length,
+      total: ids.length
+    };
+  }
+
   function contactedCount() {
     return CURRICULUM_ORDER.filter(isContacted).length;
   }
@@ -3279,12 +3287,13 @@
       elements.chapterSelect.append(optionGroup);
     });
     const legacyGroup = document.createElement("optgroup");
-    legacyGroup.label = "補助問題（コア40問の後・任意）";
+    legacyGroup.label = "以前の100問（解答履歴を保持）";
     LEGACY_CHAPTER_ENTRIES.forEach(({ chapter, chapterIndex }) => {
-      const retained = retainedCount(chapter.ids);
+      const progress = legacyProgress(chapter.ids);
       const option = document.createElement("option");
       option.value = String(chapterIndex);
-      option.textContent = `${chapter.label.replace(/^旧・業法 \/\s*/, "")} 定着${retained}/${chapter.ids.length}`;
+      option.textContent =
+        `${chapter.label.replace(/^旧・業法 \/\s*/, "")} 解答済${progress.contacted}/${progress.total}`;
       option.selected = chapterIndex === activeChapter;
       legacyGroup.append(option);
     });
@@ -3372,18 +3381,20 @@
       return { current, total: ids.length };
     };
 
-    const createChapterRow = (chapter, chapterIndex) => {
+    const createChapterRow = (chapter, chapterIndex, { legacy = false } = {}) => {
       const retained = retainedCount(chapter.ids);
       const contacted = chapter.ids.filter(isContacted).length;
+      const progressLabel = legacy ? "解答済" : isFirstPassMode() ? "接触" : "定着";
+      const progressValue = legacy || isFirstPassMode() ? contacted : retained;
       const row = document.createElement("button");
       row.type = "button";
       row.className = "chapter-row";
       row.disabled = isMockMode();
       row.classList.toggle("is-active", chapter.ids.includes(activeId));
-      row.classList.toggle("is-done", (isFirstPassMode() ? contacted : retained) === chapter.ids.length);
+      row.classList.toggle("is-done", progressValue === chapter.ids.length);
       row.setAttribute(
         "aria-label",
-        `${chapter.label}を選択 ${isFirstPassMode() ? `接触${contacted}` : `定着${retained}`}/${chapter.ids.length}`
+        `${chapter.label}を選択 ${progressLabel}${progressValue}/${chapter.ids.length}`
       );
 
       const dot = document.createElement("span");
@@ -3396,9 +3407,7 @@
 
       const score = document.createElement("span");
       score.className = "chapter-score";
-      score.textContent = `${isFirstPassMode() ? "接触" : "定着"} ${
-        isFirstPassMode() ? contacted : retained
-      }/${chapter.ids.length}`;
+      score.textContent = `${progressLabel} ${progressValue}/${chapter.ids.length}`;
 
       row.append(dot, label, score);
       row.addEventListener("click", () => selectChapter(chapterIndex));
@@ -3430,17 +3439,17 @@
 
       if (group.id === "business") {
         const optionalIds = LEGACY_CHAPTER_ENTRIES.flatMap(({ chapter }) => chapter.ids);
-        const optionalProgress = progressFor(optionalIds);
+        const optionalProgress = legacyProgress(optionalIds);
         const optional = document.createElement("details");
         optional.className = "chapter-optional";
         optional.open = LEGACY_CHAPTER_ENTRIES.some(({ chapter }) => chapter.ids.includes(activeId));
         const optionalSummary = document.createElement("summary");
         optionalSummary.innerHTML =
-          `<strong>補助問題</strong><span>今は解かなくてOK・任意 ${optionalProgress.current}/${optionalProgress.total}</span>`;
+          `<strong>以前の100問</strong><span>問題・履歴を保持　解答済 ${optionalProgress.contacted}/${optionalProgress.total}</span>`;
         const optionalList = document.createElement("div");
         optionalList.className = "chapter-group-list";
         LEGACY_CHAPTER_ENTRIES.forEach(({ chapter, chapterIndex }) => {
-          optionalList.append(createChapterRow(chapter, chapterIndex));
+          optionalList.append(createChapterRow(chapter, chapterIndex, { legacy: true }));
         });
         optional.append(optionalSummary, optionalList);
         groupElement.append(optional);
@@ -3455,7 +3464,14 @@
     if (!chapter) return;
     state.runMode = "quest";
     setFirstPassUrl(false);
-    const nextId = chapter.ids.find((id) => !answeredToday(id) && !isRetained(id)) || chapter.ids[0];
+    const isLegacyChapter = chapter.ids.every((id) => LEGACY_ID_SET.has(id));
+    const nextId = isLegacyChapter
+      ? chapter.ids.find((id) => !isContacted(id)) ||
+        [...chapter.ids].sort((a, b) =>
+          weaknessScore(b) - weaknessScore(a) ||
+          (Number(statsFor(a).lastStep) || 0) - (Number(statsFor(b).lastStep) || 0)
+        )[0]
+      : chapter.ids.find((id) => !answeredToday(id) && !isRetained(id)) || chapter.ids[0];
     goToQuestion(nextId);
   }
 

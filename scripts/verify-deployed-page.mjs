@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260726-pass-efficiency-v5";
+const expectedVersion = process.argv[3] || "20260726-legacy-history-v6";
 const attempts = Math.max(1, Number(process.env.TAKKEN_DEPLOY_VERIFY_ATTEMPTS) || 12);
 const intervalMs = Math.max(0, Number(process.env.TAKKEN_DEPLOY_VERIFY_INTERVAL_MS) || 10000);
 
@@ -42,6 +42,8 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.equal(styleResponse.status, 200, `style HTTP ${styleResponse.status}`);
     assert.match(appCode, /const DEFAULT_STUDY_SCOPE = "business"/, "study scope logic missing");
     assert.match(appCode, /function isRetained/, "retention logic missing");
+    assert.match(appCode, /以前の100問（解答履歴を保持）/, "legacy question history label missing");
+    assert.match(appCode, /問題・履歴を保持　解答済/, "legacy answered progress missing");
     assert.match(styleCode, /\.study-scope-select/, "study scope style missing");
     console.log(JSON.stringify({
       status: "ok",
