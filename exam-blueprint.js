@@ -219,8 +219,8 @@
       url: "https://elaws.e-gov.go.jp/document?lawid=340AC0000000033"
     },
     business: {
-      label: "宅地建物取引業法・令和8年運用",
-      url: "https://www.mlit.go.jp/totikensangyo/const/1_6_bt_000268.html"
+      label: "宅地建物取引業法",
+      url: "https://elaws.e-gov.go.jp/document?lawid=327AC1000000176"
     },
     retio: {
       label: "RETIO 宅建試験の概要・公式問題",

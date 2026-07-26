@@ -1004,6 +1004,24 @@ body.has-answer-dock {
   line-height: 1.5;
 }
 
+.official-source-link,
+.mock-source-link {
+  color: #8fd8ff;
+  font-weight: 850;
+  text-decoration: underline;
+  text-decoration-color: rgba(143, 216, 255, 0.52);
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+
+.official-source-link:hover,
+.official-source-link:focus-visible,
+.mock-source-link:hover,
+.mock-source-link:focus-visible {
+  color: #d5f2ff;
+  text-decoration-color: currentColor;
+}
+
 .explain-text {
   margin: 12px 0;
   color: #dcecf9;
@@ -4323,6 +4341,42 @@ body {
   font-size: 16px;
 }
 
+.mock-calibration {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #426477;
+  border-radius: 7px;
+  background: rgba(19, 45, 59, 0.7);
+}
+
+.mock-calibration > strong {
+  color: #eaf6fb;
+  font-size: 14px;
+}
+
+.mock-calibration > p {
+  margin: 0;
+  color: #a9c0cb;
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.mock-calibration > a {
+  width: fit-content;
+  color: #8fd8ff;
+  font-size: 12px;
+  font-weight: 900;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.mock-calibration > a:hover,
+.mock-calibration > a:focus-visible {
+  color: #d5f2ff;
+}
+
 .mock-wrong-review {
   display: grid;
   gap: 8px;
@@ -4364,6 +4418,13 @@ body {
   line-height: 1.65;
   white-space: pre-line;
   overflow-wrap: anywhere;
+}
+
+.mock-source-link {
+  display: block;
+  margin: 0 10px 10px;
+  font-size: 11px;
+  line-height: 1.55;
 }
 
 .mock-wrong-item dl {

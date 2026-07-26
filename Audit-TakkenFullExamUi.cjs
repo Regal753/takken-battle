@@ -68,6 +68,7 @@ async function main() {
 
     const visitedIds = [];
     const visitedSections = [];
+    const visitedSourceHosts = [];
     for (let index = 0; index < 10; index += 1) {
       const question = await page.evaluate(() => {
         const text = document.querySelector("#questionText")?.textContent || "";
@@ -80,6 +81,20 @@ async function main() {
       visitedSections.push(question.sectionId);
       await page.locator(`.choice-button[data-index="${question.answer}"]`).click();
       await page.locator("#feedbackBox").waitFor({ state: "visible" });
+      const sourceLink = await page.locator("#bookRef a.official-source-link").evaluate((link) => ({
+        host: new URL(link.href).hostname,
+        text: link.textContent || "",
+        target: link.target,
+        rel: link.rel
+      }));
+      if (
+        !sourceLink.text.includes("公式根拠") ||
+        sourceLink.target !== "_blank" ||
+        !sourceLink.rel.includes("noopener")
+      ) {
+        throw new Error(`Official source link invalid: ${JSON.stringify(sourceLink)}`);
+      }
+      visitedSourceHosts.push(sourceLink.host);
       await page.locator(".confidence-button").filter({ hasText: "根拠までOK" }).click();
       if (index < 9) {
         await page.locator("#dockNextButton").click();
@@ -101,6 +116,17 @@ async function main() {
       if (!visitedSections.includes(sectionId)) {
         throw new Error(`First daily block lacks ${sectionId}: ${visitedSections.join(",")}`);
       }
+    }
+    const allowedSourceHosts = new Set([
+      "elaws.e-gov.go.jp",
+      "www.jhf.go.jp",
+      "www.mlit.go.jp",
+      "www.moj.go.jp",
+      "www.retio.or.jp",
+      "www.rftc.jp"
+    ]);
+    if (visitedSourceHosts.some((host) => !allowedSourceHosts.has(host))) {
+      throw new Error(`Daily source host invalid: ${visitedSourceHosts.join(",")}`);
     }
 
     const stopLabel = ((await page.locator("#dockNextLabel").textContent()) || "").trim();
@@ -136,6 +162,8 @@ async function main() {
         formId: saved.mock?.formId,
         position: saved.mock?.position,
         attempts: saved.attempts,
+        questLabel: document.querySelector("#questLabel")?.textContent?.trim() || "",
+        coachText: document.querySelector("#coachText")?.textContent?.trim() || "",
         source: document.querySelector("#dailyQuestSource")?.textContent || "",
         timer: document.querySelector("#dailyWeakText")?.textContent || ""
       };
@@ -144,6 +172,9 @@ async function main() {
       mockStart.runMode !== "mock" ||
       mockStart.formId !== "form-a" ||
       mockStart.position !== 0 ||
+      mockStart.questLabel !== "50問確認模試" ||
+      !mockStart.coachText.includes("既習問題の定着確認") ||
+      !mockStart.coachText.includes("初見実力は公式過去問") ||
       !mockStart.source.includes("終了後に採点") ||
       !/^\d{2,3}:\d{2}$/.test(mockStart.timer)
     ) {
@@ -172,6 +203,7 @@ async function main() {
             answerGridHidden: Boolean(answerGrid?.hidden),
             feedback: document.querySelector("#explainText")?.textContent || "",
             correctAnswer: document.querySelector("#correctAnswer")?.textContent || "",
+            sourceLinks: document.querySelectorAll("#bookRef a").length,
             attempts: saved.attempts,
             mockResults: saved.mock?.results?.length || 0
           };
@@ -182,6 +214,7 @@ async function main() {
           !noLeakAudit.answerGridHidden ||
           !noLeakAudit.feedback.includes("50問終了後") ||
           noLeakAudit.correctAnswer ||
+          noLeakAudit.sourceLinks !== 0 ||
           noLeakAudit.attempts !== mockStart.attempts ||
           noLeakAudit.mockResults !== 1
         ) {
@@ -235,6 +268,18 @@ async function main() {
         priorityText: document.querySelector(".mock-priority")?.textContent?.replace(/\s+/g, " ").trim() || "",
         historyItems: document.querySelectorAll(".mock-history-item").length,
         historyText: document.querySelector(".mock-history")?.textContent?.replace(/\s+/g, " ").trim() || "",
+        wrongSourceLinks: [...document.querySelectorAll(".mock-wrong-item .mock-source-link")].map((link) => ({
+          host: new URL(link.href).hostname,
+          text: link.textContent?.trim() || "",
+          target: link.target,
+          rel: link.rel
+        })),
+        calibration: {
+          text: document.querySelector(".mock-calibration")?.textContent?.replace(/\s+/g, " ").trim() || "",
+          href: document.querySelector(".mock-calibration a")?.href || "",
+          target: document.querySelector(".mock-calibration a")?.target || "",
+          rel: document.querySelector(".mock-calibration a")?.rel || ""
+        },
         stats: {
           scoreLabel: document.querySelector("#accuracyLabel")?.textContent?.trim() || "",
           score: document.querySelector("#accuracyText")?.textContent?.trim() || "",
@@ -261,6 +306,17 @@ async function main() {
       !mockResult.priorityText.includes("宅建業法 16/20 → 目標18") ||
       mockResult.historyItems !== 1 ||
       !mockResult.historyText.includes("40 / 50") ||
+      mockResult.wrongSourceLinks.length !== 10 ||
+      mockResult.wrongSourceLinks.some((link) =>
+        !allowedSourceHosts.has(link.host) ||
+        !link.text.includes("公式根拠") ||
+        link.target !== "_blank" ||
+        !link.rel.includes("noopener")
+      ) ||
+      !mockResult.calibration.text.includes("初見実力は公式過去問で確認") ||
+      mockResult.calibration.href !== "https://www.retio.or.jp/exam/past_ques_ans/other/" ||
+      mockResult.calibration.target !== "_blank" ||
+      !mockResult.calibration.rel.includes("noopener") ||
       mockResult.stats.scoreLabel !== "得点" ||
       mockResult.stats.score !== "40/50" ||
       mockResult.stats.timeLabel !== "所要時間" ||
@@ -277,6 +333,7 @@ async function main() {
     await page.locator('[data-mock-result="form-a"]').waitFor({ state: "visible" });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(100);
+    await page.locator(".mock-wrong-item summary").first().click();
     await capture(page, "mock-result-mobile.png");
     const mockMobileOverflow = await page.evaluate(() =>
       Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
@@ -609,6 +666,7 @@ async function main() {
       total: blueprintAudit.total,
       visitedIds,
       visitedSections: [...new Set(visitedSections)],
+      visitedSourceHosts: [...new Set(visitedSourceHosts)],
       fixedSource: blueprintAudit.sourceLabel,
       mockStart,
       noLeakAudit,

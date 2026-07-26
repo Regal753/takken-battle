@@ -18,6 +18,7 @@
   const RUN_MODE_MOCK = "mock";
   const MOCK_DURATION_MINUTES = 120;
   const MOCK_DURATION_MS = MOCK_DURATION_MINUTES * 60 * 1000;
+  const OFFICIAL_PAST_EXAMS_URL = "https://www.retio.or.jp/exam/past_ques_ans/other/";
   const FIRST_PASS_DEADLINE = "2026-10-18";
   const FIRST_PASS_DEADLINE_LABEL = "10/18";
   const EXAM_BLUEPRINT = window.TAKKEN_EXAM_BLUEPRINT;
@@ -2301,6 +2302,22 @@
     });
   }
 
+  function renderBookReference(question) {
+    elements.bookRef.replaceChildren();
+    if (question.sourceRef && question.sourceUrl) {
+      const link = document.createElement("a");
+      link.className = "official-source-link";
+      link.href = question.sourceUrl;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      link.textContent = `公式根拠: ${question.sourceRef}（基準日 ${question.legalBaseline}）`;
+      elements.bookRef.append(link);
+      return;
+    }
+    elements.bookRef.textContent =
+      TOPIC_REFS[question.tag] || `旧・第1分冊 宅建業法 / ${question.tag}`;
+  }
+
   function renderFeedback(question) {
     const answered = state.answered;
     removeAdaptiveFeedback();
@@ -2330,9 +2347,7 @@
       : "反撃。誤りの肢を確認";
     elements.correctAnswer.textContent = `${question.answer + 1}. ${question.choices[question.answer]}`;
     elements.trapText.textContent = question.trap || "正解肢だけでなく、他の肢を切れる理由まで確認する。";
-    elements.bookRef.textContent = question.sourceRef
-      ? `${question.sourceRef}（基準日 ${question.legalBaseline}）`
-      : TOPIC_REFS[question.tag] || `旧・第1分冊 宅建業法 / ${question.tag}`;
+    renderBookReference(question);
     elements.explainText.textContent = question.explain;
     renderConfidenceCheck(question);
     renderChoiceExplanations(question);
@@ -2764,7 +2779,7 @@
       elements.markedText.textContent = String(weakIds().length);
       elements.chapterProgressText.textContent = `${state.mock.position + 1} / 50問`;
       if (elements.studyTitle) elements.studyTitle.textContent = `宅建 ${mockFormShortLabel()}`;
-      if (elements.todayLabel) elements.todayLabel.textContent = "本試験50問・120分";
+      if (elements.todayLabel) elements.todayLabel.textContent = "本試験配分50問・120分";
       return;
     }
     if (elements.attemptLabel) elements.attemptLabel.textContent = "解答";
@@ -2800,7 +2815,7 @@
       const form = currentMockForm();
       const answered = mockAnsweredCount();
       const remaining = Math.max(0, form.ids.length - answered);
-      if (elements.questLabel) elements.questLabel.textContent = "本試験模試";
+      if (elements.questLabel) elements.questLabel.textContent = "50問確認模試";
       elements.dailyQuestTitle.textContent = `${mockFormShortLabel(form)} ${state.mock.position + 1} / ${form.ids.length}`;
       if (elements.dailyAnswerLabel) elements.dailyAnswerLabel.textContent = "解答";
       if (elements.dailyCorrectLabel) elements.dailyCorrectLabel.textContent = "未回答";
@@ -3076,7 +3091,7 @@
     if (isMockMode()) {
       elements.coachTitle.textContent = `${mockFormShortLabel()}・安全圏目標${MOCK_SAFE_TARGET}点`;
       elements.coachText.textContent =
-        "本試験と同じ50問を120分で解く。途中の正誤・解説は隠し、終了後に分野別得点と誤答をまとめて復習する。";
+        "コア100から本試験配分で組んだ50問を120分で解く。途中の正誤・解説は隠す。既習問題の定着確認なので、初見実力は公式過去問で別に測る。";
       return;
     }
 
@@ -4084,6 +4099,7 @@
                 <div><dt>正解</dt><dd>${question.answer + 1}. ${escapeHtml(question.choices[question.answer])}</dd></div>
               </dl>
               <p>${escapeHtml(question.explain)}</p>
+              <a class="mock-source-link" href="${escapeHtml(question.sourceUrl)}" target="_blank" rel="noopener noreferrer">公式根拠: ${escapeHtml(question.sourceRef)}（基準日 ${escapeHtml(question.legalBaseline)}）</a>
             </details>`;
         }).join("")
       : `<p class="mock-perfect">全50問正解。誤答レビューはありません。</p>`;
@@ -4110,6 +4126,11 @@
         <section class="mock-history">
           <h3>直近の模試</h3>
           <div class="mock-history-grid">${historyItems}</div>
+        </section>
+        <section class="mock-calibration">
+          <strong>初見実力は公式過去問で確認</strong>
+          <p>フォームA・Bはコア100の再構成。得点は定着確認に使い、初見の合否判定には使わない。過年度問題は法改正で現在法と異なる場合がある。</p>
+          <a href="${OFFICIAL_PAST_EXAMS_URL}" target="_blank" rel="noopener noreferrer">RETIO公式過去問を開く</a>
         </section>
         <section class="mock-wrong-review">
           <h3>誤答レビュー</h3>

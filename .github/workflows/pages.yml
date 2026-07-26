@@ -24,6 +24,7 @@ jobs:
         with:
           node-version: "22"
       - run: node Audit-TakkenFullExam.js
+      - run: node Audit-TakkenQuestionQuality.js
       - run: node Audit-TakkenQuestionBank.js
       - run: node Audit-TakkenRewardSystem.js
       - run: node Audit-TakkenSaveTransfer.js
