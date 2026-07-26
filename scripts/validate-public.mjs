@@ -14,6 +14,13 @@ const required = [
   "reward-system.js",
   "question-bank.js",
   "question-balance.js",
+  "exam-blueprint.js",
+  "exam-question-core.js",
+  "exam-questions-rights.js",
+  "exam-questions-restrictions.js",
+  "exam-questions-tax-other.js",
+  "exam-questions-business.js",
+  "scripts/verify-deployed-page.mjs",
   "README.md",
 ];
 
@@ -29,16 +36,29 @@ const pagesWorkflow = text(".github/workflows/pages.yml");
 assert.match(index, /name="takken-runtime" content="public-static"/);
 assert.match(app, /const PUBLIC_STATIC_MODE/);
 assert.match(app, /function publicTodayQuest/);
+assert.match(app, /const CURRICULUM_ORDER/);
+assert.match(app, /const RUN_MODE_MOCK = "mock"/);
+assert.match(app, /function showMockFinished/);
+assert.match(app, /正誤・正解肢・解説は50問終了後/);
+assert.doesNotMatch(
+  app.match(/function publicTodayQuest\(\) \{[\s\S]*?\n  \}/)?.[0] || "",
+  /Math\.random|seed|shuffle/i,
+);
 assert.match(app, /この端末に保存/);
 assert.match(app, /consumeSaveTransferHash/);
 assert.match(index, /id="saveExportButton"/);
 assert.match(index, /id="saveImportInput"/);
+assert.match(index, /id="mockAButton"/);
+assert.match(index, /id="mockBButton"/);
 assert.match(index, /save-transfer\.js/);
 assert.match(readme, /市販教材本文・市販問題文・公式過去問本文は転載していません/);
 assert.match(readme, /localStorage/);
 assert.match(readme, /URLフラグメント/);
 assert.match(pagesWorkflow, /node Audit-TakkenSaveTransfer\.js/);
+assert.match(pagesWorkflow, /node Audit-TakkenFullExam\.js/);
+assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
 assert.match(pagesWorkflow, /cp [^\n]*save-transfer\.js[^\n]*_site\//);
+assert.match(pagesWorkflow, /cp [^\n]*exam-blueprint\.js[^\n]*_site\//);
 
 const forbiddenNames = new Set([
   ".env",

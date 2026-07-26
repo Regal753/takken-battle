@@ -23,6 +23,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
+      - run: node Audit-TakkenFullExam.js
       - run: node Audit-TakkenQuestionBank.js
       - run: node Audit-TakkenRewardSystem.js
       - run: node Audit-TakkenSaveTransfer.js
@@ -31,7 +32,7 @@ jobs:
         shell: bash
         run: |
           mkdir _site
-          cp index.html styles.css app.js save-transfer.js reward-system.js question-bank.js question-balance.js _site/
+          cp index.html styles.css app.js save-transfer.js reward-system.js question-bank.js question-balance.js exam-blueprint.js exam-question-core.js exam-questions-rights.js exam-questions-restrictions.js exam-questions-tax-other.js exam-questions-business.js _site/
           cp -R assets _site/assets
           touch _site/.nojekyll
       - uses: actions/configure-pages@v6
@@ -46,6 +47,12 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v5
+      - name: Verify deployed page
+        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260726-mock-v2"

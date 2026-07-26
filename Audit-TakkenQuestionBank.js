@@ -8,8 +8,8 @@ require("./question-bank.js");
 const balance = require("./question-balance.js");
 
 const appSource = fs.readFileSync("app.js", "utf8");
-const orderMatch = appSource.match(/const ORDER = \[([\s\S]*?)\n  \];/);
-if (!orderMatch) throw new Error("ORDER not found in app.js");
+const orderMatch = appSource.match(/const LEGACY_ORDER = \[([\s\S]*?)\n  \];/);
+if (!orderMatch) throw new Error("LEGACY_ORDER not found in app.js");
 const order = vm.runInNewContext(`[${orderMatch[1]}]`);
 const result = balance.rebalanceQuestions({
   questions: window.TAKKEN_QUESTIONS,
