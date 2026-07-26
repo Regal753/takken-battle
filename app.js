@@ -752,7 +752,7 @@
   async function shareSaveTransfer() {
     try {
       const savePackage = SAVE_TRANSFER.createSavePackage(state);
-      const transferUrl = SAVE_TRANSFER.createTransferUrl(savePackage, window.location.href);
+      const transferUrl = await SAVE_TRANSFER.createCompressedTransferUrl(savePackage, window.location.href);
       if (typeof navigator.share === "function") {
         try {
           await navigator.share({
@@ -789,14 +789,18 @@
     }
   }
 
-  function consumeSaveTransferHash() {
+  async function consumeSaveTransferHash() {
     if (!PUBLIC_STATIC_MODE || !SAVE_TRANSFER || !window.location.hash) return;
     const hashParams = new URLSearchParams(window.location.hash.slice(1));
     const token = hashParams.get("save");
-    if (!token) return;
+    const compressedToken = hashParams.get("savegz");
+    if (!token && !compressedToken) return;
     window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}`);
     try {
-      importSavePackage(SAVE_TRANSFER.decodePackage(token), "本人用引継ぎリンク");
+      const savePackage = compressedToken
+        ? await SAVE_TRANSFER.decodeCompressedPackage(compressedToken)
+        : SAVE_TRANSFER.decodePackage(token);
+      importSavePackage(savePackage, "本人用引継ぎリンク");
     } catch (error) {
       setSaveTransferStatus(error?.message || "移行リンクを読み込めませんでした。", true);
     }
@@ -4081,7 +4085,7 @@
 
   bindEvents();
   configurePublicStaticMode();
-  consumeSaveTransferHash();
+  void consumeSaveTransferHash();
   window.setInterval(() => {
     tickSprint();
     tickMockTimer();

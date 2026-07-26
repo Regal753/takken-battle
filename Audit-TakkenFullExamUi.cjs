@@ -366,7 +366,7 @@ async function main() {
     await handoffPage.waitForFunction(() => Boolean(window.__takkenSharedPayload?.url));
     const sharedPayload = await handoffPage.evaluate(() => window.__takkenSharedPayload);
     if (
-      !sharedPayload.url.includes("#save=") ||
+      !sharedPayload.url.includes("#savegz=") ||
       sharedPayload.url.includes('"totalXp"') ||
       !sharedPayload.title.includes("セーブ引継ぎ")
     ) {
@@ -394,7 +394,7 @@ async function main() {
     await handoffPage.waitForFunction(() => Boolean(window.__takkenCopiedUrl));
     const copiedUrl = await handoffPage.evaluate(() => window.__takkenCopiedUrl);
     const copiedStatus = ((await handoffPage.locator("#saveTransferStatus").textContent()) || "").trim();
-    if (!copiedUrl.includes("#save=") || !copiedStatus.includes("コピーしました")) {
+    if (!copiedUrl.includes("#savegz=") || !copiedStatus.includes("コピーしました")) {
       throw new Error(`Manual handoff copy fallback failed: ${JSON.stringify({
         copiedUrl: copiedUrl.slice(0, 100),
         copiedStatus
@@ -443,11 +443,13 @@ async function main() {
       !handoff.legacyWeakKept ||
       handoff.legacyStatsKept !== 3 ||
       handoff.overflow > 1 ||
-      receiverRequests.some((urlValue) => urlValue.includes("save="))
+      receiverRequests.some((urlValue) => urlValue.includes("save=") || urlValue.includes("savegz="))
     ) {
       throw new Error(`Manual phone handoff failed: ${JSON.stringify({
         handoff,
-        requestsWithSave: receiverRequests.filter((urlValue) => urlValue.includes("save="))
+        requestsWithSave: receiverRequests.filter(
+          (urlValue) => urlValue.includes("save=") || urlValue.includes("savegz=")
+        )
       })}`);
     }
 
