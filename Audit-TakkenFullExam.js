@@ -115,6 +115,44 @@ const expectedMockWeights = {
   business: 20,
   other: 5
 };
+
+const expectedStudyTargets = {
+  total: 37,
+  safe: 40,
+  rights: 8,
+  restrictions: 6,
+  business: 18,
+  taxOther: 5
+};
+Object.entries(expectedStudyTargets).forEach(([key, expected]) => {
+  if (blueprint.studyTargets?.[key] !== expected) {
+    issues.push(`study target/${key}: expected ${expected}, got ${blueprint.studyTargets?.[key]}`);
+  }
+});
+const masteryQuotaTotal = Object.values(blueprint.masteryDailyQuotas || {})
+  .reduce((sum, value) => sum + Number(value || 0), 0);
+if (masteryQuotaTotal !== 10) {
+  issues.push(`mastery daily quota: expected 10, got ${masteryQuotaTotal}`);
+}
+const expectedMasteryQuotas = {
+  rights: 3,
+  restrictions: 2,
+  business: 4,
+  taxOther: 1
+};
+Object.entries(expectedMasteryQuotas).forEach(([key, expected]) => {
+  if (blueprint.masteryDailyQuotas?.[key] !== expected) {
+    issues.push(`mastery quota/${key}: expected ${expected}, got ${blueprint.masteryDailyQuotas?.[key]}`);
+  }
+});
+if (
+  Number(blueprint.studyTargets?.rights || 0) +
+  Number(blueprint.studyTargets?.restrictions || 0) +
+  Number(blueprint.studyTargets?.business || 0) +
+  Number(blueprint.studyTargets?.taxOther || 0) !== blueprint.studyTargets?.total
+) {
+  issues.push("study target sections do not sum to total");
+}
 blueprint.mockForms.forEach((form) => {
   if (form.ids.length !== 50) issues.push(`${form.id}: expected 50 questions`);
   if (new Set(form.ids).size !== 50) issues.push(`${form.id}: duplicate id`);
@@ -137,6 +175,8 @@ const report = {
   formats: formatCounts,
   answers: answerCounts,
   dailyBlocks: blueprint.dailyBlocks.length,
+  studyTargets: blueprint.studyTargets,
+  masteryDailyQuotas: blueprint.masteryDailyQuotas,
   mockForms: blueprint.mockForms.map((form) => ({ id: form.id, questions: form.ids.length })),
   sourceUrls: new Set(Object.values(questions).map((question) => question.sourceUrl)).size,
   issues

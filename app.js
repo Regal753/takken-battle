@@ -18,10 +18,18 @@
   const RUN_MODE_MOCK = "mock";
   const MOCK_DURATION_MINUTES = 120;
   const MOCK_DURATION_MS = MOCK_DURATION_MINUTES * 60 * 1000;
-  const MOCK_SAFE_TARGET = 40;
   const FIRST_PASS_DEADLINE = "2026-10-18";
   const FIRST_PASS_DEADLINE_LABEL = "10/18";
   const EXAM_BLUEPRINT = window.TAKKEN_EXAM_BLUEPRINT;
+  const STUDY_TARGETS = EXAM_BLUEPRINT?.studyTargets || {
+    total: 37,
+    safe: 40,
+    rights: 8,
+    restrictions: 6,
+    business: 18,
+    taxOther: 5
+  };
+  const MOCK_SAFE_TARGET = STUDY_TARGETS.safe;
   const EXAM_CONTENT_VERSION = EXAM_BLUEPRINT?.version || 0;
   const REWARD_SYSTEM = window.TAKKEN_REWARDS;
   const SAVE_TRANSFER = window.TAKKEN_SAVE_TRANSFER;
@@ -247,9 +255,13 @@
     explainText: $("#explainText"),
     nextButton: $("#nextButton"),
     resetButton: $("#resetButton"),
+    attemptLabel: $("#attemptLabel"),
     attemptCount: $("#attemptCount"),
+    accuracyLabel: $("#accuracyLabel"),
     accuracyText: $("#accuracyText"),
+    streakLabel: $("#streakLabel"),
     streakText: $("#streakText"),
+    markedLabel: $("#markedLabel"),
     markedText: $("#markedText"),
     chapterProgressText: $("#chapterProgressText"),
     studyTitle: $("#studyTitle"),
@@ -360,6 +372,7 @@
     ids: [],
     items: [],
     source: "loading",
+    mode: "coverage",
     message: "固定10問: 読込中"
   };
 
@@ -385,7 +398,8 @@
       weakAdded: 0,
       target: DAILY_TARGET,
       planIds: [],
-      planVersion: EXAM_CONTENT_VERSION
+      planVersion: EXAM_CONTENT_VERSION,
+      planMode: "coverage"
     };
   }
 
@@ -405,7 +419,8 @@
       planIds: Array.isArray(input.planIds)
         ? input.planIds.filter((id) => CURRICULUM_ORDER.includes(id)).slice(0, DAILY_TARGET)
         : [],
-      planVersion: Number(input.planVersion) || 0
+      planVersion: Number(input.planVersion) || 0,
+      planMode: input.planMode === "mastery" ? "mastery" : "coverage"
     };
   }
 
@@ -918,17 +933,71 @@
       ids,
       items,
       source,
+      mode: payload?.mode === "mastery" ? "mastery" : "coverage",
       target: Number(payload?.target) || DAILY_TARGET,
       message: ids.length > 0
         ? `固定10問: ${
             source === "api"
               ? "自動生成"
               : source === "browser"
-                ? "合格ロード"
+                ? (payload?.mode === "mastery" ? "定着ロード" : "合格ロード")
                 : "前回生成"
           }`
         : "固定10問: 未生成"
     };
+  }
+
+  function masteryGroupId(id) {
+    const sectionId = QUESTIONS[id]?.sectionId;
+    return sectionId === "tax" || sectionId === "other" ? "taxOther" : sectionId;
+  }
+
+  function lastAnsweredTimestamp(id) {
+    const stats = statsFor(id);
+    return Date.parse(latestAt(stats.lastAnsweredAt, stats.centralLastAnsweredAt)) || 0;
+  }
+
+  function compareMasteryPriority(leftId, rightId) {
+    const todayDiff = Number(answeredToday(leftId)) - Number(answeredToday(rightId));
+    if (todayDiff !== 0) return todayDiff;
+    const weakDiff = weaknessScore(rightId) - weaknessScore(leftId);
+    if (weakDiff !== 0) return weakDiff;
+    const answeredDiff = lastAnsweredTimestamp(leftId) - lastAnsweredTimestamp(rightId);
+    if (answeredDiff !== 0) return answeredDiff;
+    const attemptDiff = effectiveAttempts(statsFor(leftId)) - effectiveAttempts(statsFor(rightId));
+    if (attemptDiff !== 0) return attemptDiff;
+    return CURRICULUM_ORDER.indexOf(leftId) - CURRICULUM_ORDER.indexOf(rightId);
+  }
+
+  function masteryQuestPlan() {
+    const quotas = EXAM_BLUEPRINT?.masteryDailyQuotas || {
+      rights: 3,
+      restrictions: 2,
+      business: 4,
+      taxOther: 1
+    };
+    const pools = Object.fromEntries(
+      Object.keys(quotas).map((groupId) => [
+        groupId,
+        CURRICULUM_ORDER
+          .filter((id) => masteryGroupId(id) === groupId)
+          .sort(compareMasteryPriority)
+      ])
+    );
+    const layout = [
+      "rights", "business", "restrictions", "business", "taxOther",
+      "business", "rights", "business", "restrictions", "rights"
+    ];
+    const ids = layout
+      .map((groupId) => pools[groupId]?.shift())
+      .filter(Boolean);
+    if (ids.length < DAILY_TARGET) {
+      const remainder = CURRICULUM_ORDER
+        .filter((id) => !ids.includes(id))
+        .sort(compareMasteryPriority);
+      ids.push(...remainder.slice(0, DAILY_TARGET - ids.length));
+    }
+    return ids.slice(0, DAILY_TARGET);
   }
 
   function publicTodayQuest() {
@@ -938,19 +1007,21 @@
       : [];
     const blocks = EXAM_BLUEPRINT?.dailyBlocks || [];
     const firstOpenBlock = blocks.find((block) => block.some((id) => !isContacted(id)));
-    const completedDays = Object.keys(state.adventureDays || {}).length;
-    const fallbackBlock = blocks[completedDays % Math.max(1, blocks.length)] || CURRICULUM_ORDER.slice(0, DAILY_TARGET);
+    const planMode = firstOpenBlock ? "coverage" : "mastery";
+    const generatedPlan = firstOpenBlock || masteryQuestPlan();
     const ids = savedPlan.length === DAILY_TARGET
       ? savedPlan
-      : [...(firstOpenBlock || fallbackBlock)];
+      : [...generatedPlan];
     state.daily.planIds = ids.slice(0, DAILY_TARGET);
     state.daily.planVersion = EXAM_CONTENT_VERSION;
+    state.daily.planMode = planMode;
     saveState();
     return normalizeTodayQuestPayload({
       date,
       questId: `public-${date}`,
       ids: state.daily.planIds,
-      target: DAILY_TARGET
+      target: DAILY_TARGET,
+      mode: state.daily.planMode
     }, "browser");
   }
 
@@ -1499,6 +1570,67 @@
     }));
   }
 
+  function mockStrategyRows(sectionScores = mockSectionScores()) {
+    const scoreFor = (sectionId) => Math.max(0, Number(sectionScores?.[sectionId]?.correct) || 0);
+    return [
+      {
+        id: "rights",
+        label: "権利関係",
+        correct: scoreFor("rights"),
+        total: 14,
+        target: STUDY_TARGETS.rights
+      },
+      {
+        id: "restrictions",
+        label: "法令上の制限",
+        correct: scoreFor("restrictions"),
+        total: 8,
+        target: STUDY_TARGETS.restrictions
+      },
+      {
+        id: "business",
+        label: "宅建業法",
+        correct: scoreFor("business"),
+        total: 20,
+        target: STUDY_TARGETS.business
+      },
+      {
+        id: "tax-other",
+        label: "税・その他",
+        correct: scoreFor("tax") + scoreFor("other"),
+        total: 8,
+        target: STUDY_TARGETS.taxOther
+      }
+    ].map((row) => ({
+      ...row,
+      deficit: Math.max(0, row.target - row.correct)
+    }));
+  }
+
+  function mockPriorityRow(sectionScores) {
+    return mockStrategyRows(sectionScores)
+      .filter((row) => row.deficit > 0)
+      .sort((left, right) =>
+        right.deficit - left.deficit ||
+        right.target - left.target ||
+        left.label.localeCompare(right.label, "ja")
+      )[0] || null;
+  }
+
+  function latestMockAttempt() {
+    return [...(state.mockHistory || [])]
+      .filter((item) => mockFormById(item.formId))
+      .sort((left, right) =>
+        (Date.parse(right.completedAt) || 0) - (Date.parse(left.completedAt) || 0)
+      )[0] || null;
+  }
+
+  function shortDateLabel(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "日時不明";
+    return `${date.getMonth() + 1}/${date.getDate()}`;
+  }
+
   function isContacted(id) {
     return effectiveAttempts(statsFor(id)) > 0;
   }
@@ -1612,6 +1744,10 @@
         if (scoreDiff !== 0) return scoreDiff;
         return (statsFor(a).lastStep || 0) - (statsFor(b).lastStep || 0);
       });
+  }
+
+  function curriculumWeakIds() {
+    return weakIds().filter((id) => CURRICULUM_ORDER.includes(id));
   }
 
   function nextTargetId() {
@@ -2583,7 +2719,9 @@
     note.className = "adaptive-note";
 
     const title = document.createElement("strong");
-    title.textContent = isFirstPassMode() ? "全分野一周" : "固定合格ロード";
+    title.textContent = isFirstPassMode()
+      ? "全分野一周"
+      : (remainingFirstPassCount() > 0 ? "第1段階・全分野一周" : "第2段階・定着ロード");
 
     const text = document.createElement("p");
     if (isFirstPassMode()) {
@@ -2596,12 +2734,16 @@
       return;
     }
 
-    if (state.answered?.correct === false) {
-      text.textContent = `${question.tag}を弱点に登録。合格ロードには割り込ませず、弱点ボタンから復習する。`;
-    } else if (weakIds().length > 0) {
-      text.textContent = "弱点は記録中。次は固定ロード上の未接触問題へ進む。";
+    if (remainingFirstPassCount() > 0) {
+      text.textContent = state.answered?.correct === false
+        ? `${question.tag}を弱点に登録。ただし一周完了までは日課へ割り込ませず、次の未接触問題へ進む。`
+        : "この論点は接触済み。次は固定ロード上の未接触問題へ進む。";
+    } else if (state.answered?.correct === false) {
+      text.textContent = `${question.tag}を弱点に登録。本日の固定10問は変えず、翌日以降の定着ロードで優先して再テストする。`;
+    } else if (curriculumWeakIds().length > 0) {
+      text.textContent = "本日の固定比率を保って次問へ進む。弱点は翌日以降の定着ロードで優先する。";
     } else {
-      text.textContent = "この論点は処理済み。固定ロード上の次問へ進む。";
+      text.textContent = "本日の固定比率を保って次問へ進む。翌日以降は最終接触が古い問題から再テストする。";
     }
 
     note.append(title, text);
@@ -2610,15 +2752,25 @@
 
   function renderStats() {
     if (isMockMode()) {
+      const finalized = Boolean(state.mock.finalized);
+      const mockScore = (state.mock.results || []).filter((result) => result.correct).length;
+      if (elements.attemptLabel) elements.attemptLabel.textContent = "解答";
+      if (elements.accuracyLabel) elements.accuracyLabel.textContent = finalized ? "得点" : "正答率";
+      if (elements.streakLabel) elements.streakLabel.textContent = finalized ? "所要時間" : "残り時間";
+      if (elements.markedLabel) elements.markedLabel.textContent = "要復習";
       elements.attemptCount.textContent = String(mockAnsweredCount());
-      elements.accuracyText.textContent = "採点後";
-      elements.streakText.textContent = mockTimeText();
+      elements.accuracyText.textContent = finalized ? `${mockScore}/50` : "採点後";
+      elements.streakText.textContent = finalized ? formatElapsed(state.mock.elapsedMs) : mockTimeText();
       elements.markedText.textContent = String(weakIds().length);
       elements.chapterProgressText.textContent = `${state.mock.position + 1} / 50問`;
       if (elements.studyTitle) elements.studyTitle.textContent = `宅建 ${mockFormShortLabel()}`;
       if (elements.todayLabel) elements.todayLabel.textContent = "本試験50問・120分";
       return;
     }
+    if (elements.attemptLabel) elements.attemptLabel.textContent = "解答";
+    if (elements.accuracyLabel) elements.accuracyLabel.textContent = "正答率";
+    if (elements.streakLabel) elements.streakLabel.textContent = "連続正解";
+    if (elements.markedLabel) elements.markedLabel.textContent = "要復習";
     const attempts = Math.max(state.attempts, Number(state.centralProgress?.answers) || 0);
     const correct = Math.max(state.correct, Number(state.centralProgress?.correct) || 0);
     elements.attemptCount.textContent = String(attempts);
@@ -2708,11 +2860,12 @@
       }
       elements.dailyQuestButton.textContent = "日課";
     } else {
+      const masteryMode = todayQuest.mode === "mastery";
       if (elements.questLabel) {
-        elements.questLabel.textContent = "今日のクエスト";
+        elements.questLabel.textContent = masteryMode ? "定着クエスト" : "今日のクエスト";
       }
       elements.dailyQuestTitle.textContent = fixedIds.length
-        ? `固定${fixedTarget}問 ${Math.min(fixedDone, fixedTarget)}/${fixedTarget}接触`
+        ? `${masteryMode ? "定着" : "固定"}${fixedTarget}問 ${Math.min(fixedDone, fixedTarget)}/${fixedTarget}接触`
         : `${Math.min(state.daily.answers, target)} / ${target}撃破`;
       if (elements.dailyAnswerLabel) elements.dailyAnswerLabel.textContent = "今日";
       if (elements.dailyCorrectLabel) elements.dailyCorrectLabel.textContent = "正解";
@@ -2736,7 +2889,7 @@
     if (elements.passQuestButton) {
       elements.passQuestButton.textContent = isFirstPassMode()
         ? (firstPassRemaining > 0 ? "全分野一周中" : "完了")
-        : "全分野一周";
+        : (firstPassRemaining > 0 ? "全分野一周" : "一周完了");
       elements.passQuestButton.classList.toggle("is-active", isFirstPassMode());
     }
     if (isFirstPassMode()) elements.dailyQuestButton.disabled = false;
@@ -2927,6 +3080,15 @@
       return;
     }
 
+    if (!isFirstPassMode() && remainingFirstPassCount() > 0) {
+      const remaining = remainingFirstPassCount();
+      const days = Math.ceil(remaining / DAILY_TARGET);
+      elements.coachTitle.textContent = `第1段階・全分野一周 ${contactedCount()}/${CURRICULUM_ORDER.length}`;
+      elements.coachText.textContent =
+        `まず未接触${remaining}問を固定順で埋める。1日10問ならあと${days}日。弱点は保存だけ行い、一周が終わるまで日課へ割り込ませない。`;
+      return;
+    }
+
     if (isFirstPassMode()) {
       const remaining = remainingFirstPassCount();
       const chapter = currentChapterContactSummary();
@@ -2937,15 +3099,20 @@
       return;
     }
 
-    const topic = weakestTopic();
-    if (!topic) {
-      elements.coachTitle.textContent = "固定ロード進行中";
-      elements.coachText.textContent = "本試験配分の固定順で全分野を進む。誤答は記録し、弱点ボタンから別枠で復習する。";
+    const latestMock = latestMockAttempt();
+    const priority = latestMock ? mockPriorityRow(latestMock.sectionScores) : null;
+    const weakCount = curriculumWeakIds().length;
+    elements.coachTitle.textContent = `第2段階・定着ロード 弱点${weakCount}問`;
+    if (!latestMock) {
+      elements.coachText.textContent =
+        "今日の10問は業法4・権利3・法令2・税その他1。弱点を先に、残りを最終接触が古い順に出す。50問模試で得点基準を作る。";
       return;
     }
-
-    elements.coachTitle.textContent = `${topic.label}は手動復習`;
-    elements.coachText.textContent = `${topic.chapter}で弱点${topic.count}問。固定ロードを崩さず、弱点ボタンから別枠で潰す。`;
+    const form = mockFormById(latestMock.formId);
+    const mockLabel = mockFormShortLabel(form);
+    elements.coachText.textContent = priority
+      ? `直近${mockLabel}は${latestMock.score}/50。最優先は${priority.label}${priority.correct}/${priority.total}（目標${priority.target}）。日課は本試験比率を保って弱点・古い問題から再テストする。`
+      : `直近${mockLabel}は${latestMock.score}/50で分野別目標を達成。日課で弱点と最終接触が古い問題を回し、${STUDY_TARGETS.safe}点の再現性を確認する。`;
   }
 
   function renderChapters(activeId) {
@@ -3865,15 +4032,45 @@
     const sectionScores = mockSectionScores(results);
     const wrongResults = results.filter((result) => !result.correct);
     const targetReached = score >= MOCK_SAFE_TARGET;
+    const strategyTargetReached = score >= STUDY_TARGETS.total;
     const otherFormId = form.id === "form-a" ? "form-b" : "form-a";
-    const sectionCards = (EXAM_BLUEPRINT?.sections || []).map((section) => {
-      const sectionScore = sectionScores[section.id];
+    const strategyRows = mockStrategyRows(sectionScores);
+    const priority = mockPriorityRow(sectionScores);
+    const sectionCards = strategyRows.map((row) => {
       return `
-        <div class="mock-section-card" data-section="${escapeHtml(section.id)}">
-          <span>${escapeHtml(section.label)}</span>
-          <strong>${sectionScore.correct} / ${sectionScore.total}</strong>
+        <div class="mock-section-card ${row.deficit > 0 ? "is-below-target" : "is-on-target"}" data-section="${escapeHtml(row.id)}">
+          <span>${escapeHtml(row.label)}</span>
+          <strong>${row.correct} / ${row.total}<small>目標 ${row.target}</small></strong>
         </div>`;
     }).join("");
+    const scoreMessage = targetReached
+      ? `安全圏${MOCK_SAFE_TARGET}点を達成`
+      : (strategyTargetReached
+          ? `合格戦略目標${STUDY_TARGETS.total}点を達成。安全圏${MOCK_SAFE_TARGET}点まであと${MOCK_SAFE_TARGET - score}点`
+          : `合格戦略目標${STUDY_TARGETS.total}点まであと${STUDY_TARGETS.total - score}点`);
+    const priorityPanel = priority
+      ? `
+        <section class="mock-priority is-below-target">
+          <span>次の最優先</span>
+          <strong>${escapeHtml(priority.label)} ${priority.correct}/${priority.total} → 目標${priority.target}</strong>
+          <p>今日は誤答の解説と根拠を確認して終了。翌日の日課で本試験比率を保ちながら、弱点を優先して再テストする。</p>
+        </section>`
+      : `
+        <section class="mock-priority is-on-target">
+          <span>次の目標</span>
+          <strong>4分野すべて目標達成</strong>
+          <p>定着ロードで弱点と最終接触が古い問題を回し、安全圏${MOCK_SAFE_TARGET}点を別フォームでも再現する。</p>
+        </section>`;
+    const historyItems = [...(state.mockHistory || [])]
+      .sort((left, right) => (Date.parse(right.completedAt) || 0) - (Date.parse(left.completedAt) || 0))
+      .slice(0, 3)
+      .map((item) => `
+        <div class="mock-history-item">
+          <span>${escapeHtml(shortDateLabel(item.completedAt))} ${escapeHtml(mockFormShortLabel(mockFormById(item.formId)))}</span>
+          <strong>${Math.max(0, Number(item.score) || 0)} / 50</strong>
+          <small>${escapeHtml(formatElapsed(Math.max(0, Number(item.elapsedMs) || 0)))}</small>
+        </div>`)
+      .join("");
     const wrongReview = wrongResults.length
       ? wrongResults.map((result) => {
           const question = QUESTIONS[result.id];
@@ -3900,24 +4097,29 @@
         <div class="mock-score-hero ${targetReached ? "is-target" : "is-below"}">
           <span>得点</span>
           <strong>${score}<small> / 50</small></strong>
-          <p>${targetReached ? `安全圏目標${MOCK_SAFE_TARGET}点を達成` : `安全圏目標${MOCK_SAFE_TARGET}点まであと${MOCK_SAFE_TARGET - score}点`}</p>
+          <p>${scoreMessage}</p>
         </div>
         <div class="mock-result-meta">
           <span>所要時間 <strong>${formatElapsed(state.mock.elapsedMs)}</strong></span>
           <span>誤答 <strong>${wrongResults.length}問</strong></span>
           <span>弱点へ登録 <strong>${wrongResults.length}問</strong></span>
         </div>
-        <h3>分野別得点</h3>
+        <h3>分野別得点と目標</h3>
         <div class="mock-section-grid">${sectionCards}</div>
+        ${priorityPanel}
+        <section class="mock-history">
+          <h3>直近の模試</h3>
+          <div class="mock-history-grid">${historyItems}</div>
+        </section>
         <section class="mock-wrong-review">
           <h3>誤答レビュー</h3>
           <p>誤答は弱点リストへ登録済み。各問を開くと正解と解説を確認できます。</p>
           ${wrongReview}
         </section>
         <div class="finish-actions mock-finish-actions">
-          <button id="mockRetryButton" class="next-button" type="button">同じフォームを再挑戦</button>
+          <button id="mockDailyButton" class="next-button" type="button">日課へ戻る</button>
           <button id="mockOtherButton" class="ghost-button" type="button">${otherFormId === "form-a" ? "フォームA" : "フォームB"}へ</button>
-          <button id="mockDailyButton" class="ghost-button" type="button">日課へ戻る</button>
+          <button id="mockRetryButton" class="ghost-button" type="button">同じフォームを再挑戦</button>
         </div>
       </section>
     `;

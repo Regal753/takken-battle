@@ -1,9 +1,21 @@
 #!/usr/bin/env node
 "use strict";
 
+const fs = require("fs");
+const path = require("path");
 const { chromium } = require("playwright");
 
 const baseUrl = process.env.TAKKEN_BASE_URL || "http://127.0.0.1:8783/";
+const screenshotDir = process.env.TAKKEN_SCREENSHOT_DIR || "";
+
+async function capture(page, filename) {
+  if (!screenshotDir) return;
+  fs.mkdirSync(screenshotDir, { recursive: true });
+  await page.screenshot({
+    path: path.join(screenshotDir, filename),
+    fullPage: true
+  });
+}
 
 async function main() {
   const browser = await chromium.launch({ channel: "chrome", headless: true });
@@ -40,7 +52,8 @@ async function main() {
         total: blueprint.curriculumOrder.length,
         firstBlock: blueprint.dailyBlocks[0],
         missing: blueprint.curriculumOrder.filter((id) => !questions[id]),
-        sourceLabel: document.querySelector("#dailyQuestSource")?.textContent || ""
+        sourceLabel: document.querySelector("#dailyQuestSource")?.textContent || "",
+        coachTitle: document.querySelector("#coachTitle")?.textContent || ""
       };
     });
     if (blueprintAudit.total !== 100 || blueprintAudit.missing.length) {
@@ -48,6 +61,9 @@ async function main() {
     }
     if (!blueprintAudit.sourceLabel.includes("合格ロード")) {
       throw new Error(`Random-style source label remained: ${blueprintAudit.sourceLabel}`);
+    }
+    if (!blueprintAudit.coachTitle.includes("第1段階・全分野一周")) {
+      throw new Error(`Coverage coach missing: ${blueprintAudit.coachTitle}`);
     }
 
     const visitedIds = [];
@@ -205,7 +221,10 @@ async function main() {
       const sections = Object.fromEntries(
         [...document.querySelectorAll(".mock-section-card")].map((card) => [
           card.dataset.section,
-          card.querySelector("strong")?.textContent?.trim() || ""
+          {
+            score: card.querySelector("strong")?.childNodes?.[0]?.textContent?.trim() || "",
+            target: card.querySelector("small")?.textContent?.trim() || ""
+          }
         ])
       );
       return {
@@ -213,6 +232,15 @@ async function main() {
         targetText: document.querySelector(".mock-score-hero > p")?.textContent || "",
         wrongItems: document.querySelectorAll(".mock-wrong-item").length,
         sections,
+        priorityText: document.querySelector(".mock-priority")?.textContent?.replace(/\s+/g, " ").trim() || "",
+        historyItems: document.querySelectorAll(".mock-history-item").length,
+        historyText: document.querySelector(".mock-history")?.textContent?.replace(/\s+/g, " ").trim() || "",
+        stats: {
+          scoreLabel: document.querySelector("#accuracyLabel")?.textContent?.trim() || "",
+          score: document.querySelector("#accuracyText")?.textContent?.trim() || "",
+          timeLabel: document.querySelector("#streakLabel")?.textContent?.trim() || "",
+          time: document.querySelector("#streakText")?.textContent?.trim() || ""
+        },
         finalized: Boolean(saved.mock?.finalized),
         history: saved.mockHistory?.length || 0,
         attempts: saved.attempts,
@@ -220,17 +248,23 @@ async function main() {
       };
     }, storageId);
     const expectedSections = {
-      rights: "11 / 14",
-      restrictions: "6 / 8",
-      tax: "3 / 3",
-      business: "16 / 20",
-      other: "4 / 5"
+      rights: { score: "11 / 14", target: "目標 8" },
+      restrictions: { score: "6 / 8", target: "目標 6" },
+      business: { score: "16 / 20", target: "目標 18" },
+      "tax-other": { score: "7 / 8", target: "目標 5" }
     };
     if (
       !mockResult.scoreText.includes("40 / 50") ||
-      !mockResult.targetText.includes("安全圏目標40点を達成") ||
+      !mockResult.targetText.includes("安全圏40点を達成") ||
       mockResult.wrongItems !== 10 ||
       JSON.stringify(mockResult.sections) !== JSON.stringify(expectedSections) ||
+      !mockResult.priorityText.includes("宅建業法 16/20 → 目標18") ||
+      mockResult.historyItems !== 1 ||
+      !mockResult.historyText.includes("40 / 50") ||
+      mockResult.stats.scoreLabel !== "得点" ||
+      mockResult.stats.score !== "40/50" ||
+      mockResult.stats.timeLabel !== "所要時間" ||
+      !/^\d{2}:\d{2}$/.test(mockResult.stats.time) ||
       !mockResult.finalized ||
       mockResult.history !== 1 ||
       mockResult.attempts !== mockStart.attempts + 50 ||
@@ -243,6 +277,7 @@ async function main() {
     await page.locator('[data-mock-result="form-a"]').waitFor({ state: "visible" });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(100);
+    await capture(page, "mock-result-mobile.png");
     const mockMobileOverflow = await page.evaluate(() =>
       Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
     );
@@ -265,6 +300,122 @@ async function main() {
     }, storageId);
     if (formBStart.formId !== "form-b" || formBStart.position !== 0 || formBStart.current !== "1 / 50") {
       throw new Error(`Mock B did not start correctly: ${JSON.stringify(formBStart)}`);
+    }
+
+    const masteryContext = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      reducedMotion: "reduce",
+      locale: "ja-JP",
+      timezoneId: "Asia/Tokyo"
+    });
+    const masteryPage = await masteryContext.newPage();
+    const masteryErrors = [];
+    masteryPage.on("console", (message) => {
+      if (message.type() === "error") masteryErrors.push(message.text());
+    });
+    masteryPage.on("pageerror", (error) => masteryErrors.push(String(error)));
+    const masteryNamespace = `mastery${Date.now().toString(36)}`;
+    const masteryStorageId = `takken-battle-study-clean-v2-hard-review-${masteryNamespace}`;
+    await masteryPage.addInitScript(({ storageId }) => {
+      const ids = [
+        ...Array.from({ length: 28 }, (_, index) => `r${String(index + 1).padStart(3, "0")}`),
+        ...Array.from({ length: 16 }, (_, index) => `l${String(index + 1).padStart(3, "0")}`),
+        ...Array.from({ length: 6 }, (_, index) => `t${String(index + 1).padStart(3, "0")}`),
+        ...Array.from({ length: 40 }, (_, index) => `b${String(index + 1).padStart(3, "0")}`),
+        ...Array.from({ length: 10 }, (_, index) => `o${String(index + 1).padStart(3, "0")}`)
+      ];
+      const weakIds = new Set(["r001", "l001", "t001", "b001"]);
+      const questionStats = Object.fromEntries(ids.map((id, index) => [
+        id,
+        {
+          attempts: 1,
+          correct: weakIds.has(id) ? 0 : 1,
+          wrong: weakIds.has(id) ? 1 : 0,
+          lastStep: index + 1,
+          lastAnsweredAt: "2026-06-01T00:00:00.000Z"
+        }
+      ]));
+      localStorage.setItem(storageId, JSON.stringify({
+        index: 0,
+        attempts: 100,
+        correct: 96,
+        totalXp: 6000,
+        progressionVersion: 4,
+        examContentVersion: 1,
+        marked: Object.fromEntries([...weakIds].map((id) => [id, true])),
+        questionStats
+      }));
+    }, { storageId: masteryStorageId });
+    const masteryUrl = new URL(baseUrl);
+    masteryUrl.searchParams.set("review", masteryNamespace);
+    masteryUrl.searchParams.set("today", "1");
+    await masteryPage.goto(masteryUrl.toString(), {
+      waitUntil: "domcontentloaded",
+      timeout: 15000
+    });
+    await masteryPage.waitForFunction(() =>
+      (document.querySelector("#dailyQuestSource")?.textContent || "").includes("定着ロード")
+    );
+    const readMastery = () => masteryPage.evaluate((storageId) => {
+      const saved = JSON.parse(localStorage.getItem(storageId) || "{}");
+      const planIds = saved.daily?.planIds || [];
+      const groups = planIds.map((id) => {
+        const sectionId = window.TAKKEN_EXAM_QUESTIONS?.[id]?.sectionId;
+        return sectionId === "tax" || sectionId === "other" ? "taxOther" : sectionId;
+      });
+      return {
+        planIds,
+        planMode: saved.daily?.planMode,
+        groupCounts: groups.reduce((counts, groupId) => ({
+          ...counts,
+          [groupId]: (counts[groupId] || 0) + 1
+        }), {}),
+        source: document.querySelector("#dailyQuestSource")?.textContent || "",
+        coachTitle: document.querySelector("#coachTitle")?.textContent || "",
+        coachText: document.querySelector("#coachText")?.textContent || "",
+        questLabel: document.querySelector("#questLabel")?.textContent || "",
+        passLabel: document.querySelector("#passQuestButton")?.textContent || "",
+        overflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
+      };
+    }, masteryStorageId);
+    const masteryAudit = await readMastery();
+    const expectedMasteryGroups = {
+      rights: 3,
+      business: 4,
+      restrictions: 2,
+      taxOther: 1
+    };
+    if (
+      masteryAudit.planIds.length !== 10 ||
+      new Set(masteryAudit.planIds).size !== 10 ||
+      masteryAudit.planIds[0] !== "r001" ||
+      masteryAudit.planIds[1] !== "b001" ||
+      masteryAudit.planIds[2] !== "l001" ||
+      masteryAudit.planIds[4] !== "t001" ||
+      JSON.stringify(masteryAudit.groupCounts) !== JSON.stringify(expectedMasteryGroups) ||
+      masteryAudit.planMode !== "mastery" ||
+      !masteryAudit.source.includes("定着ロード") ||
+      !masteryAudit.coachTitle.includes("第2段階・定着ロード 弱点4問") ||
+      !masteryAudit.coachText.includes("業法4・権利3・法令2・税その他1") ||
+      masteryAudit.questLabel.trim() !== "定着クエスト" ||
+      masteryAudit.passLabel.trim() !== "一周完了" ||
+      masteryAudit.overflow
+    ) {
+      throw new Error(`Mastery quest mismatch: ${JSON.stringify(masteryAudit)}`);
+    }
+    await capture(masteryPage, "mastery-quest-mobile.png");
+    await masteryPage.reload({ waitUntil: "domcontentloaded" });
+    await masteryPage.waitForFunction(() =>
+      (document.querySelector("#dailyQuestSource")?.textContent || "").includes("定着ロード")
+    );
+    const masteryReload = await readMastery();
+    await masteryContext.close();
+    if (
+      JSON.stringify(masteryReload.planIds) !== JSON.stringify(masteryAudit.planIds) ||
+      masteryReload.planMode !== "mastery" ||
+      masteryErrors.length
+    ) {
+      throw new Error(`Mastery quest reload drift: ${JSON.stringify({ masteryAudit, masteryReload, masteryErrors })}`);
     }
 
     if (consoleErrors.length || pageErrors.length) {
@@ -463,6 +614,8 @@ async function main() {
       noLeakAudit,
       mockResult,
       formBStart,
+      masteryAudit,
+      masteryReloadStable: JSON.stringify(masteryReload.planIds) === JSON.stringify(masteryAudit.planIds),
       migration,
       handoff,
       desktopOverflow,
