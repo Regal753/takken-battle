@@ -90,6 +90,26 @@
     ])
   );
 
+  // 合格プロジェクトの分野別目標。年度で変動する合格基準点ではなく、
+  // 37点を再現するための学習上の目安として使う。
+  const studyTargets = {
+    total: 37,
+    safe: 40,
+    rights: 8,
+    restrictions: 6,
+    business: 18,
+    taxOther: 5
+  };
+
+  // 全100問接触後の日課も本試験比率を崩さない。
+  // 税3問とその他5問は、10問日課では一つの枠として最終接触が古い方を出す。
+  const masteryDailyQuotas = {
+    rights: 3,
+    restrictions: 2,
+    business: 4,
+    taxOther: 1
+  };
+
   // 毎日10問の固定ブロック。全10ブロックを完走すると
   // 業法40・権利28・法令16・税その他16となり、本試験比率に一致する。
   const dailyBlocks = [];
@@ -199,8 +219,8 @@
       url: "https://elaws.e-gov.go.jp/document?lawid=340AC0000000033"
     },
     business: {
-      label: "宅地建物取引業法・令和8年運用",
-      url: "https://www.mlit.go.jp/totikensangyo/const/1_6_bt_000268.html"
+      label: "宅地建物取引業法",
+      url: "https://elaws.e-gov.go.jp/document?lawid=327AC1000000176"
     },
     retio: {
       label: "RETIO 宅建試験の概要・公式問題",
@@ -237,6 +257,8 @@
     dailyBlocks,
     curriculumOrder,
     mockForms,
+    studyTargets,
+    masteryDailyQuotas,
     sources
   };
 })();

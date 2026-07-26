@@ -1,9 +1,21 @@
 #!/usr/bin/env node
 "use strict";
 
+const fs = require("fs");
+const path = require("path");
 const { chromium } = require("playwright");
 
 const baseUrl = process.env.TAKKEN_BASE_URL || "http://127.0.0.1:8783/";
+const screenshotDir = process.env.TAKKEN_SCREENSHOT_DIR || "";
+
+async function capture(page, filename) {
+  if (!screenshotDir) return;
+  fs.mkdirSync(screenshotDir, { recursive: true });
+  await page.screenshot({
+    path: path.join(screenshotDir, filename),
+    fullPage: true
+  });
+}
 
 async function main() {
   const browser = await chromium.launch({ channel: "chrome", headless: true });
@@ -40,7 +52,8 @@ async function main() {
         total: blueprint.curriculumOrder.length,
         firstBlock: blueprint.dailyBlocks[0],
         missing: blueprint.curriculumOrder.filter((id) => !questions[id]),
-        sourceLabel: document.querySelector("#dailyQuestSource")?.textContent || ""
+        sourceLabel: document.querySelector("#dailyQuestSource")?.textContent || "",
+        coachTitle: document.querySelector("#coachTitle")?.textContent || ""
       };
     });
     if (blueprintAudit.total !== 100 || blueprintAudit.missing.length) {
@@ -49,9 +62,47 @@ async function main() {
     if (!blueprintAudit.sourceLabel.includes("合格ロード")) {
       throw new Error(`Random-style source label remained: ${blueprintAudit.sourceLabel}`);
     }
+    if (!blueprintAudit.coachTitle.includes("第1段階・全分野一周")) {
+      throw new Error(`Coverage coach missing: ${blueprintAudit.coachTitle}`);
+    }
+
+    const themeHierarchy = await page.evaluate(() => {
+      const groups = [...document.querySelectorAll("#chapterList > .chapter-group")];
+      const labels = groups.map((group) =>
+        group.querySelector(":scope > .chapter-group-summary strong")?.textContent?.trim() || ""
+      );
+      const optionGroups = [...document.querySelectorAll("#chapterSelect optgroup")]
+        .map((group) => group.label);
+      const optional = document.querySelector('[data-group="business"] > .chapter-optional');
+      return {
+        labels,
+        optionGroups,
+        openGroups: groups.filter((group) => group.open).map((group) => group.dataset.group),
+        businessCoreRows: document.querySelectorAll(
+          '[data-group="business"] > .chapter-group-list > .chapter-row'
+        ).length,
+        optionalRows: optional?.querySelectorAll(".chapter-row").length || 0,
+        optionalOpen: Boolean(optional?.open),
+        optionalText: optional?.querySelector(":scope > summary")?.textContent?.replace(/\s+/g, " ").trim() || ""
+      };
+    });
+    const expectedThemeGroups = ["宅建業法", "権利関係", "法令・税その他"];
+    if (JSON.stringify(themeHierarchy.labels) !== JSON.stringify(expectedThemeGroups)) {
+      throw new Error(`Theme hierarchy mismatch: ${JSON.stringify(themeHierarchy)}`);
+    }
+    if (
+      themeHierarchy.businessCoreRows !== 7 ||
+      themeHierarchy.optionalRows !== 8 ||
+      themeHierarchy.optionalOpen ||
+      !themeHierarchy.optionalText.includes("今は解かなくてOK") ||
+      !themeHierarchy.optionGroups.includes("補助問題（コア40問の後・任意）")
+    ) {
+      throw new Error(`Theme hierarchy details mismatch: ${JSON.stringify(themeHierarchy)}`);
+    }
 
     const visitedIds = [];
     const visitedSections = [];
+    const visitedSourceHosts = [];
     for (let index = 0; index < 10; index += 1) {
       const question = await page.evaluate(() => {
         const text = document.querySelector("#questionText")?.textContent || "";
@@ -64,6 +115,20 @@ async function main() {
       visitedSections.push(question.sectionId);
       await page.locator(`.choice-button[data-index="${question.answer}"]`).click();
       await page.locator("#feedbackBox").waitFor({ state: "visible" });
+      const sourceLink = await page.locator("#bookRef a.official-source-link").evaluate((link) => ({
+        host: new URL(link.href).hostname,
+        text: link.textContent || "",
+        target: link.target,
+        rel: link.rel
+      }));
+      if (
+        !sourceLink.text.includes("公式根拠") ||
+        sourceLink.target !== "_blank" ||
+        !sourceLink.rel.includes("noopener")
+      ) {
+        throw new Error(`Official source link invalid: ${JSON.stringify(sourceLink)}`);
+      }
+      visitedSourceHosts.push(sourceLink.host);
       await page.locator(".confidence-button").filter({ hasText: "根拠までOK" }).click();
       if (index < 9) {
         await page.locator("#dockNextButton").click();
@@ -85,6 +150,17 @@ async function main() {
       if (!visitedSections.includes(sectionId)) {
         throw new Error(`First daily block lacks ${sectionId}: ${visitedSections.join(",")}`);
       }
+    }
+    const allowedSourceHosts = new Set([
+      "elaws.e-gov.go.jp",
+      "www.jhf.go.jp",
+      "www.mlit.go.jp",
+      "www.moj.go.jp",
+      "www.retio.or.jp",
+      "www.rftc.jp"
+    ]);
+    if (visitedSourceHosts.some((host) => !allowedSourceHosts.has(host))) {
+      throw new Error(`Daily source host invalid: ${visitedSourceHosts.join(",")}`);
     }
 
     const stopLabel = ((await page.locator("#dockNextLabel").textContent()) || "").trim();
@@ -120,6 +196,8 @@ async function main() {
         formId: saved.mock?.formId,
         position: saved.mock?.position,
         attempts: saved.attempts,
+        questLabel: document.querySelector("#questLabel")?.textContent?.trim() || "",
+        coachText: document.querySelector("#coachText")?.textContent?.trim() || "",
         source: document.querySelector("#dailyQuestSource")?.textContent || "",
         timer: document.querySelector("#dailyWeakText")?.textContent || ""
       };
@@ -128,6 +206,9 @@ async function main() {
       mockStart.runMode !== "mock" ||
       mockStart.formId !== "form-a" ||
       mockStart.position !== 0 ||
+      mockStart.questLabel !== "50問確認模試" ||
+      !mockStart.coachText.includes("既習問題の定着確認") ||
+      !mockStart.coachText.includes("初見実力は公式過去問") ||
       !mockStart.source.includes("終了後に採点") ||
       !/^\d{2,3}:\d{2}$/.test(mockStart.timer)
     ) {
@@ -156,6 +237,7 @@ async function main() {
             answerGridHidden: Boolean(answerGrid?.hidden),
             feedback: document.querySelector("#explainText")?.textContent || "",
             correctAnswer: document.querySelector("#correctAnswer")?.textContent || "",
+            sourceLinks: document.querySelectorAll("#bookRef a").length,
             attempts: saved.attempts,
             mockResults: saved.mock?.results?.length || 0
           };
@@ -166,6 +248,7 @@ async function main() {
           !noLeakAudit.answerGridHidden ||
           !noLeakAudit.feedback.includes("50問終了後") ||
           noLeakAudit.correctAnswer ||
+          noLeakAudit.sourceLinks !== 0 ||
           noLeakAudit.attempts !== mockStart.attempts ||
           noLeakAudit.mockResults !== 1
         ) {
@@ -205,7 +288,10 @@ async function main() {
       const sections = Object.fromEntries(
         [...document.querySelectorAll(".mock-section-card")].map((card) => [
           card.dataset.section,
-          card.querySelector("strong")?.textContent?.trim() || ""
+          {
+            score: card.querySelector("strong")?.childNodes?.[0]?.textContent?.trim() || "",
+            target: card.querySelector("small")?.textContent?.trim() || ""
+          }
         ])
       );
       return {
@@ -213,6 +299,27 @@ async function main() {
         targetText: document.querySelector(".mock-score-hero > p")?.textContent || "",
         wrongItems: document.querySelectorAll(".mock-wrong-item").length,
         sections,
+        priorityText: document.querySelector(".mock-priority")?.textContent?.replace(/\s+/g, " ").trim() || "",
+        historyItems: document.querySelectorAll(".mock-history-item").length,
+        historyText: document.querySelector(".mock-history")?.textContent?.replace(/\s+/g, " ").trim() || "",
+        wrongSourceLinks: [...document.querySelectorAll(".mock-wrong-item .mock-source-link")].map((link) => ({
+          host: new URL(link.href).hostname,
+          text: link.textContent?.trim() || "",
+          target: link.target,
+          rel: link.rel
+        })),
+        calibration: {
+          text: document.querySelector(".mock-calibration")?.textContent?.replace(/\s+/g, " ").trim() || "",
+          href: document.querySelector(".mock-calibration a")?.href || "",
+          target: document.querySelector(".mock-calibration a")?.target || "",
+          rel: document.querySelector(".mock-calibration a")?.rel || ""
+        },
+        stats: {
+          scoreLabel: document.querySelector("#accuracyLabel")?.textContent?.trim() || "",
+          score: document.querySelector("#accuracyText")?.textContent?.trim() || "",
+          timeLabel: document.querySelector("#streakLabel")?.textContent?.trim() || "",
+          time: document.querySelector("#streakText")?.textContent?.trim() || ""
+        },
         finalized: Boolean(saved.mock?.finalized),
         history: saved.mockHistory?.length || 0,
         attempts: saved.attempts,
@@ -220,17 +327,34 @@ async function main() {
       };
     }, storageId);
     const expectedSections = {
-      rights: "11 / 14",
-      restrictions: "6 / 8",
-      tax: "3 / 3",
-      business: "16 / 20",
-      other: "4 / 5"
+      rights: { score: "11 / 14", target: "目標 8" },
+      restrictions: { score: "6 / 8", target: "目標 6" },
+      business: { score: "16 / 20", target: "目標 18" },
+      "tax-other": { score: "7 / 8", target: "目標 5" }
     };
     if (
       !mockResult.scoreText.includes("40 / 50") ||
-      !mockResult.targetText.includes("安全圏目標40点を達成") ||
+      !mockResult.targetText.includes("安全圏40点を達成") ||
       mockResult.wrongItems !== 10 ||
       JSON.stringify(mockResult.sections) !== JSON.stringify(expectedSections) ||
+      !mockResult.priorityText.includes("宅建業法 16/20 → 目標18") ||
+      mockResult.historyItems !== 1 ||
+      !mockResult.historyText.includes("40 / 50") ||
+      mockResult.wrongSourceLinks.length !== 10 ||
+      mockResult.wrongSourceLinks.some((link) =>
+        !allowedSourceHosts.has(link.host) ||
+        !link.text.includes("公式根拠") ||
+        link.target !== "_blank" ||
+        !link.rel.includes("noopener")
+      ) ||
+      !mockResult.calibration.text.includes("初見実力は公式過去問で確認") ||
+      mockResult.calibration.href !== "https://www.retio.or.jp/exam/past_ques_ans/other/" ||
+      mockResult.calibration.target !== "_blank" ||
+      !mockResult.calibration.rel.includes("noopener") ||
+      mockResult.stats.scoreLabel !== "得点" ||
+      mockResult.stats.score !== "40/50" ||
+      mockResult.stats.timeLabel !== "所要時間" ||
+      !/^\d{2}:\d{2}$/.test(mockResult.stats.time) ||
       !mockResult.finalized ||
       mockResult.history !== 1 ||
       mockResult.attempts !== mockStart.attempts + 50 ||
@@ -243,6 +367,8 @@ async function main() {
     await page.locator('[data-mock-result="form-a"]').waitFor({ state: "visible" });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(100);
+    await page.locator(".mock-wrong-item summary").first().click();
+    await capture(page, "mock-result-mobile.png");
     const mockMobileOverflow = await page.evaluate(() =>
       Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
     );
@@ -265,6 +391,122 @@ async function main() {
     }, storageId);
     if (formBStart.formId !== "form-b" || formBStart.position !== 0 || formBStart.current !== "1 / 50") {
       throw new Error(`Mock B did not start correctly: ${JSON.stringify(formBStart)}`);
+    }
+
+    const masteryContext = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      reducedMotion: "reduce",
+      locale: "ja-JP",
+      timezoneId: "Asia/Tokyo"
+    });
+    const masteryPage = await masteryContext.newPage();
+    const masteryErrors = [];
+    masteryPage.on("console", (message) => {
+      if (message.type() === "error") masteryErrors.push(message.text());
+    });
+    masteryPage.on("pageerror", (error) => masteryErrors.push(String(error)));
+    const masteryNamespace = `mastery${Date.now().toString(36)}`;
+    const masteryStorageId = `takken-battle-study-clean-v2-hard-review-${masteryNamespace}`;
+    await masteryPage.addInitScript(({ storageId }) => {
+      const ids = [
+        ...Array.from({ length: 28 }, (_, index) => `r${String(index + 1).padStart(3, "0")}`),
+        ...Array.from({ length: 16 }, (_, index) => `l${String(index + 1).padStart(3, "0")}`),
+        ...Array.from({ length: 6 }, (_, index) => `t${String(index + 1).padStart(3, "0")}`),
+        ...Array.from({ length: 40 }, (_, index) => `b${String(index + 1).padStart(3, "0")}`),
+        ...Array.from({ length: 10 }, (_, index) => `o${String(index + 1).padStart(3, "0")}`)
+      ];
+      const weakIds = new Set(["r001", "l001", "t001", "b001"]);
+      const questionStats = Object.fromEntries(ids.map((id, index) => [
+        id,
+        {
+          attempts: 1,
+          correct: weakIds.has(id) ? 0 : 1,
+          wrong: weakIds.has(id) ? 1 : 0,
+          lastStep: index + 1,
+          lastAnsweredAt: "2026-06-01T00:00:00.000Z"
+        }
+      ]));
+      localStorage.setItem(storageId, JSON.stringify({
+        index: 0,
+        attempts: 100,
+        correct: 96,
+        totalXp: 6000,
+        progressionVersion: 4,
+        examContentVersion: 1,
+        marked: Object.fromEntries([...weakIds].map((id) => [id, true])),
+        questionStats
+      }));
+    }, { storageId: masteryStorageId });
+    const masteryUrl = new URL(baseUrl);
+    masteryUrl.searchParams.set("review", masteryNamespace);
+    masteryUrl.searchParams.set("today", "1");
+    await masteryPage.goto(masteryUrl.toString(), {
+      waitUntil: "domcontentloaded",
+      timeout: 15000
+    });
+    await masteryPage.waitForFunction(() =>
+      (document.querySelector("#dailyQuestSource")?.textContent || "").includes("定着ロード")
+    );
+    const readMastery = () => masteryPage.evaluate((storageId) => {
+      const saved = JSON.parse(localStorage.getItem(storageId) || "{}");
+      const planIds = saved.daily?.planIds || [];
+      const groups = planIds.map((id) => {
+        const sectionId = window.TAKKEN_EXAM_QUESTIONS?.[id]?.sectionId;
+        return sectionId === "tax" || sectionId === "other" ? "taxOther" : sectionId;
+      });
+      return {
+        planIds,
+        planMode: saved.daily?.planMode,
+        groupCounts: groups.reduce((counts, groupId) => ({
+          ...counts,
+          [groupId]: (counts[groupId] || 0) + 1
+        }), {}),
+        source: document.querySelector("#dailyQuestSource")?.textContent || "",
+        coachTitle: document.querySelector("#coachTitle")?.textContent || "",
+        coachText: document.querySelector("#coachText")?.textContent || "",
+        questLabel: document.querySelector("#questLabel")?.textContent || "",
+        passLabel: document.querySelector("#passQuestButton")?.textContent || "",
+        overflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
+      };
+    }, masteryStorageId);
+    const masteryAudit = await readMastery();
+    const expectedMasteryGroups = {
+      rights: 3,
+      business: 4,
+      restrictions: 2,
+      taxOther: 1
+    };
+    if (
+      masteryAudit.planIds.length !== 10 ||
+      new Set(masteryAudit.planIds).size !== 10 ||
+      masteryAudit.planIds[0] !== "r001" ||
+      masteryAudit.planIds[1] !== "b001" ||
+      masteryAudit.planIds[2] !== "l001" ||
+      masteryAudit.planIds[4] !== "t001" ||
+      JSON.stringify(masteryAudit.groupCounts) !== JSON.stringify(expectedMasteryGroups) ||
+      masteryAudit.planMode !== "mastery" ||
+      !masteryAudit.source.includes("定着ロード") ||
+      !masteryAudit.coachTitle.includes("第2段階・定着ロード 弱点4問") ||
+      !masteryAudit.coachText.includes("業法4・権利3・法令2・税その他1") ||
+      masteryAudit.questLabel.trim() !== "定着クエスト" ||
+      masteryAudit.passLabel.trim() !== "一周完了" ||
+      masteryAudit.overflow
+    ) {
+      throw new Error(`Mastery quest mismatch: ${JSON.stringify(masteryAudit)}`);
+    }
+    await capture(masteryPage, "mastery-quest-mobile.png");
+    await masteryPage.reload({ waitUntil: "domcontentloaded" });
+    await masteryPage.waitForFunction(() =>
+      (document.querySelector("#dailyQuestSource")?.textContent || "").includes("定着ロード")
+    );
+    const masteryReload = await readMastery();
+    await masteryContext.close();
+    if (
+      JSON.stringify(masteryReload.planIds) !== JSON.stringify(masteryAudit.planIds) ||
+      masteryReload.planMode !== "mastery" ||
+      masteryErrors.length
+    ) {
+      throw new Error(`Mastery quest reload drift: ${JSON.stringify({ masteryAudit, masteryReload, masteryErrors })}`);
     }
 
     if (consoleErrors.length || pageErrors.length) {
@@ -456,13 +698,17 @@ async function main() {
     process.stdout.write(`${JSON.stringify({
       ok: true,
       total: blueprintAudit.total,
+      themeHierarchy,
       visitedIds,
       visitedSections: [...new Set(visitedSections)],
+      visitedSourceHosts: [...new Set(visitedSourceHosts)],
       fixedSource: blueprintAudit.sourceLabel,
       mockStart,
       noLeakAudit,
       mockResult,
       formBStart,
+      masteryAudit,
+      masteryReloadStable: JSON.stringify(masteryReload.planIds) === JSON.stringify(masteryAudit.planIds),
       migration,
       handoff,
       desktopOverflow,
