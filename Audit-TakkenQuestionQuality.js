@@ -74,6 +74,10 @@ const choiceOwners = new Map();
 const correctChoiceLengths = [];
 const distractorLengths = [];
 const answerCuePattern = /(必ず|常に|絶対|一切|すべて|例外なく|のみ)/;
+const scenarioCuePattern =
+  /([A-DＡ-Ｄ][、はがとの]|買主|売主|依頼者|宅地建物取引業者|未成年者|代理人|賃貸人|賃借人|相続人|所有者|抵当権者)/;
+const applicationCuePattern =
+  /(場合|とき|できる|できない|必要|不要|有効|無効|正しい|誤っている)/;
 let correctChoicesWithCue = 0;
 let distractorsWithCue = 0;
 
@@ -217,6 +221,15 @@ const report = {
   absoluteWordCueRate: {
     answer: Number(correctCueRate.toFixed(3)),
     distractor: Number(distractorCueRate.toFixed(3))
+  },
+  comprehensionProfile: {
+    scenarioPrompts: questions.filter((question) => scenarioCuePattern.test(question.text)).length,
+    applicationPrompts: questions.filter((question) => applicationCuePattern.test(question.text)).length,
+    fourChoiceExplanations: questions.filter(
+      (question) => Array.isArray(question.choiceExplanations) && question.choiceExplanations.length === 4
+    ).length,
+    trapExplanations: questions.filter((question) => normalize(question.trap).length >= 8).length,
+    memoryRules: questions.filter((question) => normalize(question.memoryRule).length >= 8).length
   },
   mockAnswerRuns,
   repeatedChoiceGroups: repeatedChoices.length,

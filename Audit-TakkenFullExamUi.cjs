@@ -66,6 +66,40 @@ async function main() {
       throw new Error(`Coverage coach missing: ${blueprintAudit.coachTitle}`);
     }
 
+    const themeHierarchy = await page.evaluate(() => {
+      const groups = [...document.querySelectorAll("#chapterList > .chapter-group")];
+      const labels = groups.map((group) =>
+        group.querySelector(":scope > .chapter-group-summary strong")?.textContent?.trim() || ""
+      );
+      const optionGroups = [...document.querySelectorAll("#chapterSelect optgroup")]
+        .map((group) => group.label);
+      const optional = document.querySelector('[data-group="business"] > .chapter-optional');
+      return {
+        labels,
+        optionGroups,
+        openGroups: groups.filter((group) => group.open).map((group) => group.dataset.group),
+        businessCoreRows: document.querySelectorAll(
+          '[data-group="business"] > .chapter-group-list > .chapter-row'
+        ).length,
+        optionalRows: optional?.querySelectorAll(".chapter-row").length || 0,
+        optionalOpen: Boolean(optional?.open),
+        optionalText: optional?.querySelector(":scope > summary")?.textContent?.replace(/\s+/g, " ").trim() || ""
+      };
+    });
+    const expectedThemeGroups = ["宅建業法", "権利関係", "法令・税その他"];
+    if (JSON.stringify(themeHierarchy.labels) !== JSON.stringify(expectedThemeGroups)) {
+      throw new Error(`Theme hierarchy mismatch: ${JSON.stringify(themeHierarchy)}`);
+    }
+    if (
+      themeHierarchy.businessCoreRows !== 7 ||
+      themeHierarchy.optionalRows !== 8 ||
+      themeHierarchy.optionalOpen ||
+      !themeHierarchy.optionalText.includes("今は解かなくてOK") ||
+      !themeHierarchy.optionGroups.includes("補助問題（コア40問の後・任意）")
+    ) {
+      throw new Error(`Theme hierarchy details mismatch: ${JSON.stringify(themeHierarchy)}`);
+    }
+
     const visitedIds = [];
     const visitedSections = [];
     const visitedSourceHosts = [];
@@ -664,6 +698,7 @@ async function main() {
     process.stdout.write(`${JSON.stringify({
       ok: true,
       total: blueprintAudit.total,
+      themeHierarchy,
       visitedIds,
       visitedSections: [...new Set(visitedSections)],
       visitedSourceHosts: [...new Set(visitedSourceHosts)],

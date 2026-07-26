@@ -161,11 +161,38 @@
     section.chapters.map((chapter) => ({
       ...chapter,
       sectionId: section.id,
+      topicLabel: chapter.label,
       label: `${section.shortLabel} / ${chapter.label}`
     }))
   );
   const ORDER = [...CURRICULUM_ORDER, ...LEGACY_ORDER];
   const CHAPTERS = [...CURRICULUM_CHAPTERS, ...LEGACY_CHAPTERS];
+  const STUDY_GROUPS = [
+    {
+      id: "business",
+      label: "宅建業法",
+      sectionIds: ["business"]
+    },
+    {
+      id: "rights",
+      label: "権利関係",
+      sectionIds: ["rights"]
+    },
+    {
+      id: "law-tax-other",
+      label: "法令・税その他",
+      sectionIds: ["restrictions", "tax", "other"]
+    }
+  ].map((group) => ({
+    ...group,
+    entries: CURRICULUM_CHAPTERS
+      .map((chapter, chapterIndex) => ({ chapter, chapterIndex }))
+      .filter(({ chapter }) => group.sectionIds.includes(chapter.sectionId))
+  }));
+  const LEGACY_CHAPTER_ENTRIES = LEGACY_CHAPTERS.map((chapter, legacyIndex) => ({
+    chapter,
+    chapterIndex: CURRICULUM_CHAPTERS.length + legacyIndex
+  }));
 
   const TOPIC_REFS = {
     "免許": "第1分冊 宅建業法 / 免許",
@@ -3065,14 +3092,30 @@
 
     const activeChapter = question.chapter?.chapterIndex ?? 0;
     elements.chapterSelect.replaceChildren();
-    CHAPTERS.forEach((chapter, chapterIndex) => {
+    STUDY_GROUPS.forEach((group) => {
+      const optionGroup = document.createElement("optgroup");
+      optionGroup.label = group.label;
+      group.entries.forEach(({ chapter, chapterIndex }) => {
+        const solved = chapter.ids.filter((id) => effectiveCorrectCount(statsFor(id)) > 0).length;
+        const option = document.createElement("option");
+        option.value = String(chapterIndex);
+        option.textContent = `${chapter.topicLabel || chapter.label} ${solved}/${chapter.ids.length}`;
+        option.selected = chapterIndex === activeChapter;
+        optionGroup.append(option);
+      });
+      elements.chapterSelect.append(optionGroup);
+    });
+    const legacyGroup = document.createElement("optgroup");
+    legacyGroup.label = "補助問題（コア40問の後・任意）";
+    LEGACY_CHAPTER_ENTRIES.forEach(({ chapter, chapterIndex }) => {
       const solved = chapter.ids.filter((id) => effectiveCorrectCount(statsFor(id)) > 0).length;
       const option = document.createElement("option");
       option.value = String(chapterIndex);
-      option.textContent = `${chapter.label} ${solved}/${chapter.ids.length}`;
+      option.textContent = `${chapter.label.replace(/^旧・業法 \/\s*/, "")} ${solved}/${chapter.ids.length}`;
       option.selected = chapterIndex === activeChapter;
-      elements.chapterSelect.append(option);
+      legacyGroup.append(option);
     });
+    elements.chapterSelect.append(legacyGroup);
 
     const targets = weakIds();
     elements.weakButton.textContent = `弱点 ${targets.length}`;
@@ -3136,7 +3179,15 @@
       "is-selecting",
       Boolean(state.answered) && isChapterEnd() && state.index < ORDER.length - 1
     );
-    CHAPTERS.forEach((chapter, chapterIndex) => {
+
+    const progressFor = (ids) => {
+      const current = ids.filter(isFirstPassMode() ? isContacted : (id) =>
+        effectiveCorrectCount(statsFor(id)) > 0
+      ).length;
+      return { current, total: ids.length };
+    };
+
+    const createChapterRow = (chapter, chapterIndex) => {
       const solved = chapter.ids.filter((id) => effectiveCorrectCount(statsFor(id)) > 0).length;
       const contacted = chapter.ids.filter(isContacted).length;
       const row = document.createElement("button");
@@ -3153,7 +3204,7 @@
 
       const label = document.createElement("span");
       label.className = "chapter-label";
-      label.textContent = chapter.label;
+      label.textContent = chapter.topicLabel || chapter.label.replace(/^旧・業法 \/\s*/, "");
 
       const score = document.createElement("span");
       score.className = "chapter-score";
@@ -3161,7 +3212,51 @@
 
       row.append(dot, label, score);
       row.addEventListener("click", () => selectChapter(chapterIndex));
-      elements.chapterList.append(row);
+      return row;
+    };
+
+    STUDY_GROUPS.forEach((group) => {
+      const ids = group.entries.flatMap(({ chapter }) => chapter.ids);
+      const progress = progressFor(ids);
+      const groupElement = document.createElement("details");
+      groupElement.className = "chapter-group";
+      groupElement.dataset.group = group.id;
+      groupElement.open = group.entries.some(({ chapter }) => chapter.ids.includes(activeId));
+
+      const summary = document.createElement("summary");
+      summary.className = "chapter-group-summary";
+      const title = document.createElement("strong");
+      title.textContent = group.label;
+      const score = document.createElement("span");
+      score.textContent = `${progress.current} / ${progress.total}`;
+      summary.append(title, score);
+
+      const list = document.createElement("div");
+      list.className = "chapter-group-list";
+      group.entries.forEach(({ chapter, chapterIndex }) => {
+        list.append(createChapterRow(chapter, chapterIndex));
+      });
+      groupElement.append(summary, list);
+
+      if (group.id === "business") {
+        const optionalIds = LEGACY_CHAPTER_ENTRIES.flatMap(({ chapter }) => chapter.ids);
+        const optionalProgress = progressFor(optionalIds);
+        const optional = document.createElement("details");
+        optional.className = "chapter-optional";
+        optional.open = LEGACY_CHAPTER_ENTRIES.some(({ chapter }) => chapter.ids.includes(activeId));
+        const optionalSummary = document.createElement("summary");
+        optionalSummary.innerHTML =
+          `<strong>補助問題</strong><span>今は解かなくてOK・任意 ${optionalProgress.current}/${optionalProgress.total}</span>`;
+        const optionalList = document.createElement("div");
+        optionalList.className = "chapter-group-list";
+        LEGACY_CHAPTER_ENTRIES.forEach(({ chapter, chapterIndex }) => {
+          optionalList.append(createChapterRow(chapter, chapterIndex));
+        });
+        optional.append(optionalSummary, optionalList);
+        groupElement.append(optional);
+      }
+
+      elements.chapterList.append(groupElement);
     });
   }
 

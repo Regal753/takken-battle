@@ -1646,14 +1646,106 @@ body.has-answer-dock {
   margin-top: 10px;
 }
 
+.chapter-head {
+  align-items: end;
+}
+
+.chapter-head > div {
+  min-width: 0;
+}
+
+.chapter-head small {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.chapter-group,
+.chapter-optional {
+  border: 1px solid var(--line-soft);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.018);
+  overflow: clip;
+}
+
+.chapter-group-summary,
+.chapter-optional > summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  min-height: 46px;
+  padding: 9px 11px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.chapter-group-summary::-webkit-details-marker,
+.chapter-optional > summary::-webkit-details-marker {
+  display: none;
+}
+
+.chapter-group-summary::before,
+.chapter-optional > summary::before {
+  content: "›";
+  grid-column: 1;
+  grid-row: 1;
+  width: 16px;
+  color: var(--gold);
+  font-size: 22px;
+  font-weight: 900;
+  transform-origin: center;
+  transition: transform 120ms ease;
+}
+
+.chapter-group[open] > .chapter-group-summary::before,
+.chapter-optional[open] > summary::before {
+  transform: rotate(90deg);
+}
+
+.chapter-group-summary strong,
+.chapter-optional > summary strong {
+  grid-column: 1;
+  grid-row: 1;
+  padding-left: 22px;
+  font-weight: 950;
+}
+
+.chapter-group-summary span,
+.chapter-optional > summary span {
+  grid-column: 2;
+  grid-row: 1;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.chapter-group-list {
+  display: grid;
+  gap: 5px;
+  padding: 0 6px 7px;
+}
+
+.chapter-optional {
+  margin: 0 6px 7px;
+  border-color: rgba(145, 170, 190, 0.25);
+}
+
+.chapter-optional > summary {
+  min-height: 42px;
+  padding: 7px 9px;
+}
+
 .chapter-row {
   width: 100%;
   display: grid;
   grid-template-columns: 20px minmax(0, 1fr) auto;
   align-items: center;
   gap: 10px;
-  min-height: 48px;
-  padding: 10px;
+  min-height: 42px;
+  padding: 8px 9px;
   border: 1px solid var(--line-soft);
   border-radius: 8px;
   color: var(--text);
@@ -3422,7 +3514,7 @@ body {
   }
 
   .progress-panel .chapter-list {
-    max-height: 220px;
+    max-height: 360px;
     overflow: auto;
   }
 }
