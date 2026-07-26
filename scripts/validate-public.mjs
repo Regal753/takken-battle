@@ -63,6 +63,8 @@ assert.match(index, /id="studyScopeSelect"/);
 assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 法令・税その他へ進む/);
 assert.match(index, /③ 全分野を混ぜる/);
+assert.match(index, /styles\.css\?v=20260726-pass-efficiency-v5/);
+assert.match(index, /app\.js\?v=20260726-pass-efficiency-v5/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
 
@@ -86,6 +88,7 @@ assert.match(pagesWorkflow, /node Audit-TakkenSaveTransfer\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenFullExam\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenQuestionQuality\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
+assert.match(pagesWorkflow, /20260726-pass-efficiency-v5/);
 assert.match(pagesWorkflow, /cp [^\n]*save-transfer\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*exam-blueprint\.js[^\n]*_site\//);
 

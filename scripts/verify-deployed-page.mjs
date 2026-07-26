@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260726-mastery-v3";
+const expectedVersion = process.argv[3] || "20260726-pass-efficiency-v5";
 const attempts = Math.max(1, Number(process.env.TAKKEN_DEPLOY_VERIFY_ATTEMPTS) || 12);
 const intervalMs = Math.max(0, Number(process.env.TAKKEN_DEPLOY_VERIFY_INTERVAL_MS) || 10000);
 
@@ -25,14 +25,32 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.equal(response.status, 200, `HTTP ${response.status}`);
     assert.match(html, /id="mockAButton"/, "mock A button missing");
     assert.match(html, /id="mockBButton"/, "mock B button missing");
-    assert.ok(html.includes(expectedVersion), `version missing: ${expectedVersion}`);
+    const appReference = html.match(/src="([^"]*app\.js\?v=[^"]+)"/)?.[1] || "";
+    const styleReference = html.match(/href="([^"]*styles\.css\?v=[^"]+)"/)?.[1] || "";
+    assert.ok(appReference.includes(expectedVersion), `app version missing: ${expectedVersion}`);
+    assert.ok(styleReference.includes(expectedVersion), `style version missing: ${expectedVersion}`);
     assert.match(html, /name="takken-runtime" content="public-static"/, "public-static marker missing");
+    const [appResponse, styleResponse] = await Promise.all([
+      fetch(new URL(appReference, response.url), { cache: "no-store" }),
+      fetch(new URL(styleReference, response.url), { cache: "no-store" })
+    ]);
+    const [appCode, styleCode] = await Promise.all([
+      appResponse.text(),
+      styleResponse.text()
+    ]);
+    assert.equal(appResponse.status, 200, `app HTTP ${appResponse.status}`);
+    assert.equal(styleResponse.status, 200, `style HTTP ${styleResponse.status}`);
+    assert.match(appCode, /const DEFAULT_STUDY_SCOPE = "business"/, "study scope logic missing");
+    assert.match(appCode, /function isRetained/, "retention logic missing");
+    assert.match(styleCode, /\.study-scope-select/, "study scope style missing");
     console.log(JSON.stringify({
       status: "ok",
       pageUrl: response.url,
       expectedVersion,
       attempt,
-      htmlLength: html.length
+      htmlLength: html.length,
+      appLength: appCode.length,
+      styleLength: styleCode.length
     }));
     process.exit(0);
   } catch (error) {
