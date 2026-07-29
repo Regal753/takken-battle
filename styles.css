@@ -4068,14 +4068,35 @@ body {
   font-weight: 800;
 }
 
+.daily-complete-actions {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+
+.daily-official-link,
 .daily-continue-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 44px;
   padding: 0 16px;
-  border: 1px solid rgba(160, 231, 174, 0.52);
   border-radius: 4px;
+  font-weight: 900;
+  text-align: center;
+  text-decoration: none;
+}
+
+.daily-official-link {
+  border: 1px solid rgba(255, 214, 106, 0.72);
+  color: #1a1300;
+  background: linear-gradient(180deg, #ffd66a, #e8a928);
+}
+
+.daily-continue-button {
+  border: 1px solid rgba(160, 231, 174, 0.52);
   color: #eaffee;
   background: rgba(8, 24, 19, 0.72);
-  font-weight: 900;
   cursor: pointer;
 }
 
@@ -4095,6 +4116,12 @@ body {
     font-size: 20px;
   }
 
+  .daily-complete-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .daily-official-link,
   .daily-continue-button {
     width: 100%;
   }

@@ -492,6 +492,21 @@
     return [...new Set(keys)].sort().slice(-8);
   }
 
+  function normalizedComprehensionDayKeys(stats) {
+    const hasRecordedGate = Object.prototype.hasOwnProperty.call(
+      stats || {},
+      "clearDayKeys"
+    );
+    const baseline = hasRecordedGate
+      ? (Array.isArray(stats?.clearDayKeys) ? stats.clearDayKeys : [])
+      : normalizedCorrectDayKeys(stats);
+    const keys = [
+      ...baseline,
+      localDateKey(stats?.lastClearAt)
+    ].filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value));
+    return [...new Set(keys)].sort().slice(-8);
+  }
+
   function createDailyState() {
     return {
       date: todayKey(),
@@ -776,6 +791,7 @@
           normalized.lastWrongAt = normalized.lastAnsweredAt;
         }
         normalized.correctDayKeys = normalizedCorrectDayKeys(normalized);
+        normalized.clearDayKeys = normalizedComprehensionDayKeys(normalized);
         return [id, normalized];
       })
     );
@@ -1724,7 +1740,7 @@
 
   function isRetained(id) {
     const stats = statsFor(id);
-    if (normalizedCorrectDayKeys(stats).length < 2) return false;
+    if (normalizedComprehensionDayKeys(stats).length < 2) return false;
     if (weaknessScore(id) > 0) return false;
     const lastCorrectAt = Date.parse(latestAt(stats.lastCorrectAt, stats.centralLastCorrectAt)) || 0;
     const lastWrongAt = Date.parse(latestAt(stats.lastWrongAt, stats.centralLastWrongAt)) || 0;
@@ -2351,6 +2367,10 @@
     return ORDER[state.index + 1] || null;
   }
 
+  function needsConfidenceCheck(answered = state.answered) {
+    return Boolean(answered?.correct === true && !answered.confidence);
+  }
+
   function nextActionLabel() {
     if (isMockMode()) {
       return state.mock.position >= mockQuestionIds().length - 1 ? "採点結果を見る" : "次の問題へ";
@@ -2358,8 +2378,8 @@
     if (state.answered?.correct === false && !mistakeRecorded()) {
       return "ミス入力へ";
     }
-    if (state.answered?.weakBreakCandidate && !state.answered.confidence) {
-      return "根拠を確認";
+    if (needsConfidenceCheck()) {
+      return "理解を選ぶ";
     }
     if (isDailyQuestQuestion(currentId()) && dailyQuestDoneCount() >= dailyQuestIds().length) {
       return "今日の10問を終了";
@@ -2410,18 +2430,20 @@
     const xpResult = typeof answered.xpReward === "number" ? ` / EXP +${answered.xpReward}` : "";
     elements.dockResultText.textContent = `${resultParts.join("・")}${xpResult}`;
 
-    const needsMasteryCheck = Boolean(answered.weakBreakCandidate && !answered.confidence);
+    const needsUnderstandingCheck = needsConfidenceCheck(answered);
     const dailyComplete = Boolean(
       isDailyQuestQuestion(currentId()) && dailyQuestDoneCount() >= dailyQuestIds().length
     );
-    const targetId = needsMasteryCheck ? null : nextTargetId();
+    const targetId = needsUnderstandingCheck ? null : nextTargetId();
     const targetQuestion = targetId ? QUESTIONS[targetId] : null;
-    if (needsMasteryCheck) {
-      elements.dockTargetText.textContent = "弱点克服候補・根拠確認で報酬確定";
+    if (needsUnderstandingCheck) {
+      elements.dockTargetText.textContent = answered.weakBreakCandidate
+        ? "弱点克服候補・4肢の理解を選ぶと報酬確定"
+        : "4肢の理解度を選ぶと次へ進める";
     } else if (dailyComplete) {
       elements.dockTargetText.textContent = nextFirstPassId()
-        ? "固定10問完走・今日はここまででOK"
-        : "固定10問完走・全分野コア100に接触完了";
+        ? "固定10問完走・次はRETIO公式20問"
+        : "固定10問完走・全分野接触完了。次は公式20問";
     } else if (targetQuestion) {
       elements.dockTargetText.textContent = `次 ${questionPositionText(targetId)} ・ ${targetQuestion.tag}`;
     } else if (isFirstPassMode()) {
@@ -2445,7 +2467,7 @@
     elements.dockNextButton.classList.toggle(
       "is-reward",
       Boolean(
-        needsMasteryCheck ||
+        needsUnderstandingCheck ||
         answered.levelUp ||
         answered.chestOpened ||
         answered.milestone ||
@@ -3271,30 +3293,33 @@
 
   function renderConfidenceCheck(question) {
     removeConfidenceCheck();
+    if (!state.answered?.correct) return;
     const wrapper = document.createElement("section");
     wrapper.className = "confidence-check";
 
     const copy = document.createElement("div");
     const title = document.createElement("strong");
-    title.textContent = "根拠チェック";
+    title.textContent = "理解チェック（必須）";
     const lead = document.createElement("p");
     lead.textContent = state.answered?.weakBreakCandidate
-      ? "翌日再テスト成功。根拠まで説明できれば弱点克服を確定。"
-      : "正解でも迷った問題は弱点に残す。";
+      ? "翌日再テスト成功。4肢の○×理由まで説明できれば弱点克服を確定。"
+      : "選んだ肢だけでなく、4肢の○×理由を言えるか選ぶ。勘・迷いは弱点へ回す。";
     copy.append(title, lead);
 
     const actions = document.createElement("div");
     actions.className = "confidence-actions";
     [
-      { value: "clear", label: "根拠までOK" },
-      { value: "unsure", label: "迷った" },
-      { value: "cuts", label: "全肢切れない" }
+      { value: "clear", label: "4肢を説明できる" },
+      { value: "unsure", label: "正解したが迷った" },
+      { value: "cuts", label: "切れない肢がある" }
     ].forEach((item) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "confidence-button";
       button.textContent = item.label;
-      button.classList.toggle("is-selected", state.answered?.confidence === item.value);
+      const selected = state.answered?.confidence === item.value;
+      button.classList.toggle("is-selected", selected);
+      button.setAttribute("aria-pressed", String(selected));
       button.addEventListener("click", () => setConfidence(question.id, item.value));
       actions.append(button);
     });
@@ -3520,10 +3545,10 @@
     const correct = dailyQuestClearCount();
     const target = dailyQuestIds().length || DAILY_TARGET;
     elements.dailyCompleteSummary.textContent =
-      `${target}問接触・${correct}問正解。ここで終了してOK。復習は翌日以降の固定10問へ自動で戻る。`;
+      `${target}問接触・${correct}問正解・弱点${state.daily.weakAdded}件。固定10問は1 / 4完了。次はRETIO公式の未見20問。`;
     elements.dailyContinueButton.disabled = !nextFirstPassId();
     elements.dailyContinueButton.textContent = nextFirstPassId()
-      ? `${studyScopeConfig().shortLabel}を続ける`
+      ? "追加演習を続ける"
       : "この範囲は全問接触";
   }
 
@@ -4354,6 +4379,7 @@
       correctDayKeys: isCorrect
         ? [...new Set([...normalizedCorrectDayKeys(previous), todayKey()])].sort().slice(-8)
         : normalizedCorrectDayKeys(previous),
+      clearDayKeys: normalizedComprehensionDayKeys(previous),
       lastCutCheckAt: cutCheck ? state.answered.at : previous.lastCutCheckAt,
       lastCutCheckAllCorrect: cutCheck ? cutCheck.allCorrect : previous.lastCutCheckAllCorrect
     };
@@ -4485,11 +4511,17 @@
     const stats = state.questionStats[id] || { attempts: 0, correct: 0, wrong: 0 };
     const wasMarked = Boolean(state.marked[id]);
     const shouldMark = value === "unsure" || value === "cuts";
+    const recordedAt = new Date().toISOString();
+    const clearDayKeys = normalizedComprehensionDayKeys(stats)
+      .filter((day) => day !== todayKey());
+    if (value === "clear") clearDayKeys.push(todayKey());
     state.answered.confidence = value;
     state.questionStats[id] = {
       ...stats,
       lastConfidence: value,
-      lastConfidenceAt: new Date().toISOString()
+      lastConfidenceAt: recordedAt,
+      lastClearAt: value === "clear" ? recordedAt : stats.lastClearAt,
+      clearDayKeys: [...new Set(clearDayKeys)].sort().slice(-8)
     };
     state.daily = normalizeDailyState(state.daily);
     if (shouldMark) {
@@ -4546,7 +4578,7 @@
       }, 360);
       return;
     }
-    if (state.answered.weakBreakCandidate && !state.answered.confidence) {
+    if (needsConfidenceCheck()) {
       showConfidenceCheck();
       return;
     }
@@ -4707,6 +4739,10 @@
         correctDayKeys: result.correct
           ? [...new Set([...normalizedCorrectDayKeys(previous), todayKey()])].sort().slice(-8)
           : normalizedCorrectDayKeys(previous),
+        clearDayKeys: result.correct
+          ? [...new Set([...normalizedComprehensionDayKeys(previous), todayKey()])].sort().slice(-8)
+          : normalizedComprehensionDayKeys(previous),
+        lastClearAt: result.correct ? finishedAt : previous.lastClearAt,
         lastRunMode: RUN_MODE_MOCK,
         lastMockFormId: form.id
       };

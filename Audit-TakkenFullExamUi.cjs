@@ -173,7 +173,34 @@ async function main() {
         throw new Error(`Official source link invalid: ${JSON.stringify(sourceLink)}`);
       }
       visitedSourceHosts.push(sourceLink.host);
-      await page.locator(".confidence-button").filter({ hasText: "根拠までOK" }).click();
+      const confidenceGate = await page.evaluate(() => ({
+        title: document.querySelector(".confidence-check strong")?.textContent?.trim() || "",
+        lead: document.querySelector(".confidence-check p")?.textContent?.trim() || "",
+        next: document.querySelector("#dockNextLabel")?.textContent?.trim() || ""
+      }));
+      if (
+        confidenceGate.title !== "理解チェック（必須）" ||
+        !confidenceGate.lead.includes("4肢の○×理由") ||
+        confidenceGate.next !== "理解を選ぶ"
+      ) {
+        throw new Error(`Comprehension gate missing: ${JSON.stringify(confidenceGate)}`);
+      }
+      if (index === 0) {
+        await page.locator("#dockNextButton").click();
+        await page.waitForTimeout(80);
+        await capture(page, "comprehension-gate-desktop.png");
+        const blockedId = await page.evaluate(() => {
+          const text = document.querySelector("#questionText")?.textContent || "";
+          return Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
+            .find((candidate) => candidate.text === text)?.id || "";
+        });
+        if (blockedId !== question.id) {
+          throw new Error(`Unassessed correct answer advanced: ${question.id} -> ${blockedId}`);
+        }
+      }
+      await page.locator(".confidence-button")
+        .filter({ hasText: index === 0 ? "正解したが迷った" : "4肢を説明できる" })
+        .click();
       if (index < 9) {
         await page.locator("#dockNextButton").click();
         await page.waitForFunction(
@@ -205,25 +232,63 @@ async function main() {
       throw new Error(`Daily source host invalid: ${visitedSourceHosts.join(",")}`);
     }
 
-    const stopLabel = ((await page.locator("#dockNextLabel").textContent()) || "").trim();
-    if (stopLabel !== "今日の10問を終了") {
-      throw new Error(`Unexpected completion label: ${stopLabel}`);
+    const stopState = await page.evaluate(() => ({
+      label: document.querySelector("#dockNextLabel")?.textContent?.trim() || "",
+      target: document.querySelector("#dockTargetText")?.textContent?.trim() || ""
+    }));
+    if (
+      stopState.label !== "今日の10問を終了" ||
+      !stopState.target.includes("次はRETIO公式20問")
+    ) {
+      throw new Error(`Unexpected completion handoff: ${JSON.stringify(stopState)}`);
     }
     await page.locator("#dockNextButton").click();
     await page.locator("#dailyCompletePanel").waitFor({ state: "visible" });
-    const sameDayRetention = await page.evaluate(() => ({
-      progress: document.querySelector("#chapterProgressText")?.textContent || "",
-      coach: document.querySelector("#coachTitle")?.textContent || ""
-    }));
-    if (!sameDayRetention.progress.includes("定着0/100")) {
-      throw new Error(`One-day answers counted as retained: ${JSON.stringify(sameDayRetention)}`);
+    const sameDayRetention = await page.evaluate(({ storageId, visitedIds }) => {
+      const saved = JSON.parse(localStorage.getItem(storageId) || "{}");
+      const officialLink = document.querySelector("#dailyOfficialLink");
+      return {
+        progress: document.querySelector("#chapterProgressText")?.textContent || "",
+        coach: document.querySelector("#coachTitle")?.textContent || "",
+        completion: document.querySelector("#dailyCompleteSummary")?.textContent?.trim() || "",
+        officialHref: officialLink?.href || "",
+        officialTarget: officialLink?.target || "",
+        officialRel: officialLink?.rel || "",
+        extraLabel: document.querySelector("#dailyContinueButton")?.textContent?.trim() || "",
+        confidence: visitedIds.map((id) => ({
+          id,
+          lastConfidence: saved.questionStats?.[id]?.lastConfidence || "",
+          clearDays: saved.questionStats?.[id]?.clearDayKeys || [],
+          marked: Boolean(saved.marked?.[id])
+        }))
+      };
+    }, { storageId, visitedIds });
+    if (
+      !sameDayRetention.progress.includes("定着0/100") ||
+      !sameDayRetention.completion.includes("固定10問は1 / 4完了") ||
+      !sameDayRetention.completion.includes("次はRETIO公式の未見20問") ||
+      !sameDayRetention.completion.includes("弱点1件") ||
+      !sameDayRetention.officialHref.startsWith("https://www.retio.or.jp/") ||
+      sameDayRetention.officialTarget !== "_blank" ||
+      !sameDayRetention.officialRel.includes("noopener") ||
+      sameDayRetention.extraLabel !== "追加演習を続ける" ||
+      sameDayRetention.confidence[0]?.lastConfidence !== "unsure" ||
+      sameDayRetention.confidence[0]?.clearDays.length !== 0 ||
+      !sameDayRetention.confidence[0]?.marked ||
+      sameDayRetention.confidence.slice(1).some(
+        (item) => item.lastConfidence !== "clear" || item.clearDays.length !== 1
+      )
+    ) {
+      throw new Error(`Daily completion route mismatch: ${JSON.stringify(sameDayRetention)}`);
     }
+    await capture(page, "daily-complete-desktop.png");
 
     const desktopOverflow = await page.evaluate(() =>
       Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
     );
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(100);
+    await capture(page, "daily-complete-mobile.png");
     const mobileOverflow = await page.evaluate(() =>
       Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
     );
@@ -541,6 +606,7 @@ async function main() {
         coachText: document.querySelector("#coachText")?.textContent || "",
         questLabel: document.querySelector("#questLabel")?.textContent || "",
         passLabel: document.querySelector("#passQuestButton")?.textContent || "",
+        retentionStatus: document.querySelector("#coreRetentionStatus")?.textContent || "",
         overflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
       };
     }, masteryStorageId);
@@ -565,6 +631,7 @@ async function main() {
       !masteryAudit.coachText.includes("全100問接触後") ||
       masteryAudit.questLabel.trim() !== "全分野・定着" ||
       masteryAudit.passLabel.trim() !== "範囲接触済み" ||
+      !masteryAudit.retentionStatus.includes("定着 96 / 100") ||
       masteryAudit.overflow
     ) {
       throw new Error(`Mastery quest mismatch: ${JSON.stringify(masteryAudit)}`);

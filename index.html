@@ -13,7 +13,7 @@
     <link rel="canonical" href="https://regal753.github.io/takken-battle/">
     <title>宅建バトル Study Quest</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./styles.css?v=20260727-pass-plan-v7">
+    <link rel="stylesheet" href="./styles.css?v=20260729-comprehension-v8">
   </head>
   <body>
     <div class="app-root">
@@ -252,11 +252,20 @@
 
       <section id="dailyCompletePanel" class="daily-complete-panel" aria-live="polite" hidden>
         <div class="daily-complete-copy">
-          <span>DAILY QUEST CLEAR</span>
-          <strong>今日の固定10問、完了。</strong>
-          <p id="dailyCompleteSummary">ここで終了してOK。続けたい日だけ一周へ進む。</p>
+          <span>DAILY STEP 1 CLEAR</span>
+          <strong>固定10問の接触、完了。</strong>
+          <p id="dailyCompleteSummary">合格クエストは1 / 4。次はRETIO公式の未見20問。</p>
         </div>
-        <button id="dailyContinueButton" class="daily-continue-button" type="button">未接触を続ける</button>
+        <div class="daily-complete-actions">
+          <a
+            id="dailyOfficialLink"
+            class="daily-official-link"
+            href="https://www.retio.or.jp/exam/past_ques_ans/other/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >RETIO公式20問へ</a>
+          <button id="dailyContinueButton" class="daily-continue-button" type="button">追加演習を続ける</button>
+        </div>
       </section>
 
       <main class="study-shell">
@@ -476,7 +485,7 @@
     <script src="./question-balance.js?v=20260711-feedback-v8"></script>
     <script src="./reward-system.js?v=20260713-confidence-v14"></script>
     <script src="./save-transfer.js?v=20260726-pass-efficiency-v3"></script>
-    <script src="./app.js?v=20260727-pass-plan-v7"></script>
+    <script src="./app.js?v=20260729-comprehension-v8"></script>
     <noscript>宅建バトルを利用するにはJavaScriptを有効にしてください。</noscript>
   </body>
 </html>

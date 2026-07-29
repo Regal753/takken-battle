@@ -44,7 +44,7 @@ assert.match(app, /function isRetained/);
 assert.match(app, /function legacyProgress/);
 assert.match(app, /以前の100問（解答履歴を保持）/);
 assert.match(app, /問題・履歴を保持　解答済/);
-assert.match(app, /normalizedCorrectDayKeys\(stats\)\.length < 2/);
+assert.match(app, /normalizedComprehensionDayKeys\(stats\)\.length < 2/);
 assert.match(app, /const maxReview = newPool\.length >= 6 \? 4 : DAILY_TARGET/);
 assert.match(app, /const CURRICULUM_ORDER/);
 assert.match(app, /const RUN_MODE_MOCK = "mock"/);
@@ -73,13 +73,18 @@ assert.match(index, /id="dailyMissionStatus"/);
 assert.match(index, /id="officialExamForm"/);
 assert.match(index, /id="officialExamHistory"/);
 assert.match(index, /RETIO公式過去問を開く/);
+assert.match(index, /id="dailyOfficialLink"/);
+assert.match(index, /RETIO公式20問へ/);
 assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 法令・税その他へ進む/);
 assert.match(index, /③ 全分野を混ぜる/);
-assert.match(index, /styles\.css\?v=20260727-pass-plan-v7/);
-assert.match(index, /app\.js\?v=20260727-pass-plan-v7/);
+assert.match(index, /styles\.css\?v=20260729-comprehension-v8/);
+assert.match(index, /app\.js\?v=20260729-comprehension-v8/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
+assert.match(app, /理解チェック（必須）/);
+assert.match(app, /normalizedComprehensionDayKeys/);
+assert.match(app, /固定10問は1 \/ 4完了/);
 
 const localReferencePattern = /\b(?:href|src)="([^"]+)"/g;
 for (const [, reference] of index.matchAll(localReferencePattern)) {
@@ -101,7 +106,7 @@ assert.match(pagesWorkflow, /node Audit-TakkenSaveTransfer\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenFullExam\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenQuestionQuality\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
-assert.match(pagesWorkflow, /20260727-pass-plan-v7/);
+assert.match(pagesWorkflow, /20260729-comprehension-v8/);
 assert.match(pagesWorkflow, /cp [^\n]*save-transfer\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*exam-blueprint\.js[^\n]*_site\//);
 
