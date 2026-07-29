@@ -330,6 +330,10 @@
     studyTitle: $("#studyTitle"),
     todayLabel: $("#todayLabel"),
     chapterList: $("#chapterList"),
+    progressDrawer: $("#progressDrawer"),
+    progressDrawerLink: $("#progressDrawerLink"),
+    progressDrawerSummary: $("#progressDrawerSummary"),
+    themeDrawerSummary: $("#themeDrawerSummary"),
     themeBar: $("#themeBar"),
     chapterSelect: $("#chapterSelect"),
     studyScopeSelect: $("#studyScopeSelect"),
@@ -357,9 +361,6 @@
     dailyQuestButton: $("#dailyQuestButton"),
     mockAButton: $("#mockAButton"),
     mockBButton: $("#mockBButton"),
-    dailyCompletePanel: $("#dailyCompletePanel"),
-    dailyCompleteSummary: $("#dailyCompleteSummary"),
-    dailyContinueButton: $("#dailyContinueButton"),
     passQuestButton: $("#passQuestButton"),
     weakQuestButton: $("#weakQuestButton"),
     sprintButton: $("#sprintButton"),
@@ -369,6 +370,18 @@
     saveShareButton: $("#saveShareButton"),
     saveImportInput: $("#saveImportInput"),
     saveTransferStatus: $("#saveTransferStatus"),
+    todayCommandPanel: $("#todayCommandPanel"),
+    todayCommandKicker: $("#todayCommandKicker"),
+    todayCommandTitle: $("#todayCommandTitle"),
+    todayCommandText: $("#todayCommandText"),
+    todayCommandStartButton: $("#todayCommandStartButton"),
+    todayCommandOfficialActions: $("#todayCommandOfficialActions"),
+    todayCommandOfficialDoneButton: $("#todayCommandOfficialDoneButton"),
+    todayCommandReviewActions: $("#todayCommandReviewActions"),
+    todayReviewInput: $("#todayReviewInput"),
+    todayCommandReviewButton: $("#todayCommandReviewButton"),
+    todayCommandMinutesActions: $("#todayCommandMinutesActions"),
+    todayCommandStatus: $("#todayCommandStatus"),
     passPlanPanel: $("#passPlanPanel"),
     passPhaseTitle: $("#passPhaseTitle"),
     passPhaseText: $("#passPhaseText"),
@@ -381,8 +394,12 @@
     dailyMissionSummary: $("#dailyMissionSummary"),
     missionBattleStep: $("#missionBattleStep"),
     missionBattleStatus: $("#missionBattleStatus"),
-    missionOfficialButton: $("#missionOfficialButton"),
-    missionReviewButton: $("#missionReviewButton"),
+    missionOfficialStep: $("#missionOfficialStep"),
+    missionOfficialStatus: $("#missionOfficialStatus"),
+    missionReviewStep: $("#missionReviewStep"),
+    missionReviewStatus: $("#missionReviewStatus"),
+    missionMinutesStep: $("#missionMinutesStep"),
+    missionMinutesStatus: $("#missionMinutesStatus"),
     missionMinutesInput: $("#missionMinutesInput"),
     missionMinutesButton: $("#missionMinutesButton"),
     officialLedgerSummary: $("#officialLedgerSummary"),
@@ -661,6 +678,7 @@
           {
             officialQuestions: Boolean(mission?.officialQuestions),
             reviewed: Boolean(mission?.reviewed),
+            reviewNote: String(mission?.reviewNote || "").trim().slice(0, 120),
             minutes: boundedInteger(mission?.minutes, 600)
           }
         ])
@@ -1915,6 +1933,7 @@
     return {
       officialQuestions: Boolean(current?.officialQuestions),
       reviewed: Boolean(current?.reviewed),
+      reviewNote: String(current?.reviewNote || "").trim().slice(0, 120),
       minutes: boundedInteger(current?.minutes, 600)
     };
   }
@@ -1922,11 +1941,15 @@
   function setMissionForDate(date, mission) {
     const current = missionForDate(date);
     const hasMinutes = Object.prototype.hasOwnProperty.call(mission, "minutes");
+    const hasReviewNote = Object.prototype.hasOwnProperty.call(mission, "reviewNote");
     state.missionLog = {
       ...(state.missionLog || {}),
       [date]: {
         ...current,
         ...mission,
+        reviewNote: String(hasReviewNote ? mission.reviewNote : current.reviewNote)
+          .trim()
+          .slice(0, 120),
         minutes: boundedInteger(hasMinutes ? mission.minutes : current.minutes, 600)
       }
     };
@@ -2027,6 +2050,97 @@
     });
   }
 
+  function setTodayCommandStatus(message, isError = false) {
+    if (!elements.todayCommandStatus) return;
+    elements.todayCommandStatus.textContent = message;
+    elements.todayCommandStatus.classList.toggle("is-error", isError);
+  }
+
+  function renderTodayCommand({
+    mission,
+    battleDone,
+    officialDone,
+    reviewDone,
+    minutesDone
+  }) {
+    if (!elements.todayCommandPanel) return;
+    const step = !battleDone
+      ? 1
+      : !officialDone
+        ? 2
+        : !reviewDone
+          ? 3
+          : !minutesDone
+            ? 4
+            : 5;
+    const target = dailyQuestIds().length || DAILY_TARGET;
+    const done = Math.min(dailyQuestDoneCount(), target);
+    const remainingMinutes = Math.max(0, DAILY_STUDY_MINUTES - mission.minutes);
+    const command = step === 1
+      ? {
+          kicker: "今やる・STEP 1 / 4",
+          title: "固定10問を解く",
+          text: isMockMode()
+            ? "模試を中断して日課へ戻り、各問の理解チェックまで通す。"
+            : `残り${Math.max(0, target - done)}問。正解でも4肢の理由を判定してから次へ進む。`
+        }
+      : step === 2
+        ? {
+            kicker: "今やる・STEP 2 / 4",
+            title: "RETIO公式を20問解く",
+            text: "未見年度の1〜20問を時間を測って解く。終えたら、この場で完了を記録する。"
+          }
+        : step === 3
+          ? {
+              kicker: "今やる・STEP 3 / 4",
+              title: "誤答原因を1行にする",
+              text: "一番痛かった誤答を「原因 → 次回ルール」の形で1行にして保存する。"
+            }
+          : step === 4
+            ? {
+                kicker: "今やる・STEP 4 / 4",
+                title: `合計90分まであと${remainingMinutes}分`,
+                text: `今日は${mission.minutes}分。実際の合計学習時間を入力し、90分以上で完了にする。`
+              }
+            : {
+                kicker: "今日の作戦・4 / 4",
+                title: "90分クエスト完了",
+                text: `固定10問・公式20問・誤答1行・合計${mission.minutes}分を記録済み。今日はここで切れる。`
+              };
+
+    elements.todayCommandKicker.textContent = command.kicker;
+    elements.todayCommandTitle.textContent = command.title;
+    elements.todayCommandText.textContent = command.text;
+    elements.todayCommandPanel.classList.toggle("is-complete", step === 5);
+    elements.todayCommandStartButton.hidden = step !== 1;
+    elements.todayCommandStartButton.textContent = isMockMode()
+      ? "模試を中断して固定10問へ"
+      : done
+        ? `残り${Math.max(0, target - done)}問を続ける`
+        : "固定10問を始める";
+    elements.todayCommandOfficialActions.hidden = step !== 2;
+    elements.todayCommandReviewActions.hidden = step !== 3;
+    elements.todayCommandMinutesActions.hidden = step !== 4;
+    if (elements.todayReviewInput && document.activeElement !== elements.todayReviewInput) {
+      elements.todayReviewInput.value = mission.reviewNote;
+    }
+    if (elements.missionMinutesInput && document.activeElement !== elements.missionMinutesInput) {
+      elements.missionMinutesInput.value = String(mission.minutes);
+    }
+
+    [
+      [elements.missionBattleStep, battleDone, 1],
+      [elements.missionOfficialStep, officialDone, 2],
+      [elements.missionReviewStep, reviewDone, 3],
+      [elements.missionMinutesStep, minutesDone, 4]
+    ].forEach(([item, doneState, itemStep]) => {
+      if (!item) return;
+      item.classList.toggle("is-done", doneState);
+      item.classList.toggle("is-current", step === itemStep);
+      item.classList.toggle("is-locked", step < itemStep && step !== 5);
+    });
+  }
+
   function renderPassPlan() {
     if (!elements.passPlanPanel) return;
     const phase = passPhaseFor();
@@ -2074,18 +2188,15 @@
     elements.missionBattleStep.classList.toggle("is-done", battleDone);
     elements.missionBattleStatus.textContent =
       `${Math.min(dailyQuestDoneCount(), dailyQuestIds().length || DAILY_TARGET)} / ${dailyQuestIds().length || DAILY_TARGET}`;
-    [
-      [elements.missionOfficialButton, officialDone],
-      [elements.missionReviewButton, reviewDone]
-    ].forEach(([button, done]) => {
-      if (!button) return;
-      button.classList.toggle("is-done", done);
-      button.setAttribute("aria-pressed", String(done));
-    });
-    elements.missionMinutesInput?.closest(".mission-step")?.classList.toggle("is-done", minutesDone);
-    if (elements.missionMinutesInput && document.activeElement !== elements.missionMinutesInput) {
-      elements.missionMinutesInput.value = String(mission.minutes);
-    }
+    elements.missionOfficialStatus.textContent = officialDone ? "完了記録済み" : "未完了";
+    elements.missionReviewStatus.textContent = reviewDone
+      ? mission.reviewNote
+        ? "1行保存済み"
+        : "完了記録済み"
+      : "未完了";
+    elements.missionMinutesStatus.textContent =
+      `${Math.min(mission.minutes, DAILY_STUDY_MINUTES)} / ${DAILY_STUDY_MINUTES}分`;
+    renderTodayCommand({ mission, battleDone, officialDone, reviewDone, minutesDone });
     elements.officialLedgerSummary.textContent =
       `${(state.officialExamHistory || []).length}年分`;
     elements.passPlanPanel
@@ -2094,23 +2205,53 @@
     renderOfficialExamHistory();
   }
 
-  function toggleMissionFlag(field) {
-    if (!["officialQuestions", "reviewed"].includes(field)) return;
-    const mission = missionForDate();
-    const nextValue = !mission[field];
-    setMissionForDate(todayKey(), { [field]: nextValue });
+  function completeOfficialMission() {
+    if (!dailyQuestIsComplete()) {
+      setTodayCommandStatus("先に固定10問を完了してください。", true);
+      return;
+    }
+    setMissionForDate(todayKey(), { officialQuestions: true });
     saveState();
     logStudyEvent("pass-mission", {
-      field,
-      completed: nextValue,
+      field: "officialQuestions",
+      completed: true,
       mission: missionForDate()
     });
     renderPassPlan();
+    setTodayCommandStatus("公式20問を完了として記録しました。次は誤答原因を1行にします。");
+  }
+
+  function saveMissionReview() {
+    const mission = missionForDate();
+    if (!dailyQuestIsComplete() || !mission.officialQuestions) {
+      setTodayCommandStatus("先に公式20問まで完了してください。", true);
+      return;
+    }
+    const reviewNote = String(elements.todayReviewInput?.value || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 120);
+    if (reviewNote.length < 4) {
+      setTodayCommandStatus("原因と次回ルールを4文字以上の1行で入力してください。", true);
+      elements.todayReviewInput?.focus();
+      return;
+    }
+    setMissionForDate(todayKey(), { reviewed: true, reviewNote });
+    saveState();
+    logStudyEvent("pass-mission", {
+      field: "reviewed",
+      completed: true,
+      reviewNote,
+      mission: missionForDate()
+    });
+    renderPassPlan();
+    setTodayCommandStatus("誤答ルールを保存しました。最後に今日の合計時間を記録します。");
   }
 
   function saveMissionMinutes() {
     const value = elements.missionMinutesInput?.valueAsNumber;
     if (!Number.isFinite(value) || value < 0 || value > 600) {
+      setTodayCommandStatus("学習時間は0〜600分で入力してください。", true);
       setOfficialExamStatus("学習時間は0〜600分で入力してください。", true);
       return;
     }
@@ -2123,6 +2264,11 @@
     });
     setOfficialExamStatus(`今日の学習時間を${boundedInteger(value, 600)}分で保存しました。`);
     renderPassPlan();
+    setTodayCommandStatus(
+      value >= DAILY_STUDY_MINUTES
+        ? `合計${boundedInteger(value, 600)}分。今日の90分クエスト完了です。`
+        : `合計${boundedInteger(value, 600)}分で保存。あと${DAILY_STUDY_MINUTES - boundedInteger(value, 600)}分です。`
+    );
   }
 
   function recordOfficialExam(event) {
@@ -2655,7 +2801,6 @@
     renderThemeControls(question);
     renderAdaptiveCoach(question);
     renderQuestPanel();
-    renderDailyCompletionPanel();
     renderSprint();
     renderPassPlan();
     updateLogStatusText();
@@ -3387,6 +3532,10 @@
       elements.chapterProgressText.textContent = `${state.mock.position + 1} / 50問`;
       if (elements.studyTitle) elements.studyTitle.textContent = `宅建 ${mockFormShortLabel()}`;
       if (elements.todayLabel) elements.todayLabel.textContent = "本試験配分50問・120分";
+      if (elements.progressDrawerSummary) {
+        elements.progressDrawerSummary.textContent =
+          `模試 ${mockAnsweredCount()} / 50・要復習${weakIds().length}`;
+      }
       return;
     }
     if (elements.attemptLabel) elements.attemptLabel.textContent = "解答";
@@ -3411,6 +3560,10 @@
       elements.todayLabel.textContent = isFirstPassMode()
         ? firstPassRemainingText()
         : `定着${progress.retained}/${progress.total}・復習待ち${progress.due}`;
+    }
+    if (elements.progressDrawerSummary) {
+      elements.progressDrawerSummary.textContent =
+        `解答${attempts}・定着${retainedCount()} / ${CURRICULUM_ORDER.length}・弱点${weakIds().length}`;
     }
   }
 
@@ -3534,44 +3687,20 @@
   }
 
   function isDailyQuestPaused() {
-    return !isFirstPassMode() && !isMockMode() && dailyQuestIsComplete() && state.dailyFinishedDate === todayKey();
-  }
-
-  function renderDailyCompletionPanel() {
-    if (!elements.dailyCompletePanel) return;
-    const visible = isDailyQuestPaused();
-    elements.dailyCompletePanel.hidden = !visible;
-    if (!visible) return;
-    const correct = dailyQuestClearCount();
-    const target = dailyQuestIds().length || DAILY_TARGET;
-    elements.dailyCompleteSummary.textContent =
-      `${target}問接触・${correct}問正解・弱点${state.daily.weakAdded}件。固定10問は1 / 4完了。次はRETIO公式の未見20問。`;
-    elements.dailyContinueButton.disabled = !nextFirstPassId();
-    elements.dailyContinueButton.textContent = nextFirstPassId()
-      ? "追加演習を続ける"
-      : "この範囲は全問接触";
+    return !isFirstPassMode() &&
+      !isMockMode() &&
+      dailyQuestIsComplete() &&
+      state.dailyFinishedDate === todayKey();
   }
 
   function finishDailyQuest() {
     if (!dailyQuestIsComplete() || isFirstPassMode()) return false;
     state.dailyFinishedDate = todayKey();
     saveState();
-    renderDailyCompletionPanel();
+    renderPassPlan();
     renderAnswerDock(currentQuestion());
-    elements.dailyCompletePanel?.scrollIntoView({ block: "center", behavior: "smooth" });
+    elements.todayCommandPanel?.scrollIntoView({ block: "start", behavior: "smooth" });
     return true;
-  }
-
-  function continueAfterDailyQuest() {
-    const targetId = nextFirstPassId();
-    if (!targetId) {
-      showFinished();
-      return;
-    }
-    state.dailyFinishedDate = "";
-    state.runMode = RUN_MODE_FIRST_PASS;
-    setFirstPassUrl(true);
-    goToQuestion(targetId);
   }
 
   function questClaimsForToday() {
@@ -3718,6 +3847,10 @@
     if (elements.studyScopeSelect) {
       elements.studyScopeSelect.value = state.studyScope;
       elements.studyScopeSelect.disabled = isMockMode();
+    }
+    if (elements.themeDrawerSummary) {
+      elements.themeDrawerSummary.textContent =
+        `${studyScopeConfig().shortLabel}・${question.chapter?.topicLabel || question.chapter?.label || "現在のテーマ"}`;
     }
   }
 
@@ -4802,7 +4935,6 @@
     state.finished = true;
     renderStats();
     renderQuestPanel();
-    renderDailyCompletionPanel();
     renderSprint();
     renderPassPlan();
     if (elements.answerDock) {
@@ -5031,7 +5163,20 @@
     elements.resetButton.addEventListener("click", resetAll);
     elements.markButton.addEventListener("click", toggleMarked);
     elements.dailyQuestButton?.addEventListener("click", leaveMockForDailyQuest);
-    elements.dailyContinueButton?.addEventListener("click", continueAfterDailyQuest);
+    elements.todayCommandStartButton?.addEventListener("click", () => {
+      leaveMockForDailyQuest();
+      window.requestAnimationFrame(() =>
+        elements.quizCard?.scrollIntoView({ block: "start", behavior: "smooth" })
+      );
+    });
+    elements.todayCommandOfficialDoneButton?.addEventListener("click", completeOfficialMission);
+    elements.todayCommandReviewButton?.addEventListener("click", saveMissionReview);
+    elements.todayReviewInput?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        saveMissionReview();
+      }
+    });
     elements.passQuestButton?.addEventListener("click", startFirstPass);
     elements.mockAButton?.addEventListener("click", () => startMock("form-a"));
     elements.mockBButton?.addEventListener("click", () => startMock("form-b"));
@@ -5042,12 +5187,6 @@
     elements.saveExportButton?.addEventListener("click", downloadSaveBackup);
     elements.saveShareButton?.addEventListener("click", shareSaveTransfer);
     elements.saveImportInput?.addEventListener("change", importSaveFile);
-    elements.missionOfficialButton?.addEventListener("click", () =>
-      toggleMissionFlag("officialQuestions")
-    );
-    elements.missionReviewButton?.addEventListener("click", () =>
-      toggleMissionFlag("reviewed")
-    );
     elements.missionMinutesButton?.addEventListener("click", saveMissionMinutes);
     elements.missionMinutesInput?.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
@@ -5063,6 +5202,9 @@
       setStudyScope(String(event.target.value));
     });
     elements.weakButton?.addEventListener("click", jumpToWeakPoint);
+    elements.progressDrawerLink?.addEventListener("click", () => {
+      if (elements.progressDrawer) elements.progressDrawer.open = true;
+    });
     window.addEventListener("keydown", (event) => {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
       if (!state.answered && ["1", "2", "3", "4"].includes(event.key)) {

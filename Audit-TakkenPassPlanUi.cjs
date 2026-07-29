@@ -75,7 +75,12 @@ async function main() {
       gate: document.querySelector("#julyGateStatus")?.textContent?.trim() || "",
       mission: document.querySelector("#dailyMissionStatus")?.textContent?.trim() || "",
       official: document.querySelector("#officialReadinessStatus")?.textContent?.trim() || "",
-      currentRoadmap: document.querySelectorAll(".pass-roadmap li.is-current").length
+      currentRoadmap: document.querySelectorAll(".pass-roadmap li.is-current").length,
+      commandTitle: document.querySelector("#todayCommandTitle")?.textContent?.trim() || "",
+      commandStep: document.querySelector("#todayCommandKicker")?.textContent?.trim() || "",
+      passPlanOpen: Boolean(document.querySelector("#passPlanPanel")?.open),
+      themeOpen: Boolean(document.querySelector("#themeDrawer")?.open),
+      progressOpen: Boolean(document.querySelector("#progressDrawer")?.open)
     }));
     if (
       initial.phase !== "7月ゲート" ||
@@ -83,19 +88,17 @@ async function main() {
       initial.gate !== "0 / 3" ||
       initial.mission !== "0 / 4" ||
       initial.official !== "未記録" ||
-      initial.currentRoadmap !== 1
+      initial.currentRoadmap !== 1 ||
+      initial.commandTitle !== "固定10問を解く" ||
+      initial.commandStep !== "今やる・STEP 1 / 4" ||
+      initial.passPlanOpen ||
+      initial.themeOpen ||
+      initial.progressOpen
     ) {
       throw new Error(`Initial pass plan mismatch: ${JSON.stringify(initial)}`);
     }
 
-    await page.locator("#missionOfficialButton").click();
-    await page.locator("#missionReviewButton").click();
-    await page.locator("#missionMinutesInput").fill("90");
-    await page.locator("#missionMinutesButton").click();
-    await page.waitForFunction(() =>
-      document.querySelector("#dailyMissionStatus")?.textContent?.trim() === "3 / 4"
-    );
-
+    await page.locator(".pass-plan-summary").click();
     await page.locator(".official-ledger > summary").click();
     await fillOfficialExam(page, {
       year: 2025,
@@ -135,14 +138,14 @@ async function main() {
     if (
       recorded.readiness !== "戦略目標 37 / 50" ||
       recorded.gate !== "2 / 3" ||
-      recorded.mission !== "3 / 4" ||
+      recorded.mission !== "2 / 4" ||
       recorded.ledger !== "1年分" ||
       !recorded.historyText.includes("2025年度") ||
       !recorded.historyText.includes("37 / 50") ||
       recorded.officialExamHistory?.length !== 1 ||
       recorded.officialExamHistory[0]?.business !== 18 ||
       !recorded.missionToday?.officialQuestions ||
-      !recorded.missionToday?.reviewed ||
+      recorded.missionToday?.reviewed ||
       recorded.missionToday?.minutes !== 115
     ) {
       throw new Error(`Official exam record mismatch: ${JSON.stringify(recorded)}`);
@@ -179,7 +182,7 @@ async function main() {
       history: document.querySelectorAll(".official-history-row").length,
       errors: document.querySelectorAll(":invalid").length
     }));
-    if (mobile.overflow || mobile.mission !== "3 / 4" || mobile.history !== 1) {
+    if (mobile.overflow || mobile.mission !== "2 / 4" || mobile.history !== 1) {
       throw new Error(`Mobile pass plan mismatch: ${JSON.stringify(mobile)}`);
     }
     if (consoleErrors.length || pageErrors.length) {

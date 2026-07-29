@@ -13,7 +13,7 @@
     <link rel="canonical" href="https://regal753.github.io/takken-battle/">
     <title>宅建バトル Study Quest</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./styles.css?v=20260729-comprehension-v8">
+    <link rel="stylesheet" href="./styles.css?v=20260729-structure-v9">
   </head>
   <body>
     <div class="app-root">
@@ -26,64 +26,67 @@
           </div>
         </div>
         <div class="header-actions">
-          <a class="ghost-button link-button" href="#radioPanel">ラジオ</a>
+          <a id="progressDrawerLink" class="ghost-button link-button" href="#progressDrawer">記録</a>
           <button id="resetButton" class="ghost-button" type="button">最初から</button>
         </div>
       </header>
 
-      <section class="public-mode-note" aria-label="公開版の保存と利用上の注意">
-        <strong>公開β</strong>
-        <span class="public-mode-copy">進捗はこの端末へ自動保存されます。法令基準日は2026年4月1日。統計問題は公開日を確認し、最新の公式資料でも再確認してください。</span>
-        <div class="save-transfer-actions" aria-label="セーブデータ管理">
-          <button id="saveExportButton" class="save-transfer-button" type="button">バックアップ</button>
-          <button id="saveShareButton" class="save-transfer-button save-share-button" type="button">スマホへ渡す</button>
-          <label class="save-transfer-button" for="saveImportInput">
-            読み込む
-            <input id="saveImportInput" type="file" accept=".json,application/json" hidden>
-          </label>
-          <small id="saveTransferStatus" class="save-transfer-status" aria-live="polite"></small>
-          <small class="save-transfer-help">「スマホへ渡す」は現在のセーブを本人用リンクにします。次の端末で開いて確認すると取込み、その後は端末内へ自動保存します。リンクは他人へ送らず、使用後に削除してください。</small>
-        </div>
-      </section>
-
-      <section id="passPlanPanel" class="pass-plan-panel" aria-label="2026年宅建合格作戦">
-        <div class="pass-plan-head">
-          <div>
-            <span>2026 PASS PLAN</span>
-            <strong id="passPhaseTitle">7月ゲート</strong>
-            <p id="passPhaseText">宅建業法を固め、法令上の制限へ接触し、公式未見過去問で現在地を測る。</p>
-          </div>
-          <div class="exam-countdown">
-            <span>本試験 10/18</span>
-            <strong id="examCountdown">D-83</strong>
-            <small>13:00–15:00</small>
+      <details class="public-mode-note" aria-label="公開版の保存と利用上の注意">
+        <summary>
+          <strong>公開β</strong>
+          <span>進捗はこの端末へ自動保存</span>
+          <small>保存管理</small>
+        </summary>
+        <div class="public-mode-body">
+          <p class="public-mode-copy">法令基準日は2026年4月1日。統計問題は公開日を確認し、最新の公式資料でも再確認してください。</p>
+          <div class="save-transfer-actions" aria-label="セーブデータ管理">
+            <button id="saveExportButton" class="save-transfer-button" type="button">バックアップ</button>
+            <button id="saveShareButton" class="save-transfer-button save-share-button" type="button">スマホへ渡す</button>
+            <label class="save-transfer-button" for="saveImportInput">
+              読み込む
+              <input id="saveImportInput" type="file" accept=".json,application/json" hidden>
+            </label>
+            <small id="saveTransferStatus" class="save-transfer-status" aria-live="polite"></small>
+            <small class="save-transfer-help">「スマホへ渡す」は現在のセーブを本人用リンクにします。次の端末で開いて確認すると取込み、その後は端末内へ自動保存します。リンクは他人へ送らず、使用後に削除してください。</small>
           </div>
         </div>
+      </details>
 
-        <div class="pass-metric-grid">
-          <div>
-            <span>7/31学習ゲート</span>
-            <strong id="julyGateStatus">0 / 3</strong>
-            <small>業法定着・法令接触・公式1年</small>
+      <section id="todayCommandPanel" class="today-command-panel" aria-labelledby="todayCommandTitle">
+        <div class="today-command-main">
+          <div class="today-command-copy">
+            <span id="todayCommandKicker">今やる・STEP 1 / 4</span>
+            <strong id="todayCommandTitle">固定10問を解く</strong>
+            <p id="todayCommandText">各問の理解チェックまで通し、10問すべてに判定を付ける。</p>
           </div>
-          <div>
-            <span>コア100</span>
-            <strong id="coreCoverageStatus">接触 0 / 100</strong>
-            <small id="coreRetentionStatus">定着 0 / 100</small>
-          </div>
-          <div>
-            <span>公式未見過去問</span>
-            <strong id="officialReadinessStatus">未記録</strong>
-            <small>戦略目標37・安全圏40</small>
-          </div>
-          <div>
-            <span>今日の90分</span>
-            <strong id="dailyMissionStatus">0 / 4</strong>
-            <small id="dailyMissionSummary">固定10問から開始</small>
+          <div class="today-command-actions">
+            <button id="todayCommandStartButton" class="today-command-primary" type="button">固定10問を始める</button>
+            <div id="todayCommandOfficialActions" class="today-command-action-group" hidden>
+              <a
+                id="todayCommandOfficialLink"
+                class="today-command-primary"
+                href="https://www.retio.or.jp/exam/past_ques_ans/other/"
+                target="_blank"
+                rel="noopener noreferrer"
+              >RETIO公式20問を開く</a>
+              <button id="todayCommandOfficialDoneButton" class="today-command-secondary" type="button">20問完了を記録</button>
+            </div>
+            <div id="todayCommandReviewActions" class="today-command-action-group today-review-actions" hidden>
+              <label for="todayReviewInput">原因 → 次回ルール</label>
+              <input id="todayReviewInput" type="text" maxlength="120" autocomplete="off" placeholder="例：主語を飛ばした → 最初に主体へ線を引く">
+              <button id="todayCommandReviewButton" class="today-command-primary" type="button">1行を保存</button>
+            </div>
+            <div id="todayCommandMinutesActions" class="today-command-action-group today-minutes-actions" hidden>
+              <label for="missionMinutesInput">今日の合計時間</label>
+              <input id="missionMinutesInput" type="number" min="0" max="600" step="5" inputmode="numeric" value="0" aria-label="今日の学習時間（分）">
+              <span>分</span>
+              <button id="missionMinutesButton" class="today-command-primary" type="button">90分を記録</button>
+            </div>
+            <p id="todayCommandStatus" class="today-command-status" aria-live="polite"></p>
           </div>
         </div>
 
-        <div class="daily-mission" aria-label="今日の合格クエスト">
+        <div class="daily-mission" aria-label="今日の合格クエスト進捗">
           <div id="missionBattleStep" class="mission-step">
             <span>1</span>
             <div>
@@ -91,30 +94,68 @@
               <small id="missionBattleStatus">0 / 10</small>
             </div>
           </div>
-          <button id="missionOfficialButton" class="mission-step" type="button" aria-pressed="false">
+          <div id="missionOfficialStep" class="mission-step">
             <span>2</span>
             <div>
               <strong>公式問題20問</strong>
-              <small>未見年度を使う</small>
+              <small id="missionOfficialStatus">未完了</small>
             </div>
-          </button>
-          <button id="missionReviewButton" class="mission-step" type="button" aria-pressed="false">
+          </div>
+          <div id="missionReviewStep" class="mission-step">
             <span>3</span>
             <div>
               <strong>誤答を1行化</strong>
-              <small>原因と次回ルール</small>
+              <small id="missionReviewStatus">未完了</small>
             </div>
-          </button>
-          <div class="mission-step mission-minutes">
+          </div>
+          <div id="missionMinutesStep" class="mission-step">
             <span>4</span>
-            <label for="missionMinutesInput">
+            <div>
               <strong>合計90分</strong>
-              <small>今日の学習時間</small>
-            </label>
-            <input id="missionMinutesInput" type="number" min="0" max="600" step="5" inputmode="numeric" value="0" aria-label="今日の学習時間（分）">
-            <button id="missionMinutesButton" type="button">保存</button>
+              <small id="missionMinutesStatus">0 / 90分</small>
+            </div>
           </div>
         </div>
+      </section>
+
+      <details id="passPlanPanel" class="pass-plan-panel" aria-label="2026年宅建合格作戦">
+        <summary class="pass-plan-summary">
+          <div>
+            <span>2026 PASS PLAN</span>
+            <strong id="passPhaseTitle">7月ゲート</strong>
+          </div>
+          <div class="exam-countdown">
+            <span>本試験 10/18</span>
+            <strong id="examCountdown">D-83</strong>
+            <small>作戦を見る</small>
+          </div>
+        </summary>
+
+        <div class="pass-plan-body">
+          <p id="passPhaseText" class="pass-plan-lead">宅建業法を固め、法令上の制限へ接触し、公式未見過去問で現在地を測る。</p>
+
+          <div class="pass-metric-grid">
+            <div>
+              <span>7/31学習ゲート</span>
+              <strong id="julyGateStatus">0 / 3</strong>
+              <small>業法定着・法令接触・公式1年</small>
+            </div>
+            <div>
+              <span>コア100</span>
+              <strong id="coreCoverageStatus">接触 0 / 100</strong>
+              <small id="coreRetentionStatus">定着 0 / 100</small>
+            </div>
+            <div>
+              <span>公式未見過去問</span>
+              <strong id="officialReadinessStatus">未記録</strong>
+              <small>戦略目標37・安全圏40</small>
+            </div>
+            <div>
+              <span>今日の90分</span>
+              <strong id="dailyMissionStatus">0 / 4</strong>
+              <small id="dailyMissionSummary">固定10問から開始</small>
+            </div>
+          </div>
 
         <details class="official-ledger">
           <summary>
@@ -186,17 +227,24 @@
             <li data-pass-phase="final"><strong>10/12–10/18</strong><span>40点の再現、受験票・会場・睡眠を固定</span></li>
           </ol>
         </details>
-      </section>
+        </div>
+      </details>
 
-      <nav id="themeBar" class="theme-toolbar" aria-label="テーマ操作">
-        <select id="chapterSelect" class="chapter-select" aria-label="テーマを選択"></select>
-        <select id="studyScopeSelect" class="study-scope-select" aria-label="現在の学習段階">
-          <option value="business">① 宅建業法を固める</option>
-          <option value="law-other">② 法令・税その他へ進む</option>
-          <option value="all">③ 全分野を混ぜる</option>
-        </select>
-        <button id="weakButton" class="quick-button" type="button" disabled>弱点 0</button>
-      </nav>
+      <details id="themeDrawer" class="theme-drawer">
+        <summary>
+          <span>学習モード・テーマを変更</span>
+          <strong id="themeDrawerSummary">宅建業法</strong>
+        </summary>
+        <nav id="themeBar" class="theme-toolbar" aria-label="テーマ操作">
+          <select id="chapterSelect" class="chapter-select" aria-label="テーマを選択"></select>
+          <select id="studyScopeSelect" class="study-scope-select" aria-label="現在の学習段階">
+            <option value="business">① 宅建業法を固める</option>
+            <option value="law-other">② 法令・税その他へ進む</option>
+            <option value="all">③ 全分野を混ぜる</option>
+          </select>
+          <button id="weakButton" class="quick-button" type="button" disabled>弱点 0</button>
+        </nav>
+      </details>
 
       <section class="quest-card" aria-label="今日のクエスト">
         <div class="quest-main">
@@ -247,24 +295,6 @@
           <span>集中</span>
           <strong id="sprintTimer">25:00</strong>
           <small id="sprintStatus">停止中</small>
-        </div>
-      </section>
-
-      <section id="dailyCompletePanel" class="daily-complete-panel" aria-live="polite" hidden>
-        <div class="daily-complete-copy">
-          <span>DAILY STEP 1 CLEAR</span>
-          <strong>固定10問の接触、完了。</strong>
-          <p id="dailyCompleteSummary">合格クエストは1 / 4。次はRETIO公式の未見20問。</p>
-        </div>
-        <div class="daily-complete-actions">
-          <a
-            id="dailyOfficialLink"
-            class="daily-official-link"
-            href="https://www.retio.or.jp/exam/past_ques_ans/other/"
-            target="_blank"
-            rel="noopener noreferrer"
-          >RETIO公式20問へ</a>
-          <button id="dailyContinueButton" class="daily-continue-button" type="button">追加演習を続ける</button>
         </div>
       </section>
 
@@ -385,7 +415,12 @@
           </section>
         </section>
 
-        <aside class="progress-panel" aria-label="学習記録">
+        <details id="progressDrawer" class="progress-drawer">
+          <summary class="progress-drawer-summary">
+            <span>学習記録・テーマ進捗</span>
+            <strong id="progressDrawerSummary">解答0・定着0 / 100・弱点0</strong>
+          </summary>
+          <aside class="progress-panel" aria-label="学習記録">
           <div class="panel-head">
             <div>
               <span>学習記録</span>
@@ -448,7 +483,8 @@
             <span id="chapterProgressText">0 / 100問</span>
           </div>
           <div id="chapterList" class="chapter-list"></div>
-        </aside>
+          </aside>
+        </details>
       </main>
 
       <footer class="app-footer">
@@ -485,7 +521,7 @@
     <script src="./question-balance.js?v=20260711-feedback-v8"></script>
     <script src="./reward-system.js?v=20260713-confidence-v14"></script>
     <script src="./save-transfer.js?v=20260726-pass-efficiency-v3"></script>
-    <script src="./app.js?v=20260729-comprehension-v8"></script>
+    <script src="./app.js?v=20260729-structure-v9"></script>
     <noscript>宅建バトルを利用するにはJavaScriptを有効にしてください。</noscript>
   </body>
 </html>

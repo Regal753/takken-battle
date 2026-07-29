@@ -60,7 +60,12 @@ async function main() {
         scopeValue: document.querySelector("#studyScopeSelect")?.value || "",
         mockDisabled: Boolean(document.querySelector("#mockAButton")?.disabled),
         mockTitle: document.querySelector("#mockAButton")?.title || "",
-        roundLabel: document.querySelector("#roundLabel")?.textContent?.trim() || ""
+        roundLabel: document.querySelector("#roundLabel")?.textContent?.trim() || "",
+        commandTitle: document.querySelector("#todayCommandTitle")?.textContent?.trim() || "",
+        commandStep: document.querySelector("#todayCommandKicker")?.textContent?.trim() || "",
+        passPlanOpen: Boolean(document.querySelector("#passPlanPanel")?.open),
+        themeOpen: Boolean(document.querySelector("#themeDrawer")?.open),
+        progressOpen: Boolean(document.querySelector("#progressDrawer")?.open)
       };
     });
     if (blueprintAudit.total !== 100 || blueprintAudit.missing.length) {
@@ -75,7 +80,12 @@ async function main() {
       blueprintAudit.scopeValue !== "business" ||
       !blueprintAudit.mockDisabled ||
       !blueprintAudit.mockTitle.includes("全100問接触後") ||
-      blueprintAudit.roundLabel !== "今日 1 / 10"
+      blueprintAudit.roundLabel !== "今日 1 / 10" ||
+      blueprintAudit.commandTitle !== "固定10問を解く" ||
+      blueprintAudit.commandStep !== "今やる・STEP 1 / 4" ||
+      blueprintAudit.passPlanOpen ||
+      blueprintAudit.themeOpen ||
+      blueprintAudit.progressOpen
     ) {
       throw new Error(`Coverage coach missing: ${blueprintAudit.coachTitle}`);
     }
@@ -117,7 +127,19 @@ async function main() {
     await capture(page, "business-scope-desktop.png");
     await page.setViewportSize({ width: 390, height: 844 });
     await capture(page, "business-scope-mobile.png");
+    const mobileStructure = await page.evaluate(() => {
+      const quiz = document.querySelector("#quizCard")?.getBoundingClientRect();
+      const battle = document.querySelector(".battle-card")?.getBoundingClientRect();
+      return {
+        quizBeforeBattle: Boolean(quiz && battle && quiz.top < battle.top),
+        overflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
+      };
+    });
+    if (!mobileStructure.quizBeforeBattle || mobileStructure.overflow) {
+      throw new Error(`Mobile command-first structure mismatch: ${JSON.stringify(mobileStructure)}`);
+    }
     await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.locator("#themeDrawer > summary").click();
     await page.locator("#studyScopeSelect").selectOption("law-other");
     await page.waitForFunction(() =>
       (document.querySelector("#dailyQuestSource")?.textContent || "").includes("法令・税その他")
@@ -143,6 +165,7 @@ async function main() {
     await page.waitForFunction(() =>
       (document.querySelector("#dailyQuestSource")?.textContent || "").includes("宅建業法")
     );
+    await page.locator("#themeDrawer > summary").click();
 
     const visitedIds = [];
     const visitedSections = [];
@@ -243,18 +266,21 @@ async function main() {
       throw new Error(`Unexpected completion handoff: ${JSON.stringify(stopState)}`);
     }
     await page.locator("#dockNextButton").click();
-    await page.locator("#dailyCompletePanel").waitFor({ state: "visible" });
+    await page.waitForFunction(() =>
+      document.querySelector("#todayCommandTitle")?.textContent?.trim() === "RETIO公式を20問解く"
+    );
     const sameDayRetention = await page.evaluate(({ storageId, visitedIds }) => {
       const saved = JSON.parse(localStorage.getItem(storageId) || "{}");
-      const officialLink = document.querySelector("#dailyOfficialLink");
+      const officialLink = document.querySelector("#todayCommandOfficialLink");
       return {
         progress: document.querySelector("#chapterProgressText")?.textContent || "",
         coach: document.querySelector("#coachTitle")?.textContent || "",
-        completion: document.querySelector("#dailyCompleteSummary")?.textContent?.trim() || "",
+        commandTitle: document.querySelector("#todayCommandTitle")?.textContent?.trim() || "",
+        commandStep: document.querySelector("#todayCommandKicker")?.textContent?.trim() || "",
+        mission: document.querySelector("#dailyMissionStatus")?.textContent?.trim() || "",
         officialHref: officialLink?.href || "",
         officialTarget: officialLink?.target || "",
         officialRel: officialLink?.rel || "",
-        extraLabel: document.querySelector("#dailyContinueButton")?.textContent?.trim() || "",
         confidence: visitedIds.map((id) => ({
           id,
           lastConfidence: saved.questionStats?.[id]?.lastConfidence || "",
@@ -265,13 +291,12 @@ async function main() {
     }, { storageId, visitedIds });
     if (
       !sameDayRetention.progress.includes("定着0/100") ||
-      !sameDayRetention.completion.includes("固定10問は1 / 4完了") ||
-      !sameDayRetention.completion.includes("次はRETIO公式の未見20問") ||
-      !sameDayRetention.completion.includes("弱点1件") ||
+      sameDayRetention.commandTitle !== "RETIO公式を20問解く" ||
+      sameDayRetention.commandStep !== "今やる・STEP 2 / 4" ||
+      sameDayRetention.mission !== "1 / 4" ||
       !sameDayRetention.officialHref.startsWith("https://www.retio.or.jp/") ||
       sameDayRetention.officialTarget !== "_blank" ||
       !sameDayRetention.officialRel.includes("noopener") ||
-      sameDayRetention.extraLabel !== "追加演習を続ける" ||
       sameDayRetention.confidence[0]?.lastConfidence !== "unsure" ||
       sameDayRetention.confidence[0]?.clearDays.length !== 0 ||
       !sameDayRetention.confidence[0]?.marked ||
@@ -281,19 +306,64 @@ async function main() {
     ) {
       throw new Error(`Daily completion route mismatch: ${JSON.stringify(sameDayRetention)}`);
     }
-    await capture(page, "daily-complete-desktop.png");
+    await capture(page, "command-step2-desktop.png");
+
+    await page.locator("#todayCommandOfficialDoneButton").click();
+    await page.waitForFunction(() =>
+      document.querySelector("#todayCommandTitle")?.textContent?.trim() === "誤答原因を1行にする"
+    );
+    await page.locator("#todayReviewInput").fill("主体を飛ばした → 最初に誰の義務かを線で囲む");
+    await page.locator("#todayCommandReviewButton").click();
+    await page.waitForFunction(() =>
+      (document.querySelector("#todayCommandTitle")?.textContent || "").includes("合計90分まで")
+    );
+    await page.locator("#missionMinutesInput").fill("90");
+    await page.locator("#missionMinutesButton").click();
+    await page.waitForFunction(() =>
+      document.querySelector("#todayCommandTitle")?.textContent?.trim() === "90分クエスト完了"
+    );
+    const completedMission = await page.evaluate((id) => {
+      const saved = JSON.parse(localStorage.getItem(id) || "{}");
+      const mission = saved.missionLog?.[new Date().toLocaleDateString("sv-SE")] || {};
+      return {
+        title: document.querySelector("#todayCommandTitle")?.textContent?.trim() || "",
+        step: document.querySelector("#todayCommandKicker")?.textContent?.trim() || "",
+        missionCount: document.querySelector("#dailyMissionStatus")?.textContent?.trim() || "",
+        reviewNote: mission.reviewNote || "",
+        reviewed: Boolean(mission.reviewed),
+        officialQuestions: Boolean(mission.officialQuestions),
+        minutes: Number(mission.minutes) || 0
+      };
+    }, storageId);
+    if (
+      completedMission.title !== "90分クエスト完了" ||
+      completedMission.step !== "今日の作戦・4 / 4" ||
+      completedMission.missionCount !== "4 / 4" ||
+      !completedMission.reviewed ||
+      !completedMission.officialQuestions ||
+      !completedMission.reviewNote.includes("主体を飛ばした") ||
+      completedMission.minutes !== 90
+    ) {
+      throw new Error(`Sequential mission workflow mismatch: ${JSON.stringify(completedMission)}`);
+    }
+    await capture(page, "command-complete-desktop.png");
 
     const desktopOverflow = await page.evaluate(() =>
       Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
     );
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(100);
-    await capture(page, "daily-complete-mobile.png");
-    const mobileOverflow = await page.evaluate(() =>
-      Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
-    );
-    if (desktopOverflow || mobileOverflow) {
-      throw new Error(`Horizontal overflow: desktop=${desktopOverflow}, mobile=${mobileOverflow}`);
+    await capture(page, "command-complete-mobile.png");
+    const mobileOverflow = await page.evaluate(() => {
+      const quiz = document.querySelector("#quizCard")?.getBoundingClientRect();
+      const battle = document.querySelector(".battle-card")?.getBoundingClientRect();
+      return {
+        overflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth),
+        quizBeforeBattle: Boolean(quiz && battle && quiz.top < battle.top)
+      };
+    });
+    if (desktopOverflow || mobileOverflow.overflow || !mobileOverflow.quizBeforeBattle) {
+      throw new Error(`Responsive structure mismatch: desktop=${desktopOverflow}, mobile=${JSON.stringify(mobileOverflow)}`);
     }
 
     await page.setViewportSize({ width: 1440, height: 1000 });
@@ -746,6 +816,7 @@ async function main() {
       timeout: 15000
     });
     await migrationPage.waitForSelector("#questionText");
+    await migrationPage.locator("#progressDrawer > summary").click();
     await migrationPage.locator(".chapter-optional > summary").click();
     await migrationPage.setViewportSize({ width: 390, height: 844 });
     await capture(migrationPage, "legacy-history-mobile.png");
@@ -829,6 +900,7 @@ async function main() {
       waitUntil: "domcontentloaded",
       timeout: 15000
     });
+    await handoffPage.locator(".public-mode-note > summary").click();
     await handoffPage.locator("#saveShareButton").click();
     await handoffPage.waitForFunction(() => Boolean(window.__takkenSharedPayload?.url));
     const sharedPayload = await handoffPage.evaluate(() => window.__takkenSharedPayload);
