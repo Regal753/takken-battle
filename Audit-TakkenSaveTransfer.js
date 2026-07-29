@@ -78,7 +78,9 @@ const imported = transfer.stateFromProgressPackage(decoded, {
       officialDrill: {
         setId: "2025-balanced-a-v1",
         answers: { 1: 3, 2: 3 },
+        confidence: { 1: "grounded", 2: "uncertain" },
         uncertain: [2],
+        evidenceVersion: 2,
         reviewNotes: { 2: "例外を飛ばした → ただし書きを先に読む" }
       }
     }
@@ -106,6 +108,9 @@ assert.equal(imported.missionLog["2026-07-27"].minutes, 115);
 assert.deepEqual(imported.missionLog["2026-07-27"].officialDrill.uncertain, [2]);
 
 const savePackage = transfer.createSavePackage(imported);
+assert.equal(savePackage.version, transfer.SAVE_PACKAGE_VERSION);
+assert.equal(savePackage.integrity.algorithm, transfer.INTEGRITY_ALGORITHM);
+assert.match(savePackage.integrity.value, /^[a-f0-9]{8}$/);
 const restored = transfer.validatePackage(
   transfer.decodePackage(transfer.encodePackage(savePackage)),
   allowedIds
@@ -115,6 +120,17 @@ assert.equal(restored.state.totalXp, 475);
 assert.equal(restored.state.officialExamHistory[0].business, 18);
 assert.equal(restored.state.missionLog["2026-07-27"].reviewed, true);
 assert.match(restored.state.missionLog["2026-07-27"].officialDrill.reviewNotes[2], /例外/);
+assert.equal(
+  restored.state.missionLog["2026-07-27"].officialDrill.confidence[2],
+  "uncertain"
+);
+
+const tamperedPackage = JSON.parse(JSON.stringify(savePackage));
+tamperedPackage.state.totalXp += 1;
+assert.throws(
+  () => transfer.validatePackage(tamperedPackage, allowedIds),
+  /整合性確認に失敗/
+);
 
 const handoffUrl = transfer.createTransferUrl(
   savePackage,

@@ -4184,6 +4184,11 @@ body {
   background: rgba(227, 189, 88, 0.16);
 }
 
+.save-transfer-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
 .save-transfer-status {
   max-width: 260px;
   color: #bfe6ca;
@@ -4191,6 +4196,12 @@ body {
 
 .save-transfer-status.is-error {
   color: #ffb3a9;
+}
+
+.save-protection-status {
+  flex: 1 0 100%;
+  color: #bfe6ca;
+  font-weight: 750;
 }
 
 .save-transfer-help {
@@ -5515,13 +5526,11 @@ button.mission-step {
   gap: 3px;
 }
 
-.official-drill-choices label,
-.official-drill-unsure {
+.official-drill-choices label {
   cursor: pointer;
 }
 
-.official-drill-choices input,
-.official-drill-unsure input {
+.official-drill-choices input {
   position: absolute;
   opacity: 0;
   pointer-events: none;
@@ -5544,27 +5553,64 @@ button.mission-step {
   background: var(--gold);
 }
 
-.official-drill-choices input:focus-visible + span,
-.official-drill-unsure input:focus-visible + span {
+.official-drill-choices input:focus-visible + span {
   outline: 2px solid #fff;
   outline-offset: 2px;
 }
 
-.official-drill-unsure span {
+.official-drill-confidence {
   display: grid;
-  min-height: 27px;
-  place-items: center;
-  border: 1px solid rgba(255, 170, 160, 0.3);
-  border-radius: 5px;
-  color: #d7b7b1;
-  font-size: 10px;
-  font-weight: 900;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 3px;
 }
 
-.official-drill-unsure input:checked + span {
+.official-drill-confidence label {
+  min-width: 0;
+  cursor: pointer;
+}
+
+.official-drill-confidence input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.official-drill-confidence span {
+  display: grid;
+  min-height: 29px;
+  padding: 4px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 5px;
+  color: #dbe8e1;
+  font-size: 10px;
+  font-weight: 850;
+  text-align: center;
+}
+
+.official-drill-confidence input[value="grounded"] + span {
+  color: #bfe6ca;
+}
+
+.official-drill-confidence input[value="uncertain"] + span {
+  color: #e6bab4;
+}
+
+.official-drill-confidence input[value="grounded"]:checked + span {
+  border-color: #71d56e;
+  color: #071a0b;
+  background: #71d56e;
+}
+
+.official-drill-confidence input[value="uncertain"]:checked + span {
   border-color: #ff9c8f;
   color: #29100d;
   background: #ff9c8f;
+}
+
+.official-drill-confidence input:focus-visible + span {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
 }
 
 .official-drill-result {

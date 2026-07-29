@@ -100,6 +100,10 @@ async function main() {
 
     await page.locator(".pass-plan-summary").click();
     await page.locator(".official-ledger > summary").click();
+    await page.evaluate(() => {
+      const option = document.querySelector('#officialExamYear option[value="2025"]');
+      if (option) option.disabled = false;
+    });
     await fillOfficialExam(page, {
       year: 2025,
       score: 37,
@@ -151,6 +155,10 @@ async function main() {
       throw new Error(`Official exam record mismatch: ${JSON.stringify(recorded)}`);
     }
 
+    await page.evaluate(() => {
+      const option = document.querySelector('#officialExamYear option[value="2025"]');
+      if (option) option.disabled = false;
+    });
     await fillOfficialExam(page, {
       year: 2025,
       score: 40,
@@ -213,20 +221,38 @@ async function main() {
       }
       window.Date = FixedDate;
       localStorage.setItem(storageId, JSON.stringify({
+        stateSchemaVersion: 3,
         missionLog: {
-          "2026-07-30": {
+          "2026-07-28": {
             officialQuestions: true,
             reviewed: true,
             reviewNote: "全肢の主体を先に固定する",
             minutes: 35,
             officialDrill: {
               setId: "2025-balanced-a-v1",
-              startedAt: "2026-07-30T00:00:00.000Z",
-              submittedAt: "2026-07-30T00:35:00.000Z",
+              startedAt: "2026-07-28T00:00:00.000Z",
+              submittedAt: "2026-07-28T00:35:00.000Z",
               completed: true,
               answers: {
                 1: 3, 2: 3, 3: 3, 4: 4, 5: 4, 6: 1, 15: 4, 16: 4, 17: 2, 23: 1,
                 24: 2, 26: 4, 27: 1, 28: 2, 29: 2, 30: 3, 31: 4, 32: 2, 33: 3, 46: 2
+              },
+              uncertain: []
+            }
+          },
+          "2026-07-29": {
+            officialQuestions: true,
+            reviewed: true,
+            reviewNote: "例外条件を先に固定する",
+            minutes: 35,
+            officialDrill: {
+              setId: "2025-balanced-b-v1",
+              startedAt: "2026-07-29T00:00:00.000Z",
+              submittedAt: "2026-07-29T00:35:00.000Z",
+              completed: true,
+              answers: {
+                7: 1, 8: 2, 9: 1, 10: 3, 11: 3, 12: 3, 18: 2, 19: 2, 20: 4, 25: 1,
+                34: 3, 35: 1, 36: 4, 37: 4, 38: 3, 39: 4, 40: 3, 41: 1, 47: 3, 48: 2
               },
               uncertain: []
             }
@@ -242,6 +268,27 @@ async function main() {
     });
     await touchedPage.locator(".pass-plan-summary").click();
     await touchedPage.locator(".official-ledger > summary").click();
+    const touchedProtection = await touchedPage.evaluate(() => {
+      const touched = document.querySelector('#officialExamYear option[value="2025"]');
+      return {
+        touchedDisabled: Boolean(touched?.disabled),
+        selectedYear: document.querySelector("#officialExamYear")?.value || "",
+        coverage: document.querySelector("#officialPracticeCoverageStatus")?.textContent?.trim() || "",
+        trend: document.querySelector("#officialPracticeTrendStatus")?.textContent?.trim() || ""
+      };
+    });
+    if (
+      !touchedProtection.touchedDisabled ||
+      touchedProtection.selectedYear !== "2024" ||
+      touchedProtection.coverage !== "接触 40 / 50" ||
+      !touchedProtection.trend.includes("次はC")
+    ) {
+      throw new Error(`Touched-year UI protection mismatch: ${JSON.stringify(touchedProtection)}`);
+    }
+    await touchedPage.evaluate(() => {
+      const option = document.querySelector('#officialExamYear option[value="2025"]');
+      if (option) option.disabled = false;
+    });
     await fillOfficialExam(touchedPage, {
       year: 2025,
       score: 37,
@@ -257,7 +304,8 @@ async function main() {
     );
     const touchedYearGuard = {
       message: await touchedPage.locator("#officialExamStatus").textContent(),
-      history: await touchedPage.locator(".official-history-row").count()
+      history: await touchedPage.locator(".official-history-row").count(),
+      protection: touchedProtection
     };
     await touchedContext.close();
     if (touchedYearGuard.history !== 0) {

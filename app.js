@@ -10,6 +10,8 @@
     : "";
   const STORAGE_ID = `takken-battle-study-clean-v2-hard${REVIEW_MODE ? `-review-${REVIEW_NAMESPACE || "default"}` : ""}`;
   const EVENT_OUTBOX_ID = `${STORAGE_ID}-event-outbox`;
+  const SAVE_STORE = window.TAKKEN_SAVE_STORE;
+  const STATE_SCHEMA_VERSION = 3;
   const DAILY_TARGET = 10;
   const SPRINT_MINUTES = 25;
   const TODAY_QUEST_PARAM = URL_PARAMS.has("today") || URL_PARAMS.has("quest");
@@ -23,6 +25,13 @@
   const FIRST_PASS_DEADLINE_LABEL = "10/18";
   const JULY_GATE_DEADLINE = "2026-07-31";
   const DAILY_STUDY_MINUTES = 90;
+  const OFFICIAL_DRILL_EVIDENCE_VERSION = 2;
+  let saveStoreSession = {
+    source: "empty",
+    notice: "",
+    isError: false,
+    skipPreviousRotation: false
+  };
   const OFFICIAL_PAST_EXAM_YEARS = new Set(
     Array.from({ length: 10 }, (_, index) => 2025 - index)
   );
@@ -94,6 +103,40 @@
         { number: 47, answer: 3, section: "taxOther" },
         { number: 48, answer: 2, section: "taxOther" }
       ])
+    }),
+    Object.freeze({
+      id: "2025-balanced-c-v1",
+      label: "令和7年度・公式20問 C",
+      questionRange: "問1・4・8・11・13–14・18・21–23・26・33・36・41–45・49–50",
+      year: 2025,
+      lawAsOf: "2025-04-01",
+      durationMinutes: 35,
+      targetScore: 15,
+      safeScore: 16,
+      questionUrl: "https://goukaku.retio.or.jp/exam/pdf_2025_1_UWbaZCx6hm/2025question.pdf",
+      answerSourceUrl: "https://www.retio.or.jp/wp-content/uploads/2025/12/R7_question_answer.pdf",
+      questions: Object.freeze([
+        { number: 1, answer: 3, section: "rights" },
+        { number: 4, answer: 4, section: "rights" },
+        { number: 8, answer: 2, section: "rights" },
+        { number: 11, answer: 3, section: "rights" },
+        { number: 13, answer: 3, section: "rights" },
+        { number: 14, answer: 1, section: "rights" },
+        { number: 18, answer: 2, section: "restrictions" },
+        { number: 21, answer: 4, section: "restrictions" },
+        { number: 22, answer: 4, section: "restrictions" },
+        { number: 23, answer: 1, section: "taxOther" },
+        { number: 26, answer: 4, section: "business" },
+        { number: 33, answer: 3, section: "business" },
+        { number: 36, answer: 4, section: "business" },
+        { number: 41, answer: 1, section: "business" },
+        { number: 42, answer: 2, section: "business" },
+        { number: 43, answer: 4, section: "business" },
+        { number: 44, answer: 2, section: "business" },
+        { number: 45, answer: 4, section: "business" },
+        { number: 49, answer: 1, section: "taxOther" },
+        { number: 50, answer: 1, section: "taxOther" }
+      ])
     })
   ]);
   const OFFICIAL_DRILL_SECTION_LABELS = Object.freeze({
@@ -105,14 +148,26 @@
   function officialDrillDefinitionById(setId) {
     return OFFICIAL_DAILY_DRILL_DEFINITIONS.find((item) => item.id === setId) || null;
   }
-  function officialDailyDrillDefinition(date = localDateKey(new Date())) {
-    const day = Number(String(date).slice(-2)) || 1;
-    return OFFICIAL_DAILY_DRILL_DEFINITIONS[
-      day % OFFICIAL_DAILY_DRILL_DEFINITIONS.length
-    ];
+  function officialDailyDrillDefinition(missionLog = {}) {
+    const counts = new Map(
+      OFFICIAL_DAILY_DRILL_DEFINITIONS.map((item) => [item.id, 0])
+    );
+    Object.values(missionLog && typeof missionLog === "object" ? missionLog : {})
+      .forEach((mission) => {
+        const drill = normalizeOfficialDrill(mission?.officialDrill);
+        const definition = officialDrillDefinitionById(drill?.setId);
+        if (!definition || !drill?.completed) return;
+        counts.set(definition.id, (counts.get(definition.id) || 0) + 1);
+      });
+    return OFFICIAL_DAILY_DRILL_DEFINITIONS.reduce((selected, candidate) =>
+      (counts.get(candidate.id) || 0) < (counts.get(selected.id) || 0)
+        ? candidate
+        : selected
+    );
   }
   function officialDrillDefinitionFor(drill) {
-    return officialDrillDefinitionById(drill?.setId) || officialDailyDrillDefinition();
+    return officialDrillDefinitionById(drill?.setId) ||
+      officialDailyDrillDefinition(state?.missionLog);
   }
   const EXAM_BLUEPRINT = window.TAKKEN_EXAM_BLUEPRINT;
   const STUDY_TARGETS = EXAM_BLUEPRINT?.studyTargets || {
@@ -456,8 +511,10 @@
     sprintStatus: $("#sprintStatus"),
     saveExportButton: $("#saveExportButton"),
     saveShareButton: $("#saveShareButton"),
+    saveRestorePreviousButton: $("#saveRestorePreviousButton"),
     saveImportInput: $("#saveImportInput"),
     saveTransferStatus: $("#saveTransferStatus"),
+    saveProtectionStatus: $("#saveProtectionStatus"),
     todayCommandPanel: $("#todayCommandPanel"),
     todayCommandKicker: $("#todayCommandKicker"),
     todayCommandTitle: $("#todayCommandTitle"),
@@ -492,6 +549,8 @@
     coreCoverageStatus: $("#coreCoverageStatus"),
     coreRetentionStatus: $("#coreRetentionStatus"),
     officialReadinessStatus: $("#officialReadinessStatus"),
+    officialPracticeCoverageStatus: $("#officialPracticeCoverageStatus"),
+    officialPracticeTrendStatus: $("#officialPracticeTrendStatus"),
     dailyMissionStatus: $("#dailyMissionStatus"),
     dailyMissionSummary: $("#dailyMissionSummary"),
     missionBattleStep: $("#missionBattleStep"),
@@ -518,6 +577,7 @@
   };
 
   const createState = () => ({
+    stateSchemaVersion: STATE_SCHEMA_VERSION,
     index: 0,
     answered: null,
     attempts: 0,
@@ -569,6 +629,9 @@
   let state = loadState();
   applyQuestionBalance();
   saveState();
+  if (saveStoreSession.notice) {
+    setSaveTransferStatus(saveStoreSession.notice, saveStoreSession.isError);
+  }
   let isAdvancing = false;
   let isFlushingEvents = false;
   let activeDayKey = todayKey();
@@ -777,6 +840,12 @@
       .slice(0, maximum);
   }
 
+  function validReviewRule(value) {
+    const note = cleanMissionText(value);
+    const parts = note.split(/\s*(?:→|⇒|->)\s*/);
+    return parts.length === 2 && parts.every((part) => part.length >= 2);
+  }
+
   function normalizeOfficialDrill(input) {
     if (!input || typeof input !== "object" || Array.isArray(input)) return null;
     const definition = officialDrillDefinitionById(String(input.setId || ""));
@@ -790,11 +859,29 @@
         answers[item.number] = answer;
       }
     });
-    const uncertain = [...new Set(
+    const legacyUncertain = [...new Set(
       (Array.isArray(input.uncertain) ? input.uncertain : [])
         .map(Number)
         .filter((number) => questionNumbers.has(number))
     )].sort((left, right) => left - right);
+    const evidenceVersion = boundedInteger(input.evidenceVersion, 10);
+    const confidence = {};
+    definition.questions.forEach((item) => {
+      const recorded = String(input.confidence?.[item.number] || "");
+      if (recorded === "grounded" || recorded === "uncertain") {
+        confidence[item.number] = recorded;
+      } else if (Boolean(input.completed) && evidenceVersion < OFFICIAL_DRILL_EVIDENCE_VERSION) {
+        confidence[item.number] = legacyUncertain.includes(item.number)
+          ? "uncertain"
+          : "grounded";
+      }
+    });
+    const uncertain = [...new Set([
+      ...legacyUncertain,
+      ...Object.entries(confidence)
+        .filter(([, value]) => value === "uncertain")
+        .map(([number]) => Number(number))
+    ])].sort((left, right) => left - right);
     const startedAt = Number.isFinite(Date.parse(input.startedAt))
       ? String(input.startedAt).slice(0, 64)
       : "";
@@ -804,7 +891,11 @@
     const completed =
       Boolean(input.completed) &&
       Boolean(submittedAt) &&
-      Object.keys(answers).length === definition.questions.length;
+      Object.keys(answers).length === definition.questions.length &&
+      (
+        evidenceVersion < OFFICIAL_DRILL_EVIDENCE_VERSION ||
+        Object.keys(confidence).length === definition.questions.length
+      );
 
     if (!completed) {
       return {
@@ -812,7 +903,9 @@
         startedAt,
         submittedAt: "",
         answers,
+        confidence,
         uncertain,
+        evidenceVersion,
         completed: false,
         score: 0,
         sectionScores: {},
@@ -859,7 +952,9 @@
       startedAt,
       submittedAt,
       answers,
+      confidence,
       uncertain,
+      evidenceVersion,
       completed: true,
       score,
       sectionScores,
@@ -873,11 +968,12 @@
     const officialDrill = normalizeOfficialDrill(mission?.officialDrill);
     const reviewNote = cleanMissionText(mission?.reviewNote);
     const drillReviewComplete = officialDrill?.completed
-      ? officialDrill.reviewTargets.length
-        ? officialDrill.reviewTargets.every(
-            (number) => cleanMissionText(officialDrill.reviewNotes?.[number]).length >= 4
-          )
-        : reviewNote.length >= 4
+      ? officialDrill.reviewTargets.length === 0 ||
+        officialDrill.reviewTargets.every((number) =>
+          officialDrill.evidenceVersion >= OFFICIAL_DRILL_EVIDENCE_VERSION
+            ? validReviewRule(officialDrill.reviewNotes?.[number])
+            : cleanMissionText(officialDrill.reviewNotes?.[number]).length >= 4
+        )
       : null;
     return {
       officialQuestions: Boolean(mission?.officialQuestions || officialDrill?.completed),
@@ -912,20 +1008,20 @@
   }
 
   function loadState() {
-    const raw = localStorage.getItem(STORAGE_ID);
-    try {
-      const saved = JSON.parse(raw || "null");
-      return normalizeState(saved || createState());
-    } catch {
-      if (raw) {
-        try {
-          localStorage.setItem(`${STORAGE_ID}-corrupt-${Date.now()}`, raw);
-        } catch {
-          // Recovery backup is best-effort; the fresh state remains usable.
-        }
+    if (!SAVE_STORE) {
+      const raw = localStorage.getItem(STORAGE_ID);
+      try {
+        return normalizeState(JSON.parse(raw || "null") || createState());
+      } catch {
+        return createState();
       }
-      return createState();
     }
+    saveStoreSession = SAVE_STORE.load(
+      localStorage,
+      STORAGE_ID,
+      STATE_SCHEMA_VERSION
+    );
+    return normalizeState(saveStoreSession.value || createState());
   }
 
   function normalizeState(input) {
@@ -956,6 +1052,7 @@
     next.questionChoiceOrders = next.questionChoiceOrders || {};
     next.questionBalanceAudit = next.questionBalanceAudit || {};
     next.questionBalanceVersion = Number(next.questionBalanceVersion) || 0;
+    next.stateSchemaVersion = STATE_SCHEMA_VERSION;
     next.marked = next.marked || {};
     next.autoMarked = next.autoMarked || {};
     next.focus = Math.min(100, Math.max(0, Number(next.focus) || 0));
@@ -1083,7 +1180,15 @@
   }
 
   function saveState() {
-    localStorage.setItem(STORAGE_ID, JSON.stringify(state));
+    if (!SAVE_STORE) {
+      localStorage.setItem(STORAGE_ID, JSON.stringify(state));
+      return;
+    }
+    SAVE_STORE.save(localStorage, STORAGE_ID, state, {
+      skipPreviousRotation: saveStoreSession.skipPreviousRotation
+    });
+    saveStoreSession.skipPreviousRotation = false;
+    renderSaveProtectionStatus();
   }
 
   function setSaveTransferStatus(message, isError = false) {
@@ -1631,6 +1736,47 @@
     renderQuestPanel();
     renderPassPlan();
     void loadTodayQuest();
+  }
+
+  function renderSaveProtectionStatus() {
+    if (!elements.saveProtectionStatus) return;
+    const previous = SAVE_STORE?.getPrevious(localStorage, STORAGE_ID);
+    const canRestore = Boolean(previous);
+    if (elements.saveRestorePreviousButton) {
+      elements.saveRestorePreviousButton.disabled = !canRestore;
+    }
+    elements.saveProtectionStatus.textContent =
+      `自動保護：保存形式v${STATE_SCHEMA_VERSION}・` +
+      (canRestore ? "直前セーブあり" : "初回スナップショット待ち");
+  }
+
+  function restorePreviousSave() {
+    try {
+      if (!SAVE_STORE) throw new Error("直前セーブの復元機能を読み込めませんでした。");
+      const previous = SAVE_STORE.getPrevious(localStorage, STORAGE_ID);
+      if (!previous) throw new Error("戻せる直前セーブがありません。");
+      const summary = savePackageSummary({
+        format: SAVE_TRANSFER.SAVE_FORMAT,
+        state: previous
+      });
+      const confirmed = window.confirm(
+        `直前セーブ（${summary}）へ戻します。\n` +
+        "現在の状態も復元前バックアップへ残します。"
+      );
+      if (!confirmed) {
+        setSaveTransferStatus("直前セーブへの復元をキャンセルしました。");
+        return;
+      }
+      const restored = SAVE_STORE.restorePrevious(localStorage, STORAGE_ID);
+      state = normalizeState(restored.value);
+      applyQuestionBalance();
+      saveStoreSession.skipPreviousRotation = true;
+      saveState();
+      render();
+      setSaveTransferStatus(`直前セーブへ復元しました: ${summary}`);
+    } catch (error) {
+      setSaveTransferStatus(error?.message || "直前セーブの復元に失敗しました。", true);
+    }
   }
 
   function logStudyEvent(kind, payload = {}) {
@@ -2216,6 +2362,32 @@
     elements.officialExamStatus.classList.toggle("is-error", isError);
   }
 
+  function renderOfficialExamYearOptions() {
+    if (!elements.officialExamYear) return;
+    const recorded = new Set(
+      (state.officialExamHistory || []).map((item) => Number(item.year))
+    );
+    const touched = officialDrillYearsTouched();
+    [...elements.officialExamYear.options].forEach((option) => {
+      const year = Number(option.value);
+      if (!option.dataset.baseLabel) option.dataset.baseLabel = option.textContent;
+      const reason = recorded.has(year)
+        ? "記録済み"
+        : touched.has(year)
+          ? "公式20問で接触済み"
+          : "";
+      option.disabled = Boolean(reason);
+      option.textContent = reason
+        ? `${option.dataset.baseLabel}・${reason}`
+        : option.dataset.baseLabel;
+    });
+    const selected = elements.officialExamYear.selectedOptions[0];
+    if (!selected || selected.disabled) {
+      const next = [...elements.officialExamYear.options].find((option) => !option.disabled);
+      if (next) elements.officialExamYear.value = next.value;
+    }
+  }
+
   function renderOfficialExamHistory() {
     if (!elements.officialExamHistory) return;
     elements.officialExamHistory.replaceChildren();
@@ -2267,7 +2439,45 @@
     elements.officialDrillStatus.classList.toggle("is-error", isError);
   }
 
-  function ensureOfficialDrillAnswerGrid(definition = officialDailyDrillDefinition()) {
+  function officialDrillHistory() {
+    return Object.entries(state.missionLog || {})
+      .map(([date, mission]) => ({
+        date,
+        drill: normalizeOfficialDrill(mission?.officialDrill)
+      }))
+      .filter((item) => item.drill?.completed)
+      .sort((left, right) =>
+        (Date.parse(left.drill.submittedAt) || Date.parse(left.date) || 0) -
+        (Date.parse(right.drill.submittedAt) || Date.parse(right.date) || 0)
+      );
+  }
+
+  function officialPracticeStats() {
+    const history = officialDrillHistory();
+    const questions = new Set();
+    const sets = new Set();
+    history.forEach(({ drill }) => {
+      const definition = officialDrillDefinitionById(drill.setId);
+      if (!definition) return;
+      sets.add(definition.id);
+      definition.questions.forEach((item) => questions.add(item.number));
+    });
+    const latest = history.at(-1)?.drill || null;
+    const planned = officialDailyDrillDefinition(state.missionLog);
+    const plannedAttempts = history.filter(({ drill }) => drill.setId === planned.id).length;
+    return {
+      attempts: history.length,
+      coveredQuestions: questions.size,
+      completedSets: sets.size,
+      latest,
+      planned,
+      plannedAttempts
+    };
+  }
+
+  function ensureOfficialDrillAnswerGrid(
+    definition = officialDailyDrillDefinition(state.missionLog)
+  ) {
     if (!elements.officialDrillAnswerGrid) return;
     if (elements.officialDrillAnswerGrid.dataset.setId !== definition.id) {
       elements.officialDrillAnswerGrid.replaceChildren();
@@ -2300,15 +2510,26 @@
           choices.append(label);
         });
 
-        const unsure = document.createElement("label");
-        unsure.className = "official-drill-unsure";
-        const unsureInput = document.createElement("input");
-        unsureInput.type = "checkbox";
-        unsureInput.dataset.uncertainQuestion = String(item.number);
-        const unsureText = document.createElement("span");
-        unsureText.textContent = "迷い";
-        unsure.append(unsureInput, unsureText);
-        fieldset.append(legend, choices, unsure);
+        const confidenceGroup = document.createElement("div");
+        confidenceGroup.className = "official-drill-confidence";
+        confidenceGroup.setAttribute("role", "group");
+        confidenceGroup.setAttribute("aria-label", `問${item.number}の根拠判定`);
+        [
+          ["grounded", "根拠あり"],
+          ["uncertain", "消去法・勘"]
+        ].forEach(([value, text]) => {
+          const label = document.createElement("label");
+          const input = document.createElement("input");
+          input.type = "radio";
+          input.name = `official-drill-confidence-q${item.number}`;
+          input.value = value;
+          input.dataset.confidenceQuestion = String(item.number);
+          const caption = document.createElement("span");
+          caption.textContent = text;
+          label.append(input, caption);
+          confidenceGroup.append(label);
+        });
+        fieldset.append(legend, choices, confidenceGroup);
         elements.officialDrillAnswerGrid.append(fieldset);
       });
     }
@@ -2319,16 +2540,21 @@
       officialDailyDrillDefinition()
   ) {
     const answers = {};
+    const confidence = {};
     const uncertain = [];
     definition.questions.forEach((item) => {
       const selected = elements.officialDrillForm
         ?.querySelector(`input[name="official-drill-q${item.number}"]:checked`);
       if (selected) answers[item.number] = Number(selected.value);
-      const unsure = elements.officialDrillForm
-        ?.querySelector(`[data-uncertain-question="${item.number}"]`);
-      if (unsure?.checked) uncertain.push(item.number);
+      const confidenceInput = elements.officialDrillForm
+        ?.querySelector(`[data-confidence-question="${item.number}"]:checked`);
+      const confidenceValue = String(confidenceInput?.value || "");
+      if (confidenceValue === "grounded" || confidenceValue === "uncertain") {
+        confidence[item.number] = confidenceValue;
+      }
+      if (confidenceValue === "uncertain") uncertain.push(item.number);
     });
-    return { answers, uncertain };
+    return { answers, confidence, uncertain };
   }
 
   function officialDrillSectionTotals(definition) {
@@ -2380,10 +2606,19 @@
     elements.officialDrillResult.hidden = !drill?.completed;
     if (!drill?.completed) return;
     const definition = officialDrillDefinitionFor(drill);
+    const sameSetHistory = officialDrillHistory()
+      .filter((item) => item.drill.setId === definition.id);
+    const currentIndex = sameSetHistory.findIndex((item) =>
+      item.drill.submittedAt === drill.submittedAt
+    );
+    const previous = currentIndex > 0
+      ? sameSetHistory[currentIndex - 1].drill
+      : null;
+    const practice = officialPracticeStats();
 
     const heading = document.createElement("div");
     const score = document.createElement("strong");
-    score.textContent = `${drill.score} / 20`;
+    score.textContent = `${drill.score} / ${definition.questions.length}`;
     const label = document.createElement("span");
     label.textContent = officialDrillScoreLabel(drill.score, definition);
     heading.append(score, label);
@@ -2398,33 +2633,54 @@
     const targets = document.createElement("p");
     targets.textContent = drill.reviewTargets.length
       ? `復習対象：${drill.reviewTargets.map((number) => `問${number}`).join("・")}`
-      : "復習対象：誤答・迷いなし";
+      : "復習対象：誤答・根拠なしともになし";
+    const coverage = document.createElement("p");
+    coverage.textContent =
+      `令和7年度の接触 ${practice.coveredQuestions}/50・完了セット ` +
+      `${practice.completedSets}/${OFFICIAL_DAILY_DRILL_DEFINITIONS.length}`;
+    const trend = document.createElement("p");
+    trend.textContent = previous
+      ? `前回 ${previous.score}点 → 今回 ${drill.score}点`
+      : "このセットの初回得点";
     const source = document.createElement("a");
     source.href = definition.answerSourceUrl;
     source.target = "_blank";
     source.rel = "noopener noreferrer";
     source.textContent = "RETIO公式の問題・解答PDFで照合";
-    elements.officialDrillResult.append(heading, sections, targets, source);
+    elements.officialDrillResult.append(
+      heading,
+      sections,
+      targets,
+      coverage,
+      trend,
+      source
+    );
   }
 
   function renderOfficialDrillPanel(mission, step) {
     if (!elements.officialDrillPanel) return;
     const drill = mission.officialDrill;
     const definition = officialDrillDefinitionFor(drill);
+    const completedAttempts = officialDrillHistory()
+      .filter((item) => item.drill.setId === definition.id).length;
+    const attemptNumber = drill?.completed
+      ? Math.max(1, completedAttempts)
+      : completedAttempts + 1;
     ensureOfficialDrillAnswerGrid(definition);
     const show = step === 2 || (step === 3 && drill?.completed);
     elements.officialDrillPanel.hidden = !show;
     if (!show) return;
 
-    elements.officialDrillTitle.textContent = definition.label;
+    elements.officialDrillTitle.textContent =
+      `${definition.label}・${attemptNumber === 1 ? "初回" : `再戦${attemptNumber}`}`;
     elements.officialDrillQuestionRange.textContent = definition.questionRange;
     elements.officialDrillQuestionLink.href = definition.questionUrl;
     if (drill?.startedAt || drill?.completed) {
       elements.officialDrillPanel.open = true;
     }
     elements.officialDrillSummary.textContent = drill?.completed
-      ? `${drill.score} / 20・${officialDrillScoreLabel(drill.score, definition)}`
-      : `${Object.keys(drill?.answers || {}).length} / 20`;
+      ? `${drill.score} / ${definition.questions.length}・${officialDrillScoreLabel(drill.score, definition)}`
+      : `解答${Object.keys(drill?.answers || {}).length}/${definition.questions.length}・根拠${Object.keys(drill?.confidence || {}).length}/${definition.questions.length}`;
     elements.officialDrillForm.hidden = Boolean(drill?.completed);
     elements.officialDrillStartButton.disabled = Boolean(drill?.startedAt);
     elements.officialDrillStartButton.textContent = drill?.completed
@@ -2439,9 +2695,11 @@
         .forEach((input) => {
           input.checked = Number(input.value) === answer;
         });
-      const unsure = elements.officialDrillForm
-        ?.querySelector(`[data-uncertain-question="${item.number}"]`);
-      if (unsure) unsure.checked = Boolean(drill?.uncertain?.includes(item.number));
+      elements.officialDrillForm
+        ?.querySelectorAll(`[data-confidence-question="${item.number}"]`)
+        .forEach((input) => {
+          input.checked = input.value === drill?.confidence?.[item.number];
+        });
     });
     renderOfficialDrillTimer(drill);
     renderOfficialDrillResult(drill);
@@ -2516,7 +2774,9 @@
         setId: definition.id,
         startedAt: new Date().toISOString(),
         answers: mission.officialDrill?.answers || {},
+        confidence: mission.officialDrill?.confidence || {},
         uncertain: mission.officialDrill?.uncertain || [],
+        evidenceVersion: OFFICIAL_DRILL_EVIDENCE_VERSION,
         completed: false
       }
     });
@@ -2539,13 +2799,16 @@
         setId: definition.id,
         startedAt: mission.officialDrill?.startedAt || "",
         answers: form.answers,
+        confidence: form.confidence,
         uncertain: form.uncertain,
+        evidenceVersion: OFFICIAL_DRILL_EVIDENCE_VERSION,
         completed: false
       }
     });
     saveState();
     elements.officialDrillSummary.textContent =
-      `${Object.keys(form.answers).length} / ${definition.questions.length}`;
+      `解答${Object.keys(form.answers).length}/${definition.questions.length}・` +
+      `根拠${Object.keys(form.confidence).length}/${definition.questions.length}`;
   }
 
   function submitOfficialDrill(event) {
@@ -2574,6 +2837,19 @@
         ?.scrollIntoView({ block: "center", behavior: "smooth" });
       return;
     }
+    const missingConfidence = definition.questions
+      .map((item) => item.number)
+      .filter((number) => !form.confidence[number]);
+    if (missingConfidence.length) {
+      setOfficialDrillStatus(
+        `根拠未判定：${missingConfidence.map((number) => `問${number}`).join("・")}`,
+        true
+      );
+      elements.officialDrillForm
+        ?.querySelector(`[data-question-number="${missingConfidence[0]}"]`)
+        ?.scrollIntoView({ block: "center", behavior: "smooth" });
+      return;
+    }
 
     const submittedAt = new Date().toISOString();
     const completedDrill = normalizeOfficialDrill({
@@ -2581,12 +2857,15 @@
       startedAt: mission.officialDrill.startedAt,
       submittedAt,
       answers: form.answers,
+      confidence: form.confidence,
       uncertain: form.uncertain,
+      evidenceVersion: OFFICIAL_DRILL_EVIDENCE_VERSION,
       completed: true
     });
+    const reviewComplete = completedDrill.reviewTargets.length === 0;
     setMissionForDate(todayKey(), {
       officialQuestions: true,
-      reviewed: false,
+      reviewed: reviewComplete,
       reviewNote: "",
       officialDrill: completedDrill,
       minutes: Math.min(600, mission.minutes + completedDrill.elapsedMinutes)
@@ -2598,11 +2877,14 @@
       score: completedDrill.score,
       elapsedMinutes: completedDrill.elapsedMinutes,
       uncertain: completedDrill.uncertain,
+      confidence: completedDrill.confidence,
       reviewTargets: completedDrill.reviewTargets
     });
     renderPassPlan();
     setOfficialDrillStatus(
-      `${completedDrill.score}/20を記録しました。次は復習対象${completedDrill.reviewTargets.length}件を1行ずつ処理します。`
+      reviewComplete
+        ? `${completedDrill.score}/20を記録しました。誤答・根拠なしは0件です。`
+        : `${completedDrill.score}/20を記録しました。次は復習対象${completedDrill.reviewTargets.length}件を1行ずつ処理します。`
     );
     setTodayCommandStatus(
       `${completedDrill.score}/20・${officialDrillScoreLabel(completedDrill.score, definition)}。採点済みです。`
@@ -2643,13 +2925,13 @@
         ? {
             kicker: "今やる・STEP 2 / 4",
             title: `${drillDefinition.label}を35分で解く`,
-            text: `${drillDefinition.questionRange}を検索なしで解き、迷った問にも印を付けて採点する。`
+            text: `${drillDefinition.questionRange}を検索なしで解き、全20問に「根拠あり／消去法・勘」を付けて採点する。`
           }
         : step === 3
           ? {
               kicker: "今やる・STEP 3 / 4",
               title: reviewTargets.length
-                ? `誤答・迷い${reviewTargets.length}件を1行化する`
+                ? `誤答・根拠なし${reviewTargets.length}件を1行化する`
                 : "全問正解を再現するルールを1行化する",
               text: reviewTargets.length
                 ? `${reviewTargets.map((number) => `問${number}`).join("・")}を、それぞれ「原因 → 次回ルール」で保存する。`
@@ -2706,6 +2988,7 @@
     const gateDays = daysUntil(JULY_GATE_DEADLINE);
     const mission = missionForDate();
     const latestOfficial = latestOfficialExam();
+    const officialPractice = officialPracticeStats();
     const businessIds = CURRICULUM_ORDER.filter((id) => QUESTIONS[id]?.sectionId === "business");
     const restrictionIds = CURRICULUM_ORDER.filter((id) => QUESTIONS[id]?.sectionId === "restrictions");
     const businessRetained = retainedCount(businessIds);
@@ -2736,11 +3019,16 @@
     elements.officialReadinessStatus.textContent = latestOfficial
       ? officialScoreLabel(latestOfficial.score)
       : "未記録";
+    elements.officialPracticeCoverageStatus.textContent =
+      `接触 ${officialPractice.coveredQuestions} / 50`;
+    elements.officialPracticeTrendStatus.textContent = officialPractice.latest
+      ? `直近${officialPractice.latest.score}/20・次は${officialPractice.planned.label.replace("令和7年度・公式20問 ", "")}`
+      : `${officialPractice.planned.label.replace("令和7年度・公式20問 ", "")}から開始`;
     elements.dailyMissionStatus.textContent = `${missionCount} / 4`;
     elements.dailyMissionSummary.textContent = missionCount === 4
       ? `本日完了・${mission.minutes}分`
       : battleDone
-        ? `次は${officialDone ? (reviewDone ? "90分まで記録" : "誤答・迷いを復習") : "令和7年公式20問"}`
+        ? `次は${officialDone ? (reviewDone ? "90分まで記録" : "誤答・根拠なしを復習") : "令和7年公式20問"}`
         : `固定10問 ${dailyQuestDoneCount()} / ${dailyQuestIds().length || DAILY_TARGET}`;
 
     elements.missionBattleStep.classList.toggle("is-done", battleDone);
@@ -2752,7 +3040,9 @@
         ? "完了記録済み"
         : "未完了";
     elements.missionReviewStatus.textContent = reviewDone
-      ? mission.officialDrill?.reviewTargets.length
+      ? mission.officialDrill?.completed && mission.officialDrill.reviewTargets.length === 0
+        ? "対象0件"
+        : mission.officialDrill?.reviewTargets.length
         ? `${mission.officialDrill.reviewTargets.length}件保存済み`
         : mission.reviewNote
           ? "1行保存済み"
@@ -2766,6 +3056,7 @@
     elements.passPlanPanel
       .querySelectorAll("[data-pass-phase]")
       .forEach((item) => item.classList.toggle("is-current", item.dataset.passPhase === phase.id));
+    renderOfficialExamYearOptions();
     renderOfficialExamHistory();
   }
 
@@ -2784,12 +3075,15 @@
         const input = elements.todayReviewTargets
           ?.querySelector(`[data-review-question="${number}"]`);
         const note = cleanMissionText(input?.value);
-        if (note.length < 4 && !firstInvalid) firstInvalid = input;
+        const valid = drill.evidenceVersion >= OFFICIAL_DRILL_EVIDENCE_VERSION
+          ? validReviewRule(note)
+          : note.length >= 4;
+        if (!valid && !firstInvalid) firstInvalid = input;
         if (note) reviewNotes[number] = note;
       });
       if (firstInvalid) {
         setTodayCommandStatus(
-          `問${firstInvalid.dataset.reviewQuestion}の原因と次回ルールを4文字以上で入力してください。`,
+          `問${firstInvalid.dataset.reviewQuestion}を「原因 → 次回ルール」の形で入力してください。`,
           true
         );
         firstInvalid.focus();
@@ -2822,8 +3116,8 @@
     }
 
     const reviewNote = cleanMissionText(elements.todayReviewInput?.value);
-    if (reviewNote.length < 4) {
-      setTodayCommandStatus("原因と次回ルールを4文字以上の1行で入力してください。", true);
+    if (!validReviewRule(reviewNote)) {
+      setTodayCommandStatus("「原因 → 次回ルール」の形で1行入力してください。", true);
       elements.todayReviewInput?.focus();
       return;
     }
@@ -5809,6 +6103,7 @@
     elements.armoryButton?.addEventListener("click", forgeNextArmoryRank);
     elements.saveExportButton?.addEventListener("click", downloadSaveBackup);
     elements.saveShareButton?.addEventListener("click", shareSaveTransfer);
+    elements.saveRestorePreviousButton?.addEventListener("click", restorePreviousSave);
     elements.saveImportInput?.addEventListener("change", importSaveFile);
     elements.missionMinutesButton?.addEventListener("click", saveMissionMinutes);
     elements.missionMinutesInput?.addEventListener("keydown", (event) => {

@@ -17,6 +17,17 @@ async function capture(page, filename) {
   });
 }
 
+async function chooseDrillConfidence(page, storageId, number, confidence) {
+  await page.locator(
+    `[data-confidence-question="${number}"][value="${confidence}"] + span`
+  ).click();
+  await page.waitForFunction(({ id, number: questionNumber, confidence: value }) => {
+    const saved = JSON.parse(localStorage.getItem(id) || "{}");
+    const date = new Date().toLocaleDateString("sv-SE");
+    return saved.missionLog?.[date]?.officialDrill?.confidence?.[questionNumber] === value;
+  }, { id: storageId, number, confidence });
+}
+
 async function main() {
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   try {
@@ -337,11 +348,17 @@ async function main() {
       await page.locator(`input[name="official-drill-q${number}"][value="${answer}"]`)
         .check({ force: true });
     }
-    await page.locator(`[data-uncertain-question="${drillNumbers[1]}"]`)
-      .check({ force: true });
     await page.locator("#officialDrillSubmitButton").click();
     await page.waitForFunction(() =>
-      (document.querySelector("#todayCommandTitle")?.textContent || "").includes("誤答・迷い2件")
+      (document.querySelector("#officialDrillStatus")?.textContent || "").includes("根拠未判定")
+    );
+    for (const number of drillNumbers) {
+      const confidence = number === drillNumbers[1] ? "uncertain" : "grounded";
+      await chooseDrillConfidence(page, storageId, number, confidence);
+    }
+    await page.locator("#officialDrillSubmitButton").click();
+    await page.waitForFunction(() =>
+      (document.querySelector("#todayCommandTitle")?.textContent || "").includes("誤答・根拠なし2件")
     );
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(100);
@@ -354,9 +371,15 @@ async function main() {
     }
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.locator(`[data-review-question="${drillNumbers[0]}"]`)
-      .fill("根拠を飛ばした → 条文の主体を先に囲む");
+      .fill("根拠を飛ばした");
     await page.locator(`[data-review-question="${drillNumbers[1]}"]`)
       .fill("二択で迷った → 例外条件を声に出して切る");
+    await page.locator("#todayCommandReviewButton").click();
+    await page.waitForFunction(() =>
+      (document.querySelector("#todayCommandStatus")?.textContent || "").includes("原因 → 次回ルール")
+    );
+    await page.locator(`[data-review-question="${drillNumbers[0]}"]`)
+      .fill("根拠を飛ばした → 条文の主体を先に囲む");
     await page.locator("#todayCommandReviewButton").click();
     await page.waitForFunction(() =>
       (document.querySelector("#todayCommandTitle")?.textContent || "").includes("合計90分まで")
@@ -388,6 +411,9 @@ async function main() {
       !completedMission.officialQuestions ||
       completedMission.officialDrill?.score !== 19 ||
       completedMission.officialDrill?.reviewTargets?.length !== 2 ||
+      completedMission.officialDrill?.evidenceVersion !== 2 ||
+      Object.keys(completedMission.officialDrill?.confidence || {}).length !== 20 ||
+      completedMission.officialDrill?.confidence?.[drillNumbers[1]] !== "uncertain" ||
       Object.keys(completedMission.officialDrill?.reviewNotes || {}).length !== 2 ||
       !completedMission.reviewNote.includes(`問${drillNumbers[0]}`) ||
       completedMission.minutes !== 90
@@ -415,6 +441,50 @@ async function main() {
     }
 
     await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.evaluate((id) => {
+      const saved = JSON.parse(localStorage.getItem(id) || "{}");
+      delete saved.missionLog?.[new Date().toLocaleDateString("sv-SE")];
+      localStorage.setItem(id, JSON.stringify(saved));
+    }, storageId);
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() =>
+      (document.querySelector("#todayCommandKicker")?.textContent || "").includes("STEP 2")
+    );
+    await page.locator("#officialDrillOpenButton").click();
+    await page.locator("#officialDrillStartButton").click();
+    const perfectNumbers = await page.locator(".official-drill-item")
+      .evaluateAll((items) => items.map((item) => Number(item.dataset.questionNumber)));
+    for (const number of perfectNumbers) {
+      await page.locator(
+        `input[name="official-drill-q${number}"][value="${officialAnswerKey[number]}"]`
+      ).check({ force: true });
+      await chooseDrillConfidence(page, storageId, number, "grounded");
+    }
+    await page.locator("#officialDrillSubmitButton").click();
+    await page.waitForFunction(() =>
+      (document.querySelector("#todayCommandKicker")?.textContent || "").includes("STEP 4")
+    );
+    const zeroReviewAudit = await page.evaluate((id) => {
+      const saved = JSON.parse(localStorage.getItem(id) || "{}");
+      const mission = saved.missionLog?.[new Date().toLocaleDateString("sv-SE")] || {};
+      return {
+        reviewed: Boolean(mission.reviewed),
+        reviewTargets: mission.officialDrill?.reviewTargets || [],
+        missionCount: document.querySelector("#dailyMissionStatus")?.textContent?.trim() || "",
+        reviewStatus: document.querySelector("#missionReviewStatus")?.textContent?.trim() || "",
+        command: document.querySelector("#todayCommandTitle")?.textContent?.trim() || ""
+      };
+    }, storageId);
+    if (
+      !zeroReviewAudit.reviewed ||
+      zeroReviewAudit.reviewTargets.length !== 0 ||
+      zeroReviewAudit.missionCount !== "3 / 4" ||
+      zeroReviewAudit.reviewStatus !== "対象0件" ||
+      !zeroReviewAudit.command.includes("合計90分まで")
+    ) {
+      throw new Error(`Zero-review transition mismatch: ${JSON.stringify(zeroReviewAudit)}`);
+    }
+
     await page.evaluate((id) => {
       const saved = JSON.parse(localStorage.getItem(id) || "{}");
       const now = new Date().toISOString();
@@ -1058,6 +1128,7 @@ async function main() {
       reviewMixAudit,
       migration,
       handoff,
+      zeroReviewAudit,
       desktopOverflow,
       mobileOverflow,
       mockMobileOverflow,
