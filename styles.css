@@ -5343,6 +5343,301 @@ button.mission-step {
   opacity: 0.48;
 }
 
+.official-drill-panel {
+  overflow: hidden;
+  border: 1px solid rgba(126, 183, 162, 0.42);
+  border-radius: 9px;
+  background: rgba(5, 20, 16, 0.82);
+}
+
+.official-drill-panel[hidden] {
+  display: none;
+}
+
+.official-drill-panel > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.official-drill-panel > summary::-webkit-details-marker {
+  display: none;
+}
+
+.official-drill-panel > summary > span:first-child {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.official-drill-panel > summary strong {
+  color: #f8edc7;
+  font-size: 13px;
+}
+
+.official-drill-panel > summary small {
+  color: var(--muted);
+  font-size: 10px;
+  overflow-wrap: anywhere;
+}
+
+#officialDrillSummary {
+  flex: 0 0 auto;
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 950;
+}
+
+.official-drill-body {
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.official-drill-brief {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 330px);
+  gap: 14px;
+  align-items: center;
+}
+
+.official-drill-brief > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.official-drill-brief > div:first-child > span {
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+}
+
+.official-drill-brief > div:first-child > strong {
+  color: #fff6d8;
+  font-size: 18px;
+}
+
+.official-drill-brief p,
+.official-drill-caution {
+  margin: 0;
+  color: #bfd0c8;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.55;
+}
+
+.official-drill-caution {
+  padding: 8px 10px;
+  border-left: 3px solid #8eb8aa;
+  background: rgba(126, 183, 162, 0.08);
+}
+
+.official-drill-launch {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: stretch;
+}
+
+.official-drill-launch .today-command-primary,
+.official-drill-launch .today-command-secondary {
+  min-height: 42px;
+  font-size: 11px;
+}
+
+.official-drill-timer {
+  display: grid;
+  min-width: 58px;
+  place-items: center;
+  color: #d8f1e6;
+  font-variant-numeric: tabular-nums;
+  font-size: 15px;
+}
+
+.official-drill-timer.is-over {
+  color: #ffaaa0;
+}
+
+.official-drill-form {
+  display: grid;
+  gap: 11px;
+}
+
+.official-drill-form[hidden] {
+  display: none;
+}
+
+.official-drill-answer-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.official-drill-item {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  margin: 0;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.official-drill-item legend {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 2px;
+}
+
+.official-drill-item legend strong {
+  color: #fff4d0;
+  font-size: 12px;
+}
+
+.official-drill-item legend span {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 850;
+}
+
+.official-drill-choices {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 3px;
+}
+
+.official-drill-choices label,
+.official-drill-unsure {
+  cursor: pointer;
+}
+
+.official-drill-choices input,
+.official-drill-unsure input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.official-drill-choices span {
+  display: grid;
+  min-height: 30px;
+  place-items: center;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
+  color: #d9e5df;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.official-drill-choices input:checked + span {
+  border-color: var(--gold);
+  color: #1f1809;
+  background: var(--gold);
+}
+
+.official-drill-choices input:focus-visible + span,
+.official-drill-unsure input:focus-visible + span {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
+.official-drill-unsure span {
+  display: grid;
+  min-height: 27px;
+  place-items: center;
+  border: 1px solid rgba(255, 170, 160, 0.3);
+  border-radius: 5px;
+  color: #d7b7b1;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.official-drill-unsure input:checked + span {
+  border-color: #ff9c8f;
+  color: #29100d;
+  background: #ff9c8f;
+}
+
+.official-drill-result {
+  display: grid;
+  gap: 6px;
+  padding: 11px;
+  border: 1px solid rgba(111, 213, 110, 0.32);
+  border-radius: 7px;
+  background: rgba(111, 213, 110, 0.07);
+}
+
+.official-drill-result[hidden] {
+  display: none;
+}
+
+.official-drill-result > div {
+  display: flex;
+  align-items: baseline;
+  gap: 9px;
+}
+
+.official-drill-result strong {
+  color: #f9e28c;
+  font-size: 24px;
+}
+
+.official-drill-result span {
+  color: #a9e8b5;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.official-drill-result p {
+  margin: 0;
+  color: #d7e4de;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.official-drill-result a {
+  color: #f4ca68;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.today-review-targets {
+  display: grid;
+  grid-column: 1 / -1;
+  gap: 7px;
+}
+
+.today-review-targets[hidden] {
+  display: none;
+}
+
+.today-review-target {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+}
+
+.today-review-target > span {
+  color: #f4ca68;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.today-review-actions > input[hidden],
+.today-review-actions > label[hidden] {
+  display: none;
+}
+
 .pass-plan-panel {
   display: block;
   gap: 0;
@@ -5508,6 +5803,31 @@ button.mission-step {
 
   .today-minutes-actions .today-command-primary {
     grid-column: 1 / -1;
+  }
+
+  .official-drill-brief {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .official-drill-launch {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .official-drill-timer {
+    grid-column: 1 / -1;
+    min-height: 34px;
+  }
+
+  .official-drill-answer-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .official-drill-item {
+    padding: 7px;
+  }
+
+  .today-review-target {
+    grid-template-columns: 38px minmax(0, 1fr);
   }
 
   .today-command-panel .daily-mission {

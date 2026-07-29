@@ -185,6 +185,85 @@ async function main() {
     if (mobile.overflow || mobile.mission !== "2 / 4" || mobile.history !== 1) {
       throw new Error(`Mobile pass plan mismatch: ${JSON.stringify(mobile)}`);
     }
+
+    const touchedContext = await browser.newContext({
+      viewport: { width: 900, height: 800 },
+      reducedMotion: "reduce",
+      locale: "ja-JP",
+      timezoneId: "Asia/Tokyo"
+    });
+    const touchedPage = await touchedContext.newPage();
+    touchedPage.on("console", (message) => {
+      if (message.type() === "error") consoleErrors.push(message.text());
+    });
+    touchedPage.on("pageerror", (error) => pageErrors.push(String(error)));
+    const touchedNamespace = `touched${Date.now().toString(36)}`;
+    const touchedStorageId = `takken-battle-study-clean-v2-hard-review-${touchedNamespace}`;
+    await touchedPage.addInitScript(({ storageId }) => {
+      const RealDate = Date;
+      const fixedNow = new RealDate("2026-07-30T10:00:00+09:00").getTime();
+      class FixedDate extends RealDate {
+        constructor(...args) {
+          super(...(args.length ? args : [fixedNow]));
+        }
+
+        static now() {
+          return fixedNow;
+        }
+      }
+      window.Date = FixedDate;
+      localStorage.setItem(storageId, JSON.stringify({
+        missionLog: {
+          "2026-07-30": {
+            officialQuestions: true,
+            reviewed: true,
+            reviewNote: "全肢の主体を先に固定する",
+            minutes: 35,
+            officialDrill: {
+              setId: "2025-balanced-a-v1",
+              startedAt: "2026-07-30T00:00:00.000Z",
+              submittedAt: "2026-07-30T00:35:00.000Z",
+              completed: true,
+              answers: {
+                1: 3, 2: 3, 3: 3, 4: 4, 5: 4, 6: 1, 15: 4, 16: 4, 17: 2, 23: 1,
+                24: 2, 26: 4, 27: 1, 28: 2, 29: 2, 30: 3, 31: 4, 32: 2, 33: 3, 46: 2
+              },
+              uncertain: []
+            }
+          }
+        }
+      }));
+    }, { storageId: touchedStorageId });
+    const touchedUrl = new URL(baseUrl);
+    touchedUrl.searchParams.set("review", touchedNamespace);
+    await touchedPage.goto(touchedUrl.toString(), {
+      waitUntil: "domcontentloaded",
+      timeout: 15000
+    });
+    await touchedPage.locator(".pass-plan-summary").click();
+    await touchedPage.locator(".official-ledger > summary").click();
+    await fillOfficialExam(touchedPage, {
+      year: 2025,
+      score: 37,
+      rights: 8,
+      restrictions: 6,
+      business: 18,
+      taxOther: 5,
+      elapsedMinutes: 120
+    });
+    await touchedPage.locator("#officialExamSaveButton").click();
+    await touchedPage.waitForFunction(() =>
+      (document.querySelector("#officialExamStatus")?.textContent || "").includes("公式20問で接触済み")
+    );
+    const touchedYearGuard = {
+      message: await touchedPage.locator("#officialExamStatus").textContent(),
+      history: await touchedPage.locator(".official-history-row").count()
+    };
+    await touchedContext.close();
+    if (touchedYearGuard.history !== 0) {
+      throw new Error(`Touched year was recorded as unseen: ${JSON.stringify(touchedYearGuard)}`);
+    }
+
     if (consoleErrors.length || pageErrors.length) {
       throw new Error(
         `Browser errors: ${JSON.stringify({ consoleErrors, pageErrors })}`
@@ -201,6 +280,7 @@ async function main() {
         years: recorded.officialExamHistory.length
       },
       mobile,
+      touchedYearGuard,
       consoleErrors: consoleErrors.length,
       pageErrors: pageErrors.length
     }, null, 2));

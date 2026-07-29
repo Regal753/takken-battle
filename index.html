@@ -13,7 +13,7 @@
     <link rel="canonical" href="https://regal753.github.io/takken-battle/">
     <title>宅建バトル Study Quest</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./styles.css?v=20260729-structure-v9">
+    <link rel="stylesheet" href="./styles.css?v=20260730-official-drill-v10">
   </head>
   <body>
     <div class="app-root">
@@ -62,17 +62,11 @@
           <div class="today-command-actions">
             <button id="todayCommandStartButton" class="today-command-primary" type="button">固定10問を始める</button>
             <div id="todayCommandOfficialActions" class="today-command-action-group" hidden>
-              <a
-                id="todayCommandOfficialLink"
-                class="today-command-primary"
-                href="https://www.retio.or.jp/exam/past_ques_ans/other/"
-                target="_blank"
-                rel="noopener noreferrer"
-              >RETIO公式20問を開く</a>
-              <button id="todayCommandOfficialDoneButton" class="today-command-secondary" type="button">20問完了を記録</button>
+              <button id="officialDrillOpenButton" class="today-command-primary" type="button">公式20問シートを開く</button>
             </div>
             <div id="todayCommandReviewActions" class="today-command-action-group today-review-actions" hidden>
-              <label for="todayReviewInput">原因 → 次回ルール</label>
+              <div id="todayReviewTargets" class="today-review-targets" aria-live="polite"></div>
+              <label id="todayReviewLabel" for="todayReviewInput">原因 → 次回ルール</label>
               <input id="todayReviewInput" type="text" maxlength="120" autocomplete="off" placeholder="例：主語を飛ばした → 最初に主体へ線を引く">
               <button id="todayCommandReviewButton" class="today-command-primary" type="button">1行を保存</button>
             </div>
@@ -85,6 +79,43 @@
             <p id="todayCommandStatus" class="today-command-status" aria-live="polite"></p>
           </div>
         </div>
+
+        <details id="officialDrillPanel" class="official-drill-panel" hidden>
+          <summary>
+            <span>
+              <strong id="officialDrillTitle">令和7年度・公式20問</strong>
+              <small id="officialDrillQuestionRange">対象問を読込中</small>
+            </span>
+            <span id="officialDrillSummary">未採点</span>
+          </summary>
+          <div class="official-drill-body">
+            <div class="official-drill-brief">
+              <div>
+                <span>合格仕様</span>
+                <strong>20問を35分・検索なしで解く</strong>
+                <p>権利6・法令3・業法8・税その他3。15点が戦略目標、16点が安全圏です。</p>
+              </div>
+              <div class="official-drill-launch">
+                <a
+                  id="officialDrillQuestionLink"
+                  class="today-command-primary"
+                  href="https://goukaku.retio.or.jp/exam/pdf_2025_1_UWbaZCx6hm/2025question.pdf"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >公式問題PDFを開く</a>
+                <button id="officialDrillStartButton" class="today-command-secondary" type="button">35分計測を開始</button>
+                <strong id="officialDrillTimer" class="official-drill-timer">35:00</strong>
+              </div>
+            </div>
+            <p class="official-drill-caution">令和7年度は2025年4月1日施行法令基準です。採点後、法改正の影響があり得る肢は2026年度教材で照合してください。</p>
+            <form id="officialDrillForm" class="official-drill-form">
+              <div id="officialDrillAnswerGrid" class="official-drill-answer-grid" aria-label="公式20問の解答欄"></div>
+              <button id="officialDrillSubmitButton" class="today-command-primary" type="submit">20問を採点する</button>
+            </form>
+            <div id="officialDrillResult" class="official-drill-result" hidden aria-live="polite"></div>
+            <p id="officialDrillStatus" class="today-command-status" aria-live="polite"></p>
+          </div>
+        </details>
 
         <div class="daily-mission" aria-label="今日の合格クエスト進捗">
           <div id="missionBattleStep" class="mission-step">
@@ -521,7 +552,7 @@
     <script src="./question-balance.js?v=20260711-feedback-v8"></script>
     <script src="./reward-system.js?v=20260713-confidence-v14"></script>
     <script src="./save-transfer.js?v=20260726-pass-efficiency-v3"></script>
-    <script src="./app.js?v=20260729-structure-v9"></script>
+    <script src="./app.js?v=20260730-official-drill-v10"></script>
     <noscript>宅建バトルを利用するにはJavaScriptを有効にしてください。</noscript>
   </body>
 </html>

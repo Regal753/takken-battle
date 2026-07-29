@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260729-structure-v9";
+const expectedVersion = process.argv[3] || "20260730-official-drill-v10";
 const attempts = Math.max(1, Number(process.env.TAKKEN_DEPLOY_VERIFY_ATTEMPTS) || 12);
 const intervalMs = Math.max(0, Number(process.env.TAKKEN_DEPLOY_VERIFY_INTERVAL_MS) || 10000);
 
@@ -27,6 +27,8 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(html, /id="mockBButton"/, "mock B button missing");
     assert.match(html, /id="passPlanPanel"/, "pass plan panel missing");
     assert.match(html, /id="todayCommandPanel"/, "today command panel missing");
+    assert.match(html, /id="officialDrillOpenButton"/, "official drill launcher missing");
+    assert.match(html, /id="officialDrillAnswerGrid"/, "official drill answer grid missing");
     assert.match(html, /id="progressDrawer"/, "progress drawer missing");
     assert.match(html, /id="officialExamForm"/, "official exam ledger missing");
     const appReference = html.match(/src="([^"]*app\.js\?v=[^"]+)"/)?.[1] || "";
@@ -50,6 +52,8 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(appCode, /問題・履歴を保持　解答済/, "legacy answered progress missing");
     assert.match(appCode, /function renderPassPlan/, "pass plan renderer missing");
     assert.match(appCode, /function renderTodayCommand/, "today command renderer missing");
+    assert.match(appCode, /function submitOfficialDrill/, "official drill scorer missing");
+    assert.match(appCode, /function normalizeOfficialDrill/, "official drill save normalization missing");
     assert.match(appCode, /function saveMissionReview/, "review note workflow missing");
     assert.match(appCode, /function normalizeOfficialExamHistory/, "official exam ledger logic missing");
     assert.match(styleCode, /\.study-scope-select/, "study scope style missing");

@@ -74,7 +74,13 @@ const imported = transfer.stateFromProgressPackage(decoded, {
     "2026-07-27": {
       officialQuestions: true,
       reviewed: true,
-      minutes: 115
+      minutes: 115,
+      officialDrill: {
+        setId: "2025-balanced-a-v1",
+        answers: { 1: 3, 2: 3 },
+        uncertain: [2],
+        reviewNotes: { 2: "例外を飛ばした → ただし書きを先に読む" }
+      }
     }
   }
 }, allowedIds);
@@ -97,6 +103,7 @@ assert.deepEqual(imported.questRewardClaims["2026-07-21"], ["complete", "continu
 assert.equal(imported.sessionId, "fresh-session");
 assert.equal(imported.officialExamHistory[0].score, 37);
 assert.equal(imported.missionLog["2026-07-27"].minutes, 115);
+assert.deepEqual(imported.missionLog["2026-07-27"].officialDrill.uncertain, [2]);
 
 const savePackage = transfer.createSavePackage(imported);
 const restored = transfer.validatePackage(
@@ -107,6 +114,7 @@ assert.equal(restored.format, transfer.SAVE_FORMAT);
 assert.equal(restored.state.totalXp, 475);
 assert.equal(restored.state.officialExamHistory[0].business, 18);
 assert.equal(restored.state.missionLog["2026-07-27"].reviewed, true);
+assert.match(restored.state.missionLog["2026-07-27"].officialDrill.reviewNotes[2], /例外/);
 
 const handoffUrl = transfer.createTransferUrl(
   savePackage,
@@ -123,6 +131,7 @@ assert.equal(handoffState.state.totalXp, 475);
 assert.equal(handoffState.state.centralProgress.answers, 5);
 assert.equal(handoffState.state.officialExamHistory[0].score, 37);
 assert.equal(handoffState.state.missionLog["2026-07-27"].minutes, 115);
+assert.equal(handoffState.state.missionLog["2026-07-27"].officialDrill.answers[1], 3);
 
 assert.throws(
   () => transfer.createTransferUrl(progressPackage, "https://regal753.github.io/takken-battle/"),

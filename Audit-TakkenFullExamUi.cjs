@@ -267,11 +267,11 @@ async function main() {
     }
     await page.locator("#dockNextButton").click();
     await page.waitForFunction(() =>
-      document.querySelector("#todayCommandTitle")?.textContent?.trim() === "RETIO公式を20問解く"
+      (document.querySelector("#todayCommandTitle")?.textContent || "").includes("公式20問")
     );
     const sameDayRetention = await page.evaluate(({ storageId, visitedIds }) => {
       const saved = JSON.parse(localStorage.getItem(storageId) || "{}");
-      const officialLink = document.querySelector("#todayCommandOfficialLink");
+      const officialLink = document.querySelector("#officialDrillQuestionLink");
       return {
         progress: document.querySelector("#chapterProgressText")?.textContent || "",
         coach: document.querySelector("#coachTitle")?.textContent || "",
@@ -291,10 +291,11 @@ async function main() {
     }, { storageId, visitedIds });
     if (
       !sameDayRetention.progress.includes("定着0/100") ||
-      sameDayRetention.commandTitle !== "RETIO公式を20問解く" ||
+      !sameDayRetention.commandTitle.includes("公式20問") ||
+      !sameDayRetention.commandTitle.includes("35分") ||
       sameDayRetention.commandStep !== "今やる・STEP 2 / 4" ||
       sameDayRetention.mission !== "1 / 4" ||
-      !sameDayRetention.officialHref.startsWith("https://www.retio.or.jp/") ||
+      !sameDayRetention.officialHref.startsWith("https://goukaku.retio.or.jp/") ||
       sameDayRetention.officialTarget !== "_blank" ||
       !sameDayRetention.officialRel.includes("noopener") ||
       sameDayRetention.confidence[0]?.lastConfidence !== "unsure" ||
@@ -308,11 +309,54 @@ async function main() {
     }
     await capture(page, "command-step2-desktop.png");
 
-    await page.locator("#todayCommandOfficialDoneButton").click();
-    await page.waitForFunction(() =>
-      document.querySelector("#todayCommandTitle")?.textContent?.trim() === "誤答原因を1行にする"
+    await page.locator("#officialDrillOpenButton").click();
+    await page.locator("#officialDrillStartButton").click();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(100);
+    await capture(page, "official-drill-mobile.png");
+    const officialDrillMobileOverflow = await page.evaluate(() =>
+      Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
     );
-    await page.locator("#todayReviewInput").fill("主体を飛ばした → 最初に誰の義務かを線で囲む");
+    if (officialDrillMobileOverflow) {
+      throw new Error(`Official drill mobile overflow: ${officialDrillMobileOverflow}`);
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    const officialAnswerKey = {
+      1: 3, 2: 3, 3: 3, 4: 4, 5: 4, 6: 1, 7: 1, 8: 2, 9: 1, 10: 3,
+      11: 3, 12: 3, 13: 3, 14: 1, 15: 4, 16: 4, 17: 2, 18: 2, 19: 2, 20: 4,
+      21: 4, 22: 4, 23: 1, 24: 2, 25: 1, 26: 4, 27: 1, 28: 2, 29: 2, 30: 3,
+      31: 4, 32: 2, 33: 3, 34: 3, 35: 1, 36: 4, 37: 4, 38: 3, 39: 4, 40: 3,
+      41: 1, 42: 2, 43: 4, 44: 2, 45: 4, 46: 2, 47: 3, 48: 2, 49: 1, 50: 1
+    };
+    const drillNumbers = await page.locator(".official-drill-item")
+      .evaluateAll((items) => items.map((item) => Number(item.dataset.questionNumber)));
+    for (const [index, number] of drillNumbers.entries()) {
+      const answer = index === 0
+        ? (officialAnswerKey[number] % 4) + 1
+        : officialAnswerKey[number];
+      await page.locator(`input[name="official-drill-q${number}"][value="${answer}"]`)
+        .check({ force: true });
+    }
+    await page.locator(`[data-uncertain-question="${drillNumbers[1]}"]`)
+      .check({ force: true });
+    await page.locator("#officialDrillSubmitButton").click();
+    await page.waitForFunction(() =>
+      (document.querySelector("#todayCommandTitle")?.textContent || "").includes("誤答・迷い2件")
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(100);
+    await capture(page, "official-review-mobile.png");
+    const officialReviewMobileOverflow = await page.evaluate(() =>
+      Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
+    );
+    if (officialReviewMobileOverflow) {
+      throw new Error(`Official review mobile overflow: ${officialReviewMobileOverflow}`);
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.locator(`[data-review-question="${drillNumbers[0]}"]`)
+      .fill("根拠を飛ばした → 条文の主体を先に囲む");
+    await page.locator(`[data-review-question="${drillNumbers[1]}"]`)
+      .fill("二択で迷った → 例外条件を声に出して切る");
     await page.locator("#todayCommandReviewButton").click();
     await page.waitForFunction(() =>
       (document.querySelector("#todayCommandTitle")?.textContent || "").includes("合計90分まで")
@@ -332,6 +376,7 @@ async function main() {
         reviewNote: mission.reviewNote || "",
         reviewed: Boolean(mission.reviewed),
         officialQuestions: Boolean(mission.officialQuestions),
+        officialDrill: mission.officialDrill || null,
         minutes: Number(mission.minutes) || 0
       };
     }, storageId);
@@ -341,7 +386,10 @@ async function main() {
       completedMission.missionCount !== "4 / 4" ||
       !completedMission.reviewed ||
       !completedMission.officialQuestions ||
-      !completedMission.reviewNote.includes("主体を飛ばした") ||
+      completedMission.officialDrill?.score !== 19 ||
+      completedMission.officialDrill?.reviewTargets?.length !== 2 ||
+      Object.keys(completedMission.officialDrill?.reviewNotes || {}).length !== 2 ||
+      !completedMission.reviewNote.includes(`問${drillNumbers[0]}`) ||
       completedMission.minutes !== 90
     ) {
       throw new Error(`Sequential mission workflow mismatch: ${JSON.stringify(completedMission)}`);
