@@ -10,6 +10,8 @@
     : "";
   const STORAGE_ID = `takken-battle-study-clean-v2-hard${REVIEW_MODE ? `-review-${REVIEW_NAMESPACE || "default"}` : ""}`;
   const EVENT_OUTBOX_ID = `${STORAGE_ID}-event-outbox`;
+  const SAVE_STORE = window.TAKKEN_SAVE_STORE;
+  const STATE_SCHEMA_VERSION = 3;
   const DAILY_TARGET = 10;
   const SPRINT_MINUTES = 25;
   const TODAY_QUEST_PARAM = URL_PARAMS.has("today") || URL_PARAMS.has("quest");
@@ -21,6 +23,152 @@
   const OFFICIAL_PAST_EXAMS_URL = "https://www.retio.or.jp/exam/past_ques_ans/other/";
   const FIRST_PASS_DEADLINE = "2026-10-18";
   const FIRST_PASS_DEADLINE_LABEL = "10/18";
+  const JULY_GATE_DEADLINE = "2026-07-31";
+  const DAILY_STUDY_MINUTES = 90;
+  const OFFICIAL_DRILL_EVIDENCE_VERSION = 2;
+  let saveStoreSession = {
+    source: "empty",
+    notice: "",
+    isError: false,
+    skipPreviousRotation: false
+  };
+  const OFFICIAL_PAST_EXAM_YEARS = new Set(
+    Array.from({ length: 10 }, (_, index) => 2025 - index)
+  );
+  const OFFICIAL_DAILY_DRILL_DEFINITIONS = Object.freeze([
+    Object.freeze({
+      id: "2025-balanced-a-v1",
+      label: "令和7年度・公式20問 A",
+      questionRange: "問1–6・15–17・23–24・26–33・46",
+      year: 2025,
+      lawAsOf: "2025-04-01",
+      durationMinutes: 35,
+      targetScore: 15,
+      safeScore: 16,
+      questionUrl: "https://goukaku.retio.or.jp/exam/pdf_2025_1_UWbaZCx6hm/2025question.pdf",
+      answerSourceUrl: "https://www.retio.or.jp/wp-content/uploads/2025/12/R7_question_answer.pdf",
+      questions: Object.freeze([
+        { number: 1, answer: 3, section: "rights" },
+        { number: 2, answer: 3, section: "rights" },
+        { number: 3, answer: 3, section: "rights" },
+        { number: 4, answer: 4, section: "rights" },
+        { number: 5, answer: 4, section: "rights" },
+        { number: 6, answer: 1, section: "rights" },
+        { number: 15, answer: 4, section: "restrictions" },
+        { number: 16, answer: 4, section: "restrictions" },
+        { number: 17, answer: 2, section: "restrictions" },
+        { number: 23, answer: 1, section: "taxOther" },
+        { number: 24, answer: 2, section: "taxOther" },
+        { number: 26, answer: 4, section: "business" },
+        { number: 27, answer: 1, section: "business" },
+        { number: 28, answer: 2, section: "business" },
+        { number: 29, answer: 2, section: "business" },
+        { number: 30, answer: 3, section: "business" },
+        { number: 31, answer: 4, section: "business" },
+        { number: 32, answer: 2, section: "business" },
+        { number: 33, answer: 3, section: "business" },
+        { number: 46, answer: 2, section: "taxOther" }
+      ])
+    }),
+    Object.freeze({
+      id: "2025-balanced-b-v1",
+      label: "令和7年度・公式20問 B",
+      questionRange: "問7–12・18–20・25・34–41・47–48",
+      year: 2025,
+      lawAsOf: "2025-04-01",
+      durationMinutes: 35,
+      targetScore: 15,
+      safeScore: 16,
+      questionUrl: "https://goukaku.retio.or.jp/exam/pdf_2025_1_UWbaZCx6hm/2025question.pdf",
+      answerSourceUrl: "https://www.retio.or.jp/wp-content/uploads/2025/12/R7_question_answer.pdf",
+      questions: Object.freeze([
+        { number: 7, answer: 1, section: "rights" },
+        { number: 8, answer: 2, section: "rights" },
+        { number: 9, answer: 1, section: "rights" },
+        { number: 10, answer: 3, section: "rights" },
+        { number: 11, answer: 3, section: "rights" },
+        { number: 12, answer: 3, section: "rights" },
+        { number: 18, answer: 2, section: "restrictions" },
+        { number: 19, answer: 2, section: "restrictions" },
+        { number: 20, answer: 4, section: "restrictions" },
+        { number: 25, answer: 1, section: "taxOther" },
+        { number: 34, answer: 3, section: "business" },
+        { number: 35, answer: 1, section: "business" },
+        { number: 36, answer: 4, section: "business" },
+        { number: 37, answer: 4, section: "business" },
+        { number: 38, answer: 3, section: "business" },
+        { number: 39, answer: 4, section: "business" },
+        { number: 40, answer: 3, section: "business" },
+        { number: 41, answer: 1, section: "business" },
+        { number: 47, answer: 3, section: "taxOther" },
+        { number: 48, answer: 2, section: "taxOther" }
+      ])
+    }),
+    Object.freeze({
+      id: "2025-balanced-c-v1",
+      label: "令和7年度・公式20問 C",
+      questionRange: "問1・4・8・11・13–14・18・21–23・26・33・36・41–45・49–50",
+      year: 2025,
+      lawAsOf: "2025-04-01",
+      durationMinutes: 35,
+      targetScore: 15,
+      safeScore: 16,
+      questionUrl: "https://goukaku.retio.or.jp/exam/pdf_2025_1_UWbaZCx6hm/2025question.pdf",
+      answerSourceUrl: "https://www.retio.or.jp/wp-content/uploads/2025/12/R7_question_answer.pdf",
+      questions: Object.freeze([
+        { number: 1, answer: 3, section: "rights" },
+        { number: 4, answer: 4, section: "rights" },
+        { number: 8, answer: 2, section: "rights" },
+        { number: 11, answer: 3, section: "rights" },
+        { number: 13, answer: 3, section: "rights" },
+        { number: 14, answer: 1, section: "rights" },
+        { number: 18, answer: 2, section: "restrictions" },
+        { number: 21, answer: 4, section: "restrictions" },
+        { number: 22, answer: 4, section: "restrictions" },
+        { number: 23, answer: 1, section: "taxOther" },
+        { number: 26, answer: 4, section: "business" },
+        { number: 33, answer: 3, section: "business" },
+        { number: 36, answer: 4, section: "business" },
+        { number: 41, answer: 1, section: "business" },
+        { number: 42, answer: 2, section: "business" },
+        { number: 43, answer: 4, section: "business" },
+        { number: 44, answer: 2, section: "business" },
+        { number: 45, answer: 4, section: "business" },
+        { number: 49, answer: 1, section: "taxOther" },
+        { number: 50, answer: 1, section: "taxOther" }
+      ])
+    })
+  ]);
+  const OFFICIAL_DRILL_SECTION_LABELS = Object.freeze({
+    rights: "権利",
+    restrictions: "法令",
+    business: "業法",
+    taxOther: "税その他"
+  });
+  function officialDrillDefinitionById(setId) {
+    return OFFICIAL_DAILY_DRILL_DEFINITIONS.find((item) => item.id === setId) || null;
+  }
+  function officialDailyDrillDefinition(missionLog = {}) {
+    const counts = new Map(
+      OFFICIAL_DAILY_DRILL_DEFINITIONS.map((item) => [item.id, 0])
+    );
+    Object.values(missionLog && typeof missionLog === "object" ? missionLog : {})
+      .forEach((mission) => {
+        const drill = normalizeOfficialDrill(mission?.officialDrill);
+        const definition = officialDrillDefinitionById(drill?.setId);
+        if (!definition || !drill?.completed) return;
+        counts.set(definition.id, (counts.get(definition.id) || 0) + 1);
+      });
+    return OFFICIAL_DAILY_DRILL_DEFINITIONS.reduce((selected, candidate) =>
+      (counts.get(candidate.id) || 0) < (counts.get(selected.id) || 0)
+        ? candidate
+        : selected
+    );
+  }
+  function officialDrillDefinitionFor(drill) {
+    return officialDrillDefinitionById(drill?.setId) ||
+      officialDailyDrillDefinition(state?.missionLog);
+  }
   const EXAM_BLUEPRINT = window.TAKKEN_EXAM_BLUEPRINT;
   const STUDY_TARGETS = EXAM_BLUEPRINT?.studyTargets || {
     total: 37,
@@ -325,6 +473,10 @@
     studyTitle: $("#studyTitle"),
     todayLabel: $("#todayLabel"),
     chapterList: $("#chapterList"),
+    progressDrawer: $("#progressDrawer"),
+    progressDrawerLink: $("#progressDrawerLink"),
+    progressDrawerSummary: $("#progressDrawerSummary"),
+    themeDrawerSummary: $("#themeDrawerSummary"),
     themeBar: $("#themeBar"),
     chapterSelect: $("#chapterSelect"),
     studyScopeSelect: $("#studyScopeSelect"),
@@ -352,9 +504,6 @@
     dailyQuestButton: $("#dailyQuestButton"),
     mockAButton: $("#mockAButton"),
     mockBButton: $("#mockBButton"),
-    dailyCompletePanel: $("#dailyCompletePanel"),
-    dailyCompleteSummary: $("#dailyCompleteSummary"),
-    dailyContinueButton: $("#dailyContinueButton"),
     passQuestButton: $("#passQuestButton"),
     weakQuestButton: $("#weakQuestButton"),
     sprintButton: $("#sprintButton"),
@@ -362,11 +511,73 @@
     sprintStatus: $("#sprintStatus"),
     saveExportButton: $("#saveExportButton"),
     saveShareButton: $("#saveShareButton"),
+    saveRestorePreviousButton: $("#saveRestorePreviousButton"),
     saveImportInput: $("#saveImportInput"),
-    saveTransferStatus: $("#saveTransferStatus")
+    saveTransferStatus: $("#saveTransferStatus"),
+    saveProtectionStatus: $("#saveProtectionStatus"),
+    todayCommandPanel: $("#todayCommandPanel"),
+    todayCommandKicker: $("#todayCommandKicker"),
+    todayCommandTitle: $("#todayCommandTitle"),
+    todayCommandText: $("#todayCommandText"),
+    todayCommandStartButton: $("#todayCommandStartButton"),
+    todayCommandOfficialActions: $("#todayCommandOfficialActions"),
+    officialDrillOpenButton: $("#officialDrillOpenButton"),
+    officialDrillPanel: $("#officialDrillPanel"),
+    officialDrillTitle: $("#officialDrillTitle"),
+    officialDrillQuestionRange: $("#officialDrillQuestionRange"),
+    officialDrillSummary: $("#officialDrillSummary"),
+    officialDrillQuestionLink: $("#officialDrillQuestionLink"),
+    officialDrillStartButton: $("#officialDrillStartButton"),
+    officialDrillTimer: $("#officialDrillTimer"),
+    officialDrillForm: $("#officialDrillForm"),
+    officialDrillAnswerGrid: $("#officialDrillAnswerGrid"),
+    officialDrillSubmitButton: $("#officialDrillSubmitButton"),
+    officialDrillResult: $("#officialDrillResult"),
+    officialDrillStatus: $("#officialDrillStatus"),
+    todayCommandReviewActions: $("#todayCommandReviewActions"),
+    todayReviewTargets: $("#todayReviewTargets"),
+    todayReviewLabel: $("#todayReviewLabel"),
+    todayReviewInput: $("#todayReviewInput"),
+    todayCommandReviewButton: $("#todayCommandReviewButton"),
+    todayCommandMinutesActions: $("#todayCommandMinutesActions"),
+    todayCommandStatus: $("#todayCommandStatus"),
+    passPlanPanel: $("#passPlanPanel"),
+    passPhaseTitle: $("#passPhaseTitle"),
+    passPhaseText: $("#passPhaseText"),
+    examCountdown: $("#examCountdown"),
+    julyGateStatus: $("#julyGateStatus"),
+    coreCoverageStatus: $("#coreCoverageStatus"),
+    coreRetentionStatus: $("#coreRetentionStatus"),
+    officialReadinessStatus: $("#officialReadinessStatus"),
+    officialPracticeCoverageStatus: $("#officialPracticeCoverageStatus"),
+    officialPracticeTrendStatus: $("#officialPracticeTrendStatus"),
+    dailyMissionStatus: $("#dailyMissionStatus"),
+    dailyMissionSummary: $("#dailyMissionSummary"),
+    missionBattleStep: $("#missionBattleStep"),
+    missionBattleStatus: $("#missionBattleStatus"),
+    missionOfficialStep: $("#missionOfficialStep"),
+    missionOfficialStatus: $("#missionOfficialStatus"),
+    missionReviewStep: $("#missionReviewStep"),
+    missionReviewStatus: $("#missionReviewStatus"),
+    missionMinutesStep: $("#missionMinutesStep"),
+    missionMinutesStatus: $("#missionMinutesStatus"),
+    missionMinutesInput: $("#missionMinutesInput"),
+    missionMinutesButton: $("#missionMinutesButton"),
+    officialLedgerSummary: $("#officialLedgerSummary"),
+    officialExamForm: $("#officialExamForm"),
+    officialExamYear: $("#officialExamYear"),
+    officialExamScore: $("#officialExamScore"),
+    officialRightsScore: $("#officialRightsScore"),
+    officialRestrictionsScore: $("#officialRestrictionsScore"),
+    officialBusinessScore: $("#officialBusinessScore"),
+    officialTaxOtherScore: $("#officialTaxOtherScore"),
+    officialExamMinutes: $("#officialExamMinutes"),
+    officialExamStatus: $("#officialExamStatus"),
+    officialExamHistory: $("#officialExamHistory")
   };
 
   const createState = () => ({
+    stateSchemaVersion: STATE_SCHEMA_VERSION,
     index: 0,
     answered: null,
     attempts: 0,
@@ -406,6 +617,8 @@
     daily: createDailyState(),
     mock: createMockState(),
     mockHistory: [],
+    officialExamHistory: [],
+    missionLog: {},
     sprint: {
       endsAt: null,
       completed: 0
@@ -416,6 +629,9 @@
   let state = loadState();
   applyQuestionBalance();
   saveState();
+  if (saveStoreSession.notice) {
+    setSaveTransferStatus(saveStoreSession.notice, saveStoreSession.isError);
+  }
   let isAdvancing = false;
   let isFlushingEvents = false;
   let activeDayKey = todayKey();
@@ -454,6 +670,21 @@
       ...(Array.isArray(stats?.correctDayKeys) ? stats.correctDayKeys : []),
       localDateKey(stats?.lastCorrectAt),
       localDateKey(stats?.centralLastCorrectAt)
+    ].filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value));
+    return [...new Set(keys)].sort().slice(-8);
+  }
+
+  function normalizedComprehensionDayKeys(stats) {
+    const hasRecordedGate = Object.prototype.hasOwnProperty.call(
+      stats || {},
+      "clearDayKeys"
+    );
+    const baseline = hasRecordedGate
+      ? (Array.isArray(stats?.clearDayKeys) ? stats.clearDayKeys : [])
+      : normalizedCorrectDayKeys(stats);
+    const keys = [
+      ...baseline,
+      localDateKey(stats?.lastClearAt)
     ].filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value));
     return [...new Set(keys)].sort().slice(-8);
   }
@@ -567,6 +798,206 @@
       .slice(-10);
   }
 
+  function boundedInteger(value, maximum) {
+    return Math.min(maximum, Math.max(0, Math.trunc(Number(value) || 0)));
+  }
+
+  function normalizeOfficialExamHistory(input) {
+    const normalized = (Array.isArray(input) ? input : [])
+      .filter((item) => OFFICIAL_PAST_EXAM_YEARS.has(Number(item?.year)))
+      .map((item) => {
+        const rights = boundedInteger(item.rights, 14);
+        const restrictions = boundedInteger(item.restrictions, 8);
+        const business = boundedInteger(item.business, 20);
+        const taxOther = boundedInteger(item.taxOther, 8);
+        const score = boundedInteger(item.score, 50);
+        return {
+          year: Number(item.year),
+          score,
+          rights,
+          restrictions,
+          business,
+          taxOther,
+          elapsedMinutes: Math.max(1, boundedInteger(item.elapsedMinutes, 180)),
+          completedAt: String(item.completedAt || "")
+        };
+      })
+      .filter((item) =>
+        item.score === item.rights + item.restrictions + item.business + item.taxOther
+      )
+      .sort((left, right) =>
+        (Date.parse(left.completedAt) || 0) - (Date.parse(right.completedAt) || 0)
+      );
+    const latestByYear = new Map();
+    normalized.forEach((item) => latestByYear.set(item.year, item));
+    return [...latestByYear.values()].slice(-10);
+  }
+
+  function cleanMissionText(value, maximum = 120) {
+    return String(value || "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, maximum);
+  }
+
+  function validReviewRule(value) {
+    const note = cleanMissionText(value);
+    const parts = note.split(/\s*(?:→|⇒|->)\s*/);
+    return parts.length === 2 && parts.every((part) => part.length >= 2);
+  }
+
+  function normalizeOfficialDrill(input) {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+    const definition = officialDrillDefinitionById(String(input.setId || ""));
+    if (!definition) return null;
+    const questionNumbers = new Set(definition.questions.map((item) => item.number));
+
+    const answers = {};
+    definition.questions.forEach((item) => {
+      const answer = Number(input.answers?.[item.number]);
+      if (Number.isInteger(answer) && answer >= 1 && answer <= 4) {
+        answers[item.number] = answer;
+      }
+    });
+    const legacyUncertain = [...new Set(
+      (Array.isArray(input.uncertain) ? input.uncertain : [])
+        .map(Number)
+        .filter((number) => questionNumbers.has(number))
+    )].sort((left, right) => left - right);
+    const evidenceVersion = boundedInteger(input.evidenceVersion, 10);
+    const confidence = {};
+    definition.questions.forEach((item) => {
+      const recorded = String(input.confidence?.[item.number] || "");
+      if (recorded === "grounded" || recorded === "uncertain") {
+        confidence[item.number] = recorded;
+      } else if (Boolean(input.completed) && evidenceVersion < OFFICIAL_DRILL_EVIDENCE_VERSION) {
+        confidence[item.number] = legacyUncertain.includes(item.number)
+          ? "uncertain"
+          : "grounded";
+      }
+    });
+    const uncertain = [...new Set([
+      ...legacyUncertain,
+      ...Object.entries(confidence)
+        .filter(([, value]) => value === "uncertain")
+        .map(([number]) => Number(number))
+    ])].sort((left, right) => left - right);
+    const startedAt = Number.isFinite(Date.parse(input.startedAt))
+      ? String(input.startedAt).slice(0, 64)
+      : "";
+    const submittedAt = Number.isFinite(Date.parse(input.submittedAt))
+      ? String(input.submittedAt).slice(0, 64)
+      : "";
+    const completed =
+      Boolean(input.completed) &&
+      Boolean(submittedAt) &&
+      Object.keys(answers).length === definition.questions.length &&
+      (
+        evidenceVersion < OFFICIAL_DRILL_EVIDENCE_VERSION ||
+        Object.keys(confidence).length === definition.questions.length
+      );
+
+    if (!completed) {
+      return {
+        setId: definition.id,
+        startedAt,
+        submittedAt: "",
+        answers,
+        confidence,
+        uncertain,
+        evidenceVersion,
+        completed: false,
+        score: 0,
+        sectionScores: {},
+        elapsedMinutes: 0,
+        reviewTargets: [],
+        reviewNotes: {}
+      };
+    }
+
+    const sectionScores = Object.fromEntries(
+      Object.keys(OFFICIAL_DRILL_SECTION_LABELS).map((section) => [section, 0])
+    );
+    const reviewTargets = [];
+    let score = 0;
+    definition.questions.forEach((item) => {
+      const correct = answers[item.number] === item.answer;
+      if (correct) {
+        score += 1;
+        sectionScores[item.section] += 1;
+      }
+      if (!correct || uncertain.includes(item.number)) {
+        reviewTargets.push(item.number);
+      }
+    });
+    const derivedMinutes =
+      startedAt && Date.parse(submittedAt) >= Date.parse(startedAt)
+        ? Math.ceil((Date.parse(submittedAt) - Date.parse(startedAt)) / 60000)
+        : 0;
+    const elapsedMinutes = Math.min(
+      180,
+      Math.max(1, derivedMinutes || boundedInteger(input.elapsedMinutes, 180))
+    );
+    const reviewNotes = Object.fromEntries(
+      reviewTargets
+        .map((number) => [
+          number,
+          cleanMissionText(input.reviewNotes?.[number])
+        ])
+        .filter(([, note]) => note)
+    );
+
+    return {
+      setId: definition.id,
+      startedAt,
+      submittedAt,
+      answers,
+      confidence,
+      uncertain,
+      evidenceVersion,
+      completed: true,
+      score,
+      sectionScores,
+      elapsedMinutes,
+      reviewTargets,
+      reviewNotes
+    };
+  }
+
+  function normalizeMissionEntry(mission) {
+    const officialDrill = normalizeOfficialDrill(mission?.officialDrill);
+    const reviewNote = cleanMissionText(mission?.reviewNote);
+    const drillReviewComplete = officialDrill?.completed
+      ? officialDrill.reviewTargets.length === 0 ||
+        officialDrill.reviewTargets.every((number) =>
+          officialDrill.evidenceVersion >= OFFICIAL_DRILL_EVIDENCE_VERSION
+            ? validReviewRule(officialDrill.reviewNotes?.[number])
+            : cleanMissionText(officialDrill.reviewNotes?.[number]).length >= 4
+        )
+      : null;
+    return {
+      officialQuestions: Boolean(mission?.officialQuestions || officialDrill?.completed),
+      reviewed: drillReviewComplete === null
+        ? Boolean(mission?.reviewed)
+        : drillReviewComplete,
+      reviewNote,
+      minutes: boundedInteger(mission?.minutes, 600),
+      officialDrill
+    };
+  }
+
+  function normalizeMissionLog(input) {
+    return Object.fromEntries(
+      Object.entries(input && typeof input === "object" && !Array.isArray(input) ? input : {})
+        .filter(([date]) => /^\d{4}-\d{2}-\d{2}$/.test(date))
+        .slice(-180)
+        .map(([date, mission]) => [
+          date,
+          normalizeMissionEntry(mission)
+        ])
+    );
+  }
+
   function inferredMistakeCause(answered) {
     const note = String(answered?.mistakeNote || "");
     if (/読み|見落と|見間違/.test(note)) return "reading";
@@ -577,20 +1008,20 @@
   }
 
   function loadState() {
-    const raw = localStorage.getItem(STORAGE_ID);
-    try {
-      const saved = JSON.parse(raw || "null");
-      return normalizeState(saved || createState());
-    } catch {
-      if (raw) {
-        try {
-          localStorage.setItem(`${STORAGE_ID}-corrupt-${Date.now()}`, raw);
-        } catch {
-          // Recovery backup is best-effort; the fresh state remains usable.
-        }
+    if (!SAVE_STORE) {
+      const raw = localStorage.getItem(STORAGE_ID);
+      try {
+        return normalizeState(JSON.parse(raw || "null") || createState());
+      } catch {
+        return createState();
       }
-      return createState();
     }
+    saveStoreSession = SAVE_STORE.load(
+      localStorage,
+      STORAGE_ID,
+      STATE_SCHEMA_VERSION
+    );
+    return normalizeState(saveStoreSession.value || createState());
   }
 
   function normalizeState(input) {
@@ -603,6 +1034,8 @@
     next.sessionId = next.sessionId || `session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
     next.mock = normalizeMockState(input?.mock);
     next.mockHistory = normalizeMockHistory(input?.mockHistory);
+    next.officialExamHistory = normalizeOfficialExamHistory(input?.officialExamHistory);
+    next.missionLog = normalizeMissionLog(input?.missionLog);
     const requestedMock = input?.runMode === RUN_MODE_MOCK && mockFormById(next.mock.formId);
     next.runMode = FIRST_PASS_PARAM || next.runMode === RUN_MODE_FIRST_PASS
       ? RUN_MODE_FIRST_PASS
@@ -619,6 +1052,7 @@
     next.questionChoiceOrders = next.questionChoiceOrders || {};
     next.questionBalanceAudit = next.questionBalanceAudit || {};
     next.questionBalanceVersion = Number(next.questionBalanceVersion) || 0;
+    next.stateSchemaVersion = STATE_SCHEMA_VERSION;
     next.marked = next.marked || {};
     next.autoMarked = next.autoMarked || {};
     next.focus = Math.min(100, Math.max(0, Number(next.focus) || 0));
@@ -689,6 +1123,7 @@
           normalized.lastWrongAt = normalized.lastAnsweredAt;
         }
         normalized.correctDayKeys = normalizedCorrectDayKeys(normalized);
+        normalized.clearDayKeys = normalizedComprehensionDayKeys(normalized);
         return [id, normalized];
       })
     );
@@ -745,7 +1180,15 @@
   }
 
   function saveState() {
-    localStorage.setItem(STORAGE_ID, JSON.stringify(state));
+    if (!SAVE_STORE) {
+      localStorage.setItem(STORAGE_ID, JSON.stringify(state));
+      return;
+    }
+    SAVE_STORE.save(localStorage, STORAGE_ID, state, {
+      skipPreviousRotation: saveStoreSession.skipPreviousRotation
+    });
+    saveStoreSession.skipPreviousRotation = false;
+    renderSaveProtectionStatus();
   }
 
   function setSaveTransferStatus(message, isError = false) {
@@ -1291,7 +1734,49 @@
     });
     saveState();
     renderQuestPanel();
+    renderPassPlan();
     void loadTodayQuest();
+  }
+
+  function renderSaveProtectionStatus() {
+    if (!elements.saveProtectionStatus) return;
+    const previous = SAVE_STORE?.getPrevious(localStorage, STORAGE_ID);
+    const canRestore = Boolean(previous);
+    if (elements.saveRestorePreviousButton) {
+      elements.saveRestorePreviousButton.disabled = !canRestore;
+    }
+    elements.saveProtectionStatus.textContent =
+      `自動保護：保存形式v${STATE_SCHEMA_VERSION}・` +
+      (canRestore ? "直前セーブあり" : "初回スナップショット待ち");
+  }
+
+  function restorePreviousSave() {
+    try {
+      if (!SAVE_STORE) throw new Error("直前セーブの復元機能を読み込めませんでした。");
+      const previous = SAVE_STORE.getPrevious(localStorage, STORAGE_ID);
+      if (!previous) throw new Error("戻せる直前セーブがありません。");
+      const summary = savePackageSummary({
+        format: SAVE_TRANSFER.SAVE_FORMAT,
+        state: previous
+      });
+      const confirmed = window.confirm(
+        `直前セーブ（${summary}）へ戻します。\n` +
+        "現在の状態も復元前バックアップへ残します。"
+      );
+      if (!confirmed) {
+        setSaveTransferStatus("直前セーブへの復元をキャンセルしました。");
+        return;
+      }
+      const restored = SAVE_STORE.restorePrevious(localStorage, STORAGE_ID);
+      state = normalizeState(restored.value);
+      applyQuestionBalance();
+      saveStoreSession.skipPreviousRotation = true;
+      saveState();
+      render();
+      setSaveTransferStatus(`直前セーブへ復元しました: ${summary}`);
+    } catch (error) {
+      setSaveTransferStatus(error?.message || "直前セーブの復元に失敗しました。", true);
+    }
   }
 
   function logStudyEvent(kind, payload = {}) {
@@ -1636,7 +2121,7 @@
 
   function isRetained(id) {
     const stats = statsFor(id);
-    if (normalizedCorrectDayKeys(stats).length < 2) return false;
+    if (normalizedComprehensionDayKeys(stats).length < 2) return false;
     if (weaknessScore(id) > 0) return false;
     const lastCorrectAt = Date.parse(latestAt(stats.lastCorrectAt, stats.centralLastCorrectAt)) || 0;
     const lastWrongAt = Date.parse(latestAt(stats.lastWrongAt, stats.centralLastWrongAt)) || 0;
@@ -1797,6 +2282,974 @@
       .sort((left, right) =>
         (Date.parse(right.completedAt) || 0) - (Date.parse(left.completedAt) || 0)
       )[0] || null;
+  }
+
+  function latestOfficialExam() {
+    return [...(state.officialExamHistory || [])]
+      .sort((left, right) =>
+        (Date.parse(right.completedAt) || 0) - (Date.parse(left.completedAt) || 0)
+      )[0] || null;
+  }
+
+  function missionForDate(date = todayKey()) {
+    return normalizeMissionEntry(state.missionLog?.[date]);
+  }
+
+  function setMissionForDate(date, mission) {
+    const current = missionForDate(date);
+    state.missionLog = {
+      ...(state.missionLog || {}),
+      [date]: normalizeMissionEntry({
+        ...current,
+        ...mission
+      })
+    };
+  }
+
+  function daysUntil(dateKey) {
+    const [year, month, day] = dateKey.split("-").map(Number);
+    const target = new Date(year, month - 1, day);
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    return Math.ceil((target - today) / 86400000);
+  }
+
+  function passPhaseFor(date = todayKey()) {
+    if (date <= JULY_GATE_DEADLINE) {
+      return {
+        id: "july",
+        title: "7月ゲート",
+        text: "宅建業法を固め、法令上の制限へ接触し、公式未見過去問で現在地を測る。"
+      };
+    }
+    if (date <= "2026-08-31") {
+      return {
+        id: "august",
+        title: "全分野拡張",
+        text: "権利関係を加えてコア100へ全接触。公式未見過去問を週2年分のペースで解く。"
+      };
+    }
+    if (date <= "2026-09-30") {
+      return {
+        id: "september",
+        title: "本試験演習",
+        text: "公式10年分を初見・120分で解き、37点以上を複数年度で再現する。"
+      };
+    }
+    if (date <= "2026-10-11") {
+      return {
+        id: "october",
+        title: "弱点補修",
+        text: "公式過去問の誤答、法改正、統計へ限定し、新しい教材と機能追加を止める。"
+      };
+    }
+    return {
+      id: "final",
+      title: "最終固定",
+      text: "40点の再現、受験票・会場・睡眠を固定し、10/18の13時にピークを合わせる。"
+    };
+  }
+
+  function officialScoreLabel(score) {
+    if (score >= STUDY_TARGETS.safe) return `安全圏 ${score} / 50`;
+    if (score >= STUDY_TARGETS.total) return `戦略目標 ${score} / 50`;
+    return `現在 ${score} / 50`;
+  }
+
+  function setOfficialExamStatus(message, isError = false) {
+    if (!elements.officialExamStatus) return;
+    elements.officialExamStatus.textContent = message;
+    elements.officialExamStatus.classList.toggle("is-error", isError);
+  }
+
+  function renderOfficialExamYearOptions() {
+    if (!elements.officialExamYear) return;
+    const recorded = new Set(
+      (state.officialExamHistory || []).map((item) => Number(item.year))
+    );
+    const touched = officialDrillYearsTouched();
+    [...elements.officialExamYear.options].forEach((option) => {
+      const year = Number(option.value);
+      if (!option.dataset.baseLabel) option.dataset.baseLabel = option.textContent;
+      const reason = recorded.has(year)
+        ? "記録済み"
+        : touched.has(year)
+          ? "公式20問で接触済み"
+          : "";
+      option.disabled = Boolean(reason);
+      option.textContent = reason
+        ? `${option.dataset.baseLabel}・${reason}`
+        : option.dataset.baseLabel;
+    });
+    const selected = elements.officialExamYear.selectedOptions[0];
+    if (!selected || selected.disabled) {
+      const next = [...elements.officialExamYear.options].find((option) => !option.disabled);
+      if (next) elements.officialExamYear.value = next.value;
+    }
+  }
+
+  function renderOfficialExamHistory() {
+    if (!elements.officialExamHistory) return;
+    elements.officialExamHistory.replaceChildren();
+    const history = [...(state.officialExamHistory || [])]
+      .sort((left, right) =>
+        (Date.parse(right.completedAt) || 0) - (Date.parse(left.completedAt) || 0)
+      );
+    if (!history.length) {
+      const empty = document.createElement("p");
+      empty.className = "official-history-empty";
+      empty.textContent = "まだ記録なし。最初の1年分は現在地の基準点として使います。";
+      elements.officialExamHistory.append(empty);
+      return;
+    }
+    history.forEach((item) => {
+      const row = document.createElement("article");
+      row.className = "official-history-row";
+      row.classList.toggle("is-safe", item.score >= STUDY_TARGETS.safe);
+      row.classList.toggle(
+        "is-target",
+        item.score >= STUDY_TARGETS.total && item.score < STUDY_TARGETS.safe
+      );
+      const heading = document.createElement("div");
+      const label = document.createElement("span");
+      label.textContent = `${item.year}年度`;
+      const score = document.createElement("strong");
+      score.textContent = `${item.score} / 50`;
+      const time = document.createElement("small");
+      time.textContent = `${item.elapsedMinutes}分`;
+      heading.append(label, score, time);
+
+      const sections = document.createElement("p");
+      sections.textContent =
+        `権利 ${item.rights}/14・法令 ${item.restrictions}/8・業法 ${item.business}/20・税他 ${item.taxOther}/8`;
+      row.append(heading, sections);
+      elements.officialExamHistory.append(row);
+    });
+  }
+
+  function setTodayCommandStatus(message, isError = false) {
+    if (!elements.todayCommandStatus) return;
+    elements.todayCommandStatus.textContent = message;
+    elements.todayCommandStatus.classList.toggle("is-error", isError);
+  }
+
+  function setOfficialDrillStatus(message, isError = false) {
+    if (!elements.officialDrillStatus) return;
+    elements.officialDrillStatus.textContent = message;
+    elements.officialDrillStatus.classList.toggle("is-error", isError);
+  }
+
+  function officialDrillHistory() {
+    return Object.entries(state.missionLog || {})
+      .map(([date, mission]) => ({
+        date,
+        drill: normalizeOfficialDrill(mission?.officialDrill)
+      }))
+      .filter((item) => item.drill?.completed)
+      .sort((left, right) =>
+        (Date.parse(left.drill.submittedAt) || Date.parse(left.date) || 0) -
+        (Date.parse(right.drill.submittedAt) || Date.parse(right.date) || 0)
+      );
+  }
+
+  function officialPracticeStats() {
+    const history = officialDrillHistory();
+    const questions = new Set();
+    const sets = new Set();
+    history.forEach(({ drill }) => {
+      const definition = officialDrillDefinitionById(drill.setId);
+      if (!definition) return;
+      sets.add(definition.id);
+      definition.questions.forEach((item) => questions.add(item.number));
+    });
+    const latest = history.at(-1)?.drill || null;
+    const planned = officialDailyDrillDefinition(state.missionLog);
+    const plannedAttempts = history.filter(({ drill }) => drill.setId === planned.id).length;
+    return {
+      attempts: history.length,
+      coveredQuestions: questions.size,
+      completedSets: sets.size,
+      latest,
+      planned,
+      plannedAttempts
+    };
+  }
+
+  function ensureOfficialDrillAnswerGrid(
+    definition = officialDailyDrillDefinition(state.missionLog)
+  ) {
+    if (!elements.officialDrillAnswerGrid) return;
+    if (elements.officialDrillAnswerGrid.dataset.setId !== definition.id) {
+      elements.officialDrillAnswerGrid.replaceChildren();
+      elements.officialDrillAnswerGrid.dataset.setId = definition.id;
+      definition.questions.forEach((item) => {
+        const fieldset = document.createElement("fieldset");
+        fieldset.className = "official-drill-item";
+        fieldset.dataset.questionNumber = String(item.number);
+
+        const legend = document.createElement("legend");
+        const number = document.createElement("strong");
+        number.textContent = `問${item.number}`;
+        const section = document.createElement("span");
+        section.textContent = OFFICIAL_DRILL_SECTION_LABELS[item.section] || item.section;
+        legend.append(number, section);
+
+        const choices = document.createElement("div");
+        choices.className = "official-drill-choices";
+        choices.setAttribute("aria-label", `問${item.number}の解答`);
+        [1, 2, 3, 4].forEach((choice) => {
+          const label = document.createElement("label");
+          const input = document.createElement("input");
+          input.type = "radio";
+          input.name = `official-drill-q${item.number}`;
+          input.value = String(choice);
+          input.dataset.questionNumber = String(item.number);
+          const text = document.createElement("span");
+          text.textContent = String(choice);
+          label.append(input, text);
+          choices.append(label);
+        });
+
+        const confidenceGroup = document.createElement("div");
+        confidenceGroup.className = "official-drill-confidence";
+        confidenceGroup.setAttribute("role", "group");
+        confidenceGroup.setAttribute("aria-label", `問${item.number}の根拠判定`);
+        [
+          ["grounded", "根拠あり"],
+          ["uncertain", "消去法・勘"]
+        ].forEach(([value, text]) => {
+          const label = document.createElement("label");
+          const input = document.createElement("input");
+          input.type = "radio";
+          input.name = `official-drill-confidence-q${item.number}`;
+          input.value = value;
+          input.dataset.confidenceQuestion = String(item.number);
+          const caption = document.createElement("span");
+          caption.textContent = text;
+          label.append(input, caption);
+          confidenceGroup.append(label);
+        });
+        fieldset.append(legend, choices, confidenceGroup);
+        elements.officialDrillAnswerGrid.append(fieldset);
+      });
+    }
+  }
+
+  function collectOfficialDrillForm(
+    definition = officialDrillDefinitionById(elements.officialDrillAnswerGrid?.dataset.setId) ||
+      officialDailyDrillDefinition()
+  ) {
+    const answers = {};
+    const confidence = {};
+    const uncertain = [];
+    definition.questions.forEach((item) => {
+      const selected = elements.officialDrillForm
+        ?.querySelector(`input[name="official-drill-q${item.number}"]:checked`);
+      if (selected) answers[item.number] = Number(selected.value);
+      const confidenceInput = elements.officialDrillForm
+        ?.querySelector(`[data-confidence-question="${item.number}"]:checked`);
+      const confidenceValue = String(confidenceInput?.value || "");
+      if (confidenceValue === "grounded" || confidenceValue === "uncertain") {
+        confidence[item.number] = confidenceValue;
+      }
+      if (confidenceValue === "uncertain") uncertain.push(item.number);
+    });
+    return { answers, confidence, uncertain };
+  }
+
+  function officialDrillSectionTotals(definition) {
+    return definition.questions.reduce((totals, item) => ({
+      ...totals,
+      [item.section]: (totals[item.section] || 0) + 1
+    }), {});
+  }
+
+  function officialDrillScoreLabel(score, definition) {
+    if (score >= definition.safeScore) return "安全圏";
+    if (score >= definition.targetScore) return "戦略目標";
+    return "要補強";
+  }
+
+  function renderOfficialDrillTimer(drill = missionForDate().officialDrill) {
+    if (!elements.officialDrillTimer) return;
+    const definition = officialDrillDefinitionFor(drill);
+    elements.officialDrillTimer.classList.remove("is-over");
+    if (drill?.completed) {
+      elements.officialDrillTimer.textContent = `${drill.elapsedMinutes}分`;
+      return;
+    }
+    if (!drill?.startedAt) {
+      elements.officialDrillTimer.textContent =
+        `${String(definition.durationMinutes).padStart(2, "0")}:00`;
+      return;
+    }
+    const elapsedSeconds = Math.max(
+      0,
+      Math.floor((Date.now() - Date.parse(drill.startedAt)) / 1000)
+    );
+    const plannedSeconds = definition.durationMinutes * 60;
+    const remaining = plannedSeconds - elapsedSeconds;
+    if (remaining < 0) {
+      const over = Math.abs(remaining);
+      elements.officialDrillTimer.textContent =
+        `+${String(Math.floor(over / 60)).padStart(2, "0")}:${String(over % 60).padStart(2, "0")}`;
+      elements.officialDrillTimer.classList.add("is-over");
+      return;
+    }
+    elements.officialDrillTimer.textContent =
+      `${String(Math.floor(remaining / 60)).padStart(2, "0")}:${String(remaining % 60).padStart(2, "0")}`;
+  }
+
+  function renderOfficialDrillResult(drill) {
+    if (!elements.officialDrillResult) return;
+    elements.officialDrillResult.replaceChildren();
+    elements.officialDrillResult.hidden = !drill?.completed;
+    if (!drill?.completed) return;
+    const definition = officialDrillDefinitionFor(drill);
+    const sameSetHistory = officialDrillHistory()
+      .filter((item) => item.drill.setId === definition.id);
+    const currentIndex = sameSetHistory.findIndex((item) =>
+      item.drill.submittedAt === drill.submittedAt
+    );
+    const previous = currentIndex > 0
+      ? sameSetHistory[currentIndex - 1].drill
+      : null;
+    const practice = officialPracticeStats();
+
+    const heading = document.createElement("div");
+    const score = document.createElement("strong");
+    score.textContent = `${drill.score} / ${definition.questions.length}`;
+    const label = document.createElement("span");
+    label.textContent = officialDrillScoreLabel(drill.score, definition);
+    heading.append(score, label);
+
+    const totals = officialDrillSectionTotals(definition);
+    const sections = document.createElement("p");
+    sections.textContent = Object.keys(OFFICIAL_DRILL_SECTION_LABELS)
+      .map((section) =>
+        `${OFFICIAL_DRILL_SECTION_LABELS[section]} ${drill.sectionScores?.[section] || 0}/${totals[section] || 0}`
+      )
+      .join("・");
+    const targets = document.createElement("p");
+    targets.textContent = drill.reviewTargets.length
+      ? `復習対象：${drill.reviewTargets.map((number) => `問${number}`).join("・")}`
+      : "復習対象：誤答・根拠なしともになし";
+    const coverage = document.createElement("p");
+    coverage.textContent =
+      `令和7年度の接触 ${practice.coveredQuestions}/50・完了セット ` +
+      `${practice.completedSets}/${OFFICIAL_DAILY_DRILL_DEFINITIONS.length}`;
+    const trend = document.createElement("p");
+    trend.textContent = previous
+      ? `前回 ${previous.score}点 → 今回 ${drill.score}点`
+      : "このセットの初回得点";
+    const source = document.createElement("a");
+    source.href = definition.answerSourceUrl;
+    source.target = "_blank";
+    source.rel = "noopener noreferrer";
+    source.textContent = "RETIO公式の問題・解答PDFで照合";
+    elements.officialDrillResult.append(
+      heading,
+      sections,
+      targets,
+      coverage,
+      trend,
+      source
+    );
+  }
+
+  function renderOfficialDrillPanel(mission, step) {
+    if (!elements.officialDrillPanel) return;
+    const drill = mission.officialDrill;
+    const definition = officialDrillDefinitionFor(drill);
+    const completedAttempts = officialDrillHistory()
+      .filter((item) => item.drill.setId === definition.id).length;
+    const attemptNumber = drill?.completed
+      ? Math.max(1, completedAttempts)
+      : completedAttempts + 1;
+    ensureOfficialDrillAnswerGrid(definition);
+    const show = step === 2 || (step === 3 && drill?.completed);
+    elements.officialDrillPanel.hidden = !show;
+    if (!show) return;
+
+    elements.officialDrillTitle.textContent =
+      `${definition.label}・${attemptNumber === 1 ? "初回" : `再戦${attemptNumber}`}`;
+    elements.officialDrillQuestionRange.textContent = definition.questionRange;
+    elements.officialDrillQuestionLink.href = definition.questionUrl;
+    if (drill?.startedAt || drill?.completed) {
+      elements.officialDrillPanel.open = true;
+    }
+    elements.officialDrillSummary.textContent = drill?.completed
+      ? `${drill.score} / ${definition.questions.length}・${officialDrillScoreLabel(drill.score, definition)}`
+      : `解答${Object.keys(drill?.answers || {}).length}/${definition.questions.length}・根拠${Object.keys(drill?.confidence || {}).length}/${definition.questions.length}`;
+    elements.officialDrillForm.hidden = Boolean(drill?.completed);
+    elements.officialDrillStartButton.disabled = Boolean(drill?.startedAt);
+    elements.officialDrillStartButton.textContent = drill?.completed
+      ? "採点済み"
+      : drill?.startedAt
+        ? "計測中"
+        : "35分計測を開始";
+    definition.questions.forEach((item) => {
+      const answer = drill?.answers?.[item.number];
+      elements.officialDrillForm
+        ?.querySelectorAll(`input[name="official-drill-q${item.number}"]`)
+        .forEach((input) => {
+          input.checked = Number(input.value) === answer;
+        });
+      elements.officialDrillForm
+        ?.querySelectorAll(`[data-confidence-question="${item.number}"]`)
+        .forEach((input) => {
+          input.checked = input.value === drill?.confidence?.[item.number];
+        });
+    });
+    renderOfficialDrillTimer(drill);
+    renderOfficialDrillResult(drill);
+  }
+
+  function renderMissionReviewInputs(mission, step) {
+    if (!elements.todayReviewTargets || !elements.todayReviewInput) return;
+    elements.todayReviewTargets.replaceChildren();
+    const drill = mission.officialDrill;
+    const targets = drill?.completed ? drill.reviewTargets : [];
+    const multipleTargets = step === 3 && targets.length > 0;
+    elements.todayReviewTargets.hidden = !multipleTargets;
+    elements.todayReviewLabel.hidden = multipleTargets;
+    elements.todayReviewInput.hidden = multipleTargets;
+    elements.todayCommandReviewButton.textContent = multipleTargets
+      ? `${targets.length}件を保存`
+      : "1行を保存";
+
+    if (multipleTargets) {
+      targets.forEach((number) => {
+        const label = document.createElement("label");
+        label.className = "today-review-target";
+        const heading = document.createElement("span");
+        heading.textContent = `問${number}`;
+        const input = document.createElement("input");
+        input.type = "text";
+        input.maxLength = 120;
+        input.autocomplete = "off";
+        input.dataset.reviewQuestion = String(number);
+        input.placeholder = "原因 → 次回ルール";
+        input.value = drill.reviewNotes?.[number] || "";
+        label.append(heading, input);
+        elements.todayReviewTargets.append(label);
+      });
+      return;
+    }
+
+    elements.todayReviewLabel.textContent =
+      drill?.completed && drill.reviewTargets.length === 0
+        ? "全問正解・迷いなし：維持ルール"
+        : "原因 → 次回ルール";
+    if (document.activeElement !== elements.todayReviewInput) {
+      elements.todayReviewInput.value = mission.reviewNote;
+    }
+  }
+
+  function openOfficialDrill() {
+    if (!dailyQuestIsComplete()) {
+      setTodayCommandStatus("先に固定10問を完了してください。", true);
+      return;
+    }
+    if (elements.officialDrillPanel) {
+      elements.officialDrillPanel.hidden = false;
+      elements.officialDrillPanel.open = true;
+      elements.officialDrillPanel.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
+  }
+
+  function startOfficialDrill() {
+    const mission = missionForDate();
+    const definition = officialDrillDefinitionFor(mission.officialDrill);
+    if (!dailyQuestIsComplete()) {
+      setOfficialDrillStatus("先に固定10問を完了してください。", true);
+      return;
+    }
+    if (mission.officialDrill?.completed || mission.officialDrill?.startedAt) {
+      renderOfficialDrillTimer(mission.officialDrill);
+      return;
+    }
+    setMissionForDate(todayKey(), {
+      officialDrill: {
+        setId: definition.id,
+        startedAt: new Date().toISOString(),
+        answers: mission.officialDrill?.answers || {},
+        confidence: mission.officialDrill?.confidence || {},
+        uncertain: mission.officialDrill?.uncertain || [],
+        evidenceVersion: OFFICIAL_DRILL_EVIDENCE_VERSION,
+        completed: false
+      }
+    });
+    saveState();
+    logStudyEvent("official-daily-drill", {
+      action: "start",
+      setId: definition.id
+    });
+    renderPassPlan();
+    setOfficialDrillStatus("35分計測を開始しました。問題PDFを開き、検索せずに解いてください。");
+  }
+
+  function saveOfficialDrillDraft() {
+    const mission = missionForDate();
+    if (mission.officialDrill?.completed) return;
+    const definition = officialDrillDefinitionFor(mission.officialDrill);
+    const form = collectOfficialDrillForm(definition);
+    setMissionForDate(todayKey(), {
+      officialDrill: {
+        setId: definition.id,
+        startedAt: mission.officialDrill?.startedAt || "",
+        answers: form.answers,
+        confidence: form.confidence,
+        uncertain: form.uncertain,
+        evidenceVersion: OFFICIAL_DRILL_EVIDENCE_VERSION,
+        completed: false
+      }
+    });
+    saveState();
+    elements.officialDrillSummary.textContent =
+      `解答${Object.keys(form.answers).length}/${definition.questions.length}・` +
+      `根拠${Object.keys(form.confidence).length}/${definition.questions.length}`;
+  }
+
+  function submitOfficialDrill(event) {
+    event?.preventDefault();
+    const mission = missionForDate();
+    if (!dailyQuestIsComplete()) {
+      setOfficialDrillStatus("先に固定10問を完了してください。", true);
+      return;
+    }
+    if (!mission.officialDrill?.startedAt) {
+      setOfficialDrillStatus("先に「35分計測を開始」を押してください。", true);
+      return;
+    }
+    const definition = officialDrillDefinitionFor(mission.officialDrill);
+    const form = collectOfficialDrillForm(definition);
+    const missing = definition.questions
+      .map((item) => item.number)
+      .filter((number) => !form.answers[number]);
+    if (missing.length) {
+      setOfficialDrillStatus(
+        `未回答：${missing.map((number) => `問${number}`).join("・")}`,
+        true
+      );
+      elements.officialDrillForm
+        ?.querySelector(`[data-question-number="${missing[0]}"]`)
+        ?.scrollIntoView({ block: "center", behavior: "smooth" });
+      return;
+    }
+    const missingConfidence = definition.questions
+      .map((item) => item.number)
+      .filter((number) => !form.confidence[number]);
+    if (missingConfidence.length) {
+      setOfficialDrillStatus(
+        `根拠未判定：${missingConfidence.map((number) => `問${number}`).join("・")}`,
+        true
+      );
+      elements.officialDrillForm
+        ?.querySelector(`[data-question-number="${missingConfidence[0]}"]`)
+        ?.scrollIntoView({ block: "center", behavior: "smooth" });
+      return;
+    }
+
+    const submittedAt = new Date().toISOString();
+    const completedDrill = normalizeOfficialDrill({
+      setId: definition.id,
+      startedAt: mission.officialDrill.startedAt,
+      submittedAt,
+      answers: form.answers,
+      confidence: form.confidence,
+      uncertain: form.uncertain,
+      evidenceVersion: OFFICIAL_DRILL_EVIDENCE_VERSION,
+      completed: true
+    });
+    const reviewComplete = completedDrill.reviewTargets.length === 0;
+    setMissionForDate(todayKey(), {
+      officialQuestions: true,
+      reviewed: reviewComplete,
+      reviewNote: "",
+      officialDrill: completedDrill,
+      minutes: Math.min(600, mission.minutes + completedDrill.elapsedMinutes)
+    });
+    saveState();
+    logStudyEvent("official-daily-drill", {
+      action: "submit",
+      setId: completedDrill.setId,
+      score: completedDrill.score,
+      elapsedMinutes: completedDrill.elapsedMinutes,
+      uncertain: completedDrill.uncertain,
+      confidence: completedDrill.confidence,
+      reviewTargets: completedDrill.reviewTargets
+    });
+    renderPassPlan();
+    setOfficialDrillStatus(
+      reviewComplete
+        ? `${completedDrill.score}/20を記録しました。誤答・根拠なしは0件です。`
+        : `${completedDrill.score}/20を記録しました。次は復習対象${completedDrill.reviewTargets.length}件を1行ずつ処理します。`
+    );
+    setTodayCommandStatus(
+      `${completedDrill.score}/20・${officialDrillScoreLabel(completedDrill.score, definition)}。採点済みです。`
+    );
+  }
+
+  function renderTodayCommand({
+    mission,
+    battleDone,
+    officialDone,
+    reviewDone,
+    minutesDone
+  }) {
+    if (!elements.todayCommandPanel) return;
+    const step = !battleDone
+      ? 1
+      : !officialDone
+        ? 2
+        : !reviewDone
+          ? 3
+          : !minutesDone
+            ? 4
+            : 5;
+    const target = dailyQuestIds().length || DAILY_TARGET;
+    const done = Math.min(dailyQuestDoneCount(), target);
+    const remainingMinutes = Math.max(0, DAILY_STUDY_MINUTES - mission.minutes);
+    const reviewTargets = mission.officialDrill?.reviewTargets || [];
+    const drillDefinition = officialDrillDefinitionFor(mission.officialDrill);
+    const command = step === 1
+      ? {
+          kicker: "今やる・STEP 1 / 4",
+          title: "固定10問を解く",
+          text: isMockMode()
+            ? "模試を中断して日課へ戻り、各問の理解チェックまで通す。"
+            : `残り${Math.max(0, target - done)}問。正解でも4肢の理由を判定してから次へ進む。`
+        }
+      : step === 2
+        ? {
+            kicker: "今やる・STEP 2 / 4",
+            title: `${drillDefinition.label}を35分で解く`,
+            text: `${drillDefinition.questionRange}を検索なしで解き、全20問に「根拠あり／消去法・勘」を付けて採点する。`
+          }
+        : step === 3
+          ? {
+              kicker: "今やる・STEP 3 / 4",
+              title: reviewTargets.length
+                ? `誤答・根拠なし${reviewTargets.length}件を1行化する`
+                : "全問正解を再現するルールを1行化する",
+              text: reviewTargets.length
+                ? `${reviewTargets.map((number) => `問${number}`).join("・")}を、それぞれ「原因 → 次回ルール」で保存する。`
+                : "次回も再現するための確認順を、1行で保存する。"
+            }
+          : step === 4
+            ? {
+                kicker: "今やる・STEP 4 / 4",
+                title: `合計90分まであと${remainingMinutes}分`,
+                text: `今日は${mission.minutes}分。実際の合計学習時間を入力し、90分以上で完了にする。`
+              }
+            : {
+                kicker: "今日の作戦・4 / 4",
+                title: "90分クエスト完了",
+                text: `固定10問・公式20問・誤答1行・合計${mission.minutes}分を記録済み。今日はここで切れる。`
+              };
+
+    elements.todayCommandKicker.textContent = command.kicker;
+    elements.todayCommandTitle.textContent = command.title;
+    elements.todayCommandText.textContent = command.text;
+    elements.todayCommandPanel.classList.toggle("is-complete", step === 5);
+    elements.todayCommandStartButton.hidden = step !== 1;
+    elements.todayCommandStartButton.textContent = isMockMode()
+      ? "模試を中断して固定10問へ"
+      : done
+        ? `残り${Math.max(0, target - done)}問を続ける`
+        : "固定10問を始める";
+    elements.todayCommandOfficialActions.hidden = step !== 2;
+    elements.todayCommandReviewActions.hidden = step !== 3;
+    elements.todayCommandMinutesActions.hidden = step !== 4;
+    renderMissionReviewInputs(mission, step);
+    renderOfficialDrillPanel(mission, step);
+    if (elements.missionMinutesInput && document.activeElement !== elements.missionMinutesInput) {
+      elements.missionMinutesInput.value = String(mission.minutes);
+    }
+
+    [
+      [elements.missionBattleStep, battleDone, 1],
+      [elements.missionOfficialStep, officialDone, 2],
+      [elements.missionReviewStep, reviewDone, 3],
+      [elements.missionMinutesStep, minutesDone, 4]
+    ].forEach(([item, doneState, itemStep]) => {
+      if (!item) return;
+      item.classList.toggle("is-done", doneState);
+      item.classList.toggle("is-current", step === itemStep);
+      item.classList.toggle("is-locked", step < itemStep && step !== 5);
+    });
+  }
+
+  function renderPassPlan() {
+    if (!elements.passPlanPanel) return;
+    const phase = passPhaseFor();
+    const examDays = daysUntil(FIRST_PASS_DEADLINE);
+    const gateDays = daysUntil(JULY_GATE_DEADLINE);
+    const mission = missionForDate();
+    const latestOfficial = latestOfficialExam();
+    const officialPractice = officialPracticeStats();
+    const businessIds = CURRICULUM_ORDER.filter((id) => QUESTIONS[id]?.sectionId === "business");
+    const restrictionIds = CURRICULUM_ORDER.filter((id) => QUESTIONS[id]?.sectionId === "restrictions");
+    const businessRetained = retainedCount(businessIds);
+    const restrictionContacted = restrictionIds.filter(isContacted).length;
+    const businessGate = businessRetained >= 32 || Number(latestOfficial?.business) >= STUDY_TARGETS.business;
+    const restrictionGate = restrictionContacted >= restrictionIds.length;
+    const officialGate = (state.officialExamHistory || []).length > 0;
+    const gateCount = [businessGate, restrictionGate, officialGate].filter(Boolean).length;
+    const battleDone = dailyQuestIsComplete();
+    const officialDone = mission.officialQuestions;
+    const reviewDone = mission.reviewed;
+    const minutesDone = mission.minutes >= DAILY_STUDY_MINUTES;
+    const missionCount = [battleDone, officialDone, reviewDone, minutesDone].filter(Boolean).length;
+
+    elements.passPhaseTitle.textContent = phase.title;
+    elements.passPhaseText.textContent = phase.text;
+    elements.examCountdown.textContent = examDays > 0
+      ? `D-${examDays}`
+      : examDays === 0
+        ? "本試験当日"
+        : "本試験終了";
+    elements.julyGateStatus.textContent = `${gateCount} / 3`;
+    elements.julyGateStatus.title = gateDays >= 0
+      ? `7/31まであと${gateDays}日`
+      : "7/31ゲート経過";
+    elements.coreCoverageStatus.textContent = `接触 ${contactedCount()} / ${CURRICULUM_ORDER.length}`;
+    elements.coreRetentionStatus.textContent = `定着 ${retainedCount()} / ${CURRICULUM_ORDER.length}`;
+    elements.officialReadinessStatus.textContent = latestOfficial
+      ? officialScoreLabel(latestOfficial.score)
+      : "未記録";
+    elements.officialPracticeCoverageStatus.textContent =
+      `接触 ${officialPractice.coveredQuestions} / 50`;
+    elements.officialPracticeTrendStatus.textContent = officialPractice.latest
+      ? `直近${officialPractice.latest.score}/20・次は${officialPractice.planned.label.replace("令和7年度・公式20問 ", "")}`
+      : `${officialPractice.planned.label.replace("令和7年度・公式20問 ", "")}から開始`;
+    elements.dailyMissionStatus.textContent = `${missionCount} / 4`;
+    elements.dailyMissionSummary.textContent = missionCount === 4
+      ? `本日完了・${mission.minutes}分`
+      : battleDone
+        ? `次は${officialDone ? (reviewDone ? "90分まで記録" : "誤答・根拠なしを復習") : "令和7年公式20問"}`
+        : `固定10問 ${dailyQuestDoneCount()} / ${dailyQuestIds().length || DAILY_TARGET}`;
+
+    elements.missionBattleStep.classList.toggle("is-done", battleDone);
+    elements.missionBattleStatus.textContent =
+      `${Math.min(dailyQuestDoneCount(), dailyQuestIds().length || DAILY_TARGET)} / ${dailyQuestIds().length || DAILY_TARGET}`;
+    elements.missionOfficialStatus.textContent = mission.officialDrill?.completed
+      ? `${mission.officialDrill.score} / 20`
+      : officialDone
+        ? "完了記録済み"
+        : "未完了";
+    elements.missionReviewStatus.textContent = reviewDone
+      ? mission.officialDrill?.completed && mission.officialDrill.reviewTargets.length === 0
+        ? "対象0件"
+        : mission.officialDrill?.reviewTargets.length
+        ? `${mission.officialDrill.reviewTargets.length}件保存済み`
+        : mission.reviewNote
+          ? "1行保存済み"
+          : "完了記録済み"
+      : "未完了";
+    elements.missionMinutesStatus.textContent =
+      `${Math.min(mission.minutes, DAILY_STUDY_MINUTES)} / ${DAILY_STUDY_MINUTES}分`;
+    renderTodayCommand({ mission, battleDone, officialDone, reviewDone, minutesDone });
+    elements.officialLedgerSummary.textContent =
+      `${(state.officialExamHistory || []).length}年分`;
+    elements.passPlanPanel
+      .querySelectorAll("[data-pass-phase]")
+      .forEach((item) => item.classList.toggle("is-current", item.dataset.passPhase === phase.id));
+    renderOfficialExamYearOptions();
+    renderOfficialExamHistory();
+  }
+
+  function saveMissionReview() {
+    const mission = missionForDate();
+    if (!dailyQuestIsComplete() || !mission.officialQuestions) {
+      setTodayCommandStatus("先に公式20問まで完了してください。", true);
+      return;
+    }
+
+    const drill = mission.officialDrill;
+    if (drill?.completed && drill.reviewTargets.length) {
+      const reviewNotes = {};
+      let firstInvalid = null;
+      drill.reviewTargets.forEach((number) => {
+        const input = elements.todayReviewTargets
+          ?.querySelector(`[data-review-question="${number}"]`);
+        const note = cleanMissionText(input?.value);
+        const valid = drill.evidenceVersion >= OFFICIAL_DRILL_EVIDENCE_VERSION
+          ? validReviewRule(note)
+          : note.length >= 4;
+        if (!valid && !firstInvalid) firstInvalid = input;
+        if (note) reviewNotes[number] = note;
+      });
+      if (firstInvalid) {
+        setTodayCommandStatus(
+          `問${firstInvalid.dataset.reviewQuestion}を「原因 → 次回ルール」の形で入力してください。`,
+          true
+        );
+        firstInvalid.focus();
+        return;
+      }
+      const officialDrill = {
+        ...drill,
+        reviewNotes
+      };
+      const reviewNote = cleanMissionText(
+        `問${drill.reviewTargets[0]}: ${reviewNotes[drill.reviewTargets[0]]}`
+      );
+      setMissionForDate(todayKey(), {
+        reviewed: true,
+        reviewNote,
+        officialDrill
+      });
+      saveState();
+      logStudyEvent("pass-mission", {
+        field: "reviewed",
+        completed: true,
+        reviewTargets: drill.reviewTargets,
+        reviewNotes
+      });
+      renderPassPlan();
+      setTodayCommandStatus(
+        `復習ルール${drill.reviewTargets.length}件を保存しました。最後に今日の合計時間を記録します。`
+      );
+      return;
+    }
+
+    const reviewNote = cleanMissionText(elements.todayReviewInput?.value);
+    if (!validReviewRule(reviewNote)) {
+      setTodayCommandStatus("「原因 → 次回ルール」の形で1行入力してください。", true);
+      elements.todayReviewInput?.focus();
+      return;
+    }
+    setMissionForDate(todayKey(), { reviewed: true, reviewNote });
+    saveState();
+    logStudyEvent("pass-mission", {
+      field: "reviewed",
+      completed: true,
+      reviewNote,
+      mission: missionForDate()
+    });
+    renderPassPlan();
+    setTodayCommandStatus("誤答ルールを保存しました。最後に今日の合計時間を記録します。");
+  }
+
+  function saveMissionMinutes() {
+    const value = elements.missionMinutesInput?.valueAsNumber;
+    if (!Number.isFinite(value) || value < 0 || value > 600) {
+      setTodayCommandStatus("学習時間は0〜600分で入力してください。", true);
+      setOfficialExamStatus("学習時間は0〜600分で入力してください。", true);
+      return;
+    }
+    setMissionForDate(todayKey(), { minutes: value });
+    saveState();
+    logStudyEvent("pass-mission", {
+      field: "minutes",
+      minutes: boundedInteger(value, 600),
+      mission: missionForDate()
+    });
+    setOfficialExamStatus(`今日の学習時間を${boundedInteger(value, 600)}分で保存しました。`);
+    renderPassPlan();
+    setTodayCommandStatus(
+      value >= DAILY_STUDY_MINUTES
+        ? `合計${boundedInteger(value, 600)}分。今日の90分クエスト完了です。`
+        : `合計${boundedInteger(value, 600)}分で保存。あと${DAILY_STUDY_MINUTES - boundedInteger(value, 600)}分です。`
+    );
+  }
+
+  function officialDrillYearsTouched() {
+    return new Set(
+      Object.values(state.missionLog || {})
+        .map((mission) => normalizeOfficialDrill(mission?.officialDrill))
+        .filter((drill) => drill?.completed)
+        .map((drill) => officialDrillDefinitionById(drill.setId)?.year)
+        .filter(Number.isInteger)
+    );
+  }
+
+  function recordOfficialExam(event) {
+    event?.preventDefault();
+    const fields = {
+      year: elements.officialExamYear?.valueAsNumber || Number(elements.officialExamYear?.value),
+      score: elements.officialExamScore?.valueAsNumber,
+      rights: elements.officialRightsScore?.valueAsNumber,
+      restrictions: elements.officialRestrictionsScore?.valueAsNumber,
+      business: elements.officialBusinessScore?.valueAsNumber,
+      taxOther: elements.officialTaxOtherScore?.valueAsNumber,
+      elapsedMinutes: elements.officialExamMinutes?.valueAsNumber
+    };
+    if (Object.values(fields).some((value) => !Number.isFinite(value))) {
+      setOfficialExamStatus("年度・合計・4分野・時間をすべて入力してください。", true);
+      return;
+    }
+    if (Object.values(fields).some((value) => !Number.isInteger(value))) {
+      setOfficialExamStatus("得点と時間は整数で入力してください。", true);
+      return;
+    }
+    if (
+      !OFFICIAL_PAST_EXAM_YEARS.has(fields.year) ||
+      fields.score < 0 || fields.score > 50 ||
+      fields.rights < 0 || fields.rights > 14 ||
+      fields.restrictions < 0 || fields.restrictions > 8 ||
+      fields.business < 0 || fields.business > 20 ||
+      fields.taxOther < 0 || fields.taxOther > 8 ||
+      fields.elapsedMinutes < 1 || fields.elapsedMinutes > 180
+    ) {
+      setOfficialExamStatus("各欄を表示されている上限内で入力してください。", true);
+      return;
+    }
+    const sectionTotal =
+      fields.rights + fields.restrictions + fields.business + fields.taxOther;
+    if (sectionTotal !== fields.score) {
+      setOfficialExamStatus(
+        `分野別の合計${sectionTotal}点と総得点${fields.score}点が一致しません。`,
+        true
+      );
+      return;
+    }
+    if ((state.officialExamHistory || []).some((item) => item.year === fields.year)) {
+      setOfficialExamStatus(
+        `${fields.year}年度は記録済みです。初見判定を守るため別の未見年度を選んでください。`,
+        true
+      );
+      return;
+    }
+    if (officialDrillYearsTouched().has(fields.year)) {
+      setOfficialExamStatus(
+        `${fields.year}年度は公式20問で接触済みです。初見50問の基準点には別年度を使ってください。`,
+        true
+      );
+      return;
+    }
+
+    const entry = {
+      ...fields,
+      completedAt: new Date().toISOString()
+    };
+    state.officialExamHistory = normalizeOfficialExamHistory([
+      ...(state.officialExamHistory || []),
+      entry
+    ]);
+    const mission = missionForDate();
+    setMissionForDate(todayKey(), {
+      officialQuestions: true,
+      minutes: Math.max(mission.minutes, boundedInteger(fields.elapsedMinutes, 180))
+    });
+    saveState();
+    logStudyEvent("official-past-exam", entry);
+    setOfficialExamStatus(
+      `${fields.year}年度 ${fields.score}/50を記録しました。次は誤答原因を1行ずつ残します。`
+    );
+    elements.officialExamForm?.reset();
+    if (elements.officialExamMinutes) elements.officialExamMinutes.value = "120";
+    const nextYear = [...OFFICIAL_PAST_EXAM_YEARS]
+      .find((year) =>
+        !(state.officialExamHistory || []).some((item) => item.year === year) &&
+        !officialDrillYearsTouched().has(year)
+      );
+    if (nextYear && elements.officialExamYear) {
+      elements.officialExamYear.value = String(nextYear);
+    }
+    renderPassPlan();
   }
 
   function shortDateLabel(value) {
@@ -1965,6 +3418,10 @@
     return ORDER[state.index + 1] || null;
   }
 
+  function needsConfidenceCheck(answered = state.answered) {
+    return Boolean(answered?.correct === true && !answered.confidence);
+  }
+
   function nextActionLabel() {
     if (isMockMode()) {
       return state.mock.position >= mockQuestionIds().length - 1 ? "採点結果を見る" : "次の問題へ";
@@ -1972,8 +3429,8 @@
     if (state.answered?.correct === false && !mistakeRecorded()) {
       return "ミス入力へ";
     }
-    if (state.answered?.weakBreakCandidate && !state.answered.confidence) {
-      return "根拠を確認";
+    if (needsConfidenceCheck()) {
+      return "理解を選ぶ";
     }
     if (isDailyQuestQuestion(currentId()) && dailyQuestDoneCount() >= dailyQuestIds().length) {
       return "今日の10問を終了";
@@ -2024,18 +3481,20 @@
     const xpResult = typeof answered.xpReward === "number" ? ` / EXP +${answered.xpReward}` : "";
     elements.dockResultText.textContent = `${resultParts.join("・")}${xpResult}`;
 
-    const needsMasteryCheck = Boolean(answered.weakBreakCandidate && !answered.confidence);
+    const needsUnderstandingCheck = needsConfidenceCheck(answered);
     const dailyComplete = Boolean(
       isDailyQuestQuestion(currentId()) && dailyQuestDoneCount() >= dailyQuestIds().length
     );
-    const targetId = needsMasteryCheck ? null : nextTargetId();
+    const targetId = needsUnderstandingCheck ? null : nextTargetId();
     const targetQuestion = targetId ? QUESTIONS[targetId] : null;
-    if (needsMasteryCheck) {
-      elements.dockTargetText.textContent = "弱点克服候補・根拠確認で報酬確定";
+    if (needsUnderstandingCheck) {
+      elements.dockTargetText.textContent = answered.weakBreakCandidate
+        ? "弱点克服候補・4肢の理解を選ぶと報酬確定"
+        : "4肢の理解度を選ぶと次へ進める";
     } else if (dailyComplete) {
       elements.dockTargetText.textContent = nextFirstPassId()
-        ? "固定10問完走・今日はここまででOK"
-        : "固定10問完走・全分野コア100に接触完了";
+        ? "固定10問完走・次はRETIO公式20問"
+        : "固定10問完走・全分野接触完了。次は公式20問";
     } else if (targetQuestion) {
       elements.dockTargetText.textContent = `次 ${questionPositionText(targetId)} ・ ${targetQuestion.tag}`;
     } else if (isFirstPassMode()) {
@@ -2059,7 +3518,7 @@
     elements.dockNextButton.classList.toggle(
       "is-reward",
       Boolean(
-        needsMasteryCheck ||
+        needsUnderstandingCheck ||
         answered.levelUp ||
         answered.chestOpened ||
         answered.milestone ||
@@ -2247,8 +3706,8 @@
     renderThemeControls(question);
     renderAdaptiveCoach(question);
     renderQuestPanel();
-    renderDailyCompletionPanel();
     renderSprint();
+    renderPassPlan();
     updateLogStatusText();
   }
 
@@ -2884,30 +4343,33 @@
 
   function renderConfidenceCheck(question) {
     removeConfidenceCheck();
+    if (!state.answered?.correct) return;
     const wrapper = document.createElement("section");
     wrapper.className = "confidence-check";
 
     const copy = document.createElement("div");
     const title = document.createElement("strong");
-    title.textContent = "根拠チェック";
+    title.textContent = "理解チェック（必須）";
     const lead = document.createElement("p");
     lead.textContent = state.answered?.weakBreakCandidate
-      ? "翌日再テスト成功。根拠まで説明できれば弱点克服を確定。"
-      : "正解でも迷った問題は弱点に残す。";
+      ? "翌日再テスト成功。4肢の○×理由まで説明できれば弱点克服を確定。"
+      : "選んだ肢だけでなく、4肢の○×理由を言えるか選ぶ。勘・迷いは弱点へ回す。";
     copy.append(title, lead);
 
     const actions = document.createElement("div");
     actions.className = "confidence-actions";
     [
-      { value: "clear", label: "根拠までOK" },
-      { value: "unsure", label: "迷った" },
-      { value: "cuts", label: "全肢切れない" }
+      { value: "clear", label: "4肢を説明できる" },
+      { value: "unsure", label: "正解したが迷った" },
+      { value: "cuts", label: "切れない肢がある" }
     ].forEach((item) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "confidence-button";
       button.textContent = item.label;
-      button.classList.toggle("is-selected", state.answered?.confidence === item.value);
+      const selected = state.answered?.confidence === item.value;
+      button.classList.toggle("is-selected", selected);
+      button.setAttribute("aria-pressed", String(selected));
       button.addEventListener("click", () => setConfidence(question.id, item.value));
       actions.append(button);
     });
@@ -2975,6 +4437,10 @@
       elements.chapterProgressText.textContent = `${state.mock.position + 1} / 50問`;
       if (elements.studyTitle) elements.studyTitle.textContent = `宅建 ${mockFormShortLabel()}`;
       if (elements.todayLabel) elements.todayLabel.textContent = "本試験配分50問・120分";
+      if (elements.progressDrawerSummary) {
+        elements.progressDrawerSummary.textContent =
+          `模試 ${mockAnsweredCount()} / 50・要復習${weakIds().length}`;
+      }
       return;
     }
     if (elements.attemptLabel) elements.attemptLabel.textContent = "解答";
@@ -2999,6 +4465,10 @@
       elements.todayLabel.textContent = isFirstPassMode()
         ? firstPassRemainingText()
         : `定着${progress.retained}/${progress.total}・復習待ち${progress.due}`;
+    }
+    if (elements.progressDrawerSummary) {
+      elements.progressDrawerSummary.textContent =
+        `解答${attempts}・定着${retainedCount()} / ${CURRICULUM_ORDER.length}・弱点${weakIds().length}`;
     }
   }
 
@@ -3122,44 +4592,20 @@
   }
 
   function isDailyQuestPaused() {
-    return !isFirstPassMode() && !isMockMode() && dailyQuestIsComplete() && state.dailyFinishedDate === todayKey();
-  }
-
-  function renderDailyCompletionPanel() {
-    if (!elements.dailyCompletePanel) return;
-    const visible = isDailyQuestPaused();
-    elements.dailyCompletePanel.hidden = !visible;
-    if (!visible) return;
-    const correct = dailyQuestClearCount();
-    const target = dailyQuestIds().length || DAILY_TARGET;
-    elements.dailyCompleteSummary.textContent =
-      `${target}問接触・${correct}問正解。ここで終了してOK。復習は翌日以降の固定10問へ自動で戻る。`;
-    elements.dailyContinueButton.disabled = !nextFirstPassId();
-    elements.dailyContinueButton.textContent = nextFirstPassId()
-      ? `${studyScopeConfig().shortLabel}を続ける`
-      : "この範囲は全問接触";
+    return !isFirstPassMode() &&
+      !isMockMode() &&
+      dailyQuestIsComplete() &&
+      state.dailyFinishedDate === todayKey();
   }
 
   function finishDailyQuest() {
     if (!dailyQuestIsComplete() || isFirstPassMode()) return false;
     state.dailyFinishedDate = todayKey();
     saveState();
-    renderDailyCompletionPanel();
+    renderPassPlan();
     renderAnswerDock(currentQuestion());
-    elements.dailyCompletePanel?.scrollIntoView({ block: "center", behavior: "smooth" });
+    elements.todayCommandPanel?.scrollIntoView({ block: "start", behavior: "smooth" });
     return true;
-  }
-
-  function continueAfterDailyQuest() {
-    const targetId = nextFirstPassId();
-    if (!targetId) {
-      showFinished();
-      return;
-    }
-    state.dailyFinishedDate = "";
-    state.runMode = RUN_MODE_FIRST_PASS;
-    setFirstPassUrl(true);
-    goToQuestion(targetId);
   }
 
   function questClaimsForToday() {
@@ -3306,6 +4752,10 @@
     if (elements.studyScopeSelect) {
       elements.studyScopeSelect.value = state.studyScope;
       elements.studyScopeSelect.disabled = isMockMode();
+    }
+    if (elements.themeDrawerSummary) {
+      elements.themeDrawerSummary.textContent =
+        `${studyScopeConfig().shortLabel}・${question.chapter?.topicLabel || question.chapter?.label || "現在のテーマ"}`;
     }
   }
 
@@ -3682,12 +5132,17 @@
     }
     state.sprint.completed = (Number(state.sprint.completed) || 0) + 1;
     state.sprint.endsAt = null;
+    const mission = missionForDate();
+    setMissionForDate(todayKey(), {
+      minutes: Math.min(600, mission.minutes + SPRINT_MINUTES)
+    });
     saveState();
     logStudyEvent("sprint-complete", {
       completed: state.sprint.completed,
       daily: state.daily
     });
     renderSprint();
+    renderPassPlan();
   }
 
   function tickMockTimer() {
@@ -3962,6 +5417,7 @@
       correctDayKeys: isCorrect
         ? [...new Set([...normalizedCorrectDayKeys(previous), todayKey()])].sort().slice(-8)
         : normalizedCorrectDayKeys(previous),
+      clearDayKeys: normalizedComprehensionDayKeys(previous),
       lastCutCheckAt: cutCheck ? state.answered.at : previous.lastCutCheckAt,
       lastCutCheckAllCorrect: cutCheck ? cutCheck.allCorrect : previous.lastCutCheckAllCorrect
     };
@@ -4093,11 +5549,17 @@
     const stats = state.questionStats[id] || { attempts: 0, correct: 0, wrong: 0 };
     const wasMarked = Boolean(state.marked[id]);
     const shouldMark = value === "unsure" || value === "cuts";
+    const recordedAt = new Date().toISOString();
+    const clearDayKeys = normalizedComprehensionDayKeys(stats)
+      .filter((day) => day !== todayKey());
+    if (value === "clear") clearDayKeys.push(todayKey());
     state.answered.confidence = value;
     state.questionStats[id] = {
       ...stats,
       lastConfidence: value,
-      lastConfidenceAt: new Date().toISOString()
+      lastConfidenceAt: recordedAt,
+      lastClearAt: value === "clear" ? recordedAt : stats.lastClearAt,
+      clearDayKeys: [...new Set(clearDayKeys)].sort().slice(-8)
     };
     state.daily = normalizeDailyState(state.daily);
     if (shouldMark) {
@@ -4154,7 +5616,7 @@
       }, 360);
       return;
     }
-    if (state.answered.weakBreakCandidate && !state.answered.confidence) {
+    if (needsConfidenceCheck()) {
       showConfidenceCheck();
       return;
     }
@@ -4315,6 +5777,10 @@
         correctDayKeys: result.correct
           ? [...new Set([...normalizedCorrectDayKeys(previous), todayKey()])].sort().slice(-8)
           : normalizedCorrectDayKeys(previous),
+        clearDayKeys: result.correct
+          ? [...new Set([...normalizedComprehensionDayKeys(previous), todayKey()])].sort().slice(-8)
+          : normalizedComprehensionDayKeys(previous),
+        lastClearAt: result.correct ? finishedAt : previous.lastClearAt,
         lastRunMode: RUN_MODE_MOCK,
         lastMockFormId: form.id
       };
@@ -4374,8 +5840,8 @@
     state.finished = true;
     renderStats();
     renderQuestPanel();
-    renderDailyCompletionPanel();
     renderSprint();
+    renderPassPlan();
     if (elements.answerDock) {
       elements.answerDock.hidden = true;
       document.body.classList.remove("has-answer-dock");
@@ -4602,7 +6068,32 @@
     elements.resetButton.addEventListener("click", resetAll);
     elements.markButton.addEventListener("click", toggleMarked);
     elements.dailyQuestButton?.addEventListener("click", leaveMockForDailyQuest);
-    elements.dailyContinueButton?.addEventListener("click", continueAfterDailyQuest);
+    elements.todayCommandStartButton?.addEventListener("click", () => {
+      leaveMockForDailyQuest();
+      window.requestAnimationFrame(() =>
+        elements.quizCard?.scrollIntoView({ block: "start", behavior: "smooth" })
+      );
+    });
+    elements.officialDrillOpenButton?.addEventListener("click", openOfficialDrill);
+    elements.officialDrillStartButton?.addEventListener("click", startOfficialDrill);
+    elements.officialDrillQuestionLink?.addEventListener("click", () => {
+      if (!missionForDate().officialDrill?.startedAt) startOfficialDrill();
+    });
+    elements.officialDrillForm?.addEventListener("change", saveOfficialDrillDraft);
+    elements.officialDrillForm?.addEventListener("submit", submitOfficialDrill);
+    elements.todayCommandReviewButton?.addEventListener("click", saveMissionReview);
+    elements.todayReviewInput?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        saveMissionReview();
+      }
+    });
+    elements.todayReviewTargets?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        saveMissionReview();
+      }
+    });
     elements.passQuestButton?.addEventListener("click", startFirstPass);
     elements.mockAButton?.addEventListener("click", () => startMock("form-a"));
     elements.mockBButton?.addEventListener("click", () => startMock("form-b"));
@@ -4612,7 +6103,16 @@
     elements.armoryButton?.addEventListener("click", forgeNextArmoryRank);
     elements.saveExportButton?.addEventListener("click", downloadSaveBackup);
     elements.saveShareButton?.addEventListener("click", shareSaveTransfer);
+    elements.saveRestorePreviousButton?.addEventListener("click", restorePreviousSave);
     elements.saveImportInput?.addEventListener("change", importSaveFile);
+    elements.missionMinutesButton?.addEventListener("click", saveMissionMinutes);
+    elements.missionMinutesInput?.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        saveMissionMinutes();
+      }
+    });
+    elements.officialExamForm?.addEventListener("submit", recordOfficialExam);
     elements.chapterSelect?.addEventListener("change", (event) => {
       selectChapter(Number(event.target.value));
     });
@@ -4620,6 +6120,9 @@
       setStudyScope(String(event.target.value));
     });
     elements.weakButton?.addEventListener("click", jumpToWeakPoint);
+    elements.progressDrawerLink?.addEventListener("click", () => {
+      if (elements.progressDrawer) elements.progressDrawer.open = true;
+    });
     window.addEventListener("keydown", (event) => {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
       if (!state.answered && ["1", "2", "3", "4"].includes(event.key)) {
@@ -4653,6 +6156,7 @@
   window.setInterval(() => {
     tickSprint();
     tickMockTimer();
+    renderOfficialDrillTimer();
     checkDayRollover();
   }, 1000);
   const hasMockResult = isMockMode() && state.mock.finalized;

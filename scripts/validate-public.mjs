@@ -10,6 +10,7 @@ const required = [
   "index.html",
   "styles.css",
   "app.js",
+  "save-store.js",
   "save-transfer.js",
   "reward-system.js",
   "question-bank.js",
@@ -21,6 +22,9 @@ const required = [
   "exam-questions-tax-other.js",
   "exam-questions-business.js",
   "Audit-TakkenQuestionQuality.js",
+  "Audit-TakkenOfficialDrill.js",
+  "Audit-TakkenSaveStore.js",
+  "Audit-TakkenPassPlanUi.cjs",
   "scripts/verify-deployed-page.mjs",
   "README.md",
 ];
@@ -43,11 +47,25 @@ assert.match(app, /function isRetained/);
 assert.match(app, /function legacyProgress/);
 assert.match(app, /以前の100問（解答履歴を保持）/);
 assert.match(app, /問題・履歴を保持　解答済/);
-assert.match(app, /normalizedCorrectDayKeys\(stats\)\.length < 2/);
+assert.match(app, /normalizedComprehensionDayKeys\(stats\)\.length < 2/);
 assert.match(app, /const maxReview = newPool\.length >= 6 \? 4 : DAILY_TARGET/);
 assert.match(app, /const CURRICULUM_ORDER/);
 assert.match(app, /const RUN_MODE_MOCK = "mock"/);
 assert.match(app, /function showMockFinished/);
+assert.match(app, /function renderPassPlan/);
+assert.match(app, /function renderTodayCommand/);
+assert.match(app, /const OFFICIAL_DAILY_DRILL_DEFINITIONS/);
+assert.match(app, /2025-balanced-c-v1/);
+assert.match(app, /const OFFICIAL_DRILL_EVIDENCE_VERSION = 2/);
+assert.match(app, /data-confidence-question/);
+assert.match(app, /function officialPracticeStats/);
+assert.match(app, /function restorePreviousSave/);
+assert.match(app, /function submitOfficialDrill/);
+assert.match(app, /function normalizeOfficialDrill/);
+assert.match(app, /function saveMissionReview/);
+assert.match(app, /function recordOfficialExam/);
+assert.match(app, /function normalizeOfficialExamHistory/);
+assert.match(app, /const DAILY_STUDY_MINUTES = 90/);
 assert.match(app, /正誤・正解肢・解説は50問終了後/);
 assert.doesNotMatch(
   app.match(/function publicTodayQuest\(\) \{[\s\S]*?\n  \}/)?.[0] || "",
@@ -58,18 +76,39 @@ assert.match(app, /consumeSaveTransferHash/);
 assert.match(app, /shareSaveTransfer/);
 assert.match(index, /id="saveExportButton"/);
 assert.match(index, /id="saveShareButton"/);
+assert.match(index, /id="saveRestorePreviousButton"/);
+assert.match(index, /id="saveProtectionStatus"/);
 assert.match(index, /id="saveImportInput"/);
 assert.match(index, /スマホへ渡す/);
 assert.match(index, /id="mockAButton"/);
 assert.match(index, /id="mockBButton"/);
 assert.match(index, /id="studyScopeSelect"/);
+assert.match(index, /id="passPlanPanel"/);
+assert.match(index, /id="todayCommandPanel"/);
+assert.match(index, /id="todayReviewInput"/);
+assert.match(index, /id="themeDrawer"/);
+assert.match(index, /id="progressDrawer"/);
+assert.match(index, /id="dailyMissionStatus"/);
+assert.match(index, /id="officialExamForm"/);
+assert.match(index, /id="officialExamHistory"/);
+assert.match(index, /RETIO公式過去問を開く/);
+assert.match(index, /id="officialDrillOpenButton"/);
+assert.match(index, /id="officialDrillQuestionLink"/);
+assert.match(index, /id="officialDrillAnswerGrid"/);
+assert.match(index, /id="officialPracticeCoverageStatus"/);
+assert.match(index, /公式20問シートを開く/);
 assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 法令・税その他へ進む/);
 assert.match(index, /③ 全分野を混ぜる/);
-assert.match(index, /styles\.css\?v=20260726-legacy-history-v6/);
-assert.match(index, /app\.js\?v=20260726-legacy-history-v6/);
+assert.match(index, /styles\.css\?v=20260730-pass-loop-v11/);
+assert.match(index, /app\.js\?v=20260730-pass-loop-v11/);
+assert.match(index, /save-store\.js\?v=20260730-pass-loop-v11/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
+assert.match(app, /理解チェック（必須）/);
+assert.match(app, /normalizedComprehensionDayKeys/);
+assert.match(app, /誤答・根拠なし.*1行化/);
+assert.match(app, /reviewNote/);
 
 const localReferencePattern = /\b(?:href|src)="([^"]+)"/g;
 for (const [, reference] of index.matchAll(localReferencePattern)) {
@@ -88,10 +127,13 @@ assert.match(readme, /localStorage/);
 assert.match(readme, /URLフラグメント/);
 assert.match(readme, /スマホへ渡す/);
 assert.match(pagesWorkflow, /node Audit-TakkenSaveTransfer\.js/);
+assert.match(pagesWorkflow, /node Audit-TakkenSaveStore\.js/);
+assert.match(pagesWorkflow, /node Audit-TakkenOfficialDrill\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenFullExam\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenQuestionQuality\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
-assert.match(pagesWorkflow, /20260726-legacy-history-v6/);
+assert.match(pagesWorkflow, /20260730-pass-loop-v11/);
+assert.match(pagesWorkflow, /cp [^\n]*save-store\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*save-transfer\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*exam-blueprint\.js[^\n]*_site\//);
 

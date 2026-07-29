@@ -17,6 +17,17 @@ async function capture(page, filename) {
   });
 }
 
+async function chooseDrillConfidence(page, storageId, number, confidence) {
+  await page.locator(
+    `[data-confidence-question="${number}"][value="${confidence}"] + span`
+  ).click();
+  await page.waitForFunction(({ id, number: questionNumber, confidence: value }) => {
+    const saved = JSON.parse(localStorage.getItem(id) || "{}");
+    const date = new Date().toLocaleDateString("sv-SE");
+    return saved.missionLog?.[date]?.officialDrill?.confidence?.[questionNumber] === value;
+  }, { id: storageId, number, confidence });
+}
+
 async function main() {
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   try {
@@ -60,7 +71,12 @@ async function main() {
         scopeValue: document.querySelector("#studyScopeSelect")?.value || "",
         mockDisabled: Boolean(document.querySelector("#mockAButton")?.disabled),
         mockTitle: document.querySelector("#mockAButton")?.title || "",
-        roundLabel: document.querySelector("#roundLabel")?.textContent?.trim() || ""
+        roundLabel: document.querySelector("#roundLabel")?.textContent?.trim() || "",
+        commandTitle: document.querySelector("#todayCommandTitle")?.textContent?.trim() || "",
+        commandStep: document.querySelector("#todayCommandKicker")?.textContent?.trim() || "",
+        passPlanOpen: Boolean(document.querySelector("#passPlanPanel")?.open),
+        themeOpen: Boolean(document.querySelector("#themeDrawer")?.open),
+        progressOpen: Boolean(document.querySelector("#progressDrawer")?.open)
       };
     });
     if (blueprintAudit.total !== 100 || blueprintAudit.missing.length) {
@@ -75,7 +91,12 @@ async function main() {
       blueprintAudit.scopeValue !== "business" ||
       !blueprintAudit.mockDisabled ||
       !blueprintAudit.mockTitle.includes("全100問接触後") ||
-      blueprintAudit.roundLabel !== "今日 1 / 10"
+      blueprintAudit.roundLabel !== "今日 1 / 10" ||
+      blueprintAudit.commandTitle !== "固定10問を解く" ||
+      blueprintAudit.commandStep !== "今やる・STEP 1 / 4" ||
+      blueprintAudit.passPlanOpen ||
+      blueprintAudit.themeOpen ||
+      blueprintAudit.progressOpen
     ) {
       throw new Error(`Coverage coach missing: ${blueprintAudit.coachTitle}`);
     }
@@ -117,7 +138,19 @@ async function main() {
     await capture(page, "business-scope-desktop.png");
     await page.setViewportSize({ width: 390, height: 844 });
     await capture(page, "business-scope-mobile.png");
+    const mobileStructure = await page.evaluate(() => {
+      const quiz = document.querySelector("#quizCard")?.getBoundingClientRect();
+      const battle = document.querySelector(".battle-card")?.getBoundingClientRect();
+      return {
+        quizBeforeBattle: Boolean(quiz && battle && quiz.top < battle.top),
+        overflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
+      };
+    });
+    if (!mobileStructure.quizBeforeBattle || mobileStructure.overflow) {
+      throw new Error(`Mobile command-first structure mismatch: ${JSON.stringify(mobileStructure)}`);
+    }
     await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.locator("#themeDrawer > summary").click();
     await page.locator("#studyScopeSelect").selectOption("law-other");
     await page.waitForFunction(() =>
       (document.querySelector("#dailyQuestSource")?.textContent || "").includes("法令・税その他")
@@ -143,6 +176,7 @@ async function main() {
     await page.waitForFunction(() =>
       (document.querySelector("#dailyQuestSource")?.textContent || "").includes("宅建業法")
     );
+    await page.locator("#themeDrawer > summary").click();
 
     const visitedIds = [];
     const visitedSections = [];
@@ -173,7 +207,34 @@ async function main() {
         throw new Error(`Official source link invalid: ${JSON.stringify(sourceLink)}`);
       }
       visitedSourceHosts.push(sourceLink.host);
-      await page.locator(".confidence-button").filter({ hasText: "根拠までOK" }).click();
+      const confidenceGate = await page.evaluate(() => ({
+        title: document.querySelector(".confidence-check strong")?.textContent?.trim() || "",
+        lead: document.querySelector(".confidence-check p")?.textContent?.trim() || "",
+        next: document.querySelector("#dockNextLabel")?.textContent?.trim() || ""
+      }));
+      if (
+        confidenceGate.title !== "理解チェック（必須）" ||
+        !confidenceGate.lead.includes("4肢の○×理由") ||
+        confidenceGate.next !== "理解を選ぶ"
+      ) {
+        throw new Error(`Comprehension gate missing: ${JSON.stringify(confidenceGate)}`);
+      }
+      if (index === 0) {
+        await page.locator("#dockNextButton").click();
+        await page.waitForTimeout(80);
+        await capture(page, "comprehension-gate-desktop.png");
+        const blockedId = await page.evaluate(() => {
+          const text = document.querySelector("#questionText")?.textContent || "";
+          return Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
+            .find((candidate) => candidate.text === text)?.id || "";
+        });
+        if (blockedId !== question.id) {
+          throw new Error(`Unassessed correct answer advanced: ${question.id} -> ${blockedId}`);
+        }
+      }
+      await page.locator(".confidence-button")
+        .filter({ hasText: index === 0 ? "正解したが迷った" : "4肢を説明できる" })
+        .click();
       if (index < 9) {
         await page.locator("#dockNextButton").click();
         await page.waitForFunction(
@@ -205,33 +266,225 @@ async function main() {
       throw new Error(`Daily source host invalid: ${visitedSourceHosts.join(",")}`);
     }
 
-    const stopLabel = ((await page.locator("#dockNextLabel").textContent()) || "").trim();
-    if (stopLabel !== "今日の10問を終了") {
-      throw new Error(`Unexpected completion label: ${stopLabel}`);
+    const stopState = await page.evaluate(() => ({
+      label: document.querySelector("#dockNextLabel")?.textContent?.trim() || "",
+      target: document.querySelector("#dockTargetText")?.textContent?.trim() || ""
+    }));
+    if (
+      stopState.label !== "今日の10問を終了" ||
+      !stopState.target.includes("次はRETIO公式20問")
+    ) {
+      throw new Error(`Unexpected completion handoff: ${JSON.stringify(stopState)}`);
     }
     await page.locator("#dockNextButton").click();
-    await page.locator("#dailyCompletePanel").waitFor({ state: "visible" });
-    const sameDayRetention = await page.evaluate(() => ({
-      progress: document.querySelector("#chapterProgressText")?.textContent || "",
-      coach: document.querySelector("#coachTitle")?.textContent || ""
-    }));
-    if (!sameDayRetention.progress.includes("定着0/100")) {
-      throw new Error(`One-day answers counted as retained: ${JSON.stringify(sameDayRetention)}`);
+    await page.waitForFunction(() =>
+      (document.querySelector("#todayCommandTitle")?.textContent || "").includes("公式20問")
+    );
+    const sameDayRetention = await page.evaluate(({ storageId, visitedIds }) => {
+      const saved = JSON.parse(localStorage.getItem(storageId) || "{}");
+      const officialLink = document.querySelector("#officialDrillQuestionLink");
+      return {
+        progress: document.querySelector("#chapterProgressText")?.textContent || "",
+        coach: document.querySelector("#coachTitle")?.textContent || "",
+        commandTitle: document.querySelector("#todayCommandTitle")?.textContent?.trim() || "",
+        commandStep: document.querySelector("#todayCommandKicker")?.textContent?.trim() || "",
+        mission: document.querySelector("#dailyMissionStatus")?.textContent?.trim() || "",
+        officialHref: officialLink?.href || "",
+        officialTarget: officialLink?.target || "",
+        officialRel: officialLink?.rel || "",
+        confidence: visitedIds.map((id) => ({
+          id,
+          lastConfidence: saved.questionStats?.[id]?.lastConfidence || "",
+          clearDays: saved.questionStats?.[id]?.clearDayKeys || [],
+          marked: Boolean(saved.marked?.[id])
+        }))
+      };
+    }, { storageId, visitedIds });
+    if (
+      !sameDayRetention.progress.includes("定着0/100") ||
+      !sameDayRetention.commandTitle.includes("公式20問") ||
+      !sameDayRetention.commandTitle.includes("35分") ||
+      sameDayRetention.commandStep !== "今やる・STEP 2 / 4" ||
+      sameDayRetention.mission !== "1 / 4" ||
+      !sameDayRetention.officialHref.startsWith("https://goukaku.retio.or.jp/") ||
+      sameDayRetention.officialTarget !== "_blank" ||
+      !sameDayRetention.officialRel.includes("noopener") ||
+      sameDayRetention.confidence[0]?.lastConfidence !== "unsure" ||
+      sameDayRetention.confidence[0]?.clearDays.length !== 0 ||
+      !sameDayRetention.confidence[0]?.marked ||
+      sameDayRetention.confidence.slice(1).some(
+        (item) => item.lastConfidence !== "clear" || item.clearDays.length !== 1
+      )
+    ) {
+      throw new Error(`Daily completion route mismatch: ${JSON.stringify(sameDayRetention)}`);
     }
+    await capture(page, "command-step2-desktop.png");
+
+    await page.locator("#officialDrillOpenButton").click();
+    await page.locator("#officialDrillStartButton").click();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(100);
+    await capture(page, "official-drill-mobile.png");
+    const officialDrillMobileOverflow = await page.evaluate(() =>
+      Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
+    );
+    if (officialDrillMobileOverflow) {
+      throw new Error(`Official drill mobile overflow: ${officialDrillMobileOverflow}`);
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    const officialAnswerKey = {
+      1: 3, 2: 3, 3: 3, 4: 4, 5: 4, 6: 1, 7: 1, 8: 2, 9: 1, 10: 3,
+      11: 3, 12: 3, 13: 3, 14: 1, 15: 4, 16: 4, 17: 2, 18: 2, 19: 2, 20: 4,
+      21: 4, 22: 4, 23: 1, 24: 2, 25: 1, 26: 4, 27: 1, 28: 2, 29: 2, 30: 3,
+      31: 4, 32: 2, 33: 3, 34: 3, 35: 1, 36: 4, 37: 4, 38: 3, 39: 4, 40: 3,
+      41: 1, 42: 2, 43: 4, 44: 2, 45: 4, 46: 2, 47: 3, 48: 2, 49: 1, 50: 1
+    };
+    const drillNumbers = await page.locator(".official-drill-item")
+      .evaluateAll((items) => items.map((item) => Number(item.dataset.questionNumber)));
+    for (const [index, number] of drillNumbers.entries()) {
+      const answer = index === 0
+        ? (officialAnswerKey[number] % 4) + 1
+        : officialAnswerKey[number];
+      await page.locator(`input[name="official-drill-q${number}"][value="${answer}"]`)
+        .check({ force: true });
+    }
+    await page.locator("#officialDrillSubmitButton").click();
+    await page.waitForFunction(() =>
+      (document.querySelector("#officialDrillStatus")?.textContent || "").includes("根拠未判定")
+    );
+    for (const number of drillNumbers) {
+      const confidence = number === drillNumbers[1] ? "uncertain" : "grounded";
+      await chooseDrillConfidence(page, storageId, number, confidence);
+    }
+    await page.locator("#officialDrillSubmitButton").click();
+    await page.waitForFunction(() =>
+      (document.querySelector("#todayCommandTitle")?.textContent || "").includes("誤答・根拠なし2件")
+    );
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.waitForTimeout(100);
+    await capture(page, "official-review-mobile.png");
+    const officialReviewMobileOverflow = await page.evaluate(() =>
+      Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
+    );
+    if (officialReviewMobileOverflow) {
+      throw new Error(`Official review mobile overflow: ${officialReviewMobileOverflow}`);
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.locator(`[data-review-question="${drillNumbers[0]}"]`)
+      .fill("根拠を飛ばした");
+    await page.locator(`[data-review-question="${drillNumbers[1]}"]`)
+      .fill("二択で迷った → 例外条件を声に出して切る");
+    await page.locator("#todayCommandReviewButton").click();
+    await page.waitForFunction(() =>
+      (document.querySelector("#todayCommandStatus")?.textContent || "").includes("原因 → 次回ルール")
+    );
+    await page.locator(`[data-review-question="${drillNumbers[0]}"]`)
+      .fill("根拠を飛ばした → 条文の主体を先に囲む");
+    await page.locator("#todayCommandReviewButton").click();
+    await page.waitForFunction(() =>
+      (document.querySelector("#todayCommandTitle")?.textContent || "").includes("合計90分まで")
+    );
+    await page.locator("#missionMinutesInput").fill("90");
+    await page.locator("#missionMinutesButton").click();
+    await page.waitForFunction(() =>
+      document.querySelector("#todayCommandTitle")?.textContent?.trim() === "90分クエスト完了"
+    );
+    const completedMission = await page.evaluate((id) => {
+      const saved = JSON.parse(localStorage.getItem(id) || "{}");
+      const mission = saved.missionLog?.[new Date().toLocaleDateString("sv-SE")] || {};
+      return {
+        title: document.querySelector("#todayCommandTitle")?.textContent?.trim() || "",
+        step: document.querySelector("#todayCommandKicker")?.textContent?.trim() || "",
+        missionCount: document.querySelector("#dailyMissionStatus")?.textContent?.trim() || "",
+        reviewNote: mission.reviewNote || "",
+        reviewed: Boolean(mission.reviewed),
+        officialQuestions: Boolean(mission.officialQuestions),
+        officialDrill: mission.officialDrill || null,
+        minutes: Number(mission.minutes) || 0
+      };
+    }, storageId);
+    if (
+      completedMission.title !== "90分クエスト完了" ||
+      completedMission.step !== "今日の作戦・4 / 4" ||
+      completedMission.missionCount !== "4 / 4" ||
+      !completedMission.reviewed ||
+      !completedMission.officialQuestions ||
+      completedMission.officialDrill?.score !== 19 ||
+      completedMission.officialDrill?.reviewTargets?.length !== 2 ||
+      completedMission.officialDrill?.evidenceVersion !== 2 ||
+      Object.keys(completedMission.officialDrill?.confidence || {}).length !== 20 ||
+      completedMission.officialDrill?.confidence?.[drillNumbers[1]] !== "uncertain" ||
+      Object.keys(completedMission.officialDrill?.reviewNotes || {}).length !== 2 ||
+      !completedMission.reviewNote.includes(`問${drillNumbers[0]}`) ||
+      completedMission.minutes !== 90
+    ) {
+      throw new Error(`Sequential mission workflow mismatch: ${JSON.stringify(completedMission)}`);
+    }
+    await capture(page, "command-complete-desktop.png");
 
     const desktopOverflow = await page.evaluate(() =>
       Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
     );
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(100);
-    const mobileOverflow = await page.evaluate(() =>
-      Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
-    );
-    if (desktopOverflow || mobileOverflow) {
-      throw new Error(`Horizontal overflow: desktop=${desktopOverflow}, mobile=${mobileOverflow}`);
+    await capture(page, "command-complete-mobile.png");
+    const mobileOverflow = await page.evaluate(() => {
+      const quiz = document.querySelector("#quizCard")?.getBoundingClientRect();
+      const battle = document.querySelector(".battle-card")?.getBoundingClientRect();
+      return {
+        overflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth),
+        quizBeforeBattle: Boolean(quiz && battle && quiz.top < battle.top)
+      };
+    });
+    if (desktopOverflow || mobileOverflow.overflow || !mobileOverflow.quizBeforeBattle) {
+      throw new Error(`Responsive structure mismatch: desktop=${desktopOverflow}, mobile=${JSON.stringify(mobileOverflow)}`);
     }
 
     await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.evaluate((id) => {
+      const saved = JSON.parse(localStorage.getItem(id) || "{}");
+      delete saved.missionLog?.[new Date().toLocaleDateString("sv-SE")];
+      localStorage.setItem(id, JSON.stringify(saved));
+    }, storageId);
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() =>
+      (document.querySelector("#todayCommandKicker")?.textContent || "").includes("STEP 2")
+    );
+    await page.locator("#officialDrillOpenButton").click();
+    await page.locator("#officialDrillStartButton").click();
+    const perfectNumbers = await page.locator(".official-drill-item")
+      .evaluateAll((items) => items.map((item) => Number(item.dataset.questionNumber)));
+    for (const number of perfectNumbers) {
+      await page.locator(
+        `input[name="official-drill-q${number}"][value="${officialAnswerKey[number]}"]`
+      ).check({ force: true });
+      await chooseDrillConfidence(page, storageId, number, "grounded");
+    }
+    await page.locator("#officialDrillSubmitButton").click();
+    await page.waitForFunction(() =>
+      (document.querySelector("#todayCommandKicker")?.textContent || "").includes("STEP 4")
+    );
+    const zeroReviewAudit = await page.evaluate((id) => {
+      const saved = JSON.parse(localStorage.getItem(id) || "{}");
+      const mission = saved.missionLog?.[new Date().toLocaleDateString("sv-SE")] || {};
+      return {
+        reviewed: Boolean(mission.reviewed),
+        reviewTargets: mission.officialDrill?.reviewTargets || [],
+        missionCount: document.querySelector("#dailyMissionStatus")?.textContent?.trim() || "",
+        reviewStatus: document.querySelector("#missionReviewStatus")?.textContent?.trim() || "",
+        command: document.querySelector("#todayCommandTitle")?.textContent?.trim() || ""
+      };
+    }, storageId);
+    if (
+      !zeroReviewAudit.reviewed ||
+      zeroReviewAudit.reviewTargets.length !== 0 ||
+      zeroReviewAudit.missionCount !== "3 / 4" ||
+      zeroReviewAudit.reviewStatus !== "対象0件" ||
+      !zeroReviewAudit.command.includes("合計90分まで")
+    ) {
+      throw new Error(`Zero-review transition mismatch: ${JSON.stringify(zeroReviewAudit)}`);
+    }
+
     await page.evaluate((id) => {
       const saved = JSON.parse(localStorage.getItem(id) || "{}");
       const now = new Date().toISOString();
@@ -541,6 +794,7 @@ async function main() {
         coachText: document.querySelector("#coachText")?.textContent || "",
         questLabel: document.querySelector("#questLabel")?.textContent || "",
         passLabel: document.querySelector("#passQuestButton")?.textContent || "",
+        retentionStatus: document.querySelector("#coreRetentionStatus")?.textContent || "",
         overflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
       };
     }, masteryStorageId);
@@ -565,6 +819,7 @@ async function main() {
       !masteryAudit.coachText.includes("全100問接触後") ||
       masteryAudit.questLabel.trim() !== "全分野・定着" ||
       masteryAudit.passLabel.trim() !== "範囲接触済み" ||
+      !masteryAudit.retentionStatus.includes("定着 96 / 100") ||
       masteryAudit.overflow
     ) {
       throw new Error(`Mastery quest mismatch: ${JSON.stringify(masteryAudit)}`);
@@ -679,6 +934,7 @@ async function main() {
       timeout: 15000
     });
     await migrationPage.waitForSelector("#questionText");
+    await migrationPage.locator("#progressDrawer > summary").click();
     await migrationPage.locator(".chapter-optional > summary").click();
     await migrationPage.setViewportSize({ width: 390, height: 844 });
     await capture(migrationPage, "legacy-history-mobile.png");
@@ -762,6 +1018,7 @@ async function main() {
       waitUntil: "domcontentloaded",
       timeout: 15000
     });
+    await handoffPage.locator(".public-mode-note > summary").click();
     await handoffPage.locator("#saveShareButton").click();
     await handoffPage.waitForFunction(() => Boolean(window.__takkenSharedPayload?.url));
     const sharedPayload = await handoffPage.evaluate(() => window.__takkenSharedPayload);
@@ -871,6 +1128,7 @@ async function main() {
       reviewMixAudit,
       migration,
       handoff,
+      zeroReviewAudit,
       desktopOverflow,
       mobileOverflow,
       mockMobileOverflow,

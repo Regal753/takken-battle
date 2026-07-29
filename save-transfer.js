@@ -3,6 +3,8 @@
 (() => {
   const SAVE_FORMAT = "takken-battle-save-v1";
   const PROGRESS_FORMAT = "takken-battle-progress-v1";
+  const SAVE_PACKAGE_VERSION = 2;
+  const INTEGRITY_ALGORITHM = "fnv1a32";
   const MAX_PACKAGE_CHARS = 750_000;
   const MAX_TRANSFER_URL_CHARS = 180_000;
   const MAX_PACKAGE_BYTES = MAX_PACKAGE_CHARS * 4;
@@ -22,6 +24,35 @@
 
   function safeClone(value) {
     return JSON.parse(JSON.stringify(value));
+  }
+
+  function integrityValue(value) {
+    const bytes = new TextEncoder().encode(JSON.stringify(value));
+    let hash = 0x811c9dc5;
+    for (const byte of bytes) {
+      hash ^= byte;
+      hash = Math.imul(hash, 0x01000193) >>> 0;
+    }
+    return hash.toString(16).padStart(8, "0");
+  }
+
+  function verifyIntegrity(input, state, version) {
+    if (version < SAVE_PACKAGE_VERSION && !plainObject(input.integrity)) return null;
+    if (
+      !plainObject(input.integrity) ||
+      input.integrity.algorithm !== INTEGRITY_ALGORITHM ||
+      !/^[a-f0-9]{8}$/.test(String(input.integrity.value || ""))
+    ) {
+      throw new Error("セーブの整合性コードがありません。");
+    }
+    const expected = integrityValue(state);
+    if (input.integrity.value !== expected) {
+      throw new Error("セーブの整合性確認に失敗しました。元のバックアップを使ってください。");
+    }
+    return {
+      algorithm: INTEGRITY_ALGORITHM,
+      value: expected
+    };
   }
 
   function sanitizeQuestClaims(input) {
@@ -137,11 +168,15 @@
 
     if (input.format === SAVE_FORMAT) {
       if (!plainObject(input.state)) throw new Error("端末セーブ本体がありません。");
+      const version = Math.max(1, integer(input.version, 100));
+      const state = safeClone(input.state);
+      const integrity = verifyIntegrity(input, state, version);
       return {
         format: SAVE_FORMAT,
-        version: 1,
+        version,
         exportedAt: text(input.exportedAt, 64),
-        state: safeClone(input.state)
+        ...(integrity ? { integrity } : {}),
+        state
       };
     }
 
@@ -160,11 +195,16 @@
 
   function createSavePackage(state) {
     if (!plainObject(state)) throw new Error("保存する状態がありません。");
+    const clonedState = safeClone(state);
     return {
       format: SAVE_FORMAT,
-      version: 1,
+      version: SAVE_PACKAGE_VERSION,
       exportedAt: new Date().toISOString(),
-      state: safeClone(state)
+      integrity: {
+        algorithm: INTEGRITY_ALGORITHM,
+        value: integrityValue(clonedState)
+      },
+      state: clonedState
     };
   }
 
@@ -353,11 +393,12 @@
     if (!plainObject(input) || input.format !== SAVE_FORMAT) {
       throw new Error("本人用引継ぎリンクには端末セーブ形式が必要です。");
     }
+    const verified = validatePackage(input);
     const url = new URL(String(baseUrl || ""));
     if (!["https:", "http:"].includes(url.protocol)) {
       throw new Error("引継ぎリンクの公開URLが正しくありません。");
     }
-    url.hash = new URLSearchParams({ save: encodePackage(input) }).toString();
+    url.hash = new URLSearchParams({ save: encodePackage(verified) }).toString();
     const output = url.toString();
     if (output.length > MAX_TRANSFER_URL_CHARS) {
       throw new Error("セーブが大きいためリンク化できません。JSONバックアップを使ってください。");
@@ -369,8 +410,9 @@
     if (!plainObject(input) || input.format !== SAVE_FORMAT) {
       throw new Error("本人用引継ぎリンクには端末セーブ形式が必要です。");
     }
-    const token = await encodeCompressedPackage(input);
-    if (!token) return createTransferUrl(input, baseUrl);
+    const verified = validatePackage(input);
+    const token = await encodeCompressedPackage(verified);
+    if (!token) return createTransferUrl(verified, baseUrl);
     const url = new URL(String(baseUrl || ""));
     if (!["https:", "http:"].includes(url.protocol)) {
       throw new Error("引継ぎリンクの公開URLが正しくありません。");
@@ -384,7 +426,9 @@
   }
 
   const api = {
+    INTEGRITY_ALGORITHM,
     SAVE_FORMAT,
+    SAVE_PACKAGE_VERSION,
     PROGRESS_FORMAT,
     createCompressedTransferUrl,
     createSavePackage,
