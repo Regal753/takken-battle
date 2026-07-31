@@ -94,7 +94,7 @@ async function main() {
       timeout: 15000
     });
     await page.waitForFunction(() =>
-      (document.querySelector("#saveProtectionStatus")?.textContent || "").includes("v3")
+      (document.querySelector("#saveProtectionStatus")?.textContent || "").includes("v4")
     );
 
     const readback = await page.evaluate((id) => {
@@ -102,14 +102,14 @@ async function main() {
       return {
         state,
         previousRaw: localStorage.getItem(`${id}-previous`) || "",
-        upgradeRaw: localStorage.getItem(`${id}-before-upgrade-v0-to-v3`) || "",
+        upgradeRaw: localStorage.getItem(`${id}-before-upgrade-v0-to-v4`) || "",
         protection: document.querySelector("#saveProtectionStatus")?.textContent || "",
         notice: document.querySelector("#saveTransferStatus")?.textContent || "",
         overflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
       };
     }, storageId);
     assert.deepEqual(semanticSnapshot(readback.state), expected);
-    assert.equal(readback.state.stateSchemaVersion, 3);
+    assert.equal(readback.state.stateSchemaVersion, 4);
     assert.deepEqual(semanticSnapshot(JSON.parse(readback.previousRaw)), expected);
     assert.equal(readback.upgradeRaw, sourceRaw);
     assert.match(readback.notice, /更新前のセーブを自動退避/);

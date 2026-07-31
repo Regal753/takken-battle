@@ -11,7 +11,8 @@
   const STORAGE_ID = `takken-battle-study-clean-v2-hard${REVIEW_MODE ? `-review-${REVIEW_NAMESPACE || "default"}` : ""}`;
   const EVENT_OUTBOX_ID = `${STORAGE_ID}-event-outbox`;
   const SAVE_STORE = window.TAKKEN_SAVE_STORE;
-  const STATE_SCHEMA_VERSION = 3;
+  const OFFICIAL_EXAM_DATA = window.TAKKEN_OFFICIAL_EXAMS;
+  const STATE_SCHEMA_VERSION = 4;
   const DAILY_TARGET = 10;
   const SPRINT_MINUTES = 25;
   const TODAY_QUEST_PARAM = URL_PARAMS.has("today") || URL_PARAMS.has("quest");
@@ -25,15 +26,28 @@
   const FIRST_PASS_DEADLINE_LABEL = "10/18";
   const JULY_GATE_DEADLINE = "2026-07-31";
   const DAILY_STUDY_MINUTES = 90;
-  const OFFICIAL_DRILL_EVIDENCE_VERSION = 2;
+  const OFFICIAL_DRILL_EVIDENCE_VERSION = 3;
+  const OFFICIAL_INITIAL_TARGET = 10;
+  const OFFICIAL_RETEST_TARGET = 3;
+  const OFFICIAL_RETEST_WAIT_DAYS = 14;
+  const CURRENT_LAW_BASELINE = "2026-04-01";
   let saveStoreSession = {
     source: "empty",
     notice: "",
     isError: false,
     skipPreviousRotation: false
   };
-  const OFFICIAL_PAST_EXAM_YEARS = new Set(
-    Array.from({ length: 10 }, (_, index) => 2025 - index)
+  let storageEstimatePending = false;
+  let storageEstimateChecked = false;
+  let storageEstimate = null;
+  const OFFICIAL_EXAMS = OFFICIAL_EXAM_DATA?.EXAMS || [];
+  const OFFICIAL_EXAM_BY_ID = OFFICIAL_EXAM_DATA?.EXAM_BY_ID || {};
+  const officialDrillQuestions = (items) => Object.freeze(
+    items.map((item) => Object.freeze({
+      ...item,
+      verifiedAsOf: "2025-04-01",
+      lawStatus: "historical"
+    }))
   );
   const OFFICIAL_DAILY_DRILL_DEFINITIONS = Object.freeze([
     Object.freeze({
@@ -47,7 +61,7 @@
       safeScore: 16,
       questionUrl: "https://goukaku.retio.or.jp/exam/pdf_2025_1_UWbaZCx6hm/2025question.pdf",
       answerSourceUrl: "https://www.retio.or.jp/wp-content/uploads/2025/12/R7_question_answer.pdf",
-      questions: Object.freeze([
+      questions: officialDrillQuestions([
         { number: 1, answer: 3, section: "rights" },
         { number: 2, answer: 3, section: "rights" },
         { number: 3, answer: 3, section: "rights" },
@@ -81,7 +95,7 @@
       safeScore: 16,
       questionUrl: "https://goukaku.retio.or.jp/exam/pdf_2025_1_UWbaZCx6hm/2025question.pdf",
       answerSourceUrl: "https://www.retio.or.jp/wp-content/uploads/2025/12/R7_question_answer.pdf",
-      questions: Object.freeze([
+      questions: officialDrillQuestions([
         { number: 7, answer: 1, section: "rights" },
         { number: 8, answer: 2, section: "rights" },
         { number: 9, answer: 1, section: "rights" },
@@ -115,7 +129,7 @@
       safeScore: 16,
       questionUrl: "https://goukaku.retio.or.jp/exam/pdf_2025_1_UWbaZCx6hm/2025question.pdf",
       answerSourceUrl: "https://www.retio.or.jp/wp-content/uploads/2025/12/R7_question_answer.pdf",
-      questions: Object.freeze([
+      questions: officialDrillQuestions([
         { number: 1, answer: 3, section: "rights" },
         { number: 4, answer: 4, section: "rights" },
         { number: 8, answer: 2, section: "rights" },
@@ -531,6 +545,10 @@
     officialDrillTimer: $("#officialDrillTimer"),
     officialDrillForm: $("#officialDrillForm"),
     officialDrillAnswerGrid: $("#officialDrillAnswerGrid"),
+    officialDrillPrevButton: $("#officialDrillPrevButton"),
+    officialDrillNextButton: $("#officialDrillNextButton"),
+    officialDrillJumpSelect: $("#officialDrillJumpSelect"),
+    officialDrillProgress: $("#officialDrillProgress"),
     officialDrillSubmitButton: $("#officialDrillSubmitButton"),
     officialDrillResult: $("#officialDrillResult"),
     officialDrillStatus: $("#officialDrillStatus"),
@@ -564,7 +582,22 @@
     missionMinutesInput: $("#missionMinutesInput"),
     missionMinutesButton: $("#missionMinutesButton"),
     officialLedgerSummary: $("#officialLedgerSummary"),
-    officialExamForm: $("#officialExamForm"),
+    officialExamAttemptType: $("#officialExamAttemptType"),
+    officialExamId: $("#officialExamId"),
+    officialExamQuestionLink: $("#officialExamQuestionLink"),
+    officialExamStartButton: $("#officialExamStartButton"),
+    officialExamTimer: $("#officialExamTimer"),
+    officialExamSessionForm: $("#officialExamSessionForm"),
+    officialExamQuestionNumber: $("#officialExamQuestionNumber"),
+    officialExamQuestionSection: $("#officialExamQuestionSection"),
+    officialExamAnswerChoices: $("#officialExamAnswerChoices"),
+    officialExamPrevButton: $("#officialExamPrevButton"),
+    officialExamNextButton: $("#officialExamNextButton"),
+    officialExamJumpSelect: $("#officialExamJumpSelect"),
+    officialExamProgress: $("#officialExamProgress"),
+    officialExamLawChecked: $("#officialExamLawChecked"),
+    officialExamSubmitButton: $("#officialExamSubmitButton"),
+    officialExamManualForm: $("#officialExamManualForm"),
     officialExamYear: $("#officialExamYear"),
     officialExamScore: $("#officialExamScore"),
     officialRightsScore: $("#officialRightsScore"),
@@ -637,7 +670,12 @@
     mock: createMockState(),
     mockHistory: [],
     officialExamHistory: [],
+    officialExamSession: null,
     missionLog: {},
+    saveMeta: {
+      lastExportedAt: "",
+      lastExportHash: ""
+    },
     sprint: {
       endsAt: null,
       completed: 0
@@ -821,35 +859,135 @@
     return Math.min(maximum, Math.max(0, Math.trunc(Number(value) || 0)));
   }
 
+  function officialExamDefinition(examId) {
+    return OFFICIAL_EXAM_BY_ID[String(examId || "")] || null;
+  }
+
+  function legacyOfficialExamId(item) {
+    const year = Number(item?.year);
+    if (year === 2020 || year === 2021) return `${year}-legacy`;
+    const examId = String(year || "");
+    return officialExamDefinition(examId) ? examId : "";
+  }
+
+  function normalizeOfficialExamAnswers(examId, input) {
+    const definition = officialExamDefinition(examId);
+    if (!definition) return {};
+    const answers = {};
+    definition.answers.forEach((unused, index) => {
+      const number = index + 1;
+      const selected = Number(input?.[number]);
+      if (Number.isInteger(selected) && selected >= 1 && selected <= 4) {
+        answers[number] = selected;
+      }
+    });
+    return answers;
+  }
+
+  function createOfficialExamSession() {
+    return {
+      examId: "",
+      attemptType: "initial",
+      startedAt: "",
+      answers: {},
+      position: 0,
+      lawChecked: false
+    };
+  }
+
+  function normalizeOfficialExamSession(input) {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return null;
+    const examId = String(input.examId || "");
+    if (!officialExamDefinition(examId)) return null;
+    const attemptType = input.attemptType === "retest" ? "retest" : "initial";
+    const startedAt = Number.isFinite(Date.parse(input.startedAt))
+      ? String(input.startedAt).slice(0, 64)
+      : "";
+    if (!startedAt) return null;
+    return {
+      examId,
+      attemptType,
+      startedAt,
+      answers: normalizeOfficialExamAnswers(examId, input.answers),
+      position: Math.min(49, Math.max(0, Math.trunc(Number(input.position) || 0))),
+      lawChecked: Boolean(input.lawChecked)
+    };
+  }
+
   function normalizeOfficialExamHistory(input) {
     const normalized = (Array.isArray(input) ? input : [])
-      .filter((item) => OFFICIAL_PAST_EXAM_YEARS.has(Number(item?.year)))
       .map((item) => {
-        const rights = boundedInteger(item.rights, 14);
-        const restrictions = boundedInteger(item.restrictions, 8);
-        const business = boundedInteger(item.business, 20);
-        const taxOther = boundedInteger(item.taxOther, 8);
-        const score = boundedInteger(item.score, 50);
+        const suppliedExamId = String(item?.examId || "");
+        const examId = officialExamDefinition(suppliedExamId)
+          ? suppliedExamId
+          : legacyOfficialExamId(item);
+        if (!examId) return null;
+        const definition = officialExamDefinition(examId);
+        const legacySessionAmbiguous = !definition &&
+          (examId === "2020-legacy" || examId === "2021-legacy");
+        const sourceMode = item?.sourceMode === "timed-answer-sheet"
+          ? "timed-answer-sheet"
+          : "self-report";
+        const answers = sourceMode === "timed-answer-sheet"
+          ? normalizeOfficialExamAnswers(examId, item.answers)
+          : {};
+        const scored = definition && Object.keys(answers).length === 50
+          ? OFFICIAL_EXAM_DATA?.scoreAnswers(examId, answers)
+          : null;
+        const rights = scored
+          ? scored.sectionScores.rights
+          : boundedInteger(item.rights, 14);
+        const restrictions = scored
+          ? scored.sectionScores.restrictions
+          : boundedInteger(item.restrictions, 8);
+        const business = scored
+          ? scored.sectionScores.business
+          : boundedInteger(item.business, 20);
+        const taxOther = scored
+          ? scored.sectionScores.taxOther
+          : boundedInteger(item.taxOther, 8);
+        const score = scored ? scored.score : boundedInteger(item.score, 50);
+        const completedAt = Number.isFinite(Date.parse(item.completedAt))
+          ? String(item.completedAt).slice(0, 64)
+          : "";
+        if (!completedAt) return null;
         return {
-          year: Number(item.year),
+          recordId: cleanMissionText(
+            item.recordId ||
+              `${examId}-${item.attemptType === "retest" ? "retest" : "initial"}-${sourceMode}-${completedAt}`,
+            180
+          ),
+          examId,
+          year: definition?.year || Number(item.year),
+          legacySessionAmbiguous,
+          attemptType: item.attemptType === "retest" ? "retest" : "initial",
+          sourceMode,
+          timed120: sourceMode === "timed-answer-sheet" &&
+            Boolean(item.timed120 ?? (Number(item.elapsedMinutes) <= MOCK_DURATION_MINUTES)),
+          lawChecked: sourceMode === "timed-answer-sheet" && Boolean(item.lawChecked),
+          answers,
           score,
           rights,
           restrictions,
           business,
           taxOther,
           elapsedMinutes: Math.max(1, boundedInteger(item.elapsedMinutes, 180)),
-          completedAt: String(item.completedAt || "")
+          completedAt
         };
       })
+      .filter(Boolean)
       .filter((item) =>
         item.score === item.rights + item.restrictions + item.business + item.taxOther
       )
       .sort((left, right) =>
         (Date.parse(left.completedAt) || 0) - (Date.parse(right.completedAt) || 0)
       );
-    const latestByYear = new Map();
-    normalized.forEach((item) => latestByYear.set(item.year, item));
-    return [...latestByYear.values()].slice(-10);
+    const latestByAttempt = new Map();
+    normalized.forEach((item) => {
+      const key = `${item.examId}:${item.attemptType}:${item.sourceMode}`;
+      latestByAttempt.set(key, item);
+    });
+    return [...latestByAttempt.values()].slice(-60);
   }
 
   function cleanMissionText(value, maximum = 120) {
@@ -862,7 +1000,10 @@
   function validReviewRule(value) {
     const note = cleanMissionText(value);
     const parts = note.split(/\s*(?:→|⇒|->)\s*/);
-    return parts.length === 2 && parts.every((part) => part.length >= 2);
+    return parts.length === 2 &&
+      parts[0].length >= 2 &&
+      parts[1].length >= 4 &&
+      /(見る|読む|引く|囲む|書く|比べる|数える|確認する|探す|消す|選ぶ|分ける|戻る|止める|切る|付ける|つける|照合する|唱える|チェックする)/.test(parts[1]);
   }
 
   function normalizeOfficialDrill(input) {
@@ -915,10 +1056,15 @@
         evidenceVersion < OFFICIAL_DRILL_EVIDENCE_VERSION ||
         Object.keys(confidence).length === definition.questions.length
       );
+    const position = Math.min(
+      definition.questions.length - 1,
+      Math.max(0, Math.trunc(Number(input.position) || 0))
+    );
 
     if (!completed) {
       return {
         setId: definition.id,
+        position,
         startedAt,
         submittedAt: "",
         answers,
@@ -930,7 +1076,8 @@
         sectionScores: {},
         elapsedMinutes: 0,
         reviewTargets: [],
-        reviewNotes: {}
+        reviewNotes: {},
+        reviewCauses: {}
       };
     }
 
@@ -965,9 +1112,20 @@
         ])
         .filter(([, note]) => note)
     );
+    const reviewCauses = Object.fromEntries(
+      reviewTargets
+        .map((number) => [
+          number,
+          MISTAKE_CAUSE_IDS.has(input.reviewCauses?.[number])
+            ? input.reviewCauses[number]
+            : ""
+        ])
+        .filter(([, cause]) => cause)
+    );
 
     return {
       setId: definition.id,
+      position,
       startedAt,
       submittedAt,
       answers,
@@ -979,7 +1137,8 @@
       sectionScores,
       elapsedMinutes,
       reviewTargets,
-      reviewNotes
+      reviewNotes,
+      reviewCauses
     };
   }
 
@@ -990,7 +1149,8 @@
       ? officialDrill.reviewTargets.length === 0 ||
         officialDrill.reviewTargets.every((number) =>
           officialDrill.evidenceVersion >= OFFICIAL_DRILL_EVIDENCE_VERSION
-            ? validReviewRule(officialDrill.reviewNotes?.[number])
+            ? MISTAKE_CAUSE_IDS.has(officialDrill.reviewCauses?.[number]) &&
+              validReviewRule(officialDrill.reviewNotes?.[number])
             : cleanMissionText(officialDrill.reviewNotes?.[number]).length >= 4
         )
       : null;
@@ -1054,7 +1214,16 @@
     next.mock = normalizeMockState(input?.mock);
     next.mockHistory = normalizeMockHistory(input?.mockHistory);
     next.officialExamHistory = normalizeOfficialExamHistory(input?.officialExamHistory);
+    next.officialExamSession = normalizeOfficialExamSession(input?.officialExamSession);
     next.missionLog = normalizeMissionLog(input?.missionLog);
+    next.saveMeta = {
+      lastExportedAt: Number.isFinite(Date.parse(input?.saveMeta?.lastExportedAt))
+        ? String(input.saveMeta.lastExportedAt).slice(0, 64)
+        : "",
+      lastExportHash: /^[a-f0-9]{8}$/i.test(String(input?.saveMeta?.lastExportHash || ""))
+        ? String(input.saveMeta.lastExportHash).toLowerCase()
+        : ""
+    };
     const requestedMock = input?.runMode === RUN_MODE_MOCK && mockFormById(next.mock.formId);
     next.runMode = FIRST_PASS_PARAM || next.runMode === RUN_MODE_FIRST_PASS
       ? RUN_MODE_FIRST_PASS
@@ -1242,10 +1411,19 @@
       return false;
     }
 
-    localStorage.setItem(
-      `${STORAGE_ID}-before-import-${Date.now()}`,
-      JSON.stringify(state)
-    );
+    if (SAVE_STORE?.backupCurrent) {
+      SAVE_STORE.backupCurrent(
+        localStorage,
+        STORAGE_ID,
+        SAVE_STORE.BEFORE_IMPORT_SUFFIX,
+        Date.now()
+      );
+    } else {
+      localStorage.setItem(
+        `${STORAGE_ID}-before-import-${Date.now()}`,
+        JSON.stringify(state)
+      );
+    }
     const imported = parsed.format === SAVE_TRANSFER.PROGRESS_FORMAT
       ? {
           ...SAVE_TRANSFER.stateFromProgressPackage(parsed, createState(), ORDER),
@@ -1268,13 +1446,21 @@
       });
       const link = document.createElement("a");
       const day = todayKey().replace(/-/g, "");
-      link.href = URL.createObjectURL(blob);
+      const objectUrl = URL.createObjectURL(blob);
+      link.href = objectUrl;
       link.download = `takken-battle-save-${day}.json`;
       document.body.append(link);
       link.click();
       link.remove();
-      URL.revokeObjectURL(link.href);
-      setSaveTransferStatus("セーブのバックアップを保存しました。");
+      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+      state.saveMeta = {
+        lastExportedAt: new Date().toISOString(),
+        lastExportHash: String(savePackage.integrity?.value || "")
+      };
+      saveState();
+      setSaveTransferStatus(
+        `セーブのバックアップを保存しました（照合 ${state.saveMeta.lastExportHash || "なし"}）。`
+      );
     } catch (error) {
       setSaveTransferStatus(error?.message || "バックアップに失敗しました。", true);
     }
@@ -1756,6 +1942,36 @@
     void loadTodayQuest();
   }
 
+  function backupAgeLabel(value) {
+    const timestamp = Date.parse(value);
+    if (!Number.isFinite(timestamp)) return "JSONバックアップ未作成";
+    const elapsed = Math.max(0, Date.now() - timestamp);
+    const days = Math.floor(elapsed / 86400000);
+    if (days >= 1) return `JSONバックアップ${days}日前`;
+    const hours = Math.floor(elapsed / 3600000);
+    if (hours >= 1) return `JSONバックアップ${hours}時間前`;
+    return "JSONバックアップ1時間以内";
+  }
+
+  async function refreshStorageEstimate() {
+    if (storageEstimatePending || !navigator.storage?.estimate) return;
+    storageEstimatePending = true;
+    try {
+      const estimate = await navigator.storage.estimate();
+      const usage = Math.max(0, Number(estimate?.usage) || 0);
+      const quota = Math.max(0, Number(estimate?.quota) || 0);
+      storageEstimate = quota > 0
+        ? { usage, quota, ratio: usage / quota }
+        : null;
+    } catch {
+      storageEstimate = null;
+    } finally {
+      storageEstimateChecked = true;
+      storageEstimatePending = false;
+      renderSaveProtectionStatus();
+    }
+  }
+
   function renderSaveProtectionStatus() {
     if (!elements.saveProtectionStatus) return;
     const previous = SAVE_STORE?.getPrevious(localStorage, STORAGE_ID);
@@ -1763,9 +1979,20 @@
     if (elements.saveRestorePreviousButton) {
       elements.saveRestorePreviousButton.disabled = !canRestore;
     }
+    const quotaText = storageEstimate
+      ? `・保存領域${Math.round(storageEstimate.ratio * 100)}%`
+      : "";
     elements.saveProtectionStatus.textContent =
       `自動保護：保存形式v${STATE_SCHEMA_VERSION}・` +
-      (canRestore ? "直前セーブあり" : "初回スナップショット待ち");
+      `${canRestore ? "直前セーブあり" : "初回スナップショット待ち"}・` +
+      `${backupAgeLabel(state.saveMeta?.lastExportedAt)}${quotaText}`;
+    elements.saveProtectionStatus.classList.toggle(
+      "is-warning",
+      Boolean(storageEstimate && storageEstimate.ratio >= 0.8)
+    );
+    if (!storageEstimateChecked && !storageEstimatePending) {
+      void refreshStorageEstimate();
+    }
   }
 
   function restorePreviousSave() {
@@ -2303,10 +2530,114 @@
   }
 
   function latestOfficialExam() {
+    return officialReadinessStats().qualifying.at(-1) || null;
+  }
+
+  function daysBetween(left, right) {
+    const leftTime = Date.parse(left);
+    const rightTime = Date.parse(right);
+    if (!Number.isFinite(leftTime) || !Number.isFinite(rightTime)) return -1;
+    return Math.floor((rightTime - leftTime) / 86400000);
+  }
+
+  function officialAttemptQualifies(item, history = state.officialExamHistory || []) {
+    if (
+      !officialExamDefinition(item?.examId) ||
+      item?.legacySessionAmbiguous ||
+      item?.sourceMode !== "timed-answer-sheet" ||
+      !item?.timed120 ||
+      !item?.lawChecked ||
+      Number(item?.elapsedMinutes) > MOCK_DURATION_MINUTES ||
+      Object.keys(item?.answers || {}).length !== 50
+    ) {
+      return false;
+    }
+    if (item.attemptType !== "retest") return item.attemptType === "initial";
+    const initial = history
+      .filter((candidate) =>
+        candidate.examId === item.examId &&
+        candidate.attemptType === "initial" &&
+        candidate.sourceMode === "timed-answer-sheet" &&
+        candidate.lawChecked &&
+        candidate.timed120 &&
+        Object.keys(candidate.answers || {}).length === 50 &&
+        Date.parse(candidate.completedAt) < Date.parse(item.completedAt)
+      )
+      .sort((left, right) =>
+        (Date.parse(right.completedAt) || 0) - (Date.parse(left.completedAt) || 0)
+      )[0];
+    return Boolean(
+      initial &&
+      daysBetween(initial.completedAt, item.completedAt) >= OFFICIAL_RETEST_WAIT_DAYS
+    );
+  }
+
+  function officialReadinessStats() {
+    const history = [...(state.officialExamHistory || [])]
+      .sort((left, right) =>
+        (Date.parse(left.completedAt) || 0) - (Date.parse(right.completedAt) || 0)
+      );
+    const qualifying = history.filter((item) =>
+      officialAttemptQualifies(item, history)
+    );
+    const initial = qualifying.filter((item) => item.attemptType === "initial");
+    const retests = qualifying.filter((item) => item.attemptType === "retest");
+    const latestThree = qualifying.slice(-3);
+    const mean = latestThree.length
+      ? latestThree.reduce((sum, item) => sum + item.score, 0) / latestThree.length
+      : 0;
+    const minimum = latestThree.length
+      ? Math.min(...latestThree.map((item) => item.score))
+      : 0;
+    const stability = latestThree.length < 3
+      ? "測定中"
+      : mean >= 40 && minimum >= 37
+        ? "安定40"
+        : mean >= 37 && minimum >= 35
+          ? "合格域"
+          : "測定中";
+    return {
+      history,
+      qualifying,
+      initial,
+      retests,
+      latestThree,
+      mean,
+      minimum,
+      stability
+    };
+  }
+
+  function officialInitialAttempt(examId) {
     return [...(state.officialExamHistory || [])]
+      .filter((item) =>
+        item.examId === examId &&
+        item.attemptType === "initial" &&
+        officialAttemptQualifies(item)
+      )
       .sort((left, right) =>
         (Date.parse(right.completedAt) || 0) - (Date.parse(left.completedAt) || 0)
       )[0] || null;
+  }
+
+  function officialRetestEligibility(examId, at = new Date()) {
+    const initial = officialInitialAttempt(examId);
+    if (!initial) return { eligible: false, reason: "初見測定が未完了", initial: null };
+    const existing = (state.officialExamHistory || []).some((item) =>
+      item.examId === examId &&
+      item.attemptType === "retest" &&
+      item.sourceMode === "timed-answer-sheet"
+    );
+    if (existing) return { eligible: false, reason: "再試験済み", initial };
+    const elapsedDays = daysBetween(initial.completedAt, at.toISOString());
+    if (elapsedDays < OFFICIAL_RETEST_WAIT_DAYS) {
+      return {
+        eligible: false,
+        reason: `あと${OFFICIAL_RETEST_WAIT_DAYS - Math.max(0, elapsedDays)}日`,
+        initial
+      };
+    }
+    return { eligible: true, reason: "再試験可", initial };
   }
 
   function missionForDate(date = todayKey()) {
@@ -2322,6 +2653,19 @@
         ...mission
       })
     };
+  }
+
+  function pendingOfficialReview() {
+    return Object.entries(state.missionLog || {})
+      .map(([date, mission]) => ({
+        date,
+        mission: normalizeMissionEntry(mission)
+      }))
+      .filter(({ mission }) =>
+        mission.officialQuestions &&
+        !mission.reviewed
+      )
+      .sort((left, right) => left.date.localeCompare(right.date))[0] || null;
   }
 
   function daysUntil(dateKey) {
@@ -2351,7 +2695,7 @@
       return {
         id: "september",
         title: "本試験演習",
-        text: "公式10年分を初見・120分で解き、37点以上を複数年度で再現する。"
+        text: "公式10試験回を初見・120分で解き、37点以上を複数回で再現する。"
       };
     }
     if (date <= "2026-10-11") {
@@ -2368,12 +2712,6 @@
     };
   }
 
-  function officialScoreLabel(score) {
-    if (score >= STUDY_TARGETS.safe) return `安全圏 ${score} / 50`;
-    if (score >= STUDY_TARGETS.total) return `戦略目標 ${score} / 50`;
-    return `現在 ${score} / 50`;
-  }
-
   function setOfficialExamStatus(message, isError = false) {
     if (!elements.officialExamStatus) return;
     elements.officialExamStatus.textContent = message;
@@ -2381,28 +2719,92 @@
   }
 
   function renderOfficialExamYearOptions() {
-    if (!elements.officialExamYear) return;
-    const recorded = new Set(
-      (state.officialExamHistory || []).map((item) => Number(item.year))
+    const attemptType = state.officialExamSession?.attemptType ||
+      (elements.officialExamAttemptType?.value === "retest" ? "retest" : "initial");
+    const previousSelection = state.officialExamSession?.examId ||
+      elements.officialExamId?.value ||
+      "";
+    const readiness = officialReadinessStats();
+    const touched = officialDrillExamIdsTouched();
+
+    if (elements.officialExamAttemptType) {
+      elements.officialExamAttemptType.value = attemptType;
+      elements.officialExamAttemptType.disabled = Boolean(state.officialExamSession);
+    }
+    if (elements.officialExamId) {
+      elements.officialExamId.replaceChildren();
+      OFFICIAL_EXAMS.forEach((exam) => {
+        const option = document.createElement("option");
+        option.value = exam.id;
+        let reason = "";
+        if (attemptType === "initial") {
+          const recorded = readiness.initial.some((item) => item.examId === exam.id) ||
+            (state.officialExamHistory || []).some((item) =>
+              item.examId === exam.id &&
+              item.attemptType === "initial" &&
+              item.sourceMode === "timed-answer-sheet"
+            );
+          reason = recorded
+            ? "初見記録済み"
+            : touched.has(exam.id)
+              ? "公式20問で接触済み"
+              : readiness.initial.length >= OFFICIAL_INITIAL_TARGET
+                ? "初見目標達成済み"
+                : "";
+        } else {
+          const eligibility = officialRetestEligibility(exam.id);
+          reason = readiness.retests.length >= OFFICIAL_RETEST_TARGET
+            ? "再試験目標達成済み"
+            : eligibility.eligible
+              ? ""
+              : eligibility.reason;
+        }
+        option.disabled = Boolean(reason) && !state.officialExamSession;
+        option.textContent = reason ? `${exam.label}・${reason}` : exam.label;
+        elements.officialExamId.append(option);
+      });
+      const preferred = [...elements.officialExamId.options].find((option) =>
+        option.value === previousSelection &&
+        (!option.disabled || Boolean(state.officialExamSession))
+      );
+      const next = preferred ||
+        [...elements.officialExamId.options].find((option) => !option.disabled);
+      if (next) elements.officialExamId.value = next.value;
+      elements.officialExamId.disabled = Boolean(state.officialExamSession);
+    }
+
+    if (elements.officialExamYear) {
+      const manualSelection = elements.officialExamYear.value;
+      elements.officialExamYear.replaceChildren();
+      OFFICIAL_EXAMS.forEach((exam) => {
+        const option = document.createElement("option");
+        option.value = exam.id;
+        option.textContent = exam.label;
+        elements.officialExamYear.append(option);
+      });
+      if (officialExamDefinition(manualSelection)) {
+        elements.officialExamYear.value = manualSelection;
+      }
+    }
+
+    const selectedExam = officialExamDefinition(
+      state.officialExamSession?.examId || elements.officialExamId?.value
     );
-    const touched = officialDrillYearsTouched();
-    [...elements.officialExamYear.options].forEach((option) => {
-      const year = Number(option.value);
-      if (!option.dataset.baseLabel) option.dataset.baseLabel = option.textContent;
-      const reason = recorded.has(year)
-        ? "記録済み"
-        : touched.has(year)
-          ? "公式20問で接触済み"
-          : "";
-      option.disabled = Boolean(reason);
-      option.textContent = reason
-        ? `${option.dataset.baseLabel}・${reason}`
-        : option.dataset.baseLabel;
-    });
-    const selected = elements.officialExamYear.selectedOptions[0];
-    if (!selected || selected.disabled) {
-      const next = [...elements.officialExamYear.options].find((option) => !option.disabled);
-      if (next) elements.officialExamYear.value = next.value;
+    if (elements.officialExamQuestionLink) {
+      elements.officialExamQuestionLink.href =
+        selectedExam?.questionUrl || OFFICIAL_PAST_EXAMS_URL;
+    }
+    if (elements.officialExamStartButton) {
+      const selectedOption = elements.officialExamId?.selectedOptions?.[0];
+      elements.officialExamStartButton.disabled =
+        Boolean(state.officialExamSession) ||
+        !selectedExam ||
+        Boolean(selectedOption?.disabled);
+      elements.officialExamStartButton.textContent = state.officialExamSession
+        ? "計測中"
+        : attemptType === "retest"
+          ? "120分の再試験を開始"
+          : "120分の初見測定を開始";
     }
   }
 
@@ -2416,7 +2818,7 @@
     if (!history.length) {
       const empty = document.createElement("p");
       empty.className = "official-history-empty";
-      empty.textContent = "まだ記録なし。最初の1年分は現在地の基準点として使います。";
+      empty.textContent = "まだ記録なし。未接触の試験回を120分で開始します。";
       elements.officialExamHistory.append(empty);
       return;
     }
@@ -2430,19 +2832,302 @@
       );
       const heading = document.createElement("div");
       const label = document.createElement("span");
-      label.textContent = `${item.year}年度`;
+      const definition = officialExamDefinition(item.examId);
+      label.textContent = definition?.label ||
+        `${item.year}年度（試験回不明の旧記録）`;
       const score = document.createElement("strong");
       score.textContent = `${item.score} / 50`;
       const time = document.createElement("small");
-      time.textContent = `${item.elapsedMinutes}分`;
+      time.textContent =
+        `${item.attemptType === "retest" ? "再試験" : "初見"}・${item.elapsedMinutes}分`;
       heading.append(label, score, time);
 
       const sections = document.createElement("p");
       sections.textContent =
         `権利 ${item.rights}/14・法令 ${item.restrictions}/8・業法 ${item.business}/20・税他 ${item.taxOther}/8`;
-      row.append(heading, sections);
+      const evidence = document.createElement("p");
+      evidence.className = "official-history-evidence";
+      evidence.textContent = officialAttemptQualifies(item)
+        ? `安定度算入・120分以内・${CURRENT_LAW_BASELINE}照合済み`
+        : item.legacySessionAmbiguous
+          ? "参考記録・10月／12月の試験回が不明"
+          : item.sourceMode === "self-report"
+            ? "参考記録・自己申告"
+            : "参考記録・測定条件未達";
+      row.append(heading, sections, evidence);
       elements.officialExamHistory.append(row);
     });
+  }
+
+  function officialExamSectionLabel(number) {
+    const section = OFFICIAL_EXAM_DATA?.SECTION_BY_NUMBER(Number(number));
+    return OFFICIAL_DRILL_SECTION_LABELS[section] || section || "";
+  }
+
+  function renderOfficialExamTimer(session = state.officialExamSession) {
+    if (!elements.officialExamTimer) return;
+    elements.officialExamTimer.classList.remove("is-over");
+    if (!session?.startedAt) {
+      elements.officialExamTimer.textContent = "120:00";
+      return;
+    }
+    const elapsedSeconds = Math.max(
+      0,
+      Math.floor((Date.now() - Date.parse(session.startedAt)) / 1000)
+    );
+    const remaining = MOCK_DURATION_MINUTES * 60 - elapsedSeconds;
+    if (remaining < 0) {
+      const over = Math.abs(remaining);
+      elements.officialExamTimer.textContent =
+        `+${String(Math.floor(over / 60)).padStart(2, "0")}:` +
+        `${String(over % 60).padStart(2, "0")}`;
+      elements.officialExamTimer.classList.add("is-over");
+      return;
+    }
+    elements.officialExamTimer.textContent =
+      `${String(Math.floor(remaining / 60)).padStart(2, "0")}:` +
+      `${String(remaining % 60).padStart(2, "0")}`;
+  }
+
+  function renderOfficialExamSession() {
+    const session = state.officialExamSession;
+    if (!elements.officialExamSessionForm) return;
+    elements.officialExamSessionForm.hidden = !session;
+    renderOfficialExamTimer(session);
+    if (!session) return;
+    const definition = officialExamDefinition(session.examId);
+    if (!definition) return;
+    const position = Math.min(49, Math.max(0, Number(session.position) || 0));
+    const number = position + 1;
+    if (elements.officialExamQuestionNumber) {
+      elements.officialExamQuestionNumber.textContent = `問${number}`;
+    }
+    if (elements.officialExamQuestionSection) {
+      elements.officialExamQuestionSection.textContent =
+        `${officialExamSectionLabel(number)}・歴史問題`;
+    }
+    elements.officialExamAnswerChoices
+      ?.querySelectorAll('input[name="official-exam-answer"]')
+      .forEach((input) => {
+        input.checked = Number(input.value) === Number(session.answers?.[number]);
+      });
+    if (
+      elements.officialExamJumpSelect &&
+      elements.officialExamJumpSelect.dataset.examId !== definition.id
+    ) {
+      elements.officialExamJumpSelect.replaceChildren();
+      definition.answers.forEach((unused, index) => {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = `問${index + 1}`;
+        elements.officialExamJumpSelect.append(option);
+      });
+      elements.officialExamJumpSelect.dataset.examId = definition.id;
+    }
+    if (elements.officialExamJumpSelect) {
+      elements.officialExamJumpSelect.value = String(position);
+    }
+    if (elements.officialExamProgress) {
+      elements.officialExamProgress.textContent =
+        `${position + 1} / 50・解答${Object.keys(session.answers || {}).length}`;
+    }
+    if (elements.officialExamPrevButton) {
+      elements.officialExamPrevButton.disabled = position === 0;
+    }
+    if (elements.officialExamNextButton) {
+      elements.officialExamNextButton.disabled = position === 49;
+    }
+    if (elements.officialExamLawChecked) {
+      elements.officialExamLawChecked.checked = Boolean(session.lawChecked);
+    }
+  }
+
+  function collectOfficialExamSession(position = null) {
+    const session = state.officialExamSession;
+    if (!session) return null;
+    const currentNumber = (Number(session.position) || 0) + 1;
+    const selected = elements.officialExamAnswerChoices
+      ?.querySelector('input[name="official-exam-answer"]:checked');
+    const answers = { ...(session.answers || {}) };
+    if (selected) answers[currentNumber] = Number(selected.value);
+    return normalizeOfficialExamSession({
+      ...session,
+      answers,
+      position: Number.isInteger(position) ? position : session.position,
+      lawChecked: Boolean(elements.officialExamLawChecked?.checked)
+    });
+  }
+
+  function saveOfficialExamDraft(position = null) {
+    const next = collectOfficialExamSession(position);
+    if (!next) return;
+    state.officialExamSession = next;
+    saveState();
+    if (elements.officialExamProgress) {
+      elements.officialExamProgress.textContent =
+        `${next.position + 1} / 50・解答${Object.keys(next.answers).length}`;
+    }
+  }
+
+  function moveOfficialExam(position) {
+    if (!state.officialExamSession) return;
+    const nextPosition = Math.min(
+      49,
+      Math.max(0, Math.trunc(Number(position) || 0))
+    );
+    saveOfficialExamDraft(nextPosition);
+    renderOfficialExamSession();
+  }
+
+  function startOfficialExam() {
+    if (state.officialExamSession) {
+      renderOfficialExamSession();
+      return;
+    }
+    const examId = String(elements.officialExamId?.value || "");
+    const definition = officialExamDefinition(examId);
+    const attemptType = elements.officialExamAttemptType?.value === "retest"
+      ? "retest"
+      : "initial";
+    if (!definition) {
+      setOfficialExamStatus("開始できる試験回がありません。", true);
+      return;
+    }
+    const readiness = officialReadinessStats();
+    if (attemptType === "initial") {
+      if (readiness.initial.length >= OFFICIAL_INITIAL_TARGET) {
+        setOfficialExamStatus("初見10回は達成済みです。再試験へ進んでください。", true);
+        return;
+      }
+      if (officialDrillExamIdsTouched().has(examId)) {
+        setOfficialExamStatus(
+          `${definition.label}は公式20問で接触済みです。別の未接触試験回を選んでください。`,
+          true
+        );
+        return;
+      }
+      const existing = (state.officialExamHistory || []).some((item) =>
+        item.examId === examId &&
+        item.attemptType === "initial" &&
+        item.sourceMode === "timed-answer-sheet"
+      );
+      if (existing) {
+        setOfficialExamStatus("この試験回の初見測定は記録済みです。", true);
+        return;
+      }
+    } else {
+      if (readiness.retests.length >= OFFICIAL_RETEST_TARGET) {
+        setOfficialExamStatus("再試験3回は達成済みです。弱点補修へ進んでください。", true);
+        return;
+      }
+      const eligibility = officialRetestEligibility(examId);
+      if (!eligibility.eligible) {
+        setOfficialExamStatus(
+          `${definition.label}は再試験不可：${eligibility.reason}。`,
+          true
+        );
+        return;
+      }
+    }
+    state.officialExamSession = normalizeOfficialExamSession({
+      ...createOfficialExamSession(),
+      examId,
+      attemptType,
+      startedAt: new Date().toISOString()
+    });
+    saveState();
+    logStudyEvent("official-past-exam", {
+      action: "start",
+      examId,
+      attemptType
+    });
+    renderPassPlan();
+    setOfficialExamStatus(
+      `${definition.label}の${attemptType === "retest" ? "再試験" : "初見測定"}を開始しました。120分・検索なしで50問を入力してください。`
+    );
+  }
+
+  function submitOfficialExam(event) {
+    event?.preventDefault();
+    saveOfficialExamDraft();
+    const session = state.officialExamSession;
+    if (!session) {
+      setOfficialExamStatus("先に120分計測を開始してください。", true);
+      return;
+    }
+    const definition = officialExamDefinition(session.examId);
+    const missing = definition.answers
+      .map((unused, index) => index + 1)
+      .filter((number) => !session.answers[number]);
+    if (missing.length) {
+      moveOfficialExam(missing[0] - 1);
+      setOfficialExamStatus(
+        `未回答は${missing.length}問です。問${missing[0]}から埋めてください。`,
+        true
+      );
+      return;
+    }
+    if (!session.lawChecked) {
+      setOfficialExamStatus(
+        `${CURRENT_LAW_BASELINE}現在法との照合完了にチェックしてください。`,
+        true
+      );
+      elements.officialExamLawChecked?.focus();
+      return;
+    }
+    if (session.attemptType === "retest") {
+      const eligibility = officialRetestEligibility(session.examId);
+      if (!eligibility.eligible) {
+        setOfficialExamStatus(`再試験を記録できません：${eligibility.reason}。`, true);
+        return;
+      }
+    }
+    const completedAt = new Date().toISOString();
+    const elapsedMinutes = Math.max(
+      1,
+      Math.ceil((Date.parse(completedAt) - Date.parse(session.startedAt)) / 60000)
+    );
+    const scored = OFFICIAL_EXAM_DATA.scoreAnswers(session.examId, session.answers);
+    const entry = {
+      recordId: createOpaqueId("official"),
+      examId: session.examId,
+      year: definition.year,
+      attemptType: session.attemptType,
+      sourceMode: "timed-answer-sheet",
+      timed120: elapsedMinutes <= MOCK_DURATION_MINUTES,
+      lawChecked: true,
+      answers: session.answers,
+      score: scored.score,
+      rights: scored.sectionScores.rights,
+      restrictions: scored.sectionScores.restrictions,
+      business: scored.sectionScores.business,
+      taxOther: scored.sectionScores.taxOther,
+      elapsedMinutes: Math.min(180, elapsedMinutes),
+      completedAt
+    };
+    state.officialExamHistory = normalizeOfficialExamHistory([
+      ...(state.officialExamHistory || []),
+      entry
+    ]);
+    state.officialExamSession = null;
+    const mission = missionForDate();
+    setMissionForDate(todayKey(), {
+      minutes: Math.max(mission.minutes, Math.min(180, elapsedMinutes))
+    });
+    saveState();
+    logStudyEvent("official-past-exam", {
+      action: "submit",
+      examId: entry.examId,
+      attemptType: entry.attemptType,
+      score: entry.score,
+      elapsedMinutes: entry.elapsedMinutes,
+      lawChecked: true
+    });
+    renderPassPlan();
+    setOfficialExamStatus(
+      `${definition.label} ${entry.score}/50を自動採点しました。` +
+      `${entry.timed120 ? "安定度へ算入します。" : "120分超過のため参考記録です。"}`
+    );
   }
 
   function setTodayCommandStatus(message, isError = false) {
@@ -2497,59 +3182,100 @@
     definition = officialDailyDrillDefinition(state.missionLog)
   ) {
     if (!elements.officialDrillAnswerGrid) return;
-    if (elements.officialDrillAnswerGrid.dataset.setId !== definition.id) {
-      elements.officialDrillAnswerGrid.replaceChildren();
-      elements.officialDrillAnswerGrid.dataset.setId = definition.id;
-      definition.questions.forEach((item) => {
-        const fieldset = document.createElement("fieldset");
-        fieldset.className = "official-drill-item";
-        fieldset.dataset.questionNumber = String(item.number);
+    const mission = missionForDate();
+    const drill = mission.officialDrill?.setId === definition.id
+      ? mission.officialDrill
+      : null;
+    const position = Math.min(
+      definition.questions.length - 1,
+      Math.max(0, Math.trunc(Number(drill?.position) || 0))
+    );
+    const item = definition.questions[position];
+    elements.officialDrillAnswerGrid.dataset.setId = definition.id;
+    elements.officialDrillAnswerGrid.replaceChildren();
 
-        const legend = document.createElement("legend");
-        const number = document.createElement("strong");
-        number.textContent = `問${item.number}`;
-        const section = document.createElement("span");
-        section.textContent = OFFICIAL_DRILL_SECTION_LABELS[item.section] || item.section;
-        legend.append(number, section);
+    const fieldset = document.createElement("fieldset");
+    fieldset.className = "official-drill-item official-drill-current-item";
+    fieldset.dataset.questionNumber = String(item.number);
 
-        const choices = document.createElement("div");
-        choices.className = "official-drill-choices";
-        choices.setAttribute("aria-label", `問${item.number}の解答`);
-        [1, 2, 3, 4].forEach((choice) => {
-          const label = document.createElement("label");
-          const input = document.createElement("input");
-          input.type = "radio";
-          input.name = `official-drill-q${item.number}`;
-          input.value = String(choice);
-          input.dataset.questionNumber = String(item.number);
-          const text = document.createElement("span");
-          text.textContent = String(choice);
-          label.append(input, text);
-          choices.append(label);
-        });
+    const legend = document.createElement("legend");
+    const number = document.createElement("strong");
+    number.textContent = `問${item.number}`;
+    const section = document.createElement("span");
+    section.textContent =
+      `${OFFICIAL_DRILL_SECTION_LABELS[item.section] || item.section}・` +
+      `${item.verifiedAsOf}基準`;
+    legend.append(number, section);
 
-        const confidenceGroup = document.createElement("div");
-        confidenceGroup.className = "official-drill-confidence";
-        confidenceGroup.setAttribute("role", "group");
-        confidenceGroup.setAttribute("aria-label", `問${item.number}の根拠判定`);
-        [
-          ["grounded", "根拠あり"],
-          ["uncertain", "消去法・勘"]
-        ].forEach(([value, text]) => {
-          const label = document.createElement("label");
-          const input = document.createElement("input");
-          input.type = "radio";
-          input.name = `official-drill-confidence-q${item.number}`;
-          input.value = value;
-          input.dataset.confidenceQuestion = String(item.number);
-          const caption = document.createElement("span");
-          caption.textContent = text;
-          label.append(input, caption);
-          confidenceGroup.append(label);
-        });
-        fieldset.append(legend, choices, confidenceGroup);
-        elements.officialDrillAnswerGrid.append(fieldset);
+    const choices = document.createElement("div");
+    choices.className = "official-drill-choices";
+    choices.setAttribute("aria-label", `問${item.number}の解答`);
+    [1, 2, 3, 4].forEach((choice) => {
+      const label = document.createElement("label");
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = `official-drill-q${item.number}`;
+      input.value = String(choice);
+      input.dataset.questionNumber = String(item.number);
+      input.checked = Number(drill?.answers?.[item.number]) === choice;
+      const text = document.createElement("span");
+      text.textContent = String(choice);
+      label.append(input, text);
+      choices.append(label);
+    });
+
+    const confidenceGroup = document.createElement("div");
+    confidenceGroup.className = "official-drill-confidence";
+    confidenceGroup.setAttribute("role", "group");
+    confidenceGroup.setAttribute("aria-label", `問${item.number}の根拠判定`);
+    [
+      ["grounded", "根拠あり"],
+      ["uncertain", "消去法・勘"]
+    ].forEach(([value, text]) => {
+      const label = document.createElement("label");
+      const input = document.createElement("input");
+      input.type = "radio";
+      input.name = `official-drill-confidence-q${item.number}`;
+      input.value = value;
+      input.dataset.confidenceQuestion = String(item.number);
+      input.checked = drill?.confidence?.[item.number] === value;
+      const caption = document.createElement("span");
+      caption.textContent = text;
+      label.append(input, caption);
+      confidenceGroup.append(label);
+    });
+    fieldset.append(legend, choices, confidenceGroup);
+    elements.officialDrillAnswerGrid.append(fieldset);
+
+    if (
+      elements.officialDrillJumpSelect &&
+      elements.officialDrillJumpSelect.dataset.setId !== definition.id
+    ) {
+      elements.officialDrillJumpSelect.replaceChildren();
+      definition.questions.forEach((question, index) => {
+        const option = document.createElement("option");
+        option.value = String(index);
+        option.textContent = `${index + 1}: 問${question.number}`;
+        elements.officialDrillJumpSelect.append(option);
       });
+      elements.officialDrillJumpSelect.dataset.setId = definition.id;
+    }
+    if (elements.officialDrillJumpSelect) {
+      elements.officialDrillJumpSelect.value = String(position);
+    }
+    if (elements.officialDrillProgress) {
+      const answeredCount = Object.keys(drill?.answers || {}).length;
+      const confidenceCount = Object.keys(drill?.confidence || {}).length;
+      elements.officialDrillProgress.textContent =
+        `${position + 1} / ${definition.questions.length}・` +
+        `解答${answeredCount}・根拠${confidenceCount}`;
+    }
+    if (elements.officialDrillPrevButton) {
+      elements.officialDrillPrevButton.disabled = position === 0;
+    }
+    if (elements.officialDrillNextButton) {
+      elements.officialDrillNextButton.disabled =
+        position === definition.questions.length - 1;
     }
   }
 
@@ -2557,22 +3283,40 @@
     definition = officialDrillDefinitionById(elements.officialDrillAnswerGrid?.dataset.setId) ||
       officialDailyDrillDefinition()
   ) {
-    const answers = {};
-    const confidence = {};
-    const uncertain = [];
-    definition.questions.forEach((item) => {
-      const selected = elements.officialDrillForm
-        ?.querySelector(`input[name="official-drill-q${item.number}"]:checked`);
-      if (selected) answers[item.number] = Number(selected.value);
-      const confidenceInput = elements.officialDrillForm
-        ?.querySelector(`[data-confidence-question="${item.number}"]:checked`);
-      const confidenceValue = String(confidenceInput?.value || "");
-      if (confidenceValue === "grounded" || confidenceValue === "uncertain") {
-        confidence[item.number] = confidenceValue;
-      }
-      if (confidenceValue === "uncertain") uncertain.push(item.number);
-    });
+    const drill = missionForDate().officialDrill;
+    const answers = { ...(drill?.answers || {}) };
+    const confidence = { ...(drill?.confidence || {}) };
+    const position = Math.min(
+      definition.questions.length - 1,
+      Math.max(0, Math.trunc(Number(drill?.position) || 0))
+    );
+    const item = definition.questions[position];
+    const selected = elements.officialDrillForm
+      ?.querySelector(`input[name="official-drill-q${item.number}"]:checked`);
+    if (selected) answers[item.number] = Number(selected.value);
+    const confidenceInput = elements.officialDrillForm
+      ?.querySelector(`[data-confidence-question="${item.number}"]:checked`);
+    const confidenceValue = String(confidenceInput?.value || "");
+    if (confidenceValue === "grounded" || confidenceValue === "uncertain") {
+      confidence[item.number] = confidenceValue;
+    }
+    const uncertain = Object.entries(confidence)
+      .filter(([, value]) => value === "uncertain")
+      .map(([number]) => Number(number))
+      .sort((left, right) => left - right);
     return { answers, confidence, uncertain };
+  }
+
+  function moveOfficialDrill(position) {
+    const mission = missionForDate();
+    if (mission.officialDrill?.completed) return;
+    const definition = officialDrillDefinitionFor(mission.officialDrill);
+    const nextPosition = Math.min(
+      definition.questions.length - 1,
+      Math.max(0, Math.trunc(Number(position) || 0))
+    );
+    saveOfficialDrillDraft(nextPosition);
+    ensureOfficialDrillAnswerGrid(definition);
   }
 
   function officialDrillSectionTotals(definition) {
@@ -2583,9 +3327,9 @@
   }
 
   function officialDrillScoreLabel(score, definition) {
-    if (score >= definition.safeScore) return "安全圏";
-    if (score >= definition.targetScore) return "戦略目標";
-    return "要補強";
+    if (score >= definition.safeScore) return "原問換算・目標超";
+    if (score >= definition.targetScore) return "原問換算・目標";
+    return "原問換算・要復習";
   }
 
   function renderOfficialDrillTimer(drill = missionForDate().officialDrill) {
@@ -2706,19 +3450,6 @@
       : drill?.startedAt
         ? "計測中"
         : "35分計測を開始";
-    definition.questions.forEach((item) => {
-      const answer = drill?.answers?.[item.number];
-      elements.officialDrillForm
-        ?.querySelectorAll(`input[name="official-drill-q${item.number}"]`)
-        .forEach((input) => {
-          input.checked = Number(input.value) === answer;
-        });
-      elements.officialDrillForm
-        ?.querySelectorAll(`[data-confidence-question="${item.number}"]`)
-        .forEach((input) => {
-          input.checked = input.value === drill?.confidence?.[item.number];
-        });
-    });
     renderOfficialDrillTimer(drill);
     renderOfficialDrillResult(drill);
   }
@@ -2742,14 +3473,28 @@
         label.className = "today-review-target";
         const heading = document.createElement("span");
         heading.textContent = `問${number}`;
+        const cause = document.createElement("select");
+        cause.dataset.reviewCause = String(number);
+        cause.setAttribute("aria-label", `問${number}の誤答原因`);
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "原因を選ぶ";
+        cause.append(placeholder);
+        MISTAKE_CAUSES.forEach((item) => {
+          const option = document.createElement("option");
+          option.value = item.id;
+          option.textContent = item.label;
+          cause.append(option);
+        });
+        cause.value = drill.reviewCauses?.[number] || "";
         const input = document.createElement("input");
         input.type = "text";
         input.maxLength = 120;
         input.autocomplete = "off";
         input.dataset.reviewQuestion = String(number);
-        input.placeholder = "原因 → 次回ルール";
+        input.placeholder = "例：主語を飛ばした → 最初に主体へ線を引く";
         input.value = drill.reviewNotes?.[number] || "";
-        label.append(heading, input);
+        label.append(heading, cause, input);
         elements.todayReviewTargets.append(label);
       });
       return;
@@ -2769,6 +3514,14 @@
       setTodayCommandStatus("先に固定10問を完了してください。", true);
       return;
     }
+    const pendingReview = pendingOfficialReview();
+    if (pendingReview) {
+      setTodayCommandStatus(
+        `${pendingReview.date}の未復習を先に保存してください。`,
+        true
+      );
+      return;
+    }
     if (elements.officialDrillPanel) {
       elements.officialDrillPanel.hidden = false;
       elements.officialDrillPanel.open = true;
@@ -2783,6 +3536,14 @@
       setOfficialDrillStatus("先に固定10問を完了してください。", true);
       return;
     }
+    const pendingReview = pendingOfficialReview();
+    if (pendingReview) {
+      setOfficialDrillStatus(
+        `${pendingReview.date}の未復習を先に保存してください。`,
+        true
+      );
+      return;
+    }
     if (mission.officialDrill?.completed || mission.officialDrill?.startedAt) {
       renderOfficialDrillTimer(mission.officialDrill);
       return;
@@ -2790,6 +3551,7 @@
     setMissionForDate(todayKey(), {
       officialDrill: {
         setId: definition.id,
+        position: mission.officialDrill?.position || 0,
         startedAt: new Date().toISOString(),
         answers: mission.officialDrill?.answers || {},
         confidence: mission.officialDrill?.confidence || {},
@@ -2807,14 +3569,18 @@
     setOfficialDrillStatus("35分計測を開始しました。問題PDFを開き、検索せずに解いてください。");
   }
 
-  function saveOfficialDrillDraft() {
+  function saveOfficialDrillDraft(nextPosition = null) {
     const mission = missionForDate();
     if (mission.officialDrill?.completed) return;
     const definition = officialDrillDefinitionFor(mission.officialDrill);
     const form = collectOfficialDrillForm(definition);
+    const position = Number.isInteger(nextPosition)
+      ? nextPosition
+      : mission.officialDrill?.position || 0;
     setMissionForDate(todayKey(), {
       officialDrill: {
         setId: definition.id,
+        position,
         startedAt: mission.officialDrill?.startedAt || "",
         answers: form.answers,
         confidence: form.confidence,
@@ -2827,6 +3593,11 @@
     elements.officialDrillSummary.textContent =
       `解答${Object.keys(form.answers).length}/${definition.questions.length}・` +
       `根拠${Object.keys(form.confidence).length}/${definition.questions.length}`;
+    if (elements.officialDrillProgress) {
+      elements.officialDrillProgress.textContent =
+        `${position + 1} / ${definition.questions.length}・` +
+        `解答${Object.keys(form.answers).length}・根拠${Object.keys(form.confidence).length}`;
+    }
   }
 
   function submitOfficialDrill(event) {
@@ -2850,9 +3621,10 @@
         `未回答：${missing.map((number) => `問${number}`).join("・")}`,
         true
       );
-      elements.officialDrillForm
-        ?.querySelector(`[data-question-number="${missing[0]}"]`)
-        ?.scrollIntoView({ block: "center", behavior: "smooth" });
+      saveOfficialDrillDraft(
+        definition.questions.findIndex((item) => item.number === missing[0])
+      );
+      ensureOfficialDrillAnswerGrid(definition);
       return;
     }
     const missingConfidence = definition.questions
@@ -2863,9 +3635,10 @@
         `根拠未判定：${missingConfidence.map((number) => `問${number}`).join("・")}`,
         true
       );
-      elements.officialDrillForm
-        ?.querySelector(`[data-question-number="${missingConfidence[0]}"]`)
-        ?.scrollIntoView({ block: "center", behavior: "smooth" });
+      saveOfficialDrillDraft(
+        definition.questions.findIndex((item) => item.number === missingConfidence[0])
+      );
+      ensureOfficialDrillAnswerGrid(definition);
       return;
     }
 
@@ -2878,6 +3651,7 @@
       confidence: form.confidence,
       uncertain: form.uncertain,
       evidenceVersion: OFFICIAL_DRILL_EVIDENCE_VERSION,
+      position: mission.officialDrill.position || 0,
       completed: true
     });
     const reviewComplete = completedDrill.reviewTargets.length === 0;
@@ -2914,12 +3688,19 @@
     battleDone,
     officialDone,
     reviewDone,
-    minutesDone
+    minutesDone,
+    pendingReview
   }) {
     if (!elements.todayCommandPanel) return;
+    const reviewDebt = battleDone && pendingReview?.date < todayKey()
+      ? pendingReview
+      : null;
+    const commandMission = reviewDebt?.mission || mission;
     const step = !battleDone
       ? 1
-      : !officialDone
+      : reviewDebt
+        ? 3
+        : !officialDone
         ? 2
         : !reviewDone
           ? 3
@@ -2929,8 +3710,8 @@
     const target = dailyQuestIds().length || DAILY_TARGET;
     const done = Math.min(dailyQuestDoneCount(), target);
     const remainingMinutes = Math.max(0, DAILY_STUDY_MINUTES - mission.minutes);
-    const reviewTargets = mission.officialDrill?.reviewTargets || [];
-    const drillDefinition = officialDrillDefinitionFor(mission.officialDrill);
+    const reviewTargets = commandMission.officialDrill?.reviewTargets || [];
+    const drillDefinition = officialDrillDefinitionFor(commandMission.officialDrill);
     const command = step === 1
       ? {
           kicker: "今やる・STEP 1 / 4",
@@ -2947,13 +3728,15 @@
           }
         : step === 3
           ? {
-              kicker: "今やる・STEP 3 / 4",
+              kicker: reviewDebt
+                ? `持越し解除・${reviewDebt.date}`
+                : "今やる・STEP 3 / 4",
               title: reviewTargets.length
-                ? `誤答・根拠なし${reviewTargets.length}件を1行化する`
-                : "全問正解を再現するルールを1行化する",
+                ? `${reviewDebt ? "未復習" : "誤答・根拠なし"}${reviewTargets.length}件を1行化する`
+                : `${reviewDebt ? "未復習の" : ""}再現ルールを1行化する`,
               text: reviewTargets.length
-                ? `${reviewTargets.map((number) => `問${number}`).join("・")}を、それぞれ「原因 → 次回ルール」で保存する。`
-                : "次回も再現するための確認順を、1行で保存する。"
+                ? `${reviewDebt ? `${reviewDebt.date}の` : ""}${reviewTargets.map((number) => `問${number}`).join("・")}を、それぞれ「原因 → 次回ルール」で保存する。`
+                : `${reviewDebt ? `${reviewDebt.date}の結果について、` : ""}次回も再現するための確認順を1行で保存する。`
             }
           : step === 4
             ? {
@@ -2980,8 +3763,8 @@
     elements.todayCommandOfficialActions.hidden = step !== 2;
     elements.todayCommandReviewActions.hidden = step !== 3;
     elements.todayCommandMinutesActions.hidden = step !== 4;
-    renderMissionReviewInputs(mission, step);
-    renderOfficialDrillPanel(mission, step);
+    renderMissionReviewInputs(commandMission, step);
+    renderOfficialDrillPanel(commandMission, reviewDebt ? 0 : step);
     if (elements.missionMinutesInput && document.activeElement !== elements.missionMinutesInput) {
       elements.missionMinutesInput.value = String(mission.minutes);
     }
@@ -2997,6 +3780,11 @@
       item.classList.toggle("is-current", step === itemStep);
       item.classList.toggle("is-locked", step < itemStep && step !== 5);
     });
+    if (reviewDebt) {
+      elements.missionOfficialStep?.classList.add("is-locked");
+      elements.missionReviewStep?.classList.add("is-current");
+      elements.missionReviewStep?.classList.remove("is-locked");
+    }
   }
 
   function renderPassPlan() {
@@ -3005,6 +3793,8 @@
     const examDays = daysUntil(FIRST_PASS_DEADLINE);
     const gateDays = daysUntil(JULY_GATE_DEADLINE);
     const mission = missionForDate();
+    const pendingReview = pendingOfficialReview();
+    const readiness = officialReadinessStats();
     const latestOfficial = latestOfficialExam();
     const officialPractice = officialPracticeStats();
     const businessIds = CURRICULUM_ORDER.filter((id) => QUESTIONS[id]?.sectionId === "business");
@@ -3013,7 +3803,7 @@
     const restrictionContacted = restrictionIds.filter(isContacted).length;
     const businessGate = businessRetained >= 32 || Number(latestOfficial?.business) >= STUDY_TARGETS.business;
     const restrictionGate = restrictionContacted >= restrictionIds.length;
-    const officialGate = (state.officialExamHistory || []).length > 0;
+    const officialGate = readiness.initial.length > 0;
     const gateCount = [businessGate, restrictionGate, officialGate].filter(Boolean).length;
     const battleDone = dailyQuestIsComplete();
     const officialDone = mission.officialQuestions;
@@ -3034,9 +3824,12 @@
       : "7/31ゲート経過";
     elements.coreCoverageStatus.textContent = `接触 ${contactedCount()} / ${CURRICULUM_ORDER.length}`;
     elements.coreRetentionStatus.textContent = `定着 ${retainedCount()} / ${CURRICULUM_ORDER.length}`;
-    elements.officialReadinessStatus.textContent = latestOfficial
-      ? officialScoreLabel(latestOfficial.score)
-      : "未記録";
+    elements.officialReadinessStatus.textContent =
+      `${readiness.stability}・初見${readiness.initial.length}/${OFFICIAL_INITIAL_TARGET}` +
+      `・再${readiness.retests.length}/${OFFICIAL_RETEST_TARGET}`;
+    elements.officialReadinessStatus.title = readiness.latestThree.length
+      ? `直近${readiness.latestThree.length}回 平均${readiness.mean.toFixed(1)}・最低${readiness.minimum}`
+      : "120分・自動採点・現在法照合済みの記録だけを算入";
     elements.officialPracticeCoverageStatus.textContent =
       `接触 ${officialPractice.coveredQuestions} / 50`;
     elements.officialPracticeTrendStatus.textContent = officialPractice.latest
@@ -3045,6 +3838,8 @@
     elements.dailyMissionStatus.textContent = `${missionCount} / 4`;
     elements.dailyMissionSummary.textContent = missionCount === 4
       ? `本日完了・${mission.minutes}分`
+      : pendingReview?.date < todayKey() && battleDone
+        ? `${pendingReview.date}の未復習を先に解除`
       : battleDone
         ? `次は${officialDone ? (reviewDone ? "90分まで記録" : "誤答・根拠なしを復習") : "令和7年公式20問"}`
         : `固定10問 ${dailyQuestDoneCount()} / ${dailyQuestIds().length || DAILY_TARGET}`;
@@ -3057,7 +3852,9 @@
       : officialDone
         ? "完了記録済み"
         : "未完了";
-    elements.missionReviewStatus.textContent = reviewDone
+    elements.missionReviewStatus.textContent = pendingReview?.date < todayKey()
+      ? `${pendingReview.date} 未復習`
+      : reviewDone
       ? mission.officialDrill?.completed && mission.officialDrill.reviewTargets.length === 0
         ? "対象0件"
         : mission.officialDrill?.reviewTargets.length
@@ -3068,18 +3865,29 @@
       : "未完了";
     elements.missionMinutesStatus.textContent =
       `${Math.min(mission.minutes, DAILY_STUDY_MINUTES)} / ${DAILY_STUDY_MINUTES}分`;
-    renderTodayCommand({ mission, battleDone, officialDone, reviewDone, minutesDone });
+    renderTodayCommand({
+      mission,
+      battleDone,
+      officialDone,
+      reviewDone,
+      minutesDone,
+      pendingReview
+    });
     elements.officialLedgerSummary.textContent =
-      `${(state.officialExamHistory || []).length}年分`;
+      `初見 ${readiness.initial.length} / ${OFFICIAL_INITIAL_TARGET}・` +
+      `再試験 ${readiness.retests.length} / ${OFFICIAL_RETEST_TARGET}`;
     elements.passPlanPanel
       .querySelectorAll("[data-pass-phase]")
       .forEach((item) => item.classList.toggle("is-current", item.dataset.passPhase === phase.id));
     renderOfficialExamYearOptions();
+    renderOfficialExamSession();
     renderOfficialExamHistory();
   }
 
   function saveMissionReview() {
-    const mission = missionForDate();
+    const pendingReview = pendingOfficialReview();
+    const reviewDate = pendingReview?.date || todayKey();
+    const mission = missionForDate(reviewDate);
     if (!dailyQuestIsComplete() || !mission.officialQuestions) {
       setTodayCommandStatus("先に公式20問まで完了してください。", true);
       return;
@@ -3088,20 +3896,30 @@
     const drill = mission.officialDrill;
     if (drill?.completed && drill.reviewTargets.length) {
       const reviewNotes = {};
+      const reviewCauses = {};
       let firstInvalid = null;
       drill.reviewTargets.forEach((number) => {
         const input = elements.todayReviewTargets
           ?.querySelector(`[data-review-question="${number}"]`);
+        const causeInput = elements.todayReviewTargets
+          ?.querySelector(`[data-review-cause="${number}"]`);
         const note = cleanMissionText(input?.value);
         const valid = drill.evidenceVersion >= OFFICIAL_DRILL_EVIDENCE_VERSION
-          ? validReviewRule(note)
+          ? MISTAKE_CAUSE_IDS.has(causeInput?.value) && validReviewRule(note)
           : note.length >= 4;
-        if (!valid && !firstInvalid) firstInvalid = input;
+        if (!valid && !firstInvalid) {
+          firstInvalid = MISTAKE_CAUSE_IDS.has(causeInput?.value)
+            ? input
+            : causeInput;
+        }
         if (note) reviewNotes[number] = note;
+        if (MISTAKE_CAUSE_IDS.has(causeInput?.value)) {
+          reviewCauses[number] = causeInput.value;
+        }
       });
       if (firstInvalid) {
         setTodayCommandStatus(
-          `問${firstInvalid.dataset.reviewQuestion}を「原因 → 次回ルール」の形で入力してください。`,
+          `問${firstInvalid.dataset.reviewQuestion || firstInvalid.dataset.reviewCause}は原因を選び、「原因 → 具体的に何を見る・書く」の形で入力してください。`,
           true
         );
         firstInvalid.focus();
@@ -3109,12 +3927,13 @@
       }
       const officialDrill = {
         ...drill,
-        reviewNotes
+        reviewNotes,
+        reviewCauses
       };
       const reviewNote = cleanMissionText(
         `問${drill.reviewTargets[0]}: ${reviewNotes[drill.reviewTargets[0]]}`
       );
-      setMissionForDate(todayKey(), {
+      setMissionForDate(reviewDate, {
         reviewed: true,
         reviewNote,
         officialDrill
@@ -3122,13 +3941,15 @@
       saveState();
       logStudyEvent("pass-mission", {
         field: "reviewed",
+        missionDate: reviewDate,
         completed: true,
         reviewTargets: drill.reviewTargets,
-        reviewNotes
+        reviewNotes,
+        reviewCauses
       });
       renderPassPlan();
       setTodayCommandStatus(
-        `復習ルール${drill.reviewTargets.length}件を保存しました。最後に今日の合計時間を記録します。`
+        `${reviewDate}の復習ルール${drill.reviewTargets.length}件を保存しました。最新状態から次の工程を再選定しました。`
       );
       return;
     }
@@ -3139,16 +3960,19 @@
       elements.todayReviewInput?.focus();
       return;
     }
-    setMissionForDate(todayKey(), { reviewed: true, reviewNote });
+    setMissionForDate(reviewDate, { reviewed: true, reviewNote });
     saveState();
     logStudyEvent("pass-mission", {
       field: "reviewed",
+      missionDate: reviewDate,
       completed: true,
       reviewNote,
-      mission: missionForDate()
+      mission: missionForDate(reviewDate)
     });
     renderPassPlan();
-    setTodayCommandStatus("誤答ルールを保存しました。最後に今日の合計時間を記録します。");
+    setTodayCommandStatus(
+      `${reviewDate}の再現ルールを保存しました。最新状態から次の工程を再選定しました。`
+    );
   }
 
   function saveMissionMinutes() {
@@ -3174,20 +3998,23 @@
     );
   }
 
-  function officialDrillYearsTouched() {
+  function officialDrillExamIdsTouched() {
     return new Set(
       Object.values(state.missionLog || {})
         .map((mission) => normalizeOfficialDrill(mission?.officialDrill))
         .filter((drill) => drill?.completed)
-        .map((drill) => officialDrillDefinitionById(drill.setId)?.year)
-        .filter(Number.isInteger)
+        .map((drill) => {
+          const definition = officialDrillDefinitionById(drill.setId);
+          return String(definition?.examId || definition?.year || "");
+        })
+        .filter((examId) => officialExamDefinition(examId))
     );
   }
 
   function recordOfficialExam(event) {
     event?.preventDefault();
     const fields = {
-      year: elements.officialExamYear?.valueAsNumber || Number(elements.officialExamYear?.value),
+      examId: String(elements.officialExamYear?.value || ""),
       score: elements.officialExamScore?.valueAsNumber,
       rights: elements.officialRightsScore?.valueAsNumber,
       restrictions: elements.officialRestrictionsScore?.valueAsNumber,
@@ -3195,16 +4022,24 @@
       taxOther: elements.officialTaxOtherScore?.valueAsNumber,
       elapsedMinutes: elements.officialExamMinutes?.valueAsNumber
     };
-    if (Object.values(fields).some((value) => !Number.isFinite(value))) {
-      setOfficialExamStatus("年度・合計・4分野・時間をすべて入力してください。", true);
+    const definition = officialExamDefinition(fields.examId);
+    const numericFields = [
+      fields.score,
+      fields.rights,
+      fields.restrictions,
+      fields.business,
+      fields.taxOther,
+      fields.elapsedMinutes
+    ];
+    if (!definition || numericFields.some((value) => !Number.isFinite(value))) {
+      setOfficialExamStatus("試験回・合計・4分野・時間をすべて入力してください。", true);
       return;
     }
-    if (Object.values(fields).some((value) => !Number.isInteger(value))) {
+    if (numericFields.some((value) => !Number.isInteger(value))) {
       setOfficialExamStatus("得点と時間は整数で入力してください。", true);
       return;
     }
     if (
-      !OFFICIAL_PAST_EXAM_YEARS.has(fields.year) ||
       fields.score < 0 || fields.score > 50 ||
       fields.rights < 0 || fields.rights > 14 ||
       fields.restrictions < 0 || fields.restrictions > 8 ||
@@ -3224,23 +4059,15 @@
       );
       return;
     }
-    if ((state.officialExamHistory || []).some((item) => item.year === fields.year)) {
-      setOfficialExamStatus(
-        `${fields.year}年度は記録済みです。初見判定を守るため別の未見年度を選んでください。`,
-        true
-      );
-      return;
-    }
-    if (officialDrillYearsTouched().has(fields.year)) {
-      setOfficialExamStatus(
-        `${fields.year}年度は公式20問で接触済みです。初見50問の基準点には別年度を使ってください。`,
-        true
-      );
-      return;
-    }
-
     const entry = {
       ...fields,
+      recordId: createOpaqueId("official-manual"),
+      year: definition.year,
+      attemptType: "initial",
+      sourceMode: "self-report",
+      timed120: false,
+      lawChecked: false,
+      answers: {},
       completedAt: new Date().toISOString()
     };
     state.officialExamHistory = normalizeOfficialExamHistory([
@@ -3249,24 +4076,15 @@
     ]);
     const mission = missionForDate();
     setMissionForDate(todayKey(), {
-      officialQuestions: true,
       minutes: Math.max(mission.minutes, boundedInteger(fields.elapsedMinutes, 180))
     });
     saveState();
     logStudyEvent("official-past-exam", entry);
     setOfficialExamStatus(
-      `${fields.year}年度 ${fields.score}/50を記録しました。次は誤答原因を1行ずつ残します。`
+      `${definition.label} ${fields.score}/50を参考記録として保存しました。自己申告のため安定度には算入しません。`
     );
-    elements.officialExamForm?.reset();
+    elements.officialExamManualForm?.reset();
     if (elements.officialExamMinutes) elements.officialExamMinutes.value = "120";
-    const nextYear = [...OFFICIAL_PAST_EXAM_YEARS]
-      .find((year) =>
-        !(state.officialExamHistory || []).some((item) => item.year === year) &&
-        !officialDrillYearsTouched().has(year)
-      );
-    if (nextYear && elements.officialExamYear) {
-      elements.officialExamYear.value = String(nextYear);
-    }
     renderPassPlan();
   }
 
@@ -6097,8 +6915,19 @@
     elements.officialDrillQuestionLink?.addEventListener("click", () => {
       if (!missionForDate().officialDrill?.startedAt) startOfficialDrill();
     });
-    elements.officialDrillForm?.addEventListener("change", saveOfficialDrillDraft);
+    elements.officialDrillForm?.addEventListener("change", () => saveOfficialDrillDraft());
     elements.officialDrillForm?.addEventListener("submit", submitOfficialDrill);
+    elements.officialDrillPrevButton?.addEventListener("click", () => {
+      const position = missionForDate().officialDrill?.position || 0;
+      moveOfficialDrill(position - 1);
+    });
+    elements.officialDrillNextButton?.addEventListener("click", () => {
+      const position = missionForDate().officialDrill?.position || 0;
+      moveOfficialDrill(position + 1);
+    });
+    elements.officialDrillJumpSelect?.addEventListener("change", (event) => {
+      moveOfficialDrill(Number(event.target.value));
+    });
     elements.todayCommandReviewButton?.addEventListener("click", saveMissionReview);
     elements.todayReviewInput?.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
@@ -6130,7 +6959,29 @@
         saveMissionMinutes();
       }
     });
-    elements.officialExamForm?.addEventListener("submit", recordOfficialExam);
+    elements.officialExamAttemptType?.addEventListener("change", () => {
+      renderOfficialExamYearOptions();
+      renderOfficialExamSession();
+    });
+    elements.officialExamId?.addEventListener("change", () => {
+      renderOfficialExamYearOptions();
+      renderOfficialExamSession();
+    });
+    elements.officialExamStartButton?.addEventListener("click", startOfficialExam);
+    elements.officialExamSessionForm?.addEventListener("change", () => {
+      saveOfficialExamDraft();
+    });
+    elements.officialExamSessionForm?.addEventListener("submit", submitOfficialExam);
+    elements.officialExamPrevButton?.addEventListener("click", () => {
+      moveOfficialExam((state.officialExamSession?.position || 0) - 1);
+    });
+    elements.officialExamNextButton?.addEventListener("click", () => {
+      moveOfficialExam((state.officialExamSession?.position || 0) + 1);
+    });
+    elements.officialExamJumpSelect?.addEventListener("change", (event) => {
+      moveOfficialExam(Number(event.target.value));
+    });
+    elements.officialExamManualForm?.addEventListener("submit", recordOfficialExam);
     elements.chapterSelect?.addEventListener("change", (event) => {
       selectChapter(Number(event.target.value));
     });
@@ -6143,6 +6994,14 @@
     });
     window.addEventListener("keydown", (event) => {
       if (event.altKey || event.ctrlKey || event.metaKey) return;
+      if (
+        event.target instanceof HTMLInputElement ||
+        event.target instanceof HTMLSelectElement ||
+        event.target instanceof HTMLTextAreaElement ||
+        event.target instanceof HTMLButtonElement
+      ) {
+        return;
+      }
       if (!state.answered && ["1", "2", "3", "4"].includes(event.key)) {
         answer(Number(event.key) - 1);
       }
@@ -6175,6 +7034,7 @@
     tickSprint();
     tickMockTimer();
     renderOfficialDrillTimer();
+    renderOfficialExamTimer();
     checkDayRollover();
   }, 1000);
   const hasMockResult = isMockMode() && state.mock.finalized;

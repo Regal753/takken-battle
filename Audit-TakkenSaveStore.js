@@ -15,6 +15,18 @@ class MemoryStorage {
   setItem(key, value) {
     this.values.set(String(key), String(value));
   }
+
+  removeItem(key) {
+    this.values.delete(String(key));
+  }
+
+  key(index) {
+    return [...this.values.keys()][index] ?? null;
+  }
+
+  get length() {
+    return this.values.size;
+  }
 }
 
 class FailingStorage extends MemoryStorage {
@@ -31,6 +43,7 @@ class FailingStorage extends MemoryStorage {
 
 const id = "takken-battle-study-clean-v2-hard";
 const legacyState = {
+  stateSchemaVersion: 3,
   attempts: 33,
   correct: 28,
   totalXp: 4896,
@@ -43,17 +56,17 @@ const legacyState = {
 const legacyRaw = JSON.stringify(legacyState);
 const storage = new MemoryStorage({ [id]: legacyRaw });
 
-const upgrade = store.load(storage, id, 3, 1000);
+const upgrade = store.load(storage, id, 4, 1000);
 assert.equal(upgrade.source, "upgrade");
 assert.deepEqual(upgrade.value, legacyState);
 assert.equal(
-  storage.getItem(`${id}-before-upgrade-v0-to-v3`),
+  storage.getItem(`${id}-before-upgrade-v3-to-v4`),
   legacyRaw
 );
 
 const upgradedState = {
   ...upgrade.value,
-  stateSchemaVersion: 3,
+  stateSchemaVersion: 4,
   missionLog: {
     "2026-07-30": { minutes: 90 }
   }
@@ -75,7 +88,7 @@ assert.deepEqual(
 );
 
 storage.setItem(id, "{broken");
-const recovered = store.load(storage, id, 3, 2000);
+const recovered = store.load(storage, id, 4, 2000);
 assert.equal(recovered.source, "previous");
 assert.equal(recovered.skipPreviousRotation, true);
 assert.deepEqual(recovered.value, upgradedState);
@@ -101,6 +114,25 @@ assert.deepEqual(
   newerState
 );
 
+[4000, 5000, 6000, 7000].forEach((now) => {
+  store.backupCurrent(
+    storage,
+    id,
+    store.BEFORE_IMPORT_SUFFIX,
+    now,
+    JSON.stringify({ now })
+  );
+});
+const importBackups = [...storage.values.keys()]
+  .filter((key) => key.startsWith(`${id}${store.BEFORE_IMPORT_SUFFIX}`))
+  .sort();
+assert.deepEqual(importBackups, [
+  `${id}${store.BEFORE_IMPORT_SUFFIX}5000`,
+  `${id}${store.BEFORE_IMPORT_SUFFIX}6000`,
+  `${id}${store.BEFORE_IMPORT_SUFFIX}7000`
+]);
+assert.equal(storage.getItem(`${id}-before-upgrade-v3-to-v4`), legacyRaw);
+
 const failing = new FailingStorage({ [id]: legacyRaw }, id);
 assert.throws(
   () => store.save(failing, id, upgradedState),
@@ -114,6 +146,7 @@ console.log(JSON.stringify({
   schemaUpgradeBackup: true,
   corruptRecovery: true,
   previousRestore: true,
+  backupRetention: importBackups.length,
   failedWriteKeepsPrimary: true,
   preservedAttempts: restored.value.attempts,
   preservedCentralAnswers: restored.value.centralProgress.answers

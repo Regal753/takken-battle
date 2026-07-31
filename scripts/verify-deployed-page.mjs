@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260730-pass-loop-v11";
+const expectedVersion = process.argv[3] || "20260731-pass-loop-v12";
 const attempts = Math.max(1, Number(process.env.TAKKEN_DEPLOY_VERIFY_ATTEMPTS) || 12);
 const intervalMs = Math.max(0, Number(process.env.TAKKEN_DEPLOY_VERIFY_INTERVAL_MS) || 10000);
 
@@ -32,26 +32,35 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(html, /id="saveRestorePreviousButton"/, "save restore button missing");
     assert.match(html, /id="officialPracticeCoverageStatus"/, "official practice coverage missing");
     assert.match(html, /id="progressDrawer"/, "progress drawer missing");
-    assert.match(html, /id="officialExamForm"/, "official exam ledger missing");
+    assert.match(html, /id="officialExamSessionForm"/, "official exam runner missing");
     const appReference = html.match(/src="([^"]*app\.js\?v=[^"]+)"/)?.[1] || "";
     const storeReference = html.match(/src="([^"]*save-store\.js\?v=[^"]+)"/)?.[1] || "";
+    const officialDataReference =
+      html.match(/src="([^"]*official-exam-data\.js\?v=[^"]+)"/)?.[1] || "";
     const styleReference = html.match(/href="([^"]*styles\.css\?v=[^"]+)"/)?.[1] || "";
     assert.ok(appReference.includes(expectedVersion), `app version missing: ${expectedVersion}`);
     assert.ok(storeReference.includes(expectedVersion), `save store version missing: ${expectedVersion}`);
+    assert.ok(
+      officialDataReference.includes(expectedVersion),
+      `official exam data version missing: ${expectedVersion}`
+    );
     assert.ok(styleReference.includes(expectedVersion), `style version missing: ${expectedVersion}`);
     assert.match(html, /name="takken-runtime" content="public-static"/, "public-static marker missing");
-    const [appResponse, storeResponse, styleResponse] = await Promise.all([
+    const [appResponse, storeResponse, officialDataResponse, styleResponse] = await Promise.all([
       fetch(new URL(appReference, response.url), { cache: "no-store" }),
       fetch(new URL(storeReference, response.url), { cache: "no-store" }),
+      fetch(new URL(officialDataReference, response.url), { cache: "no-store" }),
       fetch(new URL(styleReference, response.url), { cache: "no-store" })
     ]);
-    const [appCode, storeCode, styleCode] = await Promise.all([
+    const [appCode, storeCode, officialDataCode, styleCode] = await Promise.all([
       appResponse.text(),
       storeResponse.text(),
+      officialDataResponse.text(),
       styleResponse.text()
     ]);
     assert.equal(appResponse.status, 200, `app HTTP ${appResponse.status}`);
     assert.equal(storeResponse.status, 200, `save store HTTP ${storeResponse.status}`);
+    assert.equal(officialDataResponse.status, 200, `official data HTTP ${officialDataResponse.status}`);
     assert.equal(styleResponse.status, 200, `style HTTP ${styleResponse.status}`);
     assert.match(appCode, /const DEFAULT_STUDY_SCOPE = "business"/, "study scope logic missing");
     assert.match(appCode, /function isRetained/, "retention logic missing");
@@ -66,6 +75,8 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(appCode, /function normalizeOfficialDrill/, "official drill save normalization missing");
     assert.match(appCode, /function saveMissionReview/, "review note workflow missing");
     assert.match(appCode, /function normalizeOfficialExamHistory/, "official exam ledger logic missing");
+    assert.match(officialDataCode, /2021-12/, "December 2021 exam missing");
+    assert.match(officialDataCode, /2020-10/, "October 2020 exam missing");
     assert.match(styleCode, /\.study-scope-select/, "study scope style missing");
     assert.match(styleCode, /\.pass-plan-panel/, "pass plan style missing");
     assert.match(storeCode, /function restorePrevious/, "save store restore missing");
