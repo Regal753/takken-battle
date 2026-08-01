@@ -15,14 +15,22 @@ const allIds = blueprint.sections.flatMap((section) =>
   section.chapters.flatMap((chapter) => chapter.ids)
 );
 const uniqueIds = new Set(allIds);
+const supplementalIds = blueprint.supplementalOrder || [];
+const allQuestionIds = [...allIds, ...supplementalIds];
 const answerCounts = [0, 0, 0, 0];
 const formatCounts = {};
 const promptOwners = new Map();
 
 if (allIds.length !== 100) issues.push(`expected 100 blueprint ids, got ${allIds.length}`);
 if (uniqueIds.size !== allIds.length) issues.push("duplicate blueprint question id");
-if (Object.keys(questions).length !== 100) {
-  issues.push(`expected 100 questions, got ${Object.keys(questions).length}`);
+if (supplementalIds.length !== 16) {
+  issues.push(`expected 16 supplemental questions, got ${supplementalIds.length}`);
+}
+if (new Set(allQuestionIds).size !== 116) {
+  issues.push("core and supplemental ids must make 116 unique questions");
+}
+if (Object.keys(questions).length !== 116) {
+  issues.push(`expected 116 questions, got ${Object.keys(questions).length}`);
 }
 
 blueprint.sections.forEach((section) => {
@@ -63,7 +71,10 @@ Object.values(questions).forEach((question) => {
   if (String(question.trap || "").length < 12) issues.push(`${question.id}: trap too short`);
   if (String(question.memoryRule || "").length < 12) issues.push(`${question.id}: memory rule too short`);
   if (question.legalBaseline !== "2026-04-01") issues.push(`${question.id}: legal baseline mismatch`);
-  if (question.verifiedAt !== "2026-07-26") issues.push(`${question.id}: verification date mismatch`);
+  const expectedVerifiedAt = supplementalIds.includes(question.id) ? "2026-08-01" : "2026-07-26";
+  if (question.verifiedAt !== expectedVerifiedAt) {
+    issues.push(`${question.id}: verification date mismatch`);
+  }
   if (!/^https:\/\//.test(question.sourceUrl || "")) issues.push(`${question.id}: invalid source URL`);
   if (!question.sourceRef) issues.push(`${question.id}: missing source reference`);
   const promptKey = String(question.text || "").replace(/\s+/g, " ").trim();
@@ -74,8 +85,8 @@ Object.values(questions).forEach((question) => {
   }
 });
 
-if (formatCounts["単一選択"] !== 94) {
-  issues.push(`expected 94 single-choice questions, got ${formatCounts["単一選択"] || 0}`);
+if (formatCounts["単一選択"] !== 110) {
+  issues.push(`expected 110 single-choice questions, got ${formatCounts["単一選択"] || 0}`);
 }
 if (formatCounts["個数問題"] !== 6) {
   issues.push(`expected 6 count questions, got ${formatCounts["個数問題"] || 0}`);
@@ -166,6 +177,8 @@ const report = {
   version: blueprint.version,
   legalBaseline: blueprint.legalBaseline,
   total: Object.keys(questions).length,
+  coreQuestions: allIds.length,
+  supplementalQuestions: supplementalIds.length,
   sections: Object.fromEntries(
     blueprint.sections.map((section) => [
       section.id,

@@ -90,6 +90,44 @@
     ])
   );
 
+  // 市販テキスト第2分冊の読後演習。コア100と確認模試の配分は変えず、
+  // 権利関係をテキストの21単元どおりに選んで解ける補助範囲を足す。
+  const textbookRanges = {
+    rights: {
+      part: 2,
+      label: "第2分冊 権利関係",
+      chapters: [
+        { id: "rights-book-01", unit: 1, page: 163, label: "02-01 制限行為能力者", ids: ["r001", "r101"] },
+        { id: "rights-book-02", unit: 2, page: 172, label: "02-02 意思表示", ids: ["r002", "r102"] },
+        { id: "rights-book-03", unit: 3, page: 182, label: "02-03 代理", ids: ["r003", "r004"] },
+        { id: "rights-book-04", unit: 4, page: 197, label: "02-04 時効", ids: ["r005", "r014"] },
+        { id: "rights-book-05", unit: 5, page: 208, label: "02-05 債務不履行・解除", ids: ["r010", "r103"] },
+        { id: "rights-book-06", unit: 6, page: 219, label: "02-06 危険負担", ids: ["r104", "r105"] },
+        { id: "rights-book-07", unit: 7, page: 222, label: "02-07 弁済・相殺・債権譲渡", ids: ["r009", "r106"] },
+        { id: "rights-book-08", unit: 8, page: 233, label: "02-08 売買", ids: ["r011", "r012"] },
+        { id: "rights-book-09", unit: 9, page: 243, label: "02-09 物権変動", ids: ["r013", "r107"] },
+        { id: "rights-book-10", unit: 10, page: 253, label: "02-10 抵当権", ids: ["r016", "r017", "r018"] },
+        { id: "rights-book-11", unit: 11, page: 269, label: "02-11 連帯債務・保証・連帯債権", ids: ["r007", "r008", "r108"] },
+        { id: "rights-book-12", unit: 12, page: 284, label: "02-12 賃貸借", ids: ["r019", "r109"] },
+        { id: "rights-book-13", unit: 13, page: 297, label: "02-13 借地借家法（借地）", ids: ["r020", "r110"] },
+        { id: "rights-book-14", unit: 14, page: 312, label: "02-14 借地借家法（借家）", ids: ["r021", "r022"] },
+        { id: "rights-book-15", unit: 15, page: 327, label: "02-15 請負", ids: ["r111", "r112"] },
+        { id: "rights-book-16", unit: 16, page: 331, label: "02-16 不法行為", ids: ["r113", "r114"] },
+        { id: "rights-book-17", unit: 17, page: 338, label: "02-17 相続", ids: ["r023", "r024"] },
+        { id: "rights-book-18", unit: 18, page: 350, label: "02-18 共有", ids: ["r015", "r115"] },
+        { id: "rights-book-19", unit: 19, page: 357, label: "02-19 区分所有法", ids: ["r025", "r026"] },
+        { id: "rights-book-20", unit: 20, page: 375, label: "02-20 不動産登記法", ids: ["r027", "r028"] },
+        { id: "rights-book-21", unit: 21, page: 385, label: "02-21 参考論点", ids: ["r006", "r116"] }
+      ]
+    }
+  };
+  const supplementalOrder = Object.values(textbookRanges)
+    .flatMap((rangeDefinition) => rangeDefinition.chapters)
+    .flatMap((chapter) => chapter.ids)
+    .filter((id, index, ids) =>
+      !idsBySection.rights.includes(id) && ids.indexOf(id) === index
+    );
+
   // 合格プロジェクトの分野別目標。年度で変動する合格基準点ではなく、
   // 37点を再現するための学習上の目安として使う。
   const studyTargets = {
@@ -249,13 +287,15 @@
   };
 
   window.TAKKEN_EXAM_BLUEPRINT = {
-    version: 1,
+    version: 2,
     legalBaseline: "2026-04-01",
     label: "令和8年度 全分野コア100",
     sections,
     idsBySection,
     dailyBlocks,
     curriculumOrder,
+    supplementalOrder,
+    textbookRanges,
     mockForms,
     studyTargets,
     masteryDailyQuotas,

@@ -1,13 +1,14 @@
 # 宅建バトル Study Quest
 
-令和8年度（2026年度）の宅建試験全分野を、本試験配分のオリジナル100問で学ぶ公開ベータ版です。
+令和8年度（2026年度）の宅建試験全分野を、本試験配分のオリジナル・コア100問で学ぶ公開ベータ版です。第2分冊「権利関係」は、本文21単元へ対応した読後演習44問も選べます。
 
 **公開URL:** https://regal753.github.io/takken-battle/
 
 ## できること
 
 - 権利関係28・法令上の制限16・税6・宅建業法40・税以外のその他10
-- 学習段階を「①宅建業法」「②法令・税その他」「③全分野」に分け、未学習分野を早過ぎる日課へ混ぜない
+- 第2分冊「権利関係」の01〜21を本文ページと対応させ、各単元を読んだ直後に最低2問、合計44問を解ける。うち16問はコア100を変えない補助問題
+- 学習段階を「①宅建業法」「②第2分冊・権利関係」「③法令・税その他」「④全分野」に分け、未学習分野を早過ぎる日課へ混ぜない
 - その日の固定10問は、新規を最低6問、翌日以降の要復習を最大4問にして端末内へ固定
 - 通常の正解後は毎回「4肢を説明できる／正解したが迷った／切れない肢がある」の理解チェックを必須にし、未回答のまま次問へ進ませない
 - 一度の正解では攻略済みにせず、異なる2日で正解して理解チェックも通り、最新の誤答・迷いがない問題だけを「定着」と表示
@@ -21,7 +22,7 @@
 - 120分以内・自動採点・2026年4月1日現在法との照合済み記録だけで、直近3回の平均と最低点から「合格域」「安定40」を判定
 - 通常解答後と模試誤答レビューから、各問の公式根拠を別タブで確認
 - 全分野コア100の一周、章別攻略、弱点狩り
-- テーマは「宅建業法」「権利関係」「法令・税その他」の3分野から選択
+- テーマは「宅建業法」「第2分冊 権利関係（21単元・44問）」「法令・税その他」の3分野から選択
 - 50問確認模試は全100問へ一度接触するまでロックし、未学習問題の答えを模試で先に見ない
 - 以前の宅建業法100問は問題本体と既存の解答履歴を保持し、新コア40問の定着とは分けて「解答済み」を表示
 - 正誤、迷い、誤答原因、EXP、宝箱を端末内へ保存
@@ -54,6 +55,7 @@ python -m http.server 8782
 ```powershell
 node .\Audit-TakkenQuestionBank.js
 node .\Audit-TakkenFullExam.js
+node .\Audit-TakkenChapter2Range.js
 node .\Audit-TakkenQuestionQuality.js
 node .\Audit-TakkenRewardSystem.js
 node .\Audit-TakkenOfficialDrill.js
@@ -65,6 +67,7 @@ node .\scripts\validate-public.mjs
 node .\Audit-TakkenFullExamUi.cjs
 node .\Audit-TakkenPassPlanUi.cjs
 node .\Audit-TakkenPassLoopV12Ui.cjs
+node .\Audit-TakkenChapter2RangeUi.cjs
 # 個人データを出力せず、実バックアップの意味的保持を確認
 $env:TAKKEN_REAL_SAVE_FIXTURE="C:\path\to\takken-battle-save.json"
 node .\Audit-TakkenRealSaveCompatibility.cjs
@@ -73,9 +76,9 @@ node .\Audit-TakkenRealSaveCompatibility.cjs
 GitHub Actionsでも同じ検証を行い、成功した`main`だけをGitHub Pagesへ配信します。
 Pages配信後は公開HTMLを最大12回再取得し、模試A/Bボタンと配信バージョンが実際に反映されたことまで自動確認します。
 
-`Audit-TakkenQuestionQuality.js`は、正解肢と○×解説の一致、個数問題の正しい肢数、公式根拠ドメイン、同文選択肢の矛盾、設問の類似重複、正解肢の長さ・絶対表現による手掛かり、模試内の正解位置連続を監査します。
+`Audit-TakkenQuestionQuality.js`は、正解肢と○×解説の一致、個数問題の正しい肢数、公式根拠ドメイン、同文選択肢の矛盾、設問の類似重複、正解肢の長さ・絶対表現による手掛かり、模試内の正解位置連続を監査します。`Audit-TakkenChapter2Range.js`は第2分冊の21単元・44問、各単元最低2問、追加16問の法令基準・公式根拠、コア100／固定50問への非混入を検算します。
 
-`Audit-TakkenFullExamUi.cjs`は固定10問、理解チェック、日次20問、復習、確認模試までをChromeで通します。`Audit-TakkenPassLoopV12Ui.cjs`は、公式50問の1問入力・自動採点、即時再試験拒否、自己申告除外、日跨ぎ未復習、日次20問の1問表示、直近3回の安定度、JSON書出し日時、容量警告、PC／390px幅を確認します。`Audit-TakkenOfficialDrill.js`はA/B/Cの公式解答と法令基準メタデータ、`Audit-TakkenOfficialExamData.js`は12試験回・各50解答・複数正解・初見10回の達成可能性を検算します。`Audit-TakkenSaveStore.js`は更新前退避・3世代整理・破損復旧・直前復元を、`Audit-TakkenRealSaveCompatibility.cjs`は公開しない実バックアップを使って主要進捗の意味的完全保持を確認します。
+`Audit-TakkenFullExamUi.cjs`は固定10問、理解チェック、日次20問、復習、確認模試までをChromeで通します。`Audit-TakkenPassLoopV12Ui.cjs`は、公式50問の1問入力・自動採点、即時再試験拒否、自己申告除外、日跨ぎ未復習、日次20問の1問表示、直近3回の安定度、JSON書出し日時、容量警告、PC／390px幅を確認します。`Audit-TakkenChapter2RangeUi.cjs`は、21単元の選択、本文ページ表示、非連続IDでも同じ単元の次問へ進むこと、請負・不法行為への到達、PC／390px幅の横あふれをChromeで確認します。`Audit-TakkenOfficialDrill.js`はA/B/Cの公式解答と法令基準メタデータ、`Audit-TakkenOfficialExamData.js`は12試験回・各50解答・複数正解・初見10回の達成可能性を検算します。`Audit-TakkenSaveStore.js`は更新前退避・3世代整理・破損復旧・直前復元を、`Audit-TakkenRealSaveCompatibility.cjs`は公開しない実バックアップを使って主要進捗の意味的完全保持を確認します。
 
 ## 問題と権利
 

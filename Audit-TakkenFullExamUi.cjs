@@ -121,7 +121,11 @@ async function main() {
         optionalText: optional?.querySelector(":scope > summary")?.textContent?.replace(/\s+/g, " ").trim() || ""
       };
     });
-    const expectedThemeGroups = ["宅建業法", "権利関係", "法令・税その他"];
+    const expectedThemeGroups = [
+      "宅建業法",
+      "第2分冊 権利関係（21単元・44問）",
+      "法令・税その他"
+    ];
     if (JSON.stringify(themeHierarchy.labels) !== JSON.stringify(expectedThemeGroups)) {
       throw new Error(`Theme hierarchy mismatch: ${JSON.stringify(themeHierarchy)}`);
     }
@@ -979,7 +983,7 @@ async function main() {
     if (
       migration.currentId !== "b001" ||
       migration.index !== 1 ||
-      migration.examContentVersion !== 1 ||
+      migration.examContentVersion !== 2 ||
       migration.attempts !== 65 ||
       migration.totalXp !== 5000 ||
       !migration.legacyWeakKept ||

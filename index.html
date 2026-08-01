@@ -3,17 +3,17 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="権利関係・法令上の制限・税その他・宅建業法を本試験配分で学べる、令和8年度向け全分野コア100問の公開ベータ版です。">
+    <meta name="description" content="本試験配分のコア100問と、第2分冊・権利関係21単元の読後演習44問で学べる、令和8年度向け宅建学習ツールです。">
     <meta name="theme-color" content="#17261f">
     <meta name="takken-runtime" content="public-static">
     <meta property="og:title" content="宅建バトル Study Quest">
-    <meta property="og:description" content="宅建全分野コア100問を、本試験配分の固定ロードで一周する公開ベータ版。">
+    <meta property="og:description" content="宅建全分野コア100問と、第2分冊・権利関係21単元の読後演習44問を収録。">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://regal753.github.io/takken-battle/">
     <link rel="canonical" href="https://regal753.github.io/takken-battle/">
     <title>宅建バトル Study Quest</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./styles.css?v=20260731-pass-loop-v12">
+    <link rel="stylesheet" href="./styles.css?v=20260801-ch2-rights-v13">
   </head>
   <body>
     <div class="app-root">
@@ -188,6 +188,11 @@
               <small id="coreRetentionStatus">定着 0 / 100</small>
             </div>
             <div>
+              <span>第2分冊・権利</span>
+              <strong id="rightsBookCoverageStatus">接触 0 / 44</strong>
+              <small id="rightsBookRetentionStatus">定着 0 / 44・21単元</small>
+            </div>
+            <div>
               <span>公式未見過去問</span>
               <strong id="officialReadinessStatus">未記録</strong>
               <small>戦略目標37・安全圏40</small>
@@ -329,8 +334,9 @@
           <select id="chapterSelect" class="chapter-select" aria-label="テーマを選択"></select>
           <select id="studyScopeSelect" class="study-scope-select" aria-label="現在の学習段階">
             <option value="business">① 宅建業法を固める</option>
-            <option value="law-other">② 法令・税その他へ進む</option>
-            <option value="all">③ 全分野を混ぜる</option>
+            <option value="rights">② 第2分冊・権利関係を固める</option>
+            <option value="law-other">③ 法令・税その他へ進む</option>
+            <option value="all">④ 全分野を混ぜる</option>
           </select>
           <button id="weakButton" class="quick-button" type="button" disabled>弱点 0</button>
         </nav>
@@ -601,19 +607,19 @@
       </div>
     </aside>
 
-    <script src="./exam-blueprint.js?v=20260726-mastery-v3"></script>
-    <script src="./exam-question-core.js?v=20260726-mastery-v3"></script>
-    <script src="./exam-questions-rights.js?v=20260726-mastery-v3"></script>
-    <script src="./exam-questions-restrictions.js?v=20260726-mastery-v3"></script>
-    <script src="./exam-questions-tax-other.js?v=20260726-mastery-v3"></script>
-    <script src="./exam-questions-business.js?v=20260726-mastery-v3"></script>
+    <script src="./exam-blueprint.js?v=20260801-ch2-rights-v13"></script>
+    <script src="./exam-question-core.js?v=20260801-ch2-rights-v13"></script>
+    <script src="./exam-questions-rights.js?v=20260801-ch2-rights-v13"></script>
+    <script src="./exam-questions-restrictions.js?v=20260801-ch2-rights-v13"></script>
+    <script src="./exam-questions-tax-other.js?v=20260801-ch2-rights-v13"></script>
+    <script src="./exam-questions-business.js?v=20260801-ch2-rights-v13"></script>
     <script src="./question-bank.js?v=20260723-ops-v15"></script>
     <script src="./question-balance.js?v=20260711-feedback-v8"></script>
     <script src="./reward-system.js?v=20260713-confidence-v14"></script>
-    <script src="./official-exam-data.js?v=20260731-pass-loop-v12"></script>
-    <script src="./save-store.js?v=20260731-pass-loop-v12"></script>
-    <script src="./save-transfer.js?v=20260731-pass-loop-v12"></script>
-    <script src="./app.js?v=20260731-pass-loop-v12"></script>
+    <script src="./official-exam-data.js?v=20260801-ch2-rights-v13"></script>
+    <script src="./save-store.js?v=20260801-ch2-rights-v13"></script>
+    <script src="./save-transfer.js?v=20260801-ch2-rights-v13"></script>
+    <script src="./app.js?v=20260801-ch2-rights-v13"></script>
     <noscript>宅建バトルを利用するにはJavaScriptを有効にしてください。</noscript>
   </body>
 </html>

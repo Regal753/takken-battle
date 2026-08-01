@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260731-pass-loop-v12";
+const expectedVersion = process.argv[3] || "20260801-ch2-rights-v13";
 const attempts = Math.max(1, Number(process.env.TAKKEN_DEPLOY_VERIFY_ATTEMPTS) || 12);
 const intervalMs = Math.max(0, Number(process.env.TAKKEN_DEPLOY_VERIFY_INTERVAL_MS) || 10000);
 
@@ -31,6 +31,7 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(html, /id="officialDrillAnswerGrid"/, "official drill answer grid missing");
     assert.match(html, /id="saveRestorePreviousButton"/, "save restore button missing");
     assert.match(html, /id="officialPracticeCoverageStatus"/, "official practice coverage missing");
+    assert.match(html, /id="rightsBookCoverageStatus"/, "chapter 2 coverage missing");
     assert.match(html, /id="progressDrawer"/, "progress drawer missing");
     assert.match(html, /id="officialExamSessionForm"/, "official exam runner missing");
     const appReference = html.match(/src="([^"]*app\.js\?v=[^"]+)"/)?.[1] || "";
@@ -63,6 +64,7 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.equal(officialDataResponse.status, 200, `official data HTTP ${officialDataResponse.status}`);
     assert.equal(styleResponse.status, 200, `style HTTP ${styleResponse.status}`);
     assert.match(appCode, /const DEFAULT_STUDY_SCOPE = "business"/, "study scope logic missing");
+    assert.match(appCode, /const RIGHTS_TEXTBOOK_IDS/, "chapter 2 range logic missing");
     assert.match(appCode, /function isRetained/, "retention logic missing");
     assert.match(appCode, /以前の100問（解答履歴を保持）/, "legacy question history label missing");
     assert.match(appCode, /問題・履歴を保持　解答済/, "legacy answered progress missing");
