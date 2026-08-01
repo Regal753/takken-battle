@@ -21,6 +21,7 @@ jobs:
       - run: node Audit-TakkenChapter2Range.js
       - run: node Audit-TakkenTextbookRanges.js
       - run: node Audit-TakkenQuestionQuality.js
+      - run: node Audit-TakkenExplanationMastery.js
       - run: node Audit-TakkenQuestionBank.js
       - run: node Audit-TakkenRewardSystem.js
       - run: node Audit-TakkenOfficialDrill.js

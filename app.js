@@ -4902,6 +4902,7 @@
     const answered = state.answered;
     removeAdaptiveFeedback();
     removeConfidenceCheck();
+    removeReasoningPath();
     elements.feedbackBox.hidden = !answered;
     if (!answered) {
       return;
@@ -4909,7 +4910,7 @@
     const answerGrid = elements.feedbackBox.querySelector(".answer-grid");
     if (answered.mock) {
       elements.feedbackBox
-        .querySelectorAll(".cut-list, .verdict-board, .mistake-capture, .memory-rule, .confidence-check, .adaptive-note")
+        .querySelectorAll(".cut-list, .verdict-board, .reasoning-path, .mistake-capture, .memory-rule, .confidence-check, .adaptive-note")
         .forEach((node) => node.remove());
       if (answerGrid) answerGrid.hidden = true;
       elements.feedbackTitle.textContent = "解答を記録しました";
@@ -4929,8 +4930,9 @@
     elements.trapText.textContent = question.trap || "正解肢だけでなく、他の肢を切れる理由まで確認する。";
     renderBookReference(question);
     elements.explainText.textContent = question.explain;
-    renderConfidenceCheck(question);
     renderChoiceExplanations(question);
+    renderReasoningPath(question);
+    renderConfidenceCheck(question);
     renderPriorMistakeRecall(question);
     renderMistakeCapture(question);
     renderMemoryRule(question);
@@ -4988,6 +4990,71 @@
     wrapper.append(head, grid);
     const answerGrid = elements.feedbackBox.querySelector(".answer-grid");
     elements.feedbackBox.insertBefore(wrapper, answerGrid || elements.explainText);
+  }
+
+  function removeReasoningPath() {
+    elements.feedbackBox.querySelector(".reasoning-path")?.remove();
+    elements.explainText.hidden = false;
+  }
+
+  function reasoningApplicationText(question, facts) {
+    if (question.format === "個数問題") {
+      const trueLabels = facts
+        .filter((fact) => fact.truth)
+        .map((fact) => choiceSourceLabel(question, fact.index));
+      const countText = question.choices[question.answer] || `${trueLabels.length}個`;
+      return `各記述を独立に判定すると、○は${trueLabels.join("・")}の${trueLabels.length}個。したがって答えは「${countText}」。`;
+    }
+
+    const correct = facts.find((fact) => fact.index === question.answer);
+    const selected = facts.find((fact) => fact.index === state.answered?.selected);
+    if (!correct) return "正解肢の理由を全肢判定で確認する。";
+    const correctText = `正解肢${choiceSourceLabel(question, correct.index)}: ${correct.reason}`;
+    if (!selected || selected.index === correct.index) return correctText;
+    return `選んだ肢${choiceSourceLabel(question, selected.index)}: ${selected.reason} ${correctText}`;
+  }
+
+  function renderReasoningPath(question) {
+    const facts = choiceCutFacts(question);
+    if (!facts.length || !state.answered || state.answered.mock) return;
+
+    const wrapper = document.createElement("section");
+    wrapper.className = "reasoning-path";
+    wrapper.setAttribute("aria-label", "正解を再現する理解経路");
+
+    const heading = document.createElement("div");
+    heading.className = "reasoning-path-head";
+    const title = document.createElement("strong");
+    title.textContent = "理解の順番";
+    const subtitle = document.createElement("span");
+    subtitle.textContent = "結論ではなく、次も切れる理由を残す";
+    heading.append(title, subtitle);
+
+    const list = document.createElement("ol");
+    list.className = "reasoning-steps";
+    [
+      { label: "判断軸", text: question.explain },
+      { label: "この問題への当てはめ", text: reasoningApplicationText(question, facts) },
+      { label: "間違いやすい境界", text: question.trap || "似た制度と適用条件を分けて判断する。" },
+      { label: "次に再現する一文", text: question.memoryRule || question.explain }
+    ].forEach((step, index) => {
+      const item = document.createElement("li");
+      const marker = document.createElement("span");
+      marker.textContent = String(index + 1);
+      const copy = document.createElement("div");
+      const label = document.createElement("strong");
+      label.textContent = step.label;
+      const text = document.createElement("p");
+      text.textContent = step.text;
+      copy.append(label, text);
+      item.append(marker, copy);
+      list.append(item);
+    });
+
+    wrapper.append(heading, list);
+    const verdict = elements.feedbackBox.querySelector(".verdict-board");
+    elements.feedbackBox.insertBefore(wrapper, verdict || elements.feedbackBox.firstChild);
+    elements.explainText.hidden = true;
   }
 
   function renderPriorMistakeRecall(question) {

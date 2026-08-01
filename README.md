@@ -9,6 +9,7 @@
 - 権利関係28・法令上の制限16・税6・宅建業法40・税以外のその他10
 - Chapter 01（第1分冊）11単元44問、Chapter 02（第2分冊）21単元44問、Chapter 03（第3分冊）7単元18問、Chapter 04（第3分冊）6単元18問を本文ページと対応させ、各単元を読んだ直後に最低2問を解ける
 - 読後演習専用の補助24問を追加しつつ、コア100・固定50問確認模試の構成は変更しない
+- 全124問の496肢すべてに具体的な判定理由を持たせ、解答後は「判断軸→この問題への当てはめ→間違いやすい境界→次に再現する一文」の順で理解を組み立てる
 - 学習段階を「①宅建業法」「②第2分冊・権利関係」「③法令・税その他」「④全分野」に分け、未学習分野を早過ぎる日課へ混ぜない
 - その日の固定10問は、新規を最低6問、翌日以降の要復習を最大4問にして端末内へ固定
 - 通常の正解後は毎回「4肢を説明できる／正解したが迷った／切れない肢がある」の理解チェックを必須にし、未回答のまま次問へ進ませない
@@ -59,6 +60,7 @@ node .\Audit-TakkenFullExam.js
 node .\Audit-TakkenChapter2Range.js
 node .\Audit-TakkenTextbookRanges.js
 node .\Audit-TakkenQuestionQuality.js
+node .\Audit-TakkenExplanationMastery.js
 node .\Audit-TakkenRewardSystem.js
 node .\Audit-TakkenOfficialDrill.js
 node .\Audit-TakkenOfficialExamData.js
@@ -71,6 +73,7 @@ node .\Audit-TakkenPassPlanUi.cjs
 node .\Audit-TakkenPassLoopV12Ui.cjs
 node .\Audit-TakkenChapter2RangeUi.cjs
 node .\Audit-TakkenTextbookRangesUi.cjs
+node .\Audit-TakkenExplanationMasteryUi.cjs
 # 個人データを出力せず、実バックアップの意味的保持を確認
 $env:TAKKEN_REAL_SAVE_FIXTURE="C:\path\to\takken-battle-save.json"
 node .\Audit-TakkenRealSaveCompatibility.cjs
@@ -79,9 +82,9 @@ node .\Audit-TakkenRealSaveCompatibility.cjs
 GitHub Actionsでも同じ検証を行い、成功した`main`だけをGitHub Pagesへ配信します。
 Pages配信後は公開HTMLを最大12回再取得し、模試A/Bボタンと配信バージョンが実際に反映されたことまで自動確認します。
 
-`Audit-TakkenQuestionQuality.js`は、正解肢と○×解説の一致、個数問題の正しい肢数、公式根拠ドメイン、同文選択肢の矛盾、設問の類似重複、正解肢の長さ・絶対表現による手掛かり、模試内の正解位置連続を監査します。`Audit-TakkenChapter2Range.js`は第2分冊の21単元・44問を個別検算し、`Audit-TakkenTextbookRanges.js`は全3分冊・4章・45単元・124問、各単元最低2問、補助24問の現在法・公式根拠、コア100／固定50問への非混入を検算します。
+`Audit-TakkenQuestionQuality.js`は、正解肢と○×解説の一致、個数問題の正しい肢数、公式根拠ドメイン、同文選択肢の矛盾、設問の類似重複、正解肢の長さ・絶対表現による手掛かり、模試内の正解位置連続を監査します。`Audit-TakkenExplanationMastery.js`は全124問・496肢について、項目名だけの理由を禁止し、判定理由・判断軸・誤認境界・再現則の最低品質と役割分離を検査します。`Audit-TakkenChapter2Range.js`は第2分冊の21単元・44問を個別検算し、`Audit-TakkenTextbookRanges.js`は全3分冊・4章・45単元・124問、各単元最低2問、補助24問の現在法・公式根拠、コア100／固定50問への非混入を検算します。
 
-`Audit-TakkenFullExamUi.cjs`は固定10問、理解チェック、日次20問、復習、確認模試までをChromeで通します。`Audit-TakkenPassLoopV12Ui.cjs`は、公式50問の1問入力・自動採点、即時再試験拒否、自己申告除外、日跨ぎ未復習、日次20問の1問表示、直近3回の安定度、JSON書出し日時、容量警告、PC／390px幅を確認します。`Audit-TakkenChapter2RangeUi.cjs`は第2分冊内の非連続ID遷移を、`Audit-TakkenTextbookRangesUi.cjs`は全45単元の選択、本文ページ、補助問題への遷移、PC／390px幅の横あふれをChromeで確認します。`Audit-TakkenOfficialDrill.js`はA/B/Cの公式解答と法令基準メタデータ、`Audit-TakkenOfficialExamData.js`は12試験回・各50解答・複数正解・初見10回の達成可能性を検算します。`Audit-TakkenSaveStore.js`は更新前退避・3世代整理・破損復旧・直前復元を、`Audit-TakkenRealSaveCompatibility.cjs`は公開しない実バックアップを使って主要進捗の意味的完全保持を確認します。
+`Audit-TakkenFullExamUi.cjs`は固定10問、理解チェック、日次20問、復習、確認模試までをChromeで通します。`Audit-TakkenPassLoopV12Ui.cjs`は、公式50問の1問入力・自動採点、即時再試験拒否、自己申告除外、日跨ぎ未復習、日次20問の1問表示、直近3回の安定度、JSON書出し日時、容量警告、PC／390px幅を確認します。`Audit-TakkenChapter2RangeUi.cjs`は第2分冊内の非連続ID遷移を、`Audit-TakkenTextbookRangesUi.cjs`は全45単元の選択、本文ページ、補助問題への遷移、PC／390px幅の横あふれをChromeで確認します。`Audit-TakkenExplanationMasteryUi.cjs`は単一選択の誤答時と個数問題の正答時に、理解の4段階、選択肢への当てはめ、全4肢の理由、PC／390px幅を実ブラウザで確認します。`Audit-TakkenOfficialDrill.js`はA/B/Cの公式解答と法令基準メタデータ、`Audit-TakkenOfficialExamData.js`は12試験回・各50解答・複数正解・初見10回の達成可能性を検算します。`Audit-TakkenSaveStore.js`は更新前退避・3世代整理・破損復旧・直前復元を、`Audit-TakkenRealSaveCompatibility.cjs`は公開しない実バックアップを使って主要進捗の意味的完全保持を確認します。
 
 ## 問題と権利
 
