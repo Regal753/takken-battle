@@ -27,6 +27,7 @@ jobs:
       - run: node Audit-TakkenChapter2Range.js
       - run: node Audit-TakkenTextbookRanges.js
       - run: node Audit-TakkenQuestionQuality.js
+      - run: node Audit-TakkenExplanationMastery.js
       - run: node Audit-TakkenQuestionBank.js
       - run: node Audit-TakkenRewardSystem.js
       - run: node Audit-TakkenOfficialDrill.js
@@ -61,4 +62,4 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
       - name: Verify deployed page
-        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260801-textbook-units-v14"
+        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260801-explanation-mastery-v15"
