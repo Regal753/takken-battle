@@ -28,18 +28,20 @@ jobs:
       - run: node Audit-TakkenTextbookRanges.js
       - run: node Audit-TakkenQuestionQuality.js
       - run: node Audit-TakkenExplanationMastery.js
+      - run: node Audit-TakkenPracticalVariations.js
       - run: node Audit-TakkenQuestionBank.js
       - run: node Audit-TakkenRewardSystem.js
       - run: node Audit-TakkenOfficialDrill.js
       - run: node Audit-TakkenOfficialExamData.js
       - run: node Audit-TakkenSaveStore.js
       - run: node Audit-TakkenSaveTransfer.js
+      - run: node Audit-TakkenCalculationDrill.js
       - run: node scripts/validate-public.mjs
       - name: Assemble static site
         shell: bash
         run: |
           mkdir _site
-          cp index.html styles.css app.js official-exam-data.js save-store.js save-transfer.js reward-system.js question-bank.js question-balance.js exam-blueprint.js exam-question-core.js exam-questions-rights.js exam-questions-restrictions.js exam-questions-tax-other.js exam-questions-business.js _site/
+          cp index.html styles.css app.js practical-question-bank.js calculation-drill.js official-exam-data.js save-store.js save-transfer.js reward-system.js question-bank.js question-balance.js exam-blueprint.js exam-question-core.js exam-questions-rights.js exam-questions-restrictions.js exam-questions-tax-other.js exam-questions-business.js _site/
           cp -R assets _site/assets
           touch _site/.nojekyll
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
@@ -62,4 +64,4 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
       - name: Verify deployed page
-        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260801-explanation-mastery-v15"
+        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260802-practical-variations-v16"

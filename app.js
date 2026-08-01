@@ -12,7 +12,21 @@
   const EVENT_OUTBOX_ID = `${STORAGE_ID}-event-outbox`;
   const SAVE_STORE = window.TAKKEN_SAVE_STORE;
   const OFFICIAL_EXAM_DATA = window.TAKKEN_OFFICIAL_EXAMS;
-  const STATE_SCHEMA_VERSION = 4;
+  const CALCULATION_DRILL = window.TAKKEN_CALCULATION_DRILL;
+  const CALCULATION_QUESTIONS = CALCULATION_DRILL?.QUESTIONS || [];
+  const CALCULATION_QUESTION_BY_ID = Object.fromEntries(
+    CALCULATION_QUESTIONS.map((item) => [item.id, item])
+  );
+  const CALCULATION_QUESTION_IDS = Object.freeze(CALCULATION_QUESTIONS.map((item) => item.id));
+  const PRACTICAL_VARIATIONS = window.TAKKEN_PRACTICAL_VARIATIONS;
+  const PRACTICAL_QUESTIONS = PRACTICAL_VARIATIONS?.QUESTIONS || [];
+  const PRACTICAL_QUESTION_BY_ID = Object.fromEntries(
+    PRACTICAL_QUESTIONS.map((item) => [item.id, item])
+  );
+  const PRACTICAL_QUESTION_IDS = Object.freeze(PRACTICAL_QUESTIONS.map((item) => item.id));
+  const PRACTICAL_SCOPES = Object.freeze(["all", "business", "rights", "restrictions", "taxOther"]);
+  const PRACTICAL_SESSION_SIZES = Object.freeze([10, 20, 45]);
+  const STATE_SCHEMA_VERSION = 6;
   const DAILY_TARGET = 10;
   const SPRINT_MINUTES = 25;
   const TODAY_QUEST_PARAM = URL_PARAMS.has("today") || URL_PARAMS.has("quest");
@@ -641,7 +655,50 @@
     officialTaxOtherScore: $("#officialTaxOtherScore"),
     officialExamMinutes: $("#officialExamMinutes"),
     officialExamStatus: $("#officialExamStatus"),
-    officialExamHistory: $("#officialExamHistory")
+    officialExamHistory: $("#officialExamHistory"),
+    calculationDrillPanel: $("#calculationDrillPanel"),
+    calculationDrillSummary: $("#calculationDrillSummary"),
+    calculationDrillStage: $("#calculationDrillStage"),
+    calculationDrillProgress: $("#calculationDrillProgress"),
+    calculationDrillResetButton: $("#calculationDrillResetButton"),
+    calculationDrillQuestion: $("#calculationDrillQuestion"),
+    calculationDrillCategory: $("#calculationDrillCategory"),
+    calculationDrillRetryStatus: $("#calculationDrillRetryStatus"),
+    calculationDrillPrompt: $("#calculationDrillPrompt"),
+    calculationDrillChoices: $("#calculationDrillChoices"),
+    calculationDrillFeedback: $("#calculationDrillFeedback"),
+    calculationDrillVerdict: $("#calculationDrillVerdict"),
+    calculationDrillFormula: $("#calculationDrillFormula"),
+    calculationDrillTrap: $("#calculationDrillTrap"),
+    calculationDrillSource: $("#calculationDrillSource"),
+    calculationDrillConfidence: $("#calculationDrillConfidence"),
+    calculationDrillNextButton: $("#calculationDrillNextButton"),
+    calculationDrillComplete: $("#calculationDrillComplete"),
+    calculationDrillCompleteText: $("#calculationDrillCompleteText"),
+    calculationDrillRestartButton: $("#calculationDrillRestartButton"),
+    practicalDrillPanel: $("#practicalDrillPanel"),
+    practicalDrillSummary: $("#practicalDrillSummary"),
+    practicalDrillOverview: $("#practicalDrillOverview"),
+    practicalDrillScope: $("#practicalDrillScope"),
+    practicalDrillSize: $("#practicalDrillSize"),
+    practicalDrillStartButton: $("#practicalDrillStartButton"),
+    practicalDrillSession: $("#practicalDrillSession"),
+    practicalDrillStage: $("#practicalDrillStage"),
+    practicalDrillProgress: $("#practicalDrillProgress"),
+    practicalDrillUnit: $("#practicalDrillUnit"),
+    practicalDrillRetryStatus: $("#practicalDrillRetryStatus"),
+    practicalDrillPrompt: $("#practicalDrillPrompt"),
+    practicalDrillChoices: $("#practicalDrillChoices"),
+    practicalDrillFeedback: $("#practicalDrillFeedback"),
+    practicalDrillVerdict: $("#practicalDrillVerdict"),
+    practicalDrillReasoning: $("#practicalDrillReasoning"),
+    practicalDrillSources: $("#practicalDrillSources"),
+    practicalDrillConfidence: $("#practicalDrillConfidence"),
+    practicalDrillNextButton: $("#practicalDrillNextButton"),
+    practicalDrillCancelButton: $("#practicalDrillCancelButton"),
+    practicalDrillComplete: $("#practicalDrillComplete"),
+    practicalDrillCompleteText: $("#practicalDrillCompleteText"),
+    practicalDrillRestartButton: $("#practicalDrillRestartButton")
   };
 
   let fallbackIdSequence = 0;
@@ -661,6 +718,42 @@
     }
     fallbackIdSequence += 1;
     return `${prefix}-${timestamp}-${fallbackIdSequence.toString(36)}`;
+  }
+
+  function createCalculationDrillState() {
+    return {
+      version: CALCULATION_DRILL?.VERSION || 1,
+      stage: "first",
+      queue: [...CALCULATION_QUESTION_IDS],
+      position: 0,
+      currentAttempt: null,
+      retryIds: [],
+      masteredIds: [],
+      history: {},
+      attempts: 0,
+      correctAttempts: 0,
+      completedAt: ""
+    };
+  }
+
+  function createPracticalDrillState() {
+    return {
+      version: PRACTICAL_VARIATIONS?.VERSION || 1,
+      stage: "idle",
+      scope: "all",
+      sessionSize: 20,
+      sessionIds: [],
+      queue: [],
+      position: 0,
+      currentAttempt: null,
+      retryIds: [],
+      history: {},
+      attempts: 0,
+      correctAttempts: 0,
+      sessionsCompleted: 0,
+      sessionStartedAt: "",
+      completedAt: ""
+    };
   }
 
   const createState = () => ({
@@ -707,6 +800,8 @@
     officialExamHistory: [],
     officialExamSession: null,
     missionLog: {},
+    calculationDrill: createCalculationDrillState(),
+    practicalDrill: createPracticalDrillState(),
     saveMeta: {
       lastExportedAt: "",
       lastExportHash: ""
@@ -1212,6 +1307,178 @@
     );
   }
 
+  function calculationIds(input) {
+    const valid = new Set(CALCULATION_QUESTION_IDS);
+    return [...new Set((Array.isArray(input) ? input : []).map(String))]
+      .filter((id) => valid.has(id));
+  }
+
+  function normalizeCalculationHistory(input) {
+    return Object.fromEntries(
+      Object.entries(input && typeof input === "object" && !Array.isArray(input) ? input : {})
+        .filter(([id]) => Boolean(CALCULATION_QUESTION_BY_ID[id]))
+        .map(([id, item]) => [
+          id,
+          {
+            attempts: boundedInteger(item?.attempts, 10000),
+            correct: boundedInteger(item?.correct, 10000),
+            wrong: boundedInteger(item?.wrong, 10000),
+            uncertain: boundedInteger(item?.uncertain, 10000),
+            lastSelected: Number.isInteger(Number(item?.lastSelected))
+              ? Math.min(3, Math.max(0, Number(item.lastSelected)))
+              : null,
+            lastCorrect: Boolean(item?.lastCorrect),
+            lastConfidence: ["confident", "uncertain", "wrong"].includes(item?.lastConfidence)
+              ? item.lastConfidence
+              : "",
+            lastAnsweredAt: Number.isFinite(Date.parse(item?.lastAnsweredAt))
+              ? String(item.lastAnsweredAt).slice(0, 64)
+              : ""
+          }
+        ])
+    );
+  }
+
+  function normalizeCalculationDrillState(input) {
+    const fresh = createCalculationDrillState();
+    if (!CALCULATION_QUESTION_IDS.length) return fresh;
+    const retryIds = calculationIds(input?.retryIds);
+    const masteredIds = calculationIds(input?.masteredIds)
+      .filter((id) => !retryIds.includes(id));
+    let stage = ["first", "retry", "complete"].includes(input?.stage)
+      ? input.stage
+      : "first";
+    if (stage === "complete" && retryIds.length) stage = "retry";
+    let queue = calculationIds(input?.queue);
+    if (!queue.length && stage !== "complete") {
+      queue = stage === "retry" && retryIds.length
+        ? [...retryIds]
+        : [...CALCULATION_QUESTION_IDS];
+    }
+    const position = queue.length
+      ? Math.min(Math.max(Number(input?.position) || 0, 0), queue.length - 1)
+      : 0;
+    const currentId = queue[position];
+    const rawAttempt = input?.currentAttempt;
+    const selected = Number(rawAttempt?.selected);
+    const currentQuestion = CALCULATION_QUESTION_BY_ID[currentId];
+    const currentAttempt = rawAttempt?.id === currentId && Number.isInteger(selected) && selected >= 0 && selected < 4
+      ? {
+          id: currentId,
+          selected,
+          correct: selected === currentQuestion.answer,
+          confidence: selected === currentQuestion.answer
+            ? (["confident", "uncertain"].includes(rawAttempt?.confidence) ? rawAttempt.confidence : "")
+            : "wrong"
+        }
+      : null;
+    return {
+      version: CALCULATION_DRILL?.VERSION || 1,
+      stage,
+      queue,
+      position,
+      currentAttempt,
+      retryIds,
+      masteredIds,
+      history: normalizeCalculationHistory(input?.history),
+      attempts: boundedInteger(input?.attempts, 100000),
+      correctAttempts: boundedInteger(input?.correctAttempts, 100000),
+      completedAt: stage === "complete" && Number.isFinite(Date.parse(input?.completedAt))
+        ? String(input.completedAt).slice(0, 64)
+        : ""
+    };
+  }
+
+  function practicalIds(input) {
+    const valid = new Set(PRACTICAL_QUESTION_IDS);
+    return [...new Set((Array.isArray(input) ? input : []).map(String))]
+      .filter((id) => valid.has(id));
+  }
+
+  function normalizePracticalHistory(input) {
+    return Object.fromEntries(
+      Object.entries(input && typeof input === "object" && !Array.isArray(input) ? input : {})
+        .filter(([id]) => Boolean(PRACTICAL_QUESTION_BY_ID[id]))
+        .map(([id, item]) => [
+          id,
+          {
+            attempts: boundedInteger(item?.attempts, 10000),
+            correct: boundedInteger(item?.correct, 10000),
+            wrong: boundedInteger(item?.wrong, 10000),
+            uncertain: boundedInteger(item?.uncertain, 10000),
+            lastSelected: Number.isInteger(Number(item?.lastSelected))
+              ? Math.min(3, Math.max(0, Number(item.lastSelected)))
+              : null,
+            lastCorrect: Boolean(item?.lastCorrect),
+            lastConfidence: ["confident", "uncertain", "wrong"].includes(item?.lastConfidence)
+              ? item.lastConfidence
+              : "",
+            lastAnsweredAt: Number.isFinite(Date.parse(item?.lastAnsweredAt))
+              ? String(item.lastAnsweredAt).slice(0, 64)
+              : ""
+          }
+        ])
+    );
+  }
+
+  function normalizePracticalDrillState(input) {
+    const fresh = createPracticalDrillState();
+    if (!PRACTICAL_QUESTION_IDS.length) return fresh;
+    const scope = PRACTICAL_SCOPES.includes(input?.scope) ? input.scope : "all";
+    const requestedSize = Number(input?.sessionSize);
+    const sessionSize = PRACTICAL_SESSION_SIZES.includes(requestedSize) ? requestedSize : 20;
+    const retryIds = practicalIds(input?.retryIds);
+    const sessionIds = practicalIds(input?.sessionIds);
+    let stage = ["idle", "active", "retry", "complete"].includes(input?.stage)
+      ? input.stage
+      : "idle";
+    let queue = practicalIds(input?.queue);
+    if (["active", "retry"].includes(stage) && !queue.length) stage = "idle";
+    if (stage === "retry" && !retryIds.some((id) => sessionIds.includes(id))) {
+      stage = "complete";
+      queue = [];
+    }
+    const position = queue.length
+      ? Math.min(Math.max(Number(input?.position) || 0, 0), queue.length - 1)
+      : 0;
+    const currentId = queue[position];
+    const rawAttempt = input?.currentAttempt;
+    const selected = Number(rawAttempt?.selected);
+    const currentQuestion = PRACTICAL_QUESTION_BY_ID[currentId];
+    const currentAttempt = currentQuestion && rawAttempt?.id === currentId &&
+      Number.isInteger(selected) && selected >= 0 && selected < 4
+      ? {
+          id: currentId,
+          selected,
+          correct: selected === currentQuestion.answer,
+          confidence: selected === currentQuestion.answer
+            ? (["confident", "uncertain"].includes(rawAttempt?.confidence) ? rawAttempt.confidence : "")
+            : "wrong"
+        }
+      : null;
+    return {
+      version: PRACTICAL_VARIATIONS?.VERSION || 1,
+      stage,
+      scope,
+      sessionSize,
+      sessionIds,
+      queue,
+      position,
+      currentAttempt,
+      retryIds,
+      history: normalizePracticalHistory(input?.history),
+      attempts: boundedInteger(input?.attempts, 100000),
+      correctAttempts: boundedInteger(input?.correctAttempts, 100000),
+      sessionsCompleted: boundedInteger(input?.sessionsCompleted, 10000),
+      sessionStartedAt: Number.isFinite(Date.parse(input?.sessionStartedAt))
+        ? String(input.sessionStartedAt).slice(0, 64)
+        : "",
+      completedAt: stage === "complete" && Number.isFinite(Date.parse(input?.completedAt))
+        ? String(input.completedAt).slice(0, 64)
+        : ""
+    };
+  }
+
   function inferredMistakeCause(answered) {
     const note = String(answered?.mistakeNote || "");
     if (/読み|見落と|見間違/.test(note)) return "reading";
@@ -1251,6 +1518,8 @@
     next.officialExamHistory = normalizeOfficialExamHistory(input?.officialExamHistory);
     next.officialExamSession = normalizeOfficialExamSession(input?.officialExamSession);
     next.missionLog = normalizeMissionLog(input?.missionLog);
+    next.calculationDrill = normalizeCalculationDrillState(input?.calculationDrill);
+    next.practicalDrill = normalizePracticalDrillState(input?.practicalDrill);
     next.saveMeta = {
       lastExportedAt: Number.isFinite(Date.parse(input?.saveMeta?.lastExportedAt))
         ? String(input.saveMeta.lastExportedAt).slice(0, 64)
@@ -4484,6 +4753,493 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function formatCalculationYen(value) {
+    return `${Number(value).toLocaleString("ja-JP")}円`;
+  }
+
+  function currentCalculationQuestion() {
+    const drill = state.calculationDrill;
+    return CALCULATION_QUESTION_BY_ID[drill?.queue?.[drill.position]] || null;
+  }
+
+  function addCalculationId(list, id) {
+    return list.includes(id) ? list : [...list, id];
+  }
+
+  function removeCalculationId(list, id) {
+    return list.filter((item) => item !== id);
+  }
+
+  function renderCalculationDrill() {
+    if (!elements.calculationDrillPanel || !CALCULATION_QUESTION_IDS.length) return;
+    const drill = state.calculationDrill;
+    const contacted = CALCULATION_QUESTION_IDS.filter((id) => (drill.history[id]?.attempts || 0) > 0).length;
+    const retryCount = drill.retryIds.length;
+    elements.calculationDrillSummary.textContent = `初回 ${contacted} / ${CALCULATION_QUESTION_IDS.length}・再出題 ${retryCount}`;
+    elements.calculationDrillRetryStatus.textContent = `再出題 ${retryCount}`;
+
+    const complete = drill.stage === "complete";
+    elements.calculationDrillQuestion.hidden = complete;
+    elements.calculationDrillComplete.hidden = !complete;
+    if (complete) {
+      elements.calculationDrillStage.textContent = "全件クリア";
+      elements.calculationDrillProgress.textContent = `${CALCULATION_QUESTION_IDS.length} / ${CALCULATION_QUESTION_IDS.length}`;
+      elements.calculationDrillCompleteText.textContent =
+        `初回24問と再出題を完了。累計${drill.attempts}解答・正解${drill.correctAttempts}回です。`;
+      return;
+    }
+
+    const item = currentCalculationQuestion();
+    if (!item) return;
+    const attempt = drill.currentAttempt;
+    elements.calculationDrillStage.textContent = drill.stage === "retry" ? "迷い・誤答を再出題" : "初回24問";
+    elements.calculationDrillProgress.textContent = `${drill.position + 1} / ${drill.queue.length}`;
+    elements.calculationDrillCategory.textContent = item.category;
+    elements.calculationDrillPrompt.textContent = item.prompt;
+    elements.calculationDrillChoices.replaceChildren();
+    item.choices.forEach((value, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "calculation-drill-choice";
+      button.textContent = `${index + 1}. ${formatCalculationYen(value)}`;
+      button.disabled = Boolean(attempt);
+      if (attempt) {
+        button.classList.toggle("is-selected", attempt.selected === index);
+        button.classList.toggle("is-correct", item.answer === index);
+        button.classList.toggle("is-wrong", attempt.selected === index && !attempt.correct);
+      }
+      button.addEventListener("click", () => answerCalculationDrill(index));
+      elements.calculationDrillChoices.append(button);
+    });
+
+    elements.calculationDrillFeedback.hidden = !attempt;
+    if (!attempt) return;
+    elements.calculationDrillVerdict.textContent = attempt.correct
+      ? `正解 ${formatCalculationYen(item.choices[item.answer])}`
+      : `誤答。正解は ${formatCalculationYen(item.choices[item.answer])}。再出題へ追加した。`;
+    elements.calculationDrillFormula.replaceChildren(
+      ...item.formula.map((step) => {
+        const row = document.createElement("li");
+        row.textContent = step;
+        return row;
+      })
+    );
+    elements.calculationDrillTrap.textContent = `ひっかけ: ${item.trap}`;
+    elements.calculationDrillSource.replaceChildren(
+      ...item.sources.map((sourceKey) => {
+        const source = CALCULATION_DRILL.SOURCES[sourceKey];
+        const link = document.createElement("a");
+        link.className = "official-source-link";
+        link.href = source.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = `公式根拠: ${source.label}（基準日 ${CALCULATION_DRILL.LEGAL_BASELINE}）`;
+        return link;
+      })
+    );
+    elements.calculationDrillConfidence.hidden = !attempt.correct;
+    elements.calculationDrillConfidence
+      .querySelectorAll("[data-calculation-confidence]")
+      .forEach((button) => {
+        button.classList.toggle(
+          "is-selected",
+          button.dataset.calculationConfidence === attempt.confidence
+        );
+      });
+    elements.calculationDrillNextButton.disabled = attempt.correct && !attempt.confidence;
+    elements.calculationDrillNextButton.textContent = drill.position + 1 < drill.queue.length
+      ? "次の計算へ"
+      : (retryCount ? "再出題へ進む" : "特訓を完了する");
+  }
+
+  function answerCalculationDrill(selected) {
+    const drill = state.calculationDrill;
+    const item = currentCalculationQuestion();
+    if (!item || drill.currentAttempt || !Number.isInteger(selected) || selected < 0 || selected > 3) return;
+    const correct = selected === item.answer;
+    const answeredAt = new Date().toISOString();
+    const previous = drill.history[item.id] || {
+      attempts: 0,
+      correct: 0,
+      wrong: 0,
+      uncertain: 0
+    };
+    drill.history[item.id] = {
+      ...previous,
+      attempts: previous.attempts + 1,
+      correct: previous.correct + (correct ? 1 : 0),
+      wrong: previous.wrong + (correct ? 0 : 1),
+      lastSelected: selected,
+      lastCorrect: correct,
+      lastConfidence: correct ? "" : "wrong",
+      lastAnsweredAt: answeredAt
+    };
+    drill.attempts += 1;
+    drill.correctAttempts += correct ? 1 : 0;
+    drill.currentAttempt = {
+      id: item.id,
+      selected,
+      correct,
+      confidence: correct ? "" : "wrong"
+    };
+    if (!correct) {
+      drill.retryIds = addCalculationId(drill.retryIds, item.id);
+      drill.masteredIds = removeCalculationId(drill.masteredIds, item.id);
+    }
+    saveState();
+    renderCalculationDrill();
+  }
+
+  function setCalculationConfidence(confidence) {
+    const drill = state.calculationDrill;
+    const attempt = drill.currentAttempt;
+    const item = currentCalculationQuestion();
+    if (!item || !attempt?.correct || !["confident", "uncertain"].includes(confidence)) return;
+    const history = drill.history[item.id];
+    if (attempt.confidence === "uncertain" && history) {
+      history.uncertain = Math.max(0, (history.uncertain || 0) - 1);
+    }
+    attempt.confidence = confidence;
+    if (history) {
+      history.uncertain = (history.uncertain || 0) + (confidence === "uncertain" ? 1 : 0);
+      history.lastConfidence = confidence;
+    }
+    if (confidence === "uncertain") {
+      drill.retryIds = addCalculationId(drill.retryIds, item.id);
+      drill.masteredIds = removeCalculationId(drill.masteredIds, item.id);
+    } else {
+      drill.retryIds = removeCalculationId(drill.retryIds, item.id);
+      drill.masteredIds = addCalculationId(drill.masteredIds, item.id);
+    }
+    saveState();
+    renderCalculationDrill();
+  }
+
+  function advanceCalculationDrill() {
+    const drill = state.calculationDrill;
+    if (!drill.currentAttempt || (drill.currentAttempt.correct && !drill.currentAttempt.confidence)) return;
+    if (drill.position + 1 < drill.queue.length) {
+      drill.position += 1;
+      drill.currentAttempt = null;
+    } else if (drill.retryIds.length) {
+      drill.stage = "retry";
+      drill.queue = [...drill.retryIds];
+      drill.position = 0;
+      drill.currentAttempt = null;
+    } else {
+      drill.stage = "complete";
+      drill.queue = [];
+      drill.position = 0;
+      drill.currentAttempt = null;
+      drill.completedAt = new Date().toISOString();
+    }
+    saveState();
+    renderCalculationDrill();
+    window.requestAnimationFrame(() =>
+      elements.calculationDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
+    );
+  }
+
+  function resetCalculationDrill() {
+    state.calculationDrill = createCalculationDrillState();
+    saveState();
+    renderCalculationDrill();
+  }
+
+  function addPracticalId(list, id) {
+    return list.includes(id) ? list : [...list, id];
+  }
+
+  function removePracticalId(list, id) {
+    return list.filter((item) => item !== id);
+  }
+
+  function practicalScopeQuestions(scope) {
+    return PRACTICAL_QUESTIONS.filter((question) =>
+      scope === "all" || question.scopeId === scope
+    );
+  }
+
+  function practicalPriority(question, drill = state.practicalDrill) {
+    const history = drill.history[question.id] || {};
+    const needsRetry = drill.retryIds.includes(question.id) ||
+      ["wrong", "uncertain"].includes(history.lastConfidence);
+    if (needsRetry) return 0;
+    if (!(history.attempts > 0)) return 1;
+    return 2;
+  }
+
+  function buildPracticalQueue(scope, requestedSize) {
+    const drill = state.practicalDrill;
+    const eligible = practicalScopeQuestions(scope);
+    const target = Math.min(requestedSize, eligible.length);
+    const groups = new Map();
+    eligible.forEach((question) => {
+      const group = groups.get(question.unitId) || [];
+      group.push(question);
+      groups.set(question.unitId, group);
+    });
+    const rotation = drill.sessionsCompleted || 0;
+    groups.forEach((items) => {
+      items.sort((left, right) =>
+        practicalPriority(left, drill) - practicalPriority(right, drill) ||
+        (drill.history[left.id]?.attempts || 0) - (drill.history[right.id]?.attempts || 0) ||
+        ((left.variantIndex - rotation) % 4 + 4) % 4 -
+          (((right.variantIndex - rotation) % 4 + 4) % 4) ||
+        left.id.localeCompare(right.id)
+      );
+    });
+    const unitOrder = (PRACTICAL_VARIATIONS?.UNITS || [])
+      .filter((unit) => groups.has(unit.id))
+      .sort((left, right) => {
+        const leftBest = Math.min(...groups.get(left.id).map((question) => practicalPriority(question, drill)));
+        const rightBest = Math.min(...groups.get(right.id).map((question) => practicalPriority(question, drill)));
+        return leftBest - rightBest ||
+          (((left.part * 31 + left.page - rotation * 7) % 997) + 997) % 997 -
+            ((((right.part * 31 + right.page - rotation * 7) % 997) + 997) % 997);
+      });
+    const result = [];
+    for (let round = 0; result.length < target && round < 4; round += 1) {
+      unitOrder.forEach((unit) => {
+        const question = groups.get(unit.id)?.[round];
+        if (question && result.length < target) result.push(question.id);
+      });
+    }
+    return result;
+  }
+
+  function currentPracticalQuestion() {
+    const drill = state.practicalDrill;
+    return PRACTICAL_QUESTION_BY_ID[drill?.queue?.[drill.position]] || null;
+  }
+
+  function practicalReasoningStep(index, label, text) {
+    const item = document.createElement("li");
+    const marker = document.createElement("span");
+    marker.textContent = String(index);
+    const copy = document.createElement("div");
+    const heading = document.createElement("strong");
+    heading.textContent = label;
+    const body = document.createElement("p");
+    body.textContent = text;
+    copy.append(heading, body);
+    item.append(marker, copy);
+    return item;
+  }
+
+  function renderPracticalDrill() {
+    if (!elements.practicalDrillPanel || !PRACTICAL_QUESTION_IDS.length) return;
+    const drill = state.practicalDrill;
+    const contacted = PRACTICAL_QUESTION_IDS.filter((id) => (drill.history[id]?.attempts || 0) > 0).length;
+    const grounded = PRACTICAL_QUESTION_IDS.filter((id) => drill.history[id]?.lastConfidence === "confident").length;
+    elements.practicalDrillSummary.textContent =
+      `接触 ${contacted} / ${PRACTICAL_QUESTION_IDS.length}・根拠クリア ${grounded}・再出題 ${drill.retryIds.length}`;
+    elements.practicalDrillScope.value = drill.scope;
+    elements.practicalDrillSize.value = String(drill.sessionSize);
+
+    const idle = drill.stage === "idle";
+    const complete = drill.stage === "complete";
+    elements.practicalDrillOverview.hidden = !idle;
+    elements.practicalDrillSession.hidden = idle || complete;
+    elements.practicalDrillComplete.hidden = !complete;
+    if (idle) return;
+    if (complete) {
+      elements.practicalDrillCompleteText.textContent =
+        `今回${drill.sessionIds.length}問と再出題を完了。累計${drill.attempts}解答、根拠クリア${grounded}問です。`;
+      return;
+    }
+
+    const question = currentPracticalQuestion();
+    if (!question) return;
+    const attempt = drill.currentAttempt;
+    const sessionRetryCount = drill.retryIds.filter((id) => drill.sessionIds.includes(id)).length;
+    elements.practicalDrillStage.textContent = drill.stage === "retry"
+      ? "迷い・誤答を再出題"
+      : `${drill.sessionIds.length}問 実践セット`;
+    elements.practicalDrillProgress.textContent = `${drill.position + 1} / ${drill.queue.length}`;
+    elements.practicalDrillUnit.textContent = `${question.unitLabel}・p.${question.unitPage}`;
+    elements.practicalDrillRetryStatus.textContent = `今回の再出題 ${sessionRetryCount}`;
+    elements.practicalDrillPrompt.textContent = question.text;
+    elements.practicalDrillChoices.replaceChildren();
+    question.choices.forEach((choice, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "practical-drill-choice";
+      button.textContent = `${index + 1}. ${choice}`;
+      button.disabled = Boolean(attempt);
+      if (attempt) {
+        button.classList.toggle("is-selected", attempt.selected === index);
+        button.classList.toggle("is-correct", question.answer === index);
+        button.classList.toggle("is-wrong", attempt.selected === index && !attempt.correct);
+      }
+      button.addEventListener("click", () => answerPracticalDrill(index));
+      elements.practicalDrillChoices.append(button);
+    });
+
+    elements.practicalDrillFeedback.hidden = !attempt;
+    if (!attempt) return;
+    elements.practicalDrillVerdict.textContent = attempt.correct
+      ? `正解。「${question.choices[question.answer]}」を根拠から再現する。`
+      : `誤答。正解は「${question.choices[question.answer]}」。今回の再出題へ追加した。`;
+    elements.practicalDrillReasoning.replaceChildren(
+      practicalReasoningStep(1, "判断軸", question.explain),
+      practicalReasoningStep(2, "ア・イへの当てはめ", question.statementExplanations.join(" ")),
+      practicalReasoningStep(3, "間違いやすい境界", question.trap),
+      practicalReasoningStep(4, "次に再現する一文", question.memoryRule)
+    );
+    const sourceLabels = String(question.sourceRef || "").split("／").filter(Boolean);
+    elements.practicalDrillSources.replaceChildren(
+      ...question.sourceUrls.map((url, index) => {
+        const link = document.createElement("a");
+        link.className = "official-source-link";
+        link.href = url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = `公式根拠${question.sourceUrls.length > 1 ? index + 1 : ""}: ${sourceLabels[index] || sourceLabels[0] || "出典"}（基準日 ${question.legalBaseline}）`;
+        return link;
+      })
+    );
+    elements.practicalDrillConfidence.hidden = !attempt.correct;
+    elements.practicalDrillConfidence
+      .querySelectorAll("[data-practical-confidence]")
+      .forEach((button) => {
+        button.classList.toggle(
+          "is-selected",
+          button.dataset.practicalConfidence === attempt.confidence
+        );
+      });
+    elements.practicalDrillNextButton.disabled = attempt.correct && !attempt.confidence;
+    elements.practicalDrillNextButton.textContent = drill.position + 1 < drill.queue.length
+      ? "次の実践問題へ"
+      : (sessionRetryCount ? "再出題へ進む" : "今回のセットを完了する");
+  }
+
+  function startPracticalDrill() {
+    const requestedScope = String(elements.practicalDrillScope?.value || state.practicalDrill.scope);
+    const scope = PRACTICAL_SCOPES.includes(requestedScope) ? requestedScope : "all";
+    const requestedSize = Number(elements.practicalDrillSize?.value || state.practicalDrill.sessionSize);
+    const sessionSize = PRACTICAL_SESSION_SIZES.includes(requestedSize) ? requestedSize : 20;
+    const queue = buildPracticalQueue(scope, sessionSize);
+    state.practicalDrill = {
+      ...state.practicalDrill,
+      stage: "active",
+      scope,
+      sessionSize,
+      sessionIds: [...queue],
+      queue: [...queue],
+      position: 0,
+      currentAttempt: null,
+      sessionStartedAt: new Date().toISOString(),
+      completedAt: ""
+    };
+    if (elements.practicalDrillPanel) elements.practicalDrillPanel.open = true;
+    saveState();
+    renderPracticalDrill();
+    window.requestAnimationFrame(() =>
+      elements.practicalDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
+    );
+  }
+
+  function answerPracticalDrill(selected) {
+    const drill = state.practicalDrill;
+    const question = currentPracticalQuestion();
+    if (!question || drill.currentAttempt || !Number.isInteger(selected) || selected < 0 || selected > 3) return;
+    const correct = selected === question.answer;
+    const answeredAt = new Date().toISOString();
+    const previous = drill.history[question.id] || {
+      attempts: 0,
+      correct: 0,
+      wrong: 0,
+      uncertain: 0
+    };
+    drill.history[question.id] = {
+      ...previous,
+      attempts: previous.attempts + 1,
+      correct: previous.correct + (correct ? 1 : 0),
+      wrong: previous.wrong + (correct ? 0 : 1),
+      lastSelected: selected,
+      lastCorrect: correct,
+      lastConfidence: correct ? "" : "wrong",
+      lastAnsweredAt: answeredAt
+    };
+    drill.attempts += 1;
+    drill.correctAttempts += correct ? 1 : 0;
+    drill.currentAttempt = {
+      id: question.id,
+      selected,
+      correct,
+      confidence: correct ? "" : "wrong"
+    };
+    if (!correct) drill.retryIds = addPracticalId(drill.retryIds, question.id);
+    saveState();
+    renderPracticalDrill();
+  }
+
+  function setPracticalConfidence(confidence) {
+    const drill = state.practicalDrill;
+    const attempt = drill.currentAttempt;
+    const question = currentPracticalQuestion();
+    if (!question || !attempt?.correct || !["confident", "uncertain"].includes(confidence)) return;
+    const history = drill.history[question.id];
+    if (attempt.confidence === "uncertain" && history) {
+      history.uncertain = Math.max(0, (history.uncertain || 0) - 1);
+    }
+    attempt.confidence = confidence;
+    if (history) {
+      history.uncertain = (history.uncertain || 0) + (confidence === "uncertain" ? 1 : 0);
+      history.lastConfidence = confidence;
+    }
+    drill.retryIds = confidence === "uncertain"
+      ? addPracticalId(drill.retryIds, question.id)
+      : removePracticalId(drill.retryIds, question.id);
+    saveState();
+    renderPracticalDrill();
+  }
+
+  function advancePracticalDrill() {
+    const drill = state.practicalDrill;
+    if (!drill.currentAttempt || (drill.currentAttempt.correct && !drill.currentAttempt.confidence)) return;
+    if (drill.position + 1 < drill.queue.length) {
+      drill.position += 1;
+      drill.currentAttempt = null;
+    } else {
+      const pending = drill.retryIds.filter((id) => drill.sessionIds.includes(id));
+      if (pending.length) {
+        drill.stage = "retry";
+        drill.queue = pending;
+        drill.position = 0;
+        drill.currentAttempt = null;
+      } else {
+        drill.stage = "complete";
+        drill.queue = [];
+        drill.position = 0;
+        drill.currentAttempt = null;
+        drill.sessionsCompleted += 1;
+        drill.completedAt = new Date().toISOString();
+      }
+    }
+    saveState();
+    renderPracticalDrill();
+    window.requestAnimationFrame(() =>
+      elements.practicalDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
+    );
+  }
+
+  function cancelPracticalDrill() {
+    state.practicalDrill = {
+      ...state.practicalDrill,
+      stage: "idle",
+      sessionIds: [],
+      queue: [],
+      position: 0,
+      currentAttempt: null,
+      sessionStartedAt: "",
+      completedAt: ""
+    };
+    saveState();
+    renderPracticalDrill();
+  }
+
   function renderCurrentView() {
     if (isMockMode() && state.mock.finalized) {
       showMockFinished();
@@ -4493,6 +5249,8 @@
   }
 
   function render() {
+    renderCalculationDrill();
+    renderPracticalDrill();
     const question = currentQuestion();
     const answered = state.answered;
     const isCorrect = answered?.correct === true;
@@ -7144,6 +7902,21 @@
     elements.saveShareButton?.addEventListener("click", shareSaveTransfer);
     elements.saveRestorePreviousButton?.addEventListener("click", restorePreviousSave);
     elements.saveImportInput?.addEventListener("change", importSaveFile);
+    elements.calculationDrillResetButton?.addEventListener("click", resetCalculationDrill);
+    elements.calculationDrillRestartButton?.addEventListener("click", resetCalculationDrill);
+    elements.calculationDrillNextButton?.addEventListener("click", advanceCalculationDrill);
+    elements.calculationDrillConfidence?.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-calculation-confidence]");
+      if (button) setCalculationConfidence(button.dataset.calculationConfidence);
+    });
+    elements.practicalDrillStartButton?.addEventListener("click", startPracticalDrill);
+    elements.practicalDrillRestartButton?.addEventListener("click", startPracticalDrill);
+    elements.practicalDrillNextButton?.addEventListener("click", advancePracticalDrill);
+    elements.practicalDrillCancelButton?.addEventListener("click", cancelPracticalDrill);
+    elements.practicalDrillConfidence?.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-practical-confidence]");
+      if (button) setPracticalConfidence(button.dataset.practicalConfidence);
+    });
     elements.missionMinutesButton?.addEventListener("click", saveMissionMinutes);
     elements.missionMinutesInput?.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
