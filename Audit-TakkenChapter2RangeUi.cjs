@@ -103,15 +103,15 @@ async function runDesktop(browser, baseUrl) {
       optionCount: rightsGroup?.querySelectorAll("option").length || 0,
       groupTitle: rightsPanel?.querySelector("summary strong")?.textContent || "",
       rowCount: rightsPanel?.querySelectorAll(".chapter-row").length || 0,
-      coverage: document.querySelector("#rightsBookCoverageStatus")?.textContent || "",
-      retention: document.querySelector("#rightsBookRetentionStatus")?.textContent || ""
+      coverage: document.querySelector("#textbookCoverageStatus")?.textContent || "",
+      retention: document.querySelector("#textbookRetentionStatus")?.textContent || ""
     };
   });
   assert.equal(initial.optionCount, 21);
   assert.equal(initial.rowCount, 21);
   assert.match(initial.groupTitle, /21単元・44問/);
-  assert.equal(initial.coverage.trim(), "接触 0 / 44");
-  assert.match(initial.retention, /^定着 0 \/ 44・21単元$/);
+  assert.equal(initial.coverage.trim(), "接触 0 / 124");
+  assert.match(initial.retention, /^単元完了 0 \/ 45・定着 0 \/ 124$/);
 
   await selectTextbookUnit(page, "02-02 意思表示");
   await page.waitForFunction(() => document.querySelector("#studyScopeSelect")?.value === "rights");

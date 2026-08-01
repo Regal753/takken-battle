@@ -266,7 +266,7 @@ async function runCrossDayScenario(browser, baseUrl) {
   await context.addInitScript(({ id, answers: savedAnswers, confidence: savedConfidence, stats }) => {
     localStorage.setItem(id, JSON.stringify({
       stateSchemaVersion: 4,
-      examContentVersion: 2,
+      examContentVersion: 3,
       questionStats: stats,
       daily: {
         date: "2026-07-31",
@@ -377,7 +377,7 @@ async function runStabilityScenario(browser, baseUrl) {
   await context.addInitScript(({ id, records }) => {
     localStorage.setItem(id, JSON.stringify({
       stateSchemaVersion: 4,
-      examContentVersion: 2,
+      examContentVersion: 3,
       officialExamHistory: records
     }));
   }, { id: storageId, records: history });

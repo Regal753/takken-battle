@@ -65,8 +65,10 @@ if (new Set(chapters.map((chapter) => chapter.id)).size !== 21) {
   issues.push("duplicate textbook unit id");
 }
 
-if (JSON.stringify(blueprint.supplementalOrder) !== JSON.stringify(expectedSupplemental)) {
-  issues.push(`supplemental order mismatch: ${(blueprint.supplementalOrder || []).join(",")}`);
+const actualRightsSupplemental = (blueprint.supplementalOrder || [])
+  .filter((id) => /^r1\d{2}$/.test(id));
+if (JSON.stringify(actualRightsSupplemental) !== JSON.stringify(expectedSupplemental)) {
+  issues.push(`rights supplemental order mismatch: ${actualRightsSupplemental.join(",")}`);
 }
 
 uniqueRangeIds.forEach((id) => {

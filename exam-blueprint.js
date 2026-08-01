@@ -90,12 +90,33 @@
     ])
   );
 
-  // 市販テキスト第2分冊の読後演習。コア100と確認模試の配分は変えず、
-  // 権利関係をテキストの21単元どおりに選んで解ける補助範囲を足す。
+  // 市販テキスト全3分冊・4章の読後演習。コア100と確認模試の配分は変えず、
+  // 画像の目次どおり全45単元を選び、各単元で最低2問を解けるようにする。
   const textbookRanges = {
+    business: {
+      part: 1,
+      label: "第1分冊 宅建業法",
+      shortLabel: "業法",
+      sectionIds: ["business"],
+      chapters: [
+        { id: "business-book-01", unit: 1, page: 3, label: "01-01 宅建業法の基本", ids: ["b001", "b101"] },
+        { id: "business-book-02", unit: 2, page: 9, label: "01-02 免許", ids: ["b002", "b003", "b004"] },
+        { id: "business-book-03", unit: 3, page: 25, label: "01-03 宅地建物取引士", ids: ["b005", "b006", "b007", "b008"] },
+        { id: "business-book-04", unit: 4, page: 40, label: "01-04 営業保証金", ids: ["b009", "b010"] },
+        { id: "business-book-05", unit: 5, page: 49, label: "01-05 保証協会", ids: ["b011", "b012"] },
+        { id: "business-book-06", unit: 6, page: 62, label: "01-06 事務所、案内所等に関する規制", ids: ["b013", "b102"] },
+        { id: "business-book-07", unit: 7, page: 72, label: "01-07 業務上の規制", ids: ["b014", "b015", "b016", "b017", "b019", "b020", "b021", "b022", "b023", "b024", "b025", "b026", "b027", "b028", "b040"] },
+        { id: "business-book-08", unit: 8, page: 104, label: "01-08 自ら売主となる場合の8つの制限（8種制限）", ids: ["b029", "b030", "b031", "b032", "b033", "b034", "b035", "b036"] },
+        { id: "business-book-09", unit: 9, page: 123, label: "01-09 報酬に関する制限", ids: ["b018", "b037"] },
+        { id: "business-book-10", unit: 10, page: 139, label: "01-10 監督・罰則", ids: ["b038", "b039"] },
+        { id: "business-book-11", unit: 11, page: 152, label: "01-11 住宅瑕疵担保履行法", ids: ["b103", "b104"] }
+      ]
+    },
     rights: {
       part: 2,
       label: "第2分冊 権利関係",
+      shortLabel: "権利",
+      sectionIds: ["rights"],
       chapters: [
         { id: "rights-book-01", unit: 1, page: 163, label: "02-01 制限行為能力者", ids: ["r001", "r101"] },
         { id: "rights-book-02", unit: 2, page: 172, label: "02-02 意思表示", ids: ["r002", "r102"] },
@@ -119,14 +140,42 @@
         { id: "rights-book-20", unit: 20, page: 375, label: "02-20 不動産登記法", ids: ["r027", "r028"] },
         { id: "rights-book-21", unit: 21, page: 385, label: "02-21 参考論点", ids: ["r006", "r116"] }
       ]
+    },
+    restrictions: {
+      part: 3,
+      label: "第3分冊 法令上の制限",
+      shortLabel: "法令",
+      sectionIds: ["restrictions"],
+      chapters: [
+        { id: "restrictions-book-01", unit: 1, page: 411, label: "03-01 都市計画法", ids: ["l001", "l002", "l003", "l004"] },
+        { id: "restrictions-book-02", unit: 2, page: 451, label: "03-02 建築基準法", ids: ["l005", "l006", "l007", "l008"] },
+        { id: "restrictions-book-03", unit: 3, page: 492, label: "03-03 国土利用計画法", ids: ["l009", "l010"] },
+        { id: "restrictions-book-04", unit: 4, page: 504, label: "03-04 農地法", ids: ["l011", "l012"] },
+        { id: "restrictions-book-05", unit: 5, page: 510, label: "03-05 盛土規制法", ids: ["l015", "l016"] },
+        { id: "restrictions-book-06", unit: 6, page: 530, label: "03-06 土地区画整理法", ids: ["l013", "l014"] },
+        { id: "restrictions-book-07", unit: 7, page: 543, label: "03-07 その他の法令上の制限", ids: ["l101", "l102"] }
+      ]
+    },
+    taxOther: {
+      part: 3,
+      label: "第3分冊 税・その他",
+      shortLabel: "税他",
+      sectionIds: ["tax", "other"],
+      chapters: [
+        { id: "tax-other-book-01", unit: 1, page: 548, label: "04-01 不動産に関する税金", sectionId: "tax", ids: ["t001", "t002", "t003", "t004", "t005", "t006"] },
+        { id: "tax-other-book-02", unit: 2, page: 574, label: "04-02 不動産鑑定評価基準", sectionId: "other", ids: ["o002", "o101"] },
+        { id: "tax-other-book-03", unit: 3, page: 580, label: "04-03 地価公示法", sectionId: "other", ids: ["o001", "o102"] },
+        { id: "tax-other-book-04", unit: 4, page: 585, label: "04-04 住宅金融支援機構", sectionId: "other", ids: ["o003", "o004"] },
+        { id: "tax-other-book-05", unit: 5, page: 591, label: "04-05 景品表示法（不当景品類及び不当表示防止法）", sectionId: "other", ids: ["o005", "o006"] },
+        { id: "tax-other-book-06", unit: 6, page: 602, label: "04-06 土地・建物", sectionId: "other", ids: ["o007", "o008", "o009", "o010"] }
+      ]
     }
   };
+  const coreIds = Object.values(idsBySection).flat();
   const supplementalOrder = Object.values(textbookRanges)
     .flatMap((rangeDefinition) => rangeDefinition.chapters)
     .flatMap((chapter) => chapter.ids)
-    .filter((id, index, ids) =>
-      !idsBySection.rights.includes(id) && ids.indexOf(id) === index
-    );
+    .filter((id, index, ids) => !coreIds.includes(id) && ids.indexOf(id) === index);
 
   // 合格プロジェクトの分野別目標。年度で変動する合格基準点ではなく、
   // 37点を再現するための学習上の目安として使う。
@@ -240,6 +289,14 @@
       label: "宅地造成及び特定盛土等規制法",
       url: "https://elaws.e-gov.go.jp/document?lawid=336AC0000000191"
     },
+    culturalProperty: {
+      label: "文化財保護法",
+      url: "https://laws.e-gov.go.jp/law/325AC0100000214/"
+    },
+    road: {
+      label: "道路法",
+      url: "https://laws.e-gov.go.jp/law/327AC1000000180/"
+    },
     localTax: {
       label: "地方税法",
       url: "https://elaws.e-gov.go.jp/document?lawid=325AC0000000226"
@@ -260,13 +317,21 @@
       label: "宅地建物取引業法",
       url: "https://elaws.e-gov.go.jp/document?lawid=327AC1000000176"
     },
+    housingDefect: {
+      label: "住宅瑕疵担保履行法",
+      url: "https://laws.e-gov.go.jp/law/419AC0000000066/"
+    },
     retio: {
       label: "RETIO 宅建試験の概要・公式問題",
       url: "https://www.retio.or.jp/exam/exam_detail/"
     },
     appraisal: {
       label: "地価公示法・不動産鑑定評価基準",
-      url: "https://www.mlit.go.jp/totikensangyo/kanteishi/"
+      url: "https://www.mlit.go.jp/totikensangyo/totikensangyo_fr4_000161.html"
+    },
+    landPricePublic: {
+      label: "国土交通省 地価公示制度の概要",
+      url: "https://www.mlit.go.jp/totikensangyo/totikensangyo_fr4_000122.html"
     },
     housingFinance: {
       label: "住宅金融支援機構",
@@ -287,7 +352,7 @@
   };
 
   window.TAKKEN_EXAM_BLUEPRINT = {
-    version: 2,
+    version: 3,
     legalBaseline: "2026-04-01",
     label: "令和8年度 全分野コア100",
     sections,

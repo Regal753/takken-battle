@@ -24,6 +24,8 @@ const required = [
   "exam-questions-business.js",
   "Audit-TakkenChapter2Range.js",
   "Audit-TakkenChapter2RangeUi.cjs",
+  "Audit-TakkenTextbookRanges.js",
+  "Audit-TakkenTextbookRangesUi.cjs",
   "Audit-TakkenQuestionQuality.js",
   "Audit-TakkenOfficialDrill.js",
   "Audit-TakkenOfficialExamData.js",
@@ -55,8 +57,8 @@ assert.match(app, /問題・履歴を保持　解答済/);
 assert.match(app, /normalizedComprehensionDayKeys\(stats\)\.length < 2/);
 assert.match(app, /const maxReview = newPool\.length >= 6 \? 4 : DAILY_TARGET/);
 assert.match(app, /const CURRICULUM_ORDER/);
-assert.match(app, /const RIGHTS_TEXTBOOK_IDS/);
-assert.match(app, /scopeId === "rights"/);
+assert.match(app, /const TEXTBOOK_IDS/);
+assert.match(app, /function textbookIdsForSections/);
 assert.match(app, /const RUN_MODE_MOCK = "mock"/);
 assert.match(app, /function showMockFinished/);
 assert.match(app, /function renderPassPlan/);
@@ -105,17 +107,18 @@ assert.match(index, /id="officialDrillOpenButton"/);
 assert.match(index, /id="officialDrillQuestionLink"/);
 assert.match(index, /id="officialDrillAnswerGrid"/);
 assert.match(index, /id="officialPracticeCoverageStatus"/);
-assert.match(index, /id="rightsBookCoverageStatus"/);
-assert.match(index, /id="rightsBookRetentionStatus"/);
+assert.match(index, /id="textbookCoverageStatus"/);
+assert.match(index, /id="textbookRetentionStatus"/);
+assert.match(index, /全4章・45単元/);
 assert.match(index, /公式20問シートを開く/);
 assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 第2分冊・権利関係を固める/);
 assert.match(index, /③ 法令・税その他へ進む/);
 assert.match(index, /④ 全分野を混ぜる/);
-assert.match(index, /styles\.css\?v=20260801-ch2-rights-v13/);
-assert.match(index, /app\.js\?v=20260801-ch2-rights-v13/);
-assert.match(index, /save-store\.js\?v=20260801-ch2-rights-v13/);
-assert.match(index, /official-exam-data\.js\?v=20260801-ch2-rights-v13/);
+assert.match(index, /styles\.css\?v=20260801-textbook-units-v14/);
+assert.match(index, /app\.js\?v=20260801-textbook-units-v14/);
+assert.match(index, /save-store\.js\?v=20260801-textbook-units-v14/);
+assert.match(index, /official-exam-data\.js\?v=20260801-textbook-units-v14/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
 assert.match(app, /理解チェック（必須）/);
@@ -145,9 +148,10 @@ assert.match(pagesWorkflow, /node Audit-TakkenOfficialDrill\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenOfficialExamData\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenFullExam\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenChapter2Range\.js/);
+assert.match(pagesWorkflow, /node Audit-TakkenTextbookRanges\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenQuestionQuality\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
-assert.match(pagesWorkflow, /20260801-ch2-rights-v13/);
+assert.match(pagesWorkflow, /20260801-textbook-units-v14/);
 assert.match(pagesWorkflow, /cp [^\n]*official-exam-data\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*save-store\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*save-transfer\.js[^\n]*_site\//);

@@ -122,15 +122,16 @@ async function main() {
       };
     });
     const expectedThemeGroups = [
-      "宅建業法",
+      "第1分冊 宅建業法（11単元・44問）",
       "第2分冊 権利関係（21単元・44問）",
-      "法令・税その他"
+      "第3分冊 法令上の制限（7単元・18問）",
+      "第3分冊 税・その他（6単元・18問）"
     ];
     if (JSON.stringify(themeHierarchy.labels) !== JSON.stringify(expectedThemeGroups)) {
       throw new Error(`Theme hierarchy mismatch: ${JSON.stringify(themeHierarchy)}`);
     }
     if (
-      themeHierarchy.businessCoreRows !== 7 ||
+      themeHierarchy.businessCoreRows !== 11 ||
       themeHierarchy.optionalRows !== 8 ||
       themeHierarchy.optionalOpen ||
       !themeHierarchy.optionalText.includes("以前の100問") ||
@@ -983,7 +984,7 @@ async function main() {
     if (
       migration.currentId !== "b001" ||
       migration.index !== 1 ||
-      migration.examContentVersion !== 2 ||
+      migration.examContentVersion !== 3 ||
       migration.attempts !== 65 ||
       migration.totalXp !== 5000 ||
       !migration.legacyWeakKept ||

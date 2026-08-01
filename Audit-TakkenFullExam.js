@@ -23,14 +23,14 @@ const promptOwners = new Map();
 
 if (allIds.length !== 100) issues.push(`expected 100 blueprint ids, got ${allIds.length}`);
 if (uniqueIds.size !== allIds.length) issues.push("duplicate blueprint question id");
-if (supplementalIds.length !== 16) {
-  issues.push(`expected 16 supplemental questions, got ${supplementalIds.length}`);
+if (supplementalIds.length !== 24) {
+  issues.push(`expected 24 supplemental questions, got ${supplementalIds.length}`);
 }
-if (new Set(allQuestionIds).size !== 116) {
-  issues.push("core and supplemental ids must make 116 unique questions");
+if (new Set(allQuestionIds).size !== 124) {
+  issues.push("core and supplemental ids must make 124 unique questions");
 }
-if (Object.keys(questions).length !== 116) {
-  issues.push(`expected 116 questions, got ${Object.keys(questions).length}`);
+if (Object.keys(questions).length !== 124) {
+  issues.push(`expected 124 questions, got ${Object.keys(questions).length}`);
 }
 
 blueprint.sections.forEach((section) => {
@@ -85,8 +85,8 @@ Object.values(questions).forEach((question) => {
   }
 });
 
-if (formatCounts["単一選択"] !== 110) {
-  issues.push(`expected 110 single-choice questions, got ${formatCounts["単一選択"] || 0}`);
+if (formatCounts["単一選択"] !== 118) {
+  issues.push(`expected 118 single-choice questions, got ${formatCounts["単一選択"] || 0}`);
 }
 if (formatCounts["個数問題"] !== 6) {
   issues.push(`expected 6 count questions, got ${formatCounts["個数問題"] || 0}`);
