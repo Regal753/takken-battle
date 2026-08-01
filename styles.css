@@ -15,6 +15,166 @@
   --shadow: 0 18px 46px rgba(0, 0, 0, 0.34);
 }
 
+/* v17: foundation-first learning route and information architecture */
+.app-root {
+  display: flex;
+  flex-direction: column;
+}
+
+.app-header { order: 0; }
+.public-mode-note { order: 1; }
+#todayCommandPanel { order: 2; }
+#themeDrawer { order: 3; }
+.quest-card { order: 4; }
+.study-shell { order: 5; }
+#practicalDrillPanel { order: 6; }
+#calculationDrillPanel { order: 7; }
+#passPlanPanel { order: 8; }
+.app-footer { order: 9; }
+
+.foundation-route-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(340px, 0.9fr);
+  grid-template-areas:
+    "copy progress"
+    "actions progress";
+  gap: 14px 20px;
+  margin: 0 12px 12px;
+  padding: 18px;
+  border: 1px solid rgba(107, 196, 232, 0.42);
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(18, 54, 69, 0.96), rgba(9, 29, 37, 0.98));
+}
+
+.foundation-route-copy {
+  grid-area: copy;
+  min-width: 0;
+}
+
+.foundation-route-copy > span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--blue-strong);
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.foundation-route-copy > strong {
+  display: block;
+  font-size: clamp(20px, 2.3vw, 30px);
+  line-height: 1.25;
+}
+
+.foundation-route-copy > p {
+  max-width: 68ch;
+  margin: 8px 0 0;
+  color: #d9e8ec;
+  line-height: 1.65;
+}
+
+.foundation-route-progress {
+  grid-area: progress;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  align-self: stretch;
+  overflow: hidden;
+  border: 1px solid rgba(121, 207, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(4, 17, 24, 0.55);
+}
+
+.foundation-route-progress > div {
+  display: flex;
+  min-width: 0;
+  padding: 12px 10px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  border-left: 1px solid rgba(121, 207, 255, 0.16);
+}
+
+.foundation-route-progress > div:first-child {
+  border-left: 0;
+}
+
+.foundation-route-progress span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.foundation-route-progress strong {
+  color: #fff;
+  font-size: 17px;
+  white-space: nowrap;
+}
+
+.foundation-route-actions {
+  grid-area: actions;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.foundation-route-actions > button {
+  min-height: 44px;
+}
+
+.chapter-row[data-learning-stage="input"] .chapter-dot {
+  background: var(--blue-strong);
+}
+
+.chapter-row[data-learning-stage="practical"] .chapter-dot {
+  background: #b69cff;
+}
+
+.chapter-row[data-learning-stage="retention"] .chapter-dot {
+  background: var(--gold);
+}
+
+.chapter-row[data-learning-stage="complete"] .chapter-dot {
+  background: var(--green);
+}
+
+.practical-drill-reasoning li:nth-child(2) p {
+  white-space: pre-line;
+}
+
+@media (max-width: 760px) {
+  .foundation-route-card {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "copy"
+      "progress"
+      "actions";
+    margin: 0 8px 8px;
+    padding: 14px;
+  }
+
+  .foundation-route-progress {
+    grid-template-columns: 1fr;
+  }
+
+  .foundation-route-progress > div {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid rgba(121, 207, 255, 0.16);
+    border-left: 0;
+  }
+
+  .foundation-route-progress > div:first-child {
+    border-top: 0;
+  }
+
+  .foundation-route-actions,
+  .foundation-route-actions > button {
+    width: 100%;
+  }
+}
+
 * {
   box-sizing: border-box;
 }
@@ -6956,4 +7116,10 @@ button.mission-step {
   .calculation-drill-feedback > .today-command-primary {
     width: 100%;
   }
+}
+
+.app-root > .public-mode-note {
+  width: 100%;
+  margin-left: 0;
+  margin-right: 0;
 }

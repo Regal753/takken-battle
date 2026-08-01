@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260802-practical-variations-v16";
+const expectedVersion = process.argv[3] || "20260802-learning-route-v17";
 const attempts = Math.max(1, Number(process.env.TAKKEN_DEPLOY_VERIFY_ATTEMPTS) || 12);
 const intervalMs = Math.max(0, Number(process.env.TAKKEN_DEPLOY_VERIFY_INTERVAL_MS) || 10000);
 
@@ -34,6 +34,10 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(html, /id="textbookCoverageStatus"/, "textbook coverage missing");
     assert.match(html, /id="progressDrawer"/, "progress drawer missing");
     assert.match(html, /id="officialExamSessionForm"/, "official exam runner missing");
+    assert.match(html, /id="foundationRouteTitle"/, "foundation route title missing");
+    assert.match(html, /id="foundationRoutePrimaryButton"/, "foundation route action missing");
+    assert.match(html, /id="foundationUnitsProgress"/, "foundation unit progress missing");
+    assert.match(html, /id="foundationGateStatus"/, "foundation gate status missing");
     const appReference = html.match(/src="([^"]*app\.js\?v=[^"]+)"/)?.[1] || "";
     const storeReference = html.match(/src="([^"]*save-store\.js\?v=[^"]+)"/)?.[1] || "";
     const officialDataReference =
@@ -71,6 +75,10 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(appCode, /問題・履歴を保持　解答済/, "legacy answered progress missing");
     assert.match(appCode, /function renderPassPlan/, "pass plan renderer missing");
     assert.match(appCode, /function renderTodayCommand/, "today command renderer missing");
+    assert.match(appCode, /function foundationLearningRoute/, "foundation route logic missing");
+    assert.match(appCode, /function renderFoundationRoutePanel/, "foundation route renderer missing");
+    assert.match(appCode, /function startPracticalDrillForUnit/, "unit practical launcher missing");
+    assert.match(appCode, /const STATE_SCHEMA_VERSION = 7/, "save schema v7 missing");
     assert.match(appCode, /function submitOfficialDrill/, "official drill scorer missing");
     assert.match(appCode, /2025-balanced-c-v1/, "official drill set C missing");
     assert.match(appCode, /data-confidence-question/, "official evidence gate missing");
@@ -82,6 +90,7 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(officialDataCode, /2020-10/, "October 2020 exam missing");
     assert.match(styleCode, /\.study-scope-select/, "study scope style missing");
     assert.match(styleCode, /\.pass-plan-panel/, "pass plan style missing");
+    assert.match(styleCode, /\.foundation-route-card/, "foundation route style missing");
     assert.match(storeCode, /function restorePrevious/, "save store restore missing");
     assert.match(storeCode, /before-upgrade-v/, "save upgrade backup missing");
     console.log(JSON.stringify({

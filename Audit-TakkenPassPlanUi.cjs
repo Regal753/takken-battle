@@ -39,7 +39,7 @@ async function main() {
     const page = await context.newPage();
     await page.addInitScript(() => {
       const RealDate = Date;
-      const fixedNow = new RealDate("2026-07-27T02:00:00+09:00").getTime();
+      const fixedNow = new RealDate("2026-08-02T10:00:00+09:00").getTime();
       class FixedDate extends RealDate {
         constructor(...args) {
           super(...(args.length ? args : [fixedNow]));
@@ -66,13 +66,13 @@ async function main() {
     await page.goto(url.toString(), { waitUntil: "domcontentloaded", timeout: 15000 });
     await page.waitForFunction(() => {
       const source = document.querySelector("#dailyQuestSource")?.textContent || "";
-      return source.includes("固定10問") && !source.includes("読込中");
+      return source.includes("読後2問") && !source.includes("読込中");
     });
 
     const initial = await page.evaluate(() => ({
       phase: document.querySelector("#passPhaseTitle")?.textContent?.trim() || "",
       countdown: document.querySelector("#examCountdown")?.textContent?.trim() || "",
-      gate: document.querySelector("#julyGateStatus")?.textContent?.trim() || "",
+      gate: document.querySelector("#foundationGateStatus")?.textContent?.trim() || "",
       mission: document.querySelector("#dailyMissionStatus")?.textContent?.trim() || "",
       official: document.querySelector("#officialReadinessStatus")?.textContent?.trim() || "",
       currentRoadmap: document.querySelectorAll(".pass-roadmap li.is-current").length,
@@ -83,14 +83,14 @@ async function main() {
       progressOpen: Boolean(document.querySelector("#progressDrawer")?.open)
     }));
     if (
-      initial.phase !== "7月ゲート" ||
+      initial.phase !== "基礎一周" ||
       !/^D-\d+$/.test(initial.countdown) ||
-      initial.gate !== "0 / 3" ||
-      initial.mission !== "0 / 4" ||
+      initial.gate !== "単元 0 / 45" ||
+      initial.mission !== "0 / 45単元" ||
       initial.official !== "測定中・初見0/10・再0/3" ||
       initial.currentRoadmap !== 1 ||
-      initial.commandTitle !== "固定10問を解く" ||
-      initial.commandStep !== "今やる・STEP 1 / 4" ||
+      initial.commandTitle !== "01-01 宅建業法の基本" ||
+      !initial.commandStep.includes("読む") ||
       initial.passPlanOpen ||
       initial.themeOpen ||
       initial.progressOpen
@@ -132,7 +132,7 @@ async function main() {
       const saved = JSON.parse(localStorage.getItem(id) || "{}");
       return {
         readiness: document.querySelector("#officialReadinessStatus")?.textContent?.trim() || "",
-        gate: document.querySelector("#julyGateStatus")?.textContent?.trim() || "",
+        gate: document.querySelector("#foundationGateStatus")?.textContent?.trim() || "",
         mission: document.querySelector("#dailyMissionStatus")?.textContent?.trim() || "",
         ledger: document.querySelector("#officialLedgerSummary")?.textContent?.trim() || "",
         historyText: document.querySelector(".official-history-row")?.textContent?.replace(/\s+/g, " ").trim() || "",
@@ -142,8 +142,8 @@ async function main() {
     }, storageId);
     if (
       recorded.readiness !== "測定中・初見0/10・再0/3" ||
-      recorded.gate !== "0 / 3" ||
-      recorded.mission !== "1 / 4" ||
+      recorded.gate !== "単元 0 / 45" ||
+      recorded.mission !== "0 / 45単元" ||
       recorded.ledger !== "初見 0 / 10・再試験 0 / 3" ||
       !recorded.historyText.includes("令和7年度") ||
       !recorded.historyText.includes("37 / 50") ||
@@ -192,7 +192,7 @@ async function main() {
       history: document.querySelectorAll(".official-history-row").length,
       errors: document.querySelectorAll(":invalid").length
     }));
-    if (mobile.overflow || mobile.mission !== "1 / 4" || mobile.history !== 1) {
+    if (mobile.overflow || mobile.mission !== "0 / 45単元" || mobile.history !== 1) {
       throw new Error(`Mobile pass plan mismatch: ${JSON.stringify(mobile)}`);
     }
 
@@ -202,6 +202,11 @@ async function main() {
       locale: "ja-JP",
       timezoneId: "Asia/Tokyo"
     });
+    const foundationIds = await page.evaluate(() =>
+      Object.values(window.TAKKEN_EXAM_BLUEPRINT.textbookRanges)
+        .flatMap((range) => range.chapters)
+        .flatMap((chapter) => chapter.ids)
+    );
     const touchedPage = await touchedContext.newPage();
     touchedPage.on("console", (message) => {
       if (message.type() === "error") consoleErrors.push(message.text());
@@ -209,7 +214,7 @@ async function main() {
     touchedPage.on("pageerror", (error) => pageErrors.push(String(error)));
     const touchedNamespace = `touched${Date.now().toString(36)}`;
     const touchedStorageId = `takken-battle-study-clean-v2-hard-review-${touchedNamespace}`;
-    await touchedPage.addInitScript(({ storageId }) => {
+    await touchedPage.addInitScript(({ storageId, foundationQuestionIds }) => {
       const RealDate = Date;
       const fixedNow = new RealDate("2026-07-30T10:00:00+09:00").getTime();
       class FixedDate extends RealDate {
@@ -222,8 +227,22 @@ async function main() {
         }
       }
       window.Date = FixedDate;
+      const questionStats = Object.fromEntries(foundationQuestionIds.map((questionId, index) => [
+        questionId,
+        {
+          attempts: 1,
+          correct: 1,
+          wrong: 0,
+          lastStep: index + 1,
+          lastAnsweredAt: "2026-07-01T00:00:00.000Z",
+          lastCorrectAt: "2026-07-01T00:00:00.000Z",
+          correctDayKeys: ["2026-07-01"],
+          clearDayKeys: []
+        }
+      ]));
       localStorage.setItem(storageId, JSON.stringify({
         stateSchemaVersion: 3,
+        questionStats,
         missionLog: {
           "2026-07-28": {
             officialQuestions: true,
@@ -261,13 +280,16 @@ async function main() {
           }
         }
       }));
-    }, { storageId: touchedStorageId });
+    }, { storageId: touchedStorageId, foundationQuestionIds: foundationIds });
     const touchedUrl = new URL(baseUrl);
     touchedUrl.searchParams.set("review", touchedNamespace);
     await touchedPage.goto(touchedUrl.toString(), {
       waitUntil: "domcontentloaded",
       timeout: 15000
     });
+    await touchedPage.waitForFunction(() =>
+      (document.querySelector("#foundationGateStatus")?.textContent || "").includes("45 / 45")
+    );
     await touchedPage.locator(".pass-plan-summary").click();
     await touchedPage.locator(".official-ledger > summary").click();
     const touchedProtection = await touchedPage.evaluate(() => {

@@ -36,6 +36,7 @@ jobs:
       - run: node Audit-TakkenSaveStore.js
       - run: node Audit-TakkenSaveTransfer.js
       - run: node Audit-TakkenCalculationDrill.js
+      - run: node Audit-TakkenLearningArchitecture.js
       - run: node scripts/validate-public.mjs
       - name: Assemble static site
         shell: bash
@@ -64,4 +65,4 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
       - name: Verify deployed page
-        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260802-practical-variations-v16"
+        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260802-learning-route-v17"

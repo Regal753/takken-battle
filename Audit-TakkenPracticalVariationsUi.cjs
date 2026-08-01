@@ -55,7 +55,7 @@ async function gotoFresh(page, baseUrl, prefix) {
   await page.goto(url.toString(), { waitUntil: "networkidle", timeout: 20000 });
   await page.waitForFunction(() => {
     const source = document.querySelector("#dailyQuestSource")?.textContent || "";
-    return source.includes("固定10問") && !source.includes("読込中");
+    return /読後\d+問|固定10問/.test(source) && !source.includes("読込中");
   });
   return page.url();
 }
@@ -195,7 +195,7 @@ async function runDesktop(browser, baseUrl) {
   await page.locator("#practicalDrillSize").selectOption("10");
   await page.locator("#practicalDrillStartButton").click();
   const started = await savedPracticalState(page);
-  assert.equal(started.stateSchemaVersion, 6);
+  assert.equal(started.stateSchemaVersion, 7);
   assert.equal(started.practicalDrill.stage, "active");
   assert.equal(started.practicalDrill.scope, "business");
   assert.equal(started.practicalDrill.sessionIds.length, 10);

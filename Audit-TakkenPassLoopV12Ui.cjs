@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
 const path = require("node:path");
+const vm = require("node:vm");
 const { chromium } = require("playwright");
 const officialData = require("./official-exam-data.js");
 
@@ -12,6 +13,14 @@ const FIXED_NOW = "2026-07-31T10:00:00+09:00";
 const screenshotDir = process.env.TAKKEN_SCREENSHOT_DIR || "";
 const storageIdFor = (namespace) =>
   `takken-battle-study-clean-v2-hard-review-${namespace}`;
+const blueprintSandbox = { window: {} };
+vm.runInNewContext(
+  fs.readFileSync(path.join(__dirname, "exam-blueprint.js"), "utf8"),
+  blueprintSandbox
+);
+const FOUNDATION_IDS = Object.values(blueprintSandbox.window.TAKKEN_EXAM_BLUEPRINT.textbookRanges)
+  .flatMap((range) => range.chapters)
+  .flatMap((chapter) => chapter.ids);
 
 async function capture(page, filename) {
   if (!screenshotDir) return;
@@ -94,8 +103,36 @@ async function gotoReview(page, baseUrl, namespace) {
   await page.goto(url.toString(), { waitUntil: "networkidle", timeout: 15000 });
   await page.waitForFunction(() => {
     const source = document.querySelector("#dailyQuestSource")?.textContent || "";
-    return source.includes("固定10問") && !source.includes("読込中");
+    return /読後\d+問|固定10問/.test(source) && !source.includes("読込中");
   });
+}
+
+async function completeFoundationCoverage(page, storageId) {
+  await page.evaluate((id) => {
+    const saved = JSON.parse(localStorage.getItem(id) || "{}");
+    const textbookIds = Object.values(window.TAKKEN_EXAM_BLUEPRINT.textbookRanges)
+      .flatMap((range) => range.chapters)
+      .flatMap((chapter) => chapter.ids);
+    saved.questionStats ||= {};
+    textbookIds.forEach((questionId, index) => {
+      if ((Number(saved.questionStats[questionId]?.attempts) || 0) > 0) return;
+      saved.questionStats[questionId] = {
+        attempts: 1,
+        correct: 1,
+        wrong: 0,
+        lastStep: index + 1,
+        lastAnsweredAt: "2026-07-01T00:00:00.000Z",
+        lastCorrectAt: "2026-07-01T00:00:00.000Z",
+        correctDayKeys: ["2026-07-01"],
+        clearDayKeys: []
+      };
+    });
+    localStorage.setItem(id, JSON.stringify(saved));
+  }, storageId);
+  await page.reload({ waitUntil: "networkidle" });
+  await page.waitForFunction(() =>
+    (document.querySelector("#foundationGateStatus")?.textContent || "").includes("45 / 45")
+  );
 }
 
 function dailyDefinition(id) {
@@ -152,6 +189,7 @@ async function runOfficialExamScenario(browser, baseUrl) {
   const namespace = `exam${Date.now().toString(36)}`;
   const storageId = storageIdFor(namespace);
   await gotoReview(page, baseUrl, namespace);
+  await completeFoundationCoverage(page, storageId);
   await page.locator(".pass-plan-summary").click();
   await page.locator(".official-ledger > summary").click();
 
@@ -250,20 +288,32 @@ async function runCrossDayScenario(browser, baseUrl) {
   const answers = Object.fromEntries(setA);
   answers[1] = 1;
   const confidence = Object.fromEntries(setA.map(([number]) => [number, "grounded"]));
-  const fixedStats = Object.fromEntries(
-    Array.from({ length: 10 }, (_, index) => [
-      `b${String(index + 1).padStart(3, "0")}`,
-      {
-        attempts: 1,
-        correct: 1,
-        lastAnsweredAt: "2026-07-31T00:30:00.000Z",
-        lastCorrectAt: "2026-07-31T00:30:00.000Z",
-        correctDayKeys: ["2026-07-31"],
-        clearDayKeys: ["2026-07-31"]
-      }
-    ])
+  const dailyIds = Array.from({ length: 10 }, (_, index) =>
+    `b${String(index + 1).padStart(3, "0")}`
   );
-  await context.addInitScript(({ id, answers: savedAnswers, confidence: savedConfidence, stats }) => {
+  const fixedStats = Object.fromEntries(FOUNDATION_IDS.map((questionId, index) => [
+    questionId,
+    {
+      attempts: 1,
+      correct: 1,
+      wrong: 0,
+      lastStep: index + 1,
+      lastAnsweredAt: "2026-07-01T00:30:00.000Z",
+      lastCorrectAt: "2026-07-01T00:30:00.000Z",
+      correctDayKeys: ["2026-07-01"],
+      clearDayKeys: []
+    }
+  ]));
+  dailyIds.forEach((questionId) => {
+    fixedStats[questionId] = {
+      ...fixedStats[questionId],
+      lastAnsweredAt: "2026-07-31T00:30:00.000Z",
+      lastCorrectAt: "2026-07-31T00:30:00.000Z",
+      correctDayKeys: ["2026-07-31"],
+      clearDayKeys: ["2026-07-31"]
+    };
+  });
+  await context.addInitScript(({ id, answers: savedAnswers, confidence: savedConfidence, stats, planIds }) => {
     localStorage.setItem(id, JSON.stringify({
       stateSchemaVersion: 4,
       examContentVersion: 3,
@@ -275,7 +325,7 @@ async function runCrossDayScenario(browser, baseUrl) {
         wrong: 0,
         weakAdded: 0,
         target: 10,
-        planIds: Object.keys(stats),
+        planIds,
         planVersion: 3,
         planMode: "coverage",
         planScope: "business"
@@ -301,7 +351,7 @@ async function runCrossDayScenario(browser, baseUrl) {
         }
       }
     }));
-  }, { id: storageId, answers, confidence, stats: fixedStats });
+  }, { id: storageId, answers, confidence, stats: fixedStats, planIds: dailyIds });
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (error) => errors.push(String(error)));

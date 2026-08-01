@@ -55,7 +55,7 @@ async function gotoFresh(page, baseUrl, prefix) {
   await page.goto(url.toString(), { waitUntil: "networkidle", timeout: 15000 });
   await page.waitForFunction(() => {
     const source = document.querySelector("#dailyQuestSource")?.textContent || "";
-    return source.includes("固定10問") && !source.includes("読込中");
+    return /読後\d+問|固定10問/.test(source) && !source.includes("読込中");
   });
 }
 
@@ -159,11 +159,11 @@ async function runDesktop(browser, baseUrl) {
     localStorage.setItem(storageId, JSON.stringify(state));
     return planIds.length;
   });
-  assert.equal(completedDailyQuestions, 10);
+  assert.equal(completedDailyQuestions, 2);
   await page.reload({ waitUntil: "networkidle" });
   await page.waitForFunction(() => {
     const source = document.querySelector("#dailyQuestSource")?.textContent || "";
-    return source.includes("固定10問") && !source.includes("読込中");
+    return /読後\d+問|固定10問/.test(source) && !source.includes("読込中");
   });
   await page.locator("#themeDrawer > summary").click();
   await selectTextbookUnit(page, "02-15 請負");
