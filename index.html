@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="本試験配分のコア100問、全45単元の読後演習124問、実践バリエーション180問で学べる令和8年度向け宅建学習ツールです。">
+    <meta name="description" content="全45単元を、本文・読後演習124問・翌日復習・実践180問・公式過去問の順で学べる令和8年度向け宅建学習ツールです。">
     <meta name="theme-color" content="#17261f">
     <meta name="takken-runtime" content="public-static">
     <meta property="og:title" content="宅建バトル Study Quest">
@@ -13,7 +13,7 @@
     <link rel="canonical" href="https://regal753.github.io/takken-battle/">
     <title>宅建バトル Study Quest</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./styles.css?v=20260802-practical-variations-v16">
+    <link rel="stylesheet" href="./styles.css?v=20260802-learning-route-v17">
   </head>
   <body>
     <div class="app-root">
@@ -57,12 +57,12 @@
       <section id="todayCommandPanel" class="today-command-panel" aria-labelledby="todayCommandTitle">
         <div class="today-command-main">
           <div class="today-command-copy">
-            <span id="todayCommandKicker">今やる・STEP 1 / 4</span>
-            <strong id="todayCommandTitle">固定10問を解く</strong>
-            <p id="todayCommandText">各問の理解チェックまで通し、10問すべてに判定を付ける。</p>
+            <span id="todayCommandKicker">今やる・基礎ルート</span>
+            <strong id="todayCommandTitle">次の単元を読んで読後問題を解く</strong>
+            <p id="todayCommandText">未学習分野へ公式問題を先行させず、本文と小問を一単元ずつ接続する。</p>
           </div>
           <div class="today-command-actions">
-            <button id="todayCommandStartButton" class="today-command-primary" type="button">固定10問を始める</button>
+            <button id="todayCommandStartButton" class="today-command-primary" type="button">この単元の問題へ</button>
             <div id="todayCommandOfficialActions" class="today-command-action-group" hidden>
               <button id="officialDrillOpenButton" class="today-command-primary" type="button">公式20問シートを開く</button>
             </div>
@@ -132,28 +132,28 @@
           <div id="missionBattleStep" class="mission-step">
             <span>1</span>
             <div>
-              <strong>固定10問</strong>
+              <strong id="missionBattleLabel">本文＋読後問題</strong>
               <small id="missionBattleStatus">0 / 10</small>
             </div>
           </div>
           <div id="missionOfficialStep" class="mission-step">
             <span>2</span>
             <div>
-              <strong>公式問題20問</strong>
+              <strong id="missionOfficialLabel">翌日復習</strong>
               <small id="missionOfficialStatus">未完了</small>
             </div>
           </div>
           <div id="missionReviewStep" class="mission-step">
             <span>3</span>
             <div>
-              <strong>誤答を1行化</strong>
+              <strong id="missionReviewLabel">実践4問</strong>
               <small id="missionReviewStatus">未完了</small>
             </div>
           </div>
           <div id="missionMinutesStep" class="mission-step">
             <span>4</span>
             <div>
-              <strong>合計90分</strong>
+              <strong id="missionMinutesLabel">合計90分</strong>
               <small id="missionMinutesStatus">0 / 90分</small>
             </div>
           </div>
@@ -163,8 +163,8 @@
       <details id="passPlanPanel" class="pass-plan-panel" aria-label="2026年宅建合格作戦">
         <summary class="pass-plan-summary">
           <div>
-            <span>2026 PASS PLAN</span>
-            <strong id="passPhaseTitle">7月ゲート</strong>
+            <span>4 実力測定・2026 PASS PLAN</span>
+            <strong id="passPhaseTitle">基礎一周</strong>
           </div>
           <div class="exam-countdown">
             <span>本試験 10/18</span>
@@ -178,9 +178,9 @@
 
           <div class="pass-metric-grid">
             <div>
-              <span>7/31学習ゲート</span>
-              <strong id="julyGateStatus">0 / 3</strong>
-              <small>業法定着・法令接触・公式1年</small>
+              <span>基礎一周ゲート</span>
+              <strong id="foundationGateStatus">単元 0 / 45</strong>
+              <small>45単元の読後問題完了で公式演習を解放</small>
             </div>
             <div>
               <span>コア100</span>
@@ -315,8 +315,8 @@
         <details class="pass-roadmap">
           <summary>10/18までの攻略順</summary>
           <ol>
-            <li data-pass-phase="july"><strong>7/27–7/31</strong><span>業法定着32/40、法令16問接触、公式1年で基準点を作る</span></li>
-            <li data-pass-phase="august"><strong>8月</strong><span>全100問接触、権利を追加、公式過去問を週2年分</span></li>
+            <li data-pass-phase="foundation"><strong>基礎一周まで</strong><span>45単元を本文→読後2〜4問で進み、未学習分野の公式演習は保留</span></li>
+            <li data-pass-phase="august"><strong>基礎一周後</strong><span>固定10問と実践4問で定着を作り、公式20問へ接続</span></li>
             <li data-pass-phase="september"><strong>9月</strong><span>公式10試験回を初見・120分で回し、14日後の再試験3回まで測定</span></li>
             <li data-pass-phase="october"><strong>10/1–10/11</strong><span>弱点・法改正・統計だけを補修し、新教材を止める</span></li>
             <li data-pass-phase="final"><strong>10/12–10/18</strong><span>40点の再現、受験票・会場・睡眠を固定</span></li>
@@ -327,9 +327,25 @@
 
       <details id="themeDrawer" class="theme-drawer">
         <summary>
-          <span>学習モード・テーマを変更</span>
+          <span>1 基礎ルート・45単元</span>
           <strong id="themeDrawerSummary">宅建業法</strong>
         </summary>
+        <section class="foundation-route-card" aria-label="現在の単元学習ルート">
+          <div class="foundation-route-copy">
+            <span id="foundationRouteStage">読む＋読後問題</span>
+            <strong id="foundationRouteTitle">01-01 宅建業法の基本</strong>
+            <p id="foundationRouteText">本文p.3〜を読み、この単元の問題で理解を確認する。</p>
+          </div>
+          <div class="foundation-route-progress" aria-label="基礎ルート進捗">
+            <div><span>単元完了</span><strong id="foundationUnitsProgress">0 / 45</strong></div>
+            <div><span>読後問題</span><strong id="foundationQuestionsProgress">0 / 124</strong></div>
+            <div><span>実践クリア</span><strong id="foundationPracticalProgress">0 / 180</strong></div>
+          </div>
+          <div class="foundation-route-actions">
+            <button id="foundationRoutePrimaryButton" class="today-command-primary" type="button">この単元の問題へ</button>
+            <button id="foundationRoutePracticalButton" class="today-command-secondary" type="button" hidden>この単元の実践4問</button>
+          </div>
+        </section>
         <nav id="themeBar" class="theme-toolbar" aria-label="テーマ操作">
           <select id="chapterSelect" class="chapter-select" aria-label="テーマを選択"></select>
           <select id="studyScopeSelect" class="study-scope-select" aria-label="現在の学習段階">
@@ -345,7 +361,7 @@
       <details id="practicalDrillPanel" class="practical-drill-panel">
         <summary>
           <span>
-            <small>全45単元を組み替え</small>
+            <small>2 基礎を使える形へ</small>
             <strong>実践バリエーション</strong>
           </span>
           <span id="practicalDrillSummary">接触 0 / 180・根拠クリア 0・再出題 0</span>
@@ -371,6 +387,7 @@
               <label>
                 1セット
                 <select id="practicalDrillSize">
+                  <option value="4">4問</option>
                   <option value="10">10問</option>
                   <option value="20" selected>20問</option>
                   <option value="45">45問</option>
@@ -421,7 +438,7 @@
       <details id="calculationDrillPanel" class="calculation-drill-panel">
         <summary>
           <span>
-            <small>計算だけを反復</small>
+            <small>3 計算だけを反復</small>
             <strong>計算・金額特訓</strong>
           </span>
           <span id="calculationDrillSummary">初回 0 / 24・再出題 0</span>
@@ -728,21 +745,21 @@
       </div>
     </aside>
 
-    <script src="./exam-blueprint.js?v=20260801-explanation-mastery-v15"></script>
-    <script src="./exam-question-core.js?v=20260801-explanation-mastery-v15"></script>
-    <script src="./exam-questions-rights.js?v=20260801-explanation-mastery-v15"></script>
-    <script src="./exam-questions-restrictions.js?v=20260801-explanation-mastery-v15"></script>
-    <script src="./exam-questions-tax-other.js?v=20260801-explanation-mastery-v15"></script>
-    <script src="./exam-questions-business.js?v=20260801-explanation-mastery-v15"></script>
-    <script src="./practical-question-bank.js?v=20260802-practical-variations-v16"></script>
-    <script src="./question-bank.js?v=20260723-ops-v15"></script>
-    <script src="./question-balance.js?v=20260711-feedback-v8"></script>
-    <script src="./reward-system.js?v=20260713-confidence-v14"></script>
-    <script src="./official-exam-data.js?v=20260802-practical-variations-v16"></script>
-    <script src="./calculation-drill.js?v=20260802-practical-variations-v16"></script>
-    <script src="./save-store.js?v=20260802-practical-variations-v16"></script>
-    <script src="./save-transfer.js?v=20260802-practical-variations-v16"></script>
-    <script src="./app.js?v=20260802-practical-variations-v16"></script>
+    <script src="./exam-blueprint.js?v=20260802-learning-route-v17"></script>
+    <script src="./exam-question-core.js?v=20260802-learning-route-v17"></script>
+    <script src="./exam-questions-rights.js?v=20260802-learning-route-v17"></script>
+    <script src="./exam-questions-restrictions.js?v=20260802-learning-route-v17"></script>
+    <script src="./exam-questions-tax-other.js?v=20260802-learning-route-v17"></script>
+    <script src="./exam-questions-business.js?v=20260802-learning-route-v17"></script>
+    <script src="./practical-question-bank.js?v=20260802-learning-route-v17"></script>
+    <script src="./question-bank.js?v=20260802-learning-route-v17"></script>
+    <script src="./question-balance.js?v=20260802-learning-route-v17"></script>
+    <script src="./reward-system.js?v=20260802-learning-route-v17"></script>
+    <script src="./official-exam-data.js?v=20260802-learning-route-v17"></script>
+    <script src="./calculation-drill.js?v=20260802-learning-route-v17"></script>
+    <script src="./save-store.js?v=20260802-learning-route-v17"></script>
+    <script src="./save-transfer.js?v=20260802-learning-route-v17"></script>
+    <script src="./app.js?v=20260802-learning-route-v17"></script>
     <noscript>宅建バトルを利用するにはJavaScriptを有効にしてください。</noscript>
   </body>
 </html>

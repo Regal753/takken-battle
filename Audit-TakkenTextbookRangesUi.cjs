@@ -60,7 +60,7 @@ async function gotoFresh(page, baseUrl, prefix) {
   await page.goto(url.toString(), { waitUntil: "networkidle", timeout: 15000 });
   await page.waitForFunction(() => {
     const source = document.querySelector("#dailyQuestSource")?.textContent || "";
-    return source.includes("固定10問") && !source.includes("読込中");
+    return /読後\d+問|固定10問/.test(source) && !source.includes("読込中");
   });
 }
 
@@ -166,7 +166,7 @@ async function runDesktop(browser, baseUrl) {
   await answerAndAdvance(page, "o101");
   assert.equal(
     (await page.locator("#roundLabel").textContent()).replace(/\s+/g, " ").trim(),
-    "第3分冊 補助 3 / 4"
+    "読後 2 / 2"
   );
   await capture(page, "textbook-ranges-desktop.png");
   assert.deepEqual(errors, []);

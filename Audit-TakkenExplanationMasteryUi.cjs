@@ -55,7 +55,7 @@ async function gotoFresh(page, baseUrl, prefix) {
   await page.goto(url.toString(), { waitUntil: "networkidle", timeout: 15000 });
   await page.waitForFunction(() => {
     const source = document.querySelector("#dailyQuestSource")?.textContent || "";
-    return source.includes("固定10問") && !source.includes("読込中");
+    return /読後\d+問|固定10問/.test(source) && !source.includes("読込中");
   });
 }
 

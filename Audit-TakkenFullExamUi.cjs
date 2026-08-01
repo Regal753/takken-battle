@@ -28,6 +28,53 @@ async function chooseDrillConfidence(page, storageId, number, confidence) {
   }, { id: storageId, number, confidence });
 }
 
+async function seedAdvancedFoundation(page, storageId) {
+  await page.evaluate((id) => {
+    const saved = JSON.parse(localStorage.getItem(id) || "{}");
+    const blueprint = window.TAKKEN_EXAM_BLUEPRINT;
+    const textbookIds = Object.values(blueprint.textbookRanges)
+      .flatMap((range) => range.chapters)
+      .flatMap((chapter) => chapter.ids);
+    const firstBusinessBlock = blueprint.curriculumOrder
+      .filter((questionId) => window.TAKKEN_EXAM_QUESTIONS?.[questionId]?.sectionId === "business")
+      .slice(0, 10);
+    const contactedAt = "2026-01-01T00:00:00.000Z";
+    saved.questionStats ||= {};
+    textbookIds.forEach((questionId, index) => {
+      saved.questionStats[questionId] = {
+        ...(saved.questionStats[questionId] || {}),
+        attempts: Math.max(1, Number(saved.questionStats[questionId]?.attempts) || 0),
+        correct: Math.max(1, Number(saved.questionStats[questionId]?.correct) || 0),
+        lastStep: Math.max(index + 1, Number(saved.questionStats[questionId]?.lastStep) || 0),
+        lastAnsweredAt: saved.questionStats[questionId]?.lastAnsweredAt || contactedAt,
+        lastCorrectAt: saved.questionStats[questionId]?.lastCorrectAt || contactedAt,
+        correctDayKeys: saved.questionStats[questionId]?.correctDayKeys || ["2026-01-01"],
+        clearDayKeys: saved.questionStats[questionId]?.clearDayKeys || []
+      };
+    });
+    saved.studyScope = "business";
+    saved.daily = {
+      date: new Date().toLocaleDateString("sv-SE"),
+      answers: 0,
+      correct: 0,
+      wrong: 0,
+      weakAdded: 0,
+      target: 10,
+      planIds: firstBusinessBlock,
+      planVersion: 3,
+      planMode: "coverage",
+      planScope: "business",
+      planUnitId: ""
+    };
+    localStorage.setItem(id, JSON.stringify(saved));
+  }, storageId);
+  await page.reload({ waitUntil: "networkidle" });
+  await page.waitForFunction(() => {
+    const source = document.querySelector("#dailyQuestSource")?.textContent || "";
+    return source.includes("固定10問") && !source.includes("読込中");
+  });
+}
+
 async function main() {
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   try {
@@ -51,10 +98,26 @@ async function main() {
     url.searchParams.set("review", reviewNamespace);
     url.searchParams.set("today", "1");
     await page.goto(url.toString(), { waitUntil: "domcontentloaded", timeout: 15000 });
-    await page.waitForFunction(() => {
-      const source = document.querySelector("#dailyQuestSource")?.textContent || "";
-      return source.includes("固定10問") && !source.includes("読込中");
-    });
+    await page.waitForFunction(() =>
+      (document.querySelector("#dailyQuestSource")?.textContent || "").includes("読後2問")
+    );
+    const foundationEntry = await page.evaluate(() => ({
+      title: document.querySelector("#todayCommandTitle")?.textContent?.trim() || "",
+      source: document.querySelector("#dailyQuestSource")?.textContent?.trim() || "",
+      gate: document.querySelector("#foundationGateStatus")?.textContent?.trim() || "",
+      mockDisabled: Boolean(document.querySelector("#mockAButton")?.disabled),
+      mockTitle: document.querySelector("#mockAButton")?.title || ""
+    }));
+    if (
+      foundationEntry.title !== "01-01 宅建業法の基本" ||
+      !foundationEntry.source.includes("読後2問") ||
+      foundationEntry.gate !== "単元 0 / 45" ||
+      !foundationEntry.mockDisabled ||
+      !foundationEntry.mockTitle.includes("45単元")
+    ) {
+      throw new Error(`Foundation entry mismatch: ${JSON.stringify(foundationEntry)}`);
+    }
+    await seedAdvancedFoundation(page, storageId);
 
     const blueprintAudit = await page.evaluate(() => {
       const blueprint = window.TAKKEN_EXAM_BLUEPRINT;
@@ -82,15 +145,15 @@ async function main() {
     if (blueprintAudit.total !== 100 || blueprintAudit.missing.length) {
       throw new Error(`Curriculum not ready: ${JSON.stringify(blueprintAudit)}`);
     }
-    if (!blueprintAudit.sourceLabel.includes("宅建業法") || !blueprintAudit.sourceLabel.includes("新規＋復習")) {
+    if (!blueprintAudit.sourceLabel.includes("宅建業法") || !blueprintAudit.sourceLabel.includes("定着")) {
       throw new Error(`Random-style source label remained: ${blueprintAudit.sourceLabel}`);
     }
     if (
       !blueprintAudit.coachTitle.includes("宅建業法") ||
-      !blueprintAudit.coachText.includes("未学習分野は出さない") ||
+      !blueprintAudit.coachText.includes("全問接触済み") ||
       blueprintAudit.scopeValue !== "business" ||
-      !blueprintAudit.mockDisabled ||
-      !blueprintAudit.mockTitle.includes("全100問接触後") ||
+      blueprintAudit.mockDisabled ||
+      blueprintAudit.mockTitle ||
       blueprintAudit.roundLabel !== "今日 1 / 10" ||
       blueprintAudit.commandTitle !== "固定10問を解く" ||
       blueprintAudit.commandStep !== "今やる・STEP 1 / 4" ||
@@ -98,7 +161,7 @@ async function main() {
       blueprintAudit.themeOpen ||
       blueprintAudit.progressOpen
     ) {
-      throw new Error(`Coverage coach missing: ${blueprintAudit.coachTitle}`);
+      throw new Error(`Coverage coach missing: ${JSON.stringify(blueprintAudit)}`);
     }
 
     const themeHierarchy = await page.evaluate(() => {
@@ -173,7 +236,8 @@ async function main() {
       scopeSwitchAudit.scope !== "law-other" ||
       scopeSwitchAudit.planScope !== "law-other" ||
       scopeSwitchAudit.sections.includes("rights") ||
-      scopeSwitchAudit.sections.includes("business")
+      !scopeSwitchAudit.sections.includes("restrictions") ||
+      !scopeSwitchAudit.sections.includes("tax")
     ) {
       throw new Error(`Study scope switch failed: ${JSON.stringify(scopeSwitchAudit)}`);
     }
@@ -277,7 +341,7 @@ async function main() {
     }));
     if (
       stopState.label !== "今日の10問を終了" ||
-      !stopState.target.includes("次はRETIO公式20問")
+      !stopState.target.includes("次は公式20問")
     ) {
       throw new Error(`Unexpected completion handoff: ${JSON.stringify(stopState)}`);
     }
@@ -735,6 +799,11 @@ async function main() {
       throw new Error(`Mock B did not start correctly: ${JSON.stringify(formBStart)}`);
     }
 
+    const textbookIdsForFixtures = await page.evaluate(() =>
+      Object.values(window.TAKKEN_EXAM_BLUEPRINT.textbookRanges)
+        .flatMap((range) => range.chapters)
+        .flatMap((chapter) => chapter.ids)
+    );
     const masteryContext = await browser.newContext({
       viewport: { width: 390, height: 844 },
       reducedMotion: "reduce",
@@ -749,7 +818,7 @@ async function main() {
     masteryPage.on("pageerror", (error) => masteryErrors.push(String(error)));
     const masteryNamespace = `mastery${Date.now().toString(36)}`;
     const masteryStorageId = `takken-battle-study-clean-v2-hard-review-${masteryNamespace}`;
-    await masteryPage.addInitScript(({ storageId }) => {
+    await masteryPage.addInitScript(({ storageId, foundationIds }) => {
       const ids = [
         ...Array.from({ length: 28 }, (_, index) => `r${String(index + 1).padStart(3, "0")}`),
         ...Array.from({ length: 16 }, (_, index) => `l${String(index + 1).padStart(3, "0")}`),
@@ -771,6 +840,19 @@ async function main() {
           correctDayKeys: weakIds.has(id) ? [] : ["2026-05-31", "2026-06-01"]
         }
       ]));
+      foundationIds.forEach((id, index) => {
+        if (questionStats[id]) return;
+        questionStats[id] = {
+          attempts: 1,
+          correct: 1,
+          wrong: 0,
+          lastStep: ids.length + index + 1,
+          lastAnsweredAt: "2026-06-01T00:00:00.000Z",
+          lastCorrectAt: "2026-06-01T00:00:00.000Z",
+          correctDayKeys: ["2026-05-31", "2026-06-01"],
+          clearDayKeys: []
+        };
+      });
       localStorage.setItem(storageId, JSON.stringify({
         index: 0,
         attempts: 100,
@@ -782,7 +864,7 @@ async function main() {
         marked: Object.fromEntries([...weakIds].map((id) => [id, true])),
         questionStats
       }));
-    }, { storageId: masteryStorageId });
+    }, { storageId: masteryStorageId, foundationIds: textbookIdsForFixtures });
     const masteryUrl = new URL(baseUrl);
     masteryUrl.searchParams.set("review", masteryNamespace);
     masteryUrl.searchParams.set("today", "1");
@@ -904,6 +986,9 @@ async function main() {
       const reviewedIds = new Set(["b001", "b002", "b003", "b004"]);
       return {
         planIds,
+        source: document.querySelector("#dailyQuestSource")?.textContent || "",
+        planMode: saved.daily?.planMode,
+        planUnitId: saved.daily?.planUnitId,
         reviewCount: planIds.filter((id) => reviewedIds.has(id)).length,
         newCount: planIds.filter((id) => !reviewedIds.has(id)).length,
         sections: [...new Set(planIds.map((id) => window.TAKKEN_EXAM_QUESTIONS?.[id]?.sectionId))],
