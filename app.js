@@ -576,6 +576,25 @@
     officialExamHistory: $("#officialExamHistory")
   };
 
+  let fallbackIdSequence = 0;
+
+  function createOpaqueId(prefix) {
+    const timestamp = Date.now().toString(36);
+    if (globalThis.crypto?.randomUUID) {
+      return `${prefix}-${timestamp}-${globalThis.crypto.randomUUID()}`;
+    }
+    if (globalThis.crypto?.getRandomValues) {
+      const bytes = new Uint8Array(12);
+      globalThis.crypto.getRandomValues(bytes);
+      const randomPart = Array.from(bytes, (byte) =>
+        byte.toString(16).padStart(2, "0")
+      ).join("");
+      return `${prefix}-${timestamp}-${randomPart}`;
+    }
+    fallbackIdSequence += 1;
+    return `${prefix}-${timestamp}-${fallbackIdSequence.toString(36)}`;
+  }
+
   const createState = () => ({
     stateSchemaVersion: STATE_SCHEMA_VERSION,
     index: 0,
@@ -603,7 +622,7 @@
     adventureDays: {},
     weakRewards: {},
     step: 0,
-    sessionId: `session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`,
+    sessionId: createOpaqueId("session"),
     runMode: FIRST_PASS_PARAM ? RUN_MODE_FIRST_PASS : "quest",
     adaptive: false,
     studyScope: DEFAULT_STUDY_SCOPE,
@@ -1031,7 +1050,7 @@
     const next = { ...createState(), ...input };
     next.index = Math.min(Math.max(Number(next.index) || 0, 0), ORDER.length - 1);
     next.step = Number(next.step) || next.attempts || 0;
-    next.sessionId = next.sessionId || `session-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    next.sessionId = next.sessionId || createOpaqueId("session");
     next.mock = normalizeMockState(input?.mock);
     next.mockHistory = normalizeMockHistory(input?.mockHistory);
     next.officialExamHistory = normalizeOfficialExamHistory(input?.officialExamHistory);
@@ -1386,8 +1405,7 @@
   }
 
   function createEventId() {
-    if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID();
-    return `evt-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    return createOpaqueId("evt");
   }
 
   async function flushEventOutbox() {
