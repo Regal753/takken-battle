@@ -10,6 +10,7 @@ const required = [
   "index.html",
   "styles.css",
   "app.js",
+  "calculation-drill.js",
   "official-exam-data.js",
   "save-store.js",
   "save-transfer.js",
@@ -30,6 +31,7 @@ const required = [
   "Audit-TakkenOfficialDrill.js",
   "Audit-TakkenOfficialExamData.js",
   "Audit-TakkenSaveStore.js",
+  "Audit-TakkenCalculationDrill.js",
   "Audit-TakkenPassPlanUi.cjs",
   "Audit-TakkenPassLoopV12Ui.cjs",
   "scripts/verify-deployed-page.mjs",
@@ -110,15 +112,17 @@ assert.match(index, /id="officialPracticeCoverageStatus"/);
 assert.match(index, /id="textbookCoverageStatus"/);
 assert.match(index, /id="textbookRetentionStatus"/);
 assert.match(index, /全4章・45単元/);
+assert.match(index, /id="calculationDrillPanel"/);
 assert.match(index, /公式20問シートを開く/);
 assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 第2分冊・権利関係を固める/);
 assert.match(index, /③ 法令・税その他へ進む/);
 assert.match(index, /④ 全分野を混ぜる/);
-assert.match(index, /styles\.css\?v=20260801-explanation-mastery-v15/);
-assert.match(index, /app\.js\?v=20260801-explanation-mastery-v15/);
-assert.match(index, /save-store\.js\?v=20260801-explanation-mastery-v15/);
-assert.match(index, /official-exam-data\.js\?v=20260801-explanation-mastery-v15/);
+assert.match(index, /styles\.css\?v=20260802-practical-variations-v16/);
+assert.match(index, /calculation-drill\.js\?v=20260802-practical-variations-v16/);
+assert.match(index, /app\.js\?v=20260802-practical-variations-v16/);
+assert.match(index, /save-store\.js\?v=20260802-practical-variations-v16/);
+assert.match(index, /official-exam-data\.js\?v=20260802-practical-variations-v16/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
 assert.match(app, /理解チェック（必須）/);
@@ -149,13 +153,15 @@ assert.match(pagesWorkflow, /node Audit-TakkenSaveTransfer\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenSaveStore\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenOfficialDrill\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenOfficialExamData\.js/);
+assert.match(pagesWorkflow, /node Audit-TakkenCalculationDrill\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenFullExam\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenChapter2Range\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenTextbookRanges\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenQuestionQuality\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenExplanationMastery\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
-assert.match(pagesWorkflow, /20260801-explanation-mastery-v15/);
+assert.match(pagesWorkflow, /20260802-practical-variations-v16/);
+assert.match(pagesWorkflow, /cp [^\n]*calculation-drill\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*official-exam-data\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*save-store\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*save-transfer\.js[^\n]*_site\//);

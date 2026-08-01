@@ -12,7 +12,13 @@
   const EVENT_OUTBOX_ID = `${STORAGE_ID}-event-outbox`;
   const SAVE_STORE = window.TAKKEN_SAVE_STORE;
   const OFFICIAL_EXAM_DATA = window.TAKKEN_OFFICIAL_EXAMS;
-  const STATE_SCHEMA_VERSION = 4;
+  const CALCULATION_DRILL = window.TAKKEN_CALCULATION_DRILL;
+  const CALCULATION_QUESTIONS = CALCULATION_DRILL?.QUESTIONS || [];
+  const CALCULATION_QUESTION_BY_ID = Object.fromEntries(
+    CALCULATION_QUESTIONS.map((item) => [item.id, item])
+  );
+  const CALCULATION_QUESTION_IDS = Object.freeze(CALCULATION_QUESTIONS.map((item) => item.id));
+  const STATE_SCHEMA_VERSION = 5;
   const DAILY_TARGET = 10;
   const SPRINT_MINUTES = 25;
   const TODAY_QUEST_PARAM = URL_PARAMS.has("today") || URL_PARAMS.has("quest");
@@ -641,7 +647,27 @@
     officialTaxOtherScore: $("#officialTaxOtherScore"),
     officialExamMinutes: $("#officialExamMinutes"),
     officialExamStatus: $("#officialExamStatus"),
-    officialExamHistory: $("#officialExamHistory")
+    officialExamHistory: $("#officialExamHistory"),
+    calculationDrillPanel: $("#calculationDrillPanel"),
+    calculationDrillSummary: $("#calculationDrillSummary"),
+    calculationDrillStage: $("#calculationDrillStage"),
+    calculationDrillProgress: $("#calculationDrillProgress"),
+    calculationDrillResetButton: $("#calculationDrillResetButton"),
+    calculationDrillQuestion: $("#calculationDrillQuestion"),
+    calculationDrillCategory: $("#calculationDrillCategory"),
+    calculationDrillRetryStatus: $("#calculationDrillRetryStatus"),
+    calculationDrillPrompt: $("#calculationDrillPrompt"),
+    calculationDrillChoices: $("#calculationDrillChoices"),
+    calculationDrillFeedback: $("#calculationDrillFeedback"),
+    calculationDrillVerdict: $("#calculationDrillVerdict"),
+    calculationDrillFormula: $("#calculationDrillFormula"),
+    calculationDrillTrap: $("#calculationDrillTrap"),
+    calculationDrillSource: $("#calculationDrillSource"),
+    calculationDrillConfidence: $("#calculationDrillConfidence"),
+    calculationDrillNextButton: $("#calculationDrillNextButton"),
+    calculationDrillComplete: $("#calculationDrillComplete"),
+    calculationDrillCompleteText: $("#calculationDrillCompleteText"),
+    calculationDrillRestartButton: $("#calculationDrillRestartButton")
   };
 
   let fallbackIdSequence = 0;
@@ -661,6 +687,22 @@
     }
     fallbackIdSequence += 1;
     return `${prefix}-${timestamp}-${fallbackIdSequence.toString(36)}`;
+  }
+
+  function createCalculationDrillState() {
+    return {
+      version: CALCULATION_DRILL?.VERSION || 1,
+      stage: "first",
+      queue: [...CALCULATION_QUESTION_IDS],
+      position: 0,
+      currentAttempt: null,
+      retryIds: [],
+      masteredIds: [],
+      history: {},
+      attempts: 0,
+      correctAttempts: 0,
+      completedAt: ""
+    };
   }
 
   const createState = () => ({
@@ -707,6 +749,7 @@
     officialExamHistory: [],
     officialExamSession: null,
     missionLog: {},
+    calculationDrill: createCalculationDrillState(),
     saveMeta: {
       lastExportedAt: "",
       lastExportHash: ""
@@ -1212,6 +1255,88 @@
     );
   }
 
+  function calculationIds(input) {
+    const valid = new Set(CALCULATION_QUESTION_IDS);
+    return [...new Set((Array.isArray(input) ? input : []).map(String))]
+      .filter((id) => valid.has(id));
+  }
+
+  function normalizeCalculationHistory(input) {
+    return Object.fromEntries(
+      Object.entries(input && typeof input === "object" && !Array.isArray(input) ? input : {})
+        .filter(([id]) => Boolean(CALCULATION_QUESTION_BY_ID[id]))
+        .map(([id, item]) => [
+          id,
+          {
+            attempts: boundedInteger(item?.attempts, 10000),
+            correct: boundedInteger(item?.correct, 10000),
+            wrong: boundedInteger(item?.wrong, 10000),
+            uncertain: boundedInteger(item?.uncertain, 10000),
+            lastSelected: Number.isInteger(Number(item?.lastSelected))
+              ? Math.min(3, Math.max(0, Number(item.lastSelected)))
+              : null,
+            lastCorrect: Boolean(item?.lastCorrect),
+            lastConfidence: ["confident", "uncertain", "wrong"].includes(item?.lastConfidence)
+              ? item.lastConfidence
+              : "",
+            lastAnsweredAt: Number.isFinite(Date.parse(item?.lastAnsweredAt))
+              ? String(item.lastAnsweredAt).slice(0, 64)
+              : ""
+          }
+        ])
+    );
+  }
+
+  function normalizeCalculationDrillState(input) {
+    const fresh = createCalculationDrillState();
+    if (!CALCULATION_QUESTION_IDS.length) return fresh;
+    const retryIds = calculationIds(input?.retryIds);
+    const masteredIds = calculationIds(input?.masteredIds)
+      .filter((id) => !retryIds.includes(id));
+    let stage = ["first", "retry", "complete"].includes(input?.stage)
+      ? input.stage
+      : "first";
+    if (stage === "complete" && retryIds.length) stage = "retry";
+    let queue = calculationIds(input?.queue);
+    if (!queue.length && stage !== "complete") {
+      queue = stage === "retry" && retryIds.length
+        ? [...retryIds]
+        : [...CALCULATION_QUESTION_IDS];
+    }
+    const position = queue.length
+      ? Math.min(Math.max(Number(input?.position) || 0, 0), queue.length - 1)
+      : 0;
+    const currentId = queue[position];
+    const rawAttempt = input?.currentAttempt;
+    const selected = Number(rawAttempt?.selected);
+    const currentQuestion = CALCULATION_QUESTION_BY_ID[currentId];
+    const currentAttempt = rawAttempt?.id === currentId && Number.isInteger(selected) && selected >= 0 && selected < 4
+      ? {
+          id: currentId,
+          selected,
+          correct: selected === currentQuestion.answer,
+          confidence: selected === currentQuestion.answer
+            ? (["confident", "uncertain"].includes(rawAttempt?.confidence) ? rawAttempt.confidence : "")
+            : "wrong"
+        }
+      : null;
+    return {
+      version: CALCULATION_DRILL?.VERSION || 1,
+      stage,
+      queue,
+      position,
+      currentAttempt,
+      retryIds,
+      masteredIds,
+      history: normalizeCalculationHistory(input?.history),
+      attempts: boundedInteger(input?.attempts, 100000),
+      correctAttempts: boundedInteger(input?.correctAttempts, 100000),
+      completedAt: stage === "complete" && Number.isFinite(Date.parse(input?.completedAt))
+        ? String(input.completedAt).slice(0, 64)
+        : ""
+    };
+  }
+
   function inferredMistakeCause(answered) {
     const note = String(answered?.mistakeNote || "");
     if (/読み|見落と|見間違/.test(note)) return "reading";
@@ -1251,6 +1376,7 @@
     next.officialExamHistory = normalizeOfficialExamHistory(input?.officialExamHistory);
     next.officialExamSession = normalizeOfficialExamSession(input?.officialExamSession);
     next.missionLog = normalizeMissionLog(input?.missionLog);
+    next.calculationDrill = normalizeCalculationDrillState(input?.calculationDrill);
     next.saveMeta = {
       lastExportedAt: Number.isFinite(Date.parse(input?.saveMeta?.lastExportedAt))
         ? String(input.saveMeta.lastExportedAt).slice(0, 64)
@@ -4484,6 +4610,199 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
+  function formatCalculationYen(value) {
+    return `${Number(value).toLocaleString("ja-JP")}円`;
+  }
+
+  function currentCalculationQuestion() {
+    const drill = state.calculationDrill;
+    return CALCULATION_QUESTION_BY_ID[drill?.queue?.[drill.position]] || null;
+  }
+
+  function addCalculationId(list, id) {
+    return list.includes(id) ? list : [...list, id];
+  }
+
+  function removeCalculationId(list, id) {
+    return list.filter((item) => item !== id);
+  }
+
+  function renderCalculationDrill() {
+    if (!elements.calculationDrillPanel || !CALCULATION_QUESTION_IDS.length) return;
+    const drill = state.calculationDrill;
+    const contacted = CALCULATION_QUESTION_IDS.filter((id) => (drill.history[id]?.attempts || 0) > 0).length;
+    const retryCount = drill.retryIds.length;
+    elements.calculationDrillSummary.textContent = `初回 ${contacted} / ${CALCULATION_QUESTION_IDS.length}・再出題 ${retryCount}`;
+    elements.calculationDrillRetryStatus.textContent = `再出題 ${retryCount}`;
+
+    const complete = drill.stage === "complete";
+    elements.calculationDrillQuestion.hidden = complete;
+    elements.calculationDrillComplete.hidden = !complete;
+    if (complete) {
+      elements.calculationDrillStage.textContent = "全件クリア";
+      elements.calculationDrillProgress.textContent = `${CALCULATION_QUESTION_IDS.length} / ${CALCULATION_QUESTION_IDS.length}`;
+      elements.calculationDrillCompleteText.textContent =
+        `初回24問と再出題を完了。累計${drill.attempts}解答・正解${drill.correctAttempts}回です。`;
+      return;
+    }
+
+    const item = currentCalculationQuestion();
+    if (!item) return;
+    const attempt = drill.currentAttempt;
+    elements.calculationDrillStage.textContent = drill.stage === "retry" ? "迷い・誤答を再出題" : "初回24問";
+    elements.calculationDrillProgress.textContent = `${drill.position + 1} / ${drill.queue.length}`;
+    elements.calculationDrillCategory.textContent = item.category;
+    elements.calculationDrillPrompt.textContent = item.prompt;
+    elements.calculationDrillChoices.replaceChildren();
+    item.choices.forEach((value, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "calculation-drill-choice";
+      button.textContent = `${index + 1}. ${formatCalculationYen(value)}`;
+      button.disabled = Boolean(attempt);
+      if (attempt) {
+        button.classList.toggle("is-selected", attempt.selected === index);
+        button.classList.toggle("is-correct", item.answer === index);
+        button.classList.toggle("is-wrong", attempt.selected === index && !attempt.correct);
+      }
+      button.addEventListener("click", () => answerCalculationDrill(index));
+      elements.calculationDrillChoices.append(button);
+    });
+
+    elements.calculationDrillFeedback.hidden = !attempt;
+    if (!attempt) return;
+    elements.calculationDrillVerdict.textContent = attempt.correct
+      ? `正解 ${formatCalculationYen(item.choices[item.answer])}`
+      : `誤答。正解は ${formatCalculationYen(item.choices[item.answer])}。再出題へ追加した。`;
+    elements.calculationDrillFormula.replaceChildren(
+      ...item.formula.map((step) => {
+        const row = document.createElement("li");
+        row.textContent = step;
+        return row;
+      })
+    );
+    elements.calculationDrillTrap.textContent = `ひっかけ: ${item.trap}`;
+    elements.calculationDrillSource.replaceChildren(
+      ...item.sources.map((sourceKey) => {
+        const source = CALCULATION_DRILL.SOURCES[sourceKey];
+        const link = document.createElement("a");
+        link.className = "official-source-link";
+        link.href = source.url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        link.textContent = `公式根拠: ${source.label}（基準日 ${CALCULATION_DRILL.LEGAL_BASELINE}）`;
+        return link;
+      })
+    );
+    elements.calculationDrillConfidence.hidden = !attempt.correct;
+    elements.calculationDrillConfidence
+      .querySelectorAll("[data-calculation-confidence]")
+      .forEach((button) => {
+        button.classList.toggle(
+          "is-selected",
+          button.dataset.calculationConfidence === attempt.confidence
+        );
+      });
+    elements.calculationDrillNextButton.disabled = attempt.correct && !attempt.confidence;
+    elements.calculationDrillNextButton.textContent = drill.position + 1 < drill.queue.length
+      ? "次の計算へ"
+      : (retryCount ? "再出題へ進む" : "特訓を完了する");
+  }
+
+  function answerCalculationDrill(selected) {
+    const drill = state.calculationDrill;
+    const item = currentCalculationQuestion();
+    if (!item || drill.currentAttempt || !Number.isInteger(selected) || selected < 0 || selected > 3) return;
+    const correct = selected === item.answer;
+    const answeredAt = new Date().toISOString();
+    const previous = drill.history[item.id] || {
+      attempts: 0,
+      correct: 0,
+      wrong: 0,
+      uncertain: 0
+    };
+    drill.history[item.id] = {
+      ...previous,
+      attempts: previous.attempts + 1,
+      correct: previous.correct + (correct ? 1 : 0),
+      wrong: previous.wrong + (correct ? 0 : 1),
+      lastSelected: selected,
+      lastCorrect: correct,
+      lastConfidence: correct ? "" : "wrong",
+      lastAnsweredAt: answeredAt
+    };
+    drill.attempts += 1;
+    drill.correctAttempts += correct ? 1 : 0;
+    drill.currentAttempt = {
+      id: item.id,
+      selected,
+      correct,
+      confidence: correct ? "" : "wrong"
+    };
+    if (!correct) {
+      drill.retryIds = addCalculationId(drill.retryIds, item.id);
+      drill.masteredIds = removeCalculationId(drill.masteredIds, item.id);
+    }
+    saveState();
+    renderCalculationDrill();
+  }
+
+  function setCalculationConfidence(confidence) {
+    const drill = state.calculationDrill;
+    const attempt = drill.currentAttempt;
+    const item = currentCalculationQuestion();
+    if (!item || !attempt?.correct || !["confident", "uncertain"].includes(confidence)) return;
+    const history = drill.history[item.id];
+    if (attempt.confidence === "uncertain" && history) {
+      history.uncertain = Math.max(0, (history.uncertain || 0) - 1);
+    }
+    attempt.confidence = confidence;
+    if (history) {
+      history.uncertain = (history.uncertain || 0) + (confidence === "uncertain" ? 1 : 0);
+      history.lastConfidence = confidence;
+    }
+    if (confidence === "uncertain") {
+      drill.retryIds = addCalculationId(drill.retryIds, item.id);
+      drill.masteredIds = removeCalculationId(drill.masteredIds, item.id);
+    } else {
+      drill.retryIds = removeCalculationId(drill.retryIds, item.id);
+      drill.masteredIds = addCalculationId(drill.masteredIds, item.id);
+    }
+    saveState();
+    renderCalculationDrill();
+  }
+
+  function advanceCalculationDrill() {
+    const drill = state.calculationDrill;
+    if (!drill.currentAttempt || (drill.currentAttempt.correct && !drill.currentAttempt.confidence)) return;
+    if (drill.position + 1 < drill.queue.length) {
+      drill.position += 1;
+      drill.currentAttempt = null;
+    } else if (drill.retryIds.length) {
+      drill.stage = "retry";
+      drill.queue = [...drill.retryIds];
+      drill.position = 0;
+      drill.currentAttempt = null;
+    } else {
+      drill.stage = "complete";
+      drill.queue = [];
+      drill.position = 0;
+      drill.currentAttempt = null;
+      drill.completedAt = new Date().toISOString();
+    }
+    saveState();
+    renderCalculationDrill();
+    window.requestAnimationFrame(() =>
+      elements.calculationDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
+    );
+  }
+
+  function resetCalculationDrill() {
+    state.calculationDrill = createCalculationDrillState();
+    saveState();
+    renderCalculationDrill();
+  }
+
   function renderCurrentView() {
     if (isMockMode() && state.mock.finalized) {
       showMockFinished();
@@ -4493,6 +4812,7 @@
   }
 
   function render() {
+    renderCalculationDrill();
     const question = currentQuestion();
     const answered = state.answered;
     const isCorrect = answered?.correct === true;
@@ -7144,6 +7464,13 @@
     elements.saveShareButton?.addEventListener("click", shareSaveTransfer);
     elements.saveRestorePreviousButton?.addEventListener("click", restorePreviousSave);
     elements.saveImportInput?.addEventListener("change", importSaveFile);
+    elements.calculationDrillResetButton?.addEventListener("click", resetCalculationDrill);
+    elements.calculationDrillRestartButton?.addEventListener("click", resetCalculationDrill);
+    elements.calculationDrillNextButton?.addEventListener("click", advanceCalculationDrill);
+    elements.calculationDrillConfidence?.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-calculation-confidence]");
+      if (button) setCalculationConfidence(button.dataset.calculationConfidence);
+    });
     elements.missionMinutesButton?.addEventListener("click", saveMissionMinutes);
     elements.missionMinutesInput?.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
