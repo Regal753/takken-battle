@@ -22,6 +22,7 @@ jobs:
       - run: node Audit-TakkenQuestionBank.js
       - run: node Audit-TakkenRewardSystem.js
       - run: node Audit-TakkenOfficialDrill.js
+      - run: node Audit-TakkenOfficialExamData.js
       - run: node Audit-TakkenSaveStore.js
       - run: node Audit-TakkenSaveTransfer.js
       - run: node scripts/validate-public.mjs

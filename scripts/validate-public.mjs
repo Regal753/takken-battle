@@ -10,6 +10,7 @@ const required = [
   "index.html",
   "styles.css",
   "app.js",
+  "official-exam-data.js",
   "save-store.js",
   "save-transfer.js",
   "reward-system.js",
@@ -23,8 +24,10 @@ const required = [
   "exam-questions-business.js",
   "Audit-TakkenQuestionQuality.js",
   "Audit-TakkenOfficialDrill.js",
+  "Audit-TakkenOfficialExamData.js",
   "Audit-TakkenSaveStore.js",
   "Audit-TakkenPassPlanUi.cjs",
+  "Audit-TakkenPassLoopV12Ui.cjs",
   "scripts/verify-deployed-page.mjs",
   "README.md",
 ];
@@ -56,7 +59,7 @@ assert.match(app, /function renderPassPlan/);
 assert.match(app, /function renderTodayCommand/);
 assert.match(app, /const OFFICIAL_DAILY_DRILL_DEFINITIONS/);
 assert.match(app, /2025-balanced-c-v1/);
-assert.match(app, /const OFFICIAL_DRILL_EVIDENCE_VERSION = 2/);
+assert.match(app, /const OFFICIAL_DRILL_EVIDENCE_VERSION = 3/);
 assert.match(app, /data-confidence-question/);
 assert.match(app, /function officialPracticeStats/);
 assert.match(app, /function restorePreviousSave/);
@@ -89,7 +92,9 @@ assert.match(index, /id="todayReviewInput"/);
 assert.match(index, /id="themeDrawer"/);
 assert.match(index, /id="progressDrawer"/);
 assert.match(index, /id="dailyMissionStatus"/);
-assert.match(index, /id="officialExamForm"/);
+assert.match(index, /id="officialExamSessionForm"/);
+assert.match(index, /id="officialExamManualForm"/);
+assert.match(index, /id="officialExamLawChecked"/);
 assert.match(index, /id="officialExamHistory"/);
 assert.match(index, /RETIO公式過去問を開く/);
 assert.match(index, /id="officialDrillOpenButton"/);
@@ -100,9 +105,10 @@ assert.match(index, /公式20問シートを開く/);
 assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 法令・税その他へ進む/);
 assert.match(index, /③ 全分野を混ぜる/);
-assert.match(index, /styles\.css\?v=20260730-pass-loop-v11/);
-assert.match(index, /app\.js\?v=20260730-pass-loop-v11/);
-assert.match(index, /save-store\.js\?v=20260730-pass-loop-v11/);
+assert.match(index, /styles\.css\?v=20260731-pass-loop-v12/);
+assert.match(index, /app\.js\?v=20260731-pass-loop-v12/);
+assert.match(index, /save-store\.js\?v=20260731-pass-loop-v12/);
+assert.match(index, /official-exam-data\.js\?v=20260731-pass-loop-v12/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
 assert.match(app, /理解チェック（必須）/);
@@ -129,10 +135,12 @@ assert.match(readme, /スマホへ渡す/);
 assert.match(pagesWorkflow, /node Audit-TakkenSaveTransfer\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenSaveStore\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenOfficialDrill\.js/);
+assert.match(pagesWorkflow, /node Audit-TakkenOfficialExamData\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenFullExam\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenQuestionQuality\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
-assert.match(pagesWorkflow, /20260730-pass-loop-v11/);
+assert.match(pagesWorkflow, /20260731-pass-loop-v12/);
+assert.match(pagesWorkflow, /cp [^\n]*official-exam-data\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*save-store\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*save-transfer\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*exam-blueprint\.js[^\n]*_site\//);

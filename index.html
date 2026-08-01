@@ -13,7 +13,7 @@
     <link rel="canonical" href="https://regal753.github.io/takken-battle/">
     <title>宅建バトル Study Quest</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./styles.css?v=20260730-pass-loop-v11">
+    <link rel="stylesheet" href="./styles.css?v=20260731-pass-loop-v12">
   </head>
   <body>
     <div class="app-root">
@@ -93,9 +93,9 @@
           <div class="official-drill-body">
             <div class="official-drill-brief">
               <div>
-                <span>合格仕様</span>
+                <span>原問接触</span>
                 <strong>20問を35分・検索なしで解く</strong>
-                <p>解答に加え、全問で「根拠あり」か「消去法・勘」を選ぶ。15点が戦略目標、16点が安全圏です。</p>
+                <p>1問ずつ解答し、全問で「根拠あり」か「消去法・勘」を選ぶ。15点は原問換算の訓練目標で、合格安定度には算入しません。</p>
               </div>
               <div class="official-drill-launch">
                 <a
@@ -109,9 +109,18 @@
                 <strong id="officialDrillTimer" class="official-drill-timer">35:00</strong>
               </div>
             </div>
-            <p class="official-drill-caution">A→B→Cで令和7年度50問へ全接触し、その後は再戦する。2025年4月1日施行法令基準のため、法改正の影響があり得る肢は2026年度教材で照合してください。</p>
+            <p class="official-drill-caution">A→B→Cで令和7年度50問へ全接触し、その後は再戦する。全問とも2025年4月1日基準の歴史問題です。2026年4月1日現在法との一致を未確認のため、得点は訓練値として扱います。</p>
             <form id="officialDrillForm" class="official-drill-form">
               <div id="officialDrillAnswerGrid" class="official-drill-answer-grid" aria-label="公式20問の解答欄"></div>
+              <div class="official-answer-navigation" aria-label="公式20問の移動">
+                <button id="officialDrillPrevButton" class="today-command-secondary" type="button">前の問</button>
+                <label>
+                  <span>移動</span>
+                  <select id="officialDrillJumpSelect" aria-label="表示する問題"></select>
+                </label>
+                <strong id="officialDrillProgress">1 / 20</strong>
+                <button id="officialDrillNextButton" class="today-command-secondary" type="button">次の問</button>
+              </div>
               <button id="officialDrillSubmitButton" class="today-command-primary" type="submit">20問を採点する</button>
             </form>
             <div id="officialDrillResult" class="official-drill-result" hidden aria-live="polite"></div>
@@ -198,30 +207,74 @@
         <details class="official-ledger">
           <summary>
             <span>
-              <strong>公式未見過去問スコア台帳</strong>
-              <small>内蔵模試とは分けて、初見50問だけを記録</small>
+              <strong>公式50問・本試験測定台帳</strong>
+              <small>試験回を区別し、初見10回＋14日後の再試験3回を測定</small>
             </span>
-            <span id="officialLedgerSummary">0年分</span>
+            <span id="officialLedgerSummary">初見 0 / 10・再試験 0 / 3</span>
           </summary>
           <div class="official-ledger-body">
             <div class="official-ledger-copy">
-              <p>RETIO公式の未見年度を120分で解き、採点後に入力します。過年度問題は法改正で現在法と異なる場合があります。</p>
+              <p>RETIO公式PDFを120分で解き、この解答シートへ1問ずつ入力します。2020・2021年の10月／12月試験は別試験として扱います。過去問は現在法と異なる可能性があるため、採点後に2026年度教材との照合を必須にします。</p>
               <a href="https://www.retio.or.jp/exam/past_ques_ans/other/" target="_blank" rel="noopener noreferrer">RETIO公式過去問を開く</a>
             </div>
-            <form id="officialExamForm" class="official-exam-form">
+
+            <section class="official-exam-runner" aria-label="公式50問の計測">
+              <div class="official-exam-setup">
+                <label>
+                  測定種別
+                  <select id="officialExamAttemptType">
+                    <option value="initial">初見</option>
+                    <option value="retest">14日後の再試験</option>
+                  </select>
+                </label>
+                <label>
+                  試験回
+                  <select id="officialExamId"></select>
+                </label>
+                <a id="officialExamQuestionLink" class="today-command-secondary" href="https://www.retio.or.jp/exam/past_ques_ans/other/" target="_blank" rel="noopener noreferrer">公式問題PDF</a>
+                <button id="officialExamStartButton" class="today-command-primary" type="button">120分計測を開始</button>
+                <strong id="officialExamTimer" class="official-drill-timer">120:00</strong>
+              </div>
+              <form id="officialExamSessionForm" class="official-exam-session-form" hidden>
+                <fieldset id="officialExamQuestionCard" class="official-drill-item official-exam-question-card">
+                  <legend>
+                    <strong id="officialExamQuestionNumber">問1</strong>
+                    <span id="officialExamQuestionSection">権利</span>
+                  </legend>
+                  <p>公式PDFの該当問題を読み、選択肢番号を入力する。</p>
+                  <div id="officialExamAnswerChoices" class="official-drill-choices" role="radiogroup" aria-label="公式50問の解答">
+                    <label><input type="radio" name="official-exam-answer" value="1"><span>1</span></label>
+                    <label><input type="radio" name="official-exam-answer" value="2"><span>2</span></label>
+                    <label><input type="radio" name="official-exam-answer" value="3"><span>3</span></label>
+                    <label><input type="radio" name="official-exam-answer" value="4"><span>4</span></label>
+                  </div>
+                </fieldset>
+                <div class="official-answer-navigation" aria-label="公式50問の移動">
+                  <button id="officialExamPrevButton" class="today-command-secondary" type="button">前の問</button>
+                  <label>
+                    <span>移動</span>
+                    <select id="officialExamJumpSelect" aria-label="表示する問題"></select>
+                  </label>
+                  <strong id="officialExamProgress">1 / 50</strong>
+                  <button id="officialExamNextButton" class="today-command-secondary" type="button">次の問</button>
+                </div>
+                <label class="official-law-check">
+                  <input id="officialExamLawChecked" type="checkbox">
+                  <span>この試験回で法改正の影響がある肢を、2026年4月1日現在法の教材で照合した</span>
+                </label>
+                <button id="officialExamSubmitButton" class="today-command-primary" type="submit">50問を採点して記録</button>
+              </form>
+            </section>
+
+            <p id="officialExamStatus" class="official-exam-status" aria-live="polite"></p>
+            <div id="officialExamHistory" class="official-exam-history" aria-label="公式過去問の記録"></div>
+
+            <details class="official-manual-entry">
+              <summary>紙で解いた旧記録を入力（自己申告・安定度から除外）</summary>
+              <form id="officialExamManualForm" class="official-exam-form">
               <label>
-                年度
+                試験回
                 <select id="officialExamYear" required>
-                  <option value="2025">令和7年度（2025）</option>
-                  <option value="2024">令和6年度（2024）</option>
-                  <option value="2023">令和5年度（2023）</option>
-                  <option value="2022">令和4年度（2022）</option>
-                  <option value="2021">令和3年度（2021）</option>
-                  <option value="2020">令和2年度（2020）</option>
-                  <option value="2019">令和元年度（2019）</option>
-                  <option value="2018">平成30年度（2018）</option>
-                  <option value="2017">平成29年度（2017）</option>
-                  <option value="2016">平成28年度（2016）</option>
                 </select>
               </label>
               <label>
@@ -248,10 +301,9 @@
                 時間（分）
                 <input id="officialExamMinutes" type="number" min="1" max="180" value="120" inputmode="numeric" required>
               </label>
-              <button id="officialExamSaveButton" type="submit">スコアを記録</button>
-            </form>
-            <p id="officialExamStatus" class="official-exam-status" aria-live="polite"></p>
-            <div id="officialExamHistory" class="official-exam-history" aria-label="公式過去問の記録"></div>
+                <button id="officialExamSaveButton" type="submit">自己申告で記録</button>
+              </form>
+            </details>
           </div>
         </details>
 
@@ -260,7 +312,7 @@
           <ol>
             <li data-pass-phase="july"><strong>7/27–7/31</strong><span>業法定着32/40、法令16問接触、公式1年で基準点を作る</span></li>
             <li data-pass-phase="august"><strong>8月</strong><span>全100問接触、権利を追加、公式過去問を週2年分</span></li>
-            <li data-pass-phase="september"><strong>9月</strong><span>公式10年分を初見・120分で回し、37点以上を再現</span></li>
+            <li data-pass-phase="september"><strong>9月</strong><span>公式10試験回を初見・120分で回し、14日後の再試験3回まで測定</span></li>
             <li data-pass-phase="october"><strong>10/1–10/11</strong><span>弱点・法改正・統計だけを補修し、新教材を止める</span></li>
             <li data-pass-phase="final"><strong>10/12–10/18</strong><span>40点の再現、受験票・会場・睡眠を固定</span></li>
           </ol>
@@ -558,9 +610,10 @@
     <script src="./question-bank.js?v=20260723-ops-v15"></script>
     <script src="./question-balance.js?v=20260711-feedback-v8"></script>
     <script src="./reward-system.js?v=20260713-confidence-v14"></script>
-    <script src="./save-store.js?v=20260730-pass-loop-v11"></script>
-    <script src="./save-transfer.js?v=20260730-pass-loop-v11"></script>
-    <script src="./app.js?v=20260730-pass-loop-v11"></script>
+    <script src="./official-exam-data.js?v=20260731-pass-loop-v12"></script>
+    <script src="./save-store.js?v=20260731-pass-loop-v12"></script>
+    <script src="./save-transfer.js?v=20260731-pass-loop-v12"></script>
+    <script src="./app.js?v=20260731-pass-loop-v12"></script>
     <noscript>宅建バトルを利用するにはJavaScriptを有効にしてください。</noscript>
   </body>
 </html>

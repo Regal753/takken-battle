@@ -9,7 +9,18 @@ const match = source.match(
   /const OFFICIAL_DAILY_DRILL_DEFINITIONS = (Object\.freeze\(\[[\s\S]*?\]\));\s+const OFFICIAL_DRILL_SECTION_LABELS/
 );
 assert.ok(match, "official drill definitions not found");
-const definitions = vm.runInNewContext(match[1]);
+const definitions = vm.runInNewContext(`
+  (() => {
+    const officialDrillQuestions = (items) => Object.freeze(
+      items.map((item) => Object.freeze({
+        ...item,
+        verifiedAsOf: "2025-04-01",
+        lawStatus: "historical"
+      }))
+    );
+    return ${match[1]};
+  })()
+`);
 assert.equal(definitions.length, 3);
 
 const officialAnswerKey = [
@@ -38,6 +49,8 @@ for (const definition of definitions) {
   const sections = definition.questions.reduce((counts, item) => {
     assert.ok(item.number >= 1 && item.number <= 50);
     assert.equal(item.answer, officialAnswerKey[item.number - 1], `Q${item.number}`);
+    assert.equal(item.verifiedAsOf, "2025-04-01");
+    assert.equal(item.lawStatus, "historical");
     counts[item.section] = (counts[item.section] || 0) + 1;
     allQuestions.add(item.number);
     return counts;

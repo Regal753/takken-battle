@@ -87,7 +87,7 @@ async function main() {
       !/^D-\d+$/.test(initial.countdown) ||
       initial.gate !== "0 / 3" ||
       initial.mission !== "0 / 4" ||
-      initial.official !== "未記録" ||
+      initial.official !== "測定中・初見0/10・再0/3" ||
       initial.currentRoadmap !== 1 ||
       initial.commandTitle !== "固定10問を解く" ||
       initial.commandStep !== "今やる・STEP 1 / 4" ||
@@ -100,6 +100,7 @@ async function main() {
 
     await page.locator(".pass-plan-summary").click();
     await page.locator(".official-ledger > summary").click();
+    await page.locator(".official-manual-entry > summary").click();
     await page.evaluate(() => {
       const option = document.querySelector('#officialExamYear option[value="2025"]');
       if (option) option.disabled = false;
@@ -140,15 +141,16 @@ async function main() {
       };
     }, storageId);
     if (
-      recorded.readiness !== "戦略目標 37 / 50" ||
-      recorded.gate !== "2 / 3" ||
-      recorded.mission !== "2 / 4" ||
-      recorded.ledger !== "1年分" ||
-      !recorded.historyText.includes("2025年度") ||
+      recorded.readiness !== "測定中・初見0/10・再0/3" ||
+      recorded.gate !== "0 / 3" ||
+      recorded.mission !== "1 / 4" ||
+      recorded.ledger !== "初見 0 / 10・再試験 0 / 3" ||
+      !recorded.historyText.includes("令和7年度") ||
       !recorded.historyText.includes("37 / 50") ||
       recorded.officialExamHistory?.length !== 1 ||
       recorded.officialExamHistory[0]?.business !== 18 ||
-      !recorded.missionToday?.officialQuestions ||
+      recorded.officialExamHistory[0]?.sourceMode !== "self-report" ||
+      recorded.missionToday?.officialQuestions ||
       recorded.missionToday?.reviewed ||
       recorded.missionToday?.minutes !== 115
     ) {
@@ -170,7 +172,7 @@ async function main() {
     });
     await page.locator("#officialExamSaveButton").click();
     await page.waitForFunction(() =>
-      (document.querySelector("#officialExamStatus")?.textContent || "").includes("記録済み")
+      (document.querySelector("#officialExamStatus")?.textContent || "").includes("参考記録")
     );
     if (await page.locator(".official-history-row").count() !== 1) {
       throw new Error("Duplicate official year was not rejected.");
@@ -179,7 +181,7 @@ async function main() {
     await capture(page, "pass-plan-desktop.png");
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForFunction(() =>
-      document.querySelector("#officialReadinessStatus")?.textContent?.includes("37 / 50")
+      document.querySelector("#officialReadinessStatus")?.textContent?.includes("初見0/10")
     );
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(100);
@@ -190,7 +192,7 @@ async function main() {
       history: document.querySelectorAll(".official-history-row").length,
       errors: document.querySelectorAll(":invalid").length
     }));
-    if (mobile.overflow || mobile.mission !== "2 / 4" || mobile.history !== 1) {
+    if (mobile.overflow || mobile.mission !== "1 / 4" || mobile.history !== 1) {
       throw new Error(`Mobile pass plan mismatch: ${JSON.stringify(mobile)}`);
     }
 
@@ -269,10 +271,10 @@ async function main() {
     await touchedPage.locator(".pass-plan-summary").click();
     await touchedPage.locator(".official-ledger > summary").click();
     const touchedProtection = await touchedPage.evaluate(() => {
-      const touched = document.querySelector('#officialExamYear option[value="2025"]');
+      const touched = document.querySelector('#officialExamId option[value="2025"]');
       return {
         touchedDisabled: Boolean(touched?.disabled),
-        selectedYear: document.querySelector("#officialExamYear")?.value || "",
+        selectedYear: document.querySelector("#officialExamId")?.value || "",
         coverage: document.querySelector("#officialPracticeCoverageStatus")?.textContent?.trim() || "",
         trend: document.querySelector("#officialPracticeTrendStatus")?.textContent?.trim() || ""
       };
@@ -286,25 +288,23 @@ async function main() {
       throw new Error(`Touched-year UI protection mismatch: ${JSON.stringify(touchedProtection)}`);
     }
     await touchedPage.evaluate(() => {
-      const option = document.querySelector('#officialExamYear option[value="2025"]');
+      const option = document.querySelector('#officialExamId option[value="2025"]');
       if (option) option.disabled = false;
+      const select = document.querySelector("#officialExamId");
+      if (select) select.value = "2025";
     });
-    await fillOfficialExam(touchedPage, {
-      year: 2025,
-      score: 37,
-      rights: 8,
-      restrictions: 6,
-      business: 18,
-      taxOther: 5,
-      elapsedMinutes: 120
-    });
-    await touchedPage.locator("#officialExamSaveButton").click();
+    await touchedPage.locator("#officialExamStartButton").click();
     await touchedPage.waitForFunction(() =>
       (document.querySelector("#officialExamStatus")?.textContent || "").includes("公式20問で接触済み")
     );
     const touchedYearGuard = {
       message: await touchedPage.locator("#officialExamStatus").textContent(),
-      history: await touchedPage.locator(".official-history-row").count(),
+      history: (await touchedPage.evaluate((id) => {
+        const saved = JSON.parse(localStorage.getItem(id) || "{}");
+        return saved.officialExamHistory?.filter(
+          (item) => item.sourceMode === "timed-answer-sheet"
+        ).length || 0;
+      }, touchedStorageId)),
       protection: touchedProtection
     };
     await touchedContext.close();

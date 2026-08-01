@@ -4,6 +4,12 @@
   const PREVIOUS_SUFFIX = "-previous";
   const CORRUPT_SUFFIX = "-corrupt-";
   const BEFORE_RESTORE_SUFFIX = "-before-restore-";
+  const BEFORE_IMPORT_SUFFIX = "-before-import-";
+  const TIMESTAMPED_BACKUP_SUFFIXES = Object.freeze([
+    CORRUPT_SUFFIX,
+    BEFORE_RESTORE_SUFFIX,
+    BEFORE_IMPORT_SUFFIX
+  ]);
 
   function plainObject(value) {
     return Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -23,6 +29,67 @@
     } catch {
       return false;
     }
+  }
+
+  function storageKeys(storage) {
+    const keys = [];
+    const length = Math.max(0, Number(storage?.length) || 0);
+    if (typeof storage?.key !== "function") return keys;
+    for (let index = 0; index < length; index += 1) {
+      const key = storage.key(index);
+      if (typeof key === "string") keys.push(key);
+    }
+    return keys;
+  }
+
+  function backupTimestamp(key, prefix) {
+    const suffix = key.slice(prefix.length);
+    const timestamp = Number(suffix);
+    return Number.isFinite(timestamp) ? timestamp : 0;
+  }
+
+  function pruneBackups(storage, storageId, maximumPerType = 3) {
+    if (typeof storage?.removeItem !== "function") return [];
+    const keep = Math.max(0, Math.trunc(Number(maximumPerType) || 0));
+    const removed = [];
+    const keys = storageKeys(storage);
+    TIMESTAMPED_BACKUP_SUFFIXES.forEach((suffix) => {
+      const prefix = `${storageId}${suffix}`;
+      keys
+        .filter((key) => key.startsWith(prefix))
+        .sort((left, right) =>
+          backupTimestamp(right, prefix) - backupTimestamp(left, prefix) ||
+          right.localeCompare(left)
+        )
+        .slice(keep)
+        .forEach((key) => {
+          try {
+            storage.removeItem(key);
+            removed.push(key);
+          } catch {
+            // Backup pruning is best effort and must never block a current save.
+          }
+        });
+    });
+    return removed;
+  }
+
+  function backupCurrent(
+    storage,
+    storageId,
+    suffix = BEFORE_IMPORT_SUFFIX,
+    now = Date.now(),
+    raw = ""
+  ) {
+    if (!TIMESTAMPED_BACKUP_SUFFIXES.includes(suffix)) {
+      throw new Error("未対応のバックアップ種別です。");
+    }
+    const currentRaw = raw || storage.getItem(storageId) || "";
+    if (!currentRaw) return { backupKey: "", removed: [] };
+    const backupKey = `${storageId}${suffix}${now}`;
+    storage.setItem(backupKey, currentRaw);
+    const removed = pruneBackups(storage, storageId);
+    return { backupKey, removed };
   }
 
   function load(storage, storageId, schemaVersion, now = Date.now()) {
@@ -79,6 +146,7 @@
     } catch {
       const corruptKey = `${storageId}${CORRUPT_SUFFIX}${now}`;
       safeSet(storage, corruptKey, raw);
+      pruneBackups(storage, storageId);
       const previousRaw = storage.getItem(`${storageId}${PREVIOUS_SUFFIX}`) || "";
       try {
         const value = parsedObject(previousRaw);
@@ -152,6 +220,7 @@
 
     const backupKey = `${storageId}${BEFORE_RESTORE_SUFFIX}${now}`;
     if (currentRaw) storage.setItem(backupKey, currentRaw);
+    pruneBackups(storage, storageId);
     storage.setItem(storageId, previousRaw);
     if (storage.getItem(storageId) !== previousRaw) {
       throw new Error("直前セーブの復元確認に失敗しました。");
@@ -161,11 +230,15 @@
   }
 
   const api = {
+    BEFORE_IMPORT_SUFFIX,
     BEFORE_RESTORE_SUFFIX,
     CORRUPT_SUFFIX,
     PREVIOUS_SUFFIX,
+    TIMESTAMPED_BACKUP_SUFFIXES,
+    backupCurrent,
     getPrevious,
     load,
+    pruneBackups,
     restorePrevious,
     save
   };

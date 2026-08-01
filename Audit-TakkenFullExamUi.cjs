@@ -339,22 +339,30 @@ async function main() {
       31: 4, 32: 2, 33: 3, 34: 3, 35: 1, 36: 4, 37: 4, 38: 3, 39: 4, 40: 3,
       41: 1, 42: 2, 43: 4, 44: 2, 45: 4, 46: 2, 47: 3, 48: 2, 49: 1, 50: 1
     };
-    const drillNumbers = await page.locator(".official-drill-item")
-      .evaluateAll((items) => items.map((item) => Number(item.dataset.questionNumber)));
+    const drillNumbers = [
+      1, 2, 3, 4, 5, 6, 15, 16, 17, 23,
+      24, 26, 27, 28, 29, 30, 31, 32, 33, 46
+    ];
     for (const [index, number] of drillNumbers.entries()) {
       const answer = index === 0
         ? (officialAnswerKey[number] % 4) + 1
         : officialAnswerKey[number];
       await page.locator(`input[name="official-drill-q${number}"][value="${answer}"]`)
         .check({ force: true });
+      if (index < drillNumbers.length - 1) {
+        await page.locator("#officialDrillNextButton").click();
+      }
     }
     await page.locator("#officialDrillSubmitButton").click();
     await page.waitForFunction(() =>
       (document.querySelector("#officialDrillStatus")?.textContent || "").includes("根拠未判定")
     );
-    for (const number of drillNumbers) {
+    for (const [index, number] of drillNumbers.entries()) {
       const confidence = number === drillNumbers[1] ? "uncertain" : "grounded";
       await chooseDrillConfidence(page, storageId, number, confidence);
+      if (index < drillNumbers.length - 1) {
+        await page.locator("#officialDrillNextButton").click();
+      }
     }
     await page.locator("#officialDrillSubmitButton").click();
     await page.waitForFunction(() =>
@@ -370,13 +378,15 @@ async function main() {
       throw new Error(`Official review mobile overflow: ${officialReviewMobileOverflow}`);
     }
     await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.locator(`[data-review-cause="${drillNumbers[0]}"]`).selectOption("reading");
+    await page.locator(`[data-review-cause="${drillNumbers[1]}"]`).selectOption("exception");
     await page.locator(`[data-review-question="${drillNumbers[0]}"]`)
       .fill("根拠を飛ばした");
     await page.locator(`[data-review-question="${drillNumbers[1]}"]`)
       .fill("二択で迷った → 例外条件を声に出して切る");
     await page.locator("#todayCommandReviewButton").click();
     await page.waitForFunction(() =>
-      (document.querySelector("#todayCommandStatus")?.textContent || "").includes("原因 → 次回ルール")
+      (document.querySelector("#todayCommandStatus")?.textContent || "").includes("原因を選び")
     );
     await page.locator(`[data-review-question="${drillNumbers[0]}"]`)
       .fill("根拠を飛ばした → 条文の主体を先に囲む");
@@ -411,10 +421,11 @@ async function main() {
       !completedMission.officialQuestions ||
       completedMission.officialDrill?.score !== 19 ||
       completedMission.officialDrill?.reviewTargets?.length !== 2 ||
-      completedMission.officialDrill?.evidenceVersion !== 2 ||
+      completedMission.officialDrill?.evidenceVersion !== 3 ||
       Object.keys(completedMission.officialDrill?.confidence || {}).length !== 20 ||
       completedMission.officialDrill?.confidence?.[drillNumbers[1]] !== "uncertain" ||
       Object.keys(completedMission.officialDrill?.reviewNotes || {}).length !== 2 ||
+      Object.keys(completedMission.officialDrill?.reviewCauses || {}).length !== 2 ||
       !completedMission.reviewNote.includes(`問${drillNumbers[0]}`) ||
       completedMission.minutes !== 90
     ) {
@@ -452,13 +463,15 @@ async function main() {
     );
     await page.locator("#officialDrillOpenButton").click();
     await page.locator("#officialDrillStartButton").click();
-    const perfectNumbers = await page.locator(".official-drill-item")
-      .evaluateAll((items) => items.map((item) => Number(item.dataset.questionNumber)));
-    for (const number of perfectNumbers) {
+    const perfectNumbers = drillNumbers;
+    for (const [index, number] of perfectNumbers.entries()) {
       await page.locator(
         `input[name="official-drill-q${number}"][value="${officialAnswerKey[number]}"]`
       ).check({ force: true });
       await chooseDrillConfidence(page, storageId, number, "grounded");
+      if (index < perfectNumbers.length - 1) {
+        await page.locator("#officialDrillNextButton").click();
+      }
     }
     await page.locator("#officialDrillSubmitButton").click();
     await page.waitForFunction(() =>
