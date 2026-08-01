@@ -3,11 +3,11 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="本試験配分のコア100問と、全4章・45単元の読後演習124問で学べる、令和8年度向け宅建学習ツールです。">
+    <meta name="description" content="本試験配分のコア100問、全45単元の読後演習124問、実践バリエーション180問で学べる令和8年度向け宅建学習ツールです。">
     <meta name="theme-color" content="#17261f">
     <meta name="takken-runtime" content="public-static">
     <meta property="og:title" content="宅建バトル Study Quest">
-    <meta property="og:description" content="宅建全分野コア100問と、全4章・45単元の読後演習124問を収録。">
+    <meta property="og:description" content="宅建全分野コア100問、全45単元の読後演習124問、別枠の実践バリエーション180問を収録。">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://regal753.github.io/takken-battle/">
     <link rel="canonical" href="https://regal753.github.io/takken-battle/">
@@ -342,7 +342,83 @@
         </nav>
       </details>
 
-      <details id="calculationDrillPanel" class="calculation-drill-panel" open>
+      <details id="practicalDrillPanel" class="practical-drill-panel">
+        <summary>
+          <span>
+            <small>全45単元を組み替え</small>
+            <strong>実践バリエーション</strong>
+          </span>
+          <span id="practicalDrillSummary">接触 0 / 180・根拠クリア 0・再出題 0</span>
+        </summary>
+        <div class="practical-drill-body">
+          <section id="practicalDrillOverview" class="practical-drill-overview">
+            <div>
+              <span>基礎124問とは別枠</span>
+              <strong>2論点を同時に切る実践組合せ180問</strong>
+              <p>同じ単元の正誤事実を2つ組み合わせる。答えの位置ではなく、ア・イを別々に判定してから組合せを選ぶ。</p>
+            </div>
+            <div class="practical-drill-controls">
+              <label>
+                出題範囲
+                <select id="practicalDrillScope">
+                  <option value="all">全分野（180問）</option>
+                  <option value="business">宅建業法（44問）</option>
+                  <option value="rights">権利関係（84問）</option>
+                  <option value="restrictions">法令上の制限（28問）</option>
+                  <option value="taxOther">税・その他（24問）</option>
+                </select>
+              </label>
+              <label>
+                1セット
+                <select id="practicalDrillSize">
+                  <option value="10">10問</option>
+                  <option value="20" selected>20問</option>
+                  <option value="45">45問</option>
+                </select>
+              </label>
+              <button id="practicalDrillStartButton" class="today-command-primary" type="button">実践セットを開始</button>
+            </div>
+            <ul class="practical-drill-principles">
+              <li>全45単元に4問ずつ</li>
+              <li>正答位置は各45問で均等</li>
+              <li>誤答・迷いは根拠クリアまで再出題</li>
+            </ul>
+          </section>
+          <section id="practicalDrillSession" class="practical-drill-session" hidden aria-live="polite">
+            <div class="practical-drill-head">
+              <div>
+                <span id="practicalDrillStage">20問 実践セット</span>
+                <strong id="practicalDrillProgress">1 / 20</strong>
+              </div>
+              <button id="practicalDrillCancelButton" class="today-command-secondary" type="button">今回を終了</button>
+            </div>
+            <div class="practical-drill-meta">
+              <span id="practicalDrillUnit">01-01 宅建業法の基本・p.3</span>
+              <strong id="practicalDrillRetryStatus">今回の再出題 0</strong>
+            </div>
+            <p id="practicalDrillPrompt" class="practical-drill-prompt"></p>
+            <div id="practicalDrillChoices" class="practical-drill-choices" aria-label="実践問題の選択肢"></div>
+            <div id="practicalDrillFeedback" class="practical-drill-feedback" hidden>
+              <strong id="practicalDrillVerdict"></strong>
+              <ol id="practicalDrillReasoning" class="practical-drill-reasoning" aria-label="正解を再現する理解経路"></ol>
+              <div id="practicalDrillSources" class="practical-drill-sources" aria-label="公式根拠"></div>
+              <div id="practicalDrillConfidence" class="practical-drill-confidence" hidden>
+                <span>正解の手応え</span>
+                <button type="button" data-practical-confidence="confident">ア・イ両方の根拠を言えた</button>
+                <button type="button" data-practical-confidence="uncertain">正解したが迷った</button>
+              </div>
+              <button id="practicalDrillNextButton" class="today-command-primary" type="button">次の実践問題へ</button>
+            </div>
+          </section>
+          <section id="practicalDrillComplete" class="practical-drill-complete" hidden aria-live="polite">
+            <strong>実践セットを完了</strong>
+            <p id="practicalDrillCompleteText">今回20問と再出題を完了しました。</p>
+            <button id="practicalDrillRestartButton" class="today-command-primary" type="button">別セットを作る</button>
+          </section>
+        </div>
+      </details>
+
+      <details id="calculationDrillPanel" class="calculation-drill-panel">
         <summary>
           <span>
             <small>計算だけを反復</small>
@@ -658,6 +734,7 @@
     <script src="./exam-questions-restrictions.js?v=20260801-explanation-mastery-v15"></script>
     <script src="./exam-questions-tax-other.js?v=20260801-explanation-mastery-v15"></script>
     <script src="./exam-questions-business.js?v=20260801-explanation-mastery-v15"></script>
+    <script src="./practical-question-bank.js?v=20260802-practical-variations-v16"></script>
     <script src="./question-bank.js?v=20260723-ops-v15"></script>
     <script src="./question-balance.js?v=20260711-feedback-v8"></script>
     <script src="./reward-system.js?v=20260713-confidence-v14"></script>

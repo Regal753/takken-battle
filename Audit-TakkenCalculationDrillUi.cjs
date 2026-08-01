@@ -68,6 +68,9 @@ async function gotoReview(page, baseUrl, namespace) {
   url.searchParams.set("review", namespace);
   await page.goto(url.toString(), { waitUntil: "networkidle", timeout: 15000 });
   await page.locator("#calculationDrillPanel").waitFor({ state: "visible" });
+  if (!(await page.locator("#calculationDrillPanel").evaluate((node) => node.open))) {
+    await page.locator("#calculationDrillPanel > summary").click();
+  }
 }
 
 async function noHorizontalOverflow(page) {
@@ -160,12 +163,15 @@ async function answerCurrentCorrectly(page) {
         attempts: saved.calculationDrill?.attempts
       };
     }, storageIdFor("calc-desktop"));
-    assert.equal(persistedBeforeReload.schema, 5);
+    assert.equal(persistedBeforeReload.schema, 6);
     assert.equal(persistedBeforeReload.currentAttempt?.confidence, "uncertain");
     assert.deepEqual(persistedBeforeReload.retryIds, ["calc-sale-200", "calc-sale-300"]);
     assert.equal(persistedBeforeReload.attempts, 2);
 
     await desktop.reload({ waitUntil: "networkidle" });
+    if (!(await desktop.locator("#calculationDrillPanel").evaluate((node) => node.open))) {
+      await desktop.locator("#calculationDrillPanel > summary").click();
+    }
     assert.equal(await desktop.locator('[data-calculation-confidence="uncertain"]').getAttribute("class"), "is-selected");
     await desktop.locator("#calculationDrillNextButton").click();
     for (let guard = 0; guard < 80; guard += 1) {
@@ -228,7 +234,7 @@ async function answerCurrentCorrectly(page) {
       };
     }, storageIdFor("calc-legacy"));
     assert.deepEqual(migrated, {
-      schema: 5,
+      schema: 6,
       attempts: 37,
       correct: 25,
       q1Correct: 2,

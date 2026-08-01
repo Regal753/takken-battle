@@ -10,6 +10,7 @@ const required = [
   "index.html",
   "styles.css",
   "app.js",
+  "practical-question-bank.js",
   "calculation-drill.js",
   "official-exam-data.js",
   "save-store.js",
@@ -28,6 +29,8 @@ const required = [
   "Audit-TakkenTextbookRanges.js",
   "Audit-TakkenTextbookRangesUi.cjs",
   "Audit-TakkenQuestionQuality.js",
+  "Audit-TakkenPracticalVariations.js",
+  "Audit-TakkenPracticalVariationsUi.cjs",
   "Audit-TakkenOfficialDrill.js",
   "Audit-TakkenOfficialExamData.js",
   "Audit-TakkenSaveStore.js",
@@ -113,12 +116,15 @@ assert.match(index, /id="textbookCoverageStatus"/);
 assert.match(index, /id="textbookRetentionStatus"/);
 assert.match(index, /全4章・45単元/);
 assert.match(index, /id="calculationDrillPanel"/);
+assert.match(index, /id="practicalDrillPanel"/);
+assert.match(index, /実践バリエーション/);
 assert.match(index, /公式20問シートを開く/);
 assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 第2分冊・権利関係を固める/);
 assert.match(index, /③ 法令・税その他へ進む/);
 assert.match(index, /④ 全分野を混ぜる/);
 assert.match(index, /styles\.css\?v=20260802-practical-variations-v16/);
+assert.match(index, /practical-question-bank\.js\?v=20260802-practical-variations-v16/);
 assert.match(index, /calculation-drill\.js\?v=20260802-practical-variations-v16/);
 assert.match(index, /app\.js\?v=20260802-practical-variations-v16/);
 assert.match(index, /save-store\.js\?v=20260802-practical-variations-v16/);
@@ -159,9 +165,11 @@ assert.match(pagesWorkflow, /node Audit-TakkenChapter2Range\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenTextbookRanges\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenQuestionQuality\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenExplanationMastery\.js/);
+assert.match(pagesWorkflow, /node Audit-TakkenPracticalVariations\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
 assert.match(pagesWorkflow, /20260802-practical-variations-v16/);
 assert.match(pagesWorkflow, /cp [^\n]*calculation-drill\.js[^\n]*_site\//);
+assert.match(pagesWorkflow, /cp [^\n]*practical-question-bank\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*official-exam-data\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*save-store\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*save-transfer\.js[^\n]*_site\//);
