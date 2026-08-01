@@ -34,7 +34,7 @@ if (!textbookUnits.every((unit) => practical.QUESTIONS.filter((question) => ques
   issues.push("every textbook unit must have exactly four practical questions");
 }
 
-requireText(app, "const STATE_SCHEMA_VERSION = 7;", "save schema must be v7");
+requireText(app, "const STATE_SCHEMA_VERSION = 8;", "save schema must be v8");
 requireText(app, "const PRACTICAL_SESSION_SIZES = Object.freeze([4, 10, 20, 45]);", "four-question unit session size is missing");
 requireText(app, "const FOUNDATION_UNIT_BATCH_MAX = 4;", "read-after batch cap is missing");
 requireText(app, "function foundationUnitBatchIds", "bounded read-after batching is missing");
@@ -63,14 +63,14 @@ if (app.includes("JULY_GATE_DEADLINE") || html.includes("7/31学習ゲート")) 
 ].forEach((id) => requireText(html, `id=\"${id}\"`, `${id} is missing from the page`));
 requireText(html, "本文＋読後問題", "foundation-first mission label is missing");
 requireText(html, "45単元の読後問題完了で公式演習を解放", "official foundation gate copy is missing");
-requireText(html, "20260802-learning-route-v17", "v17 cache version is missing");
+requireText(html, "20260802-understanding-v18", "v18 cache version is missing");
 requireText(css, "#themeDrawer { order: 3; }", "foundation route must precede the question workspace");
 requireText(css, ".quest-card { order: 4; }", "question workspace order is missing");
 requireText(css, "#passPlanPanel { order: 8; }", "measurement panel must follow foundation and practice lanes");
 
 const report = {
   status: issues.length ? "error" : "ok",
-  stateSchema: 7,
+  stateSchema: 8,
   textbookUnits: textbookUnits.length,
   textbookQuestions: textbookIds.length,
   practicalQuestions: practical.QUESTIONS.length,
