@@ -194,7 +194,7 @@
   };
   const MOCK_SAFE_TARGET = STUDY_TARGETS.safe;
   const EXAM_CONTENT_VERSION = EXAM_BLUEPRINT?.version || 0;
-  const STUDY_PLAN_VERSION = 2;
+  const STUDY_PLAN_VERSION = 3;
   const DEFAULT_STUDY_SCOPE = "business";
   const STUDY_SCOPES = [
     {
@@ -206,8 +206,16 @@
       targetRate: 0.8
     },
     {
+      id: "rights",
+      label: "② 第2分冊・権利関係を固める",
+      shortLabel: "第2分冊・権利",
+      newSections: ["rights"],
+      reviewSections: ["business", "rights"],
+      targetRate: 0.8
+    },
+    {
       id: "law-other",
-      label: "② 法令・税その他へ進む",
+      label: "③ 法令・税その他へ進む",
       shortLabel: "法令・税その他",
       newSections: ["restrictions", "tax", "other"],
       reviewSections: ["business", "restrictions", "tax", "other"],
@@ -215,7 +223,7 @@
     },
     {
       id: "all",
-      label: "③ 全分野を混ぜる",
+      label: "④ 全分野を混ぜる",
       shortLabel: "全分野",
       newSections: ["rights", "restrictions", "tax", "business", "other"],
       reviewSections: ["rights", "restrictions", "tax", "business", "other"],
@@ -349,38 +357,63 @@
   ];
 
   const CURRICULUM_ORDER = EXAM_BLUEPRINT?.curriculumOrder || [];
-  const CURRICULUM_CHAPTERS = (EXAM_BLUEPRINT?.sections || []).flatMap((section) =>
-    section.chapters.map((chapter) => ({
+  const SUPPLEMENTAL_ORDER = EXAM_BLUEPRINT?.supplementalOrder || [];
+  const TEXTBOOK_RANGES = EXAM_BLUEPRINT?.textbookRanges || {};
+  const TEXTBOOK_RANGE_ENTRIES = Object.entries(TEXTBOOK_RANGES);
+  const SECTION_BY_ID = new Map(
+    (EXAM_BLUEPRINT?.sections || []).map((section) => [section.id, section])
+  );
+  const TEXTBOOK_CHAPTERS = TEXTBOOK_RANGE_ENTRIES.flatMap(([rangeId, textbookRange]) => {
+    const sectionIds = textbookRange.sectionIds || [rangeId];
+    return (textbookRange.chapters || []).map((chapter) => {
+      const sectionId = chapter.sectionId || sectionIds.find((candidate) =>
+        chapter.ids.some((id) => EXAM_BLUEPRINT?.idsBySection?.[candidate]?.includes(id))
+      ) || sectionIds[0];
+      return {
+        ...chapter,
+        sectionId,
+        sectionIds,
+        textbookRangeId: rangeId,
+        textbookPart: textbookRange.part || null,
+        textbookLabel: textbookRange.label || "",
+        topicLabel: chapter.label,
+        label: `${textbookRange.shortLabel || SECTION_BY_ID.get(sectionId)?.shortLabel || "教材"} / ${chapter.label}`
+      };
+    });
+  });
+  const TEXTBOOK_IDS = [...new Set(TEXTBOOK_CHAPTERS.flatMap((chapter) => chapter.ids))];
+  const TEXTBOOK_SECTION_IDS = new Set(
+    TEXTBOOK_RANGE_ENTRIES.flatMap(([, textbookRange]) => textbookRange.sectionIds || [])
+  );
+  const FALLBACK_CURRICULUM_CHAPTERS = (EXAM_BLUEPRINT?.sections || [])
+    .filter((section) => !TEXTBOOK_SECTION_IDS.has(section.id))
+    .flatMap((section) => section.chapters.map((chapter) => ({
       ...chapter,
       sectionId: section.id,
+      sectionIds: [section.id],
+      textbookRangeId: "",
+      textbookPart: null,
+      textbookLabel: "",
       topicLabel: chapter.label,
       label: `${section.shortLabel} / ${chapter.label}`
-    }))
-  );
-  const ORDER = [...CURRICULUM_ORDER, ...LEGACY_ORDER];
+    })));
+  const CURRICULUM_CHAPTERS = [...TEXTBOOK_CHAPTERS, ...FALLBACK_CURRICULUM_CHAPTERS];
+  const STUDY_ORDER = [...CURRICULUM_ORDER, ...SUPPLEMENTAL_ORDER];
+  const ORDER = [...STUDY_ORDER, ...LEGACY_ORDER];
   const CHAPTERS = [...CURRICULUM_CHAPTERS, ...LEGACY_CHAPTERS];
-  const STUDY_GROUPS = [
-    {
-      id: "business",
-      label: "宅建業法",
-      sectionIds: ["business"]
-    },
-    {
-      id: "rights",
-      label: "権利関係",
-      sectionIds: ["rights"]
-    },
-    {
-      id: "law-tax-other",
-      label: "法令・税その他",
-      sectionIds: ["restrictions", "tax", "other"]
-    }
-  ].map((group) => ({
-    ...group,
-    entries: CURRICULUM_CHAPTERS
+  let selectedTextbookChapterId = "";
+  const STUDY_GROUPS = TEXTBOOK_RANGE_ENTRIES.map(([rangeId, textbookRange]) => {
+    const entries = CURRICULUM_CHAPTERS
       .map((chapter, chapterIndex) => ({ chapter, chapterIndex }))
-      .filter(({ chapter }) => group.sectionIds.includes(chapter.sectionId))
-  }));
+      .filter(({ chapter }) => chapter.textbookRangeId === rangeId);
+    const ids = [...new Set(entries.flatMap(({ chapter }) => chapter.ids))];
+    return {
+      id: rangeId,
+      label: `${textbookRange.label}（${entries.length}単元・${ids.length}問）`,
+      sectionIds: textbookRange.sectionIds || [],
+      entries
+    };
+  });
   const LEGACY_CHAPTER_ENTRIES = LEGACY_CHAPTERS.map((chapter, legacyIndex) => ({
     chapter,
     chapterIndex: CURRICULUM_CHAPTERS.length + legacyIndex
@@ -566,6 +599,8 @@
     julyGateStatus: $("#julyGateStatus"),
     coreCoverageStatus: $("#coreCoverageStatus"),
     coreRetentionStatus: $("#coreRetentionStatus"),
+    textbookCoverageStatus: $("#textbookCoverageStatus"),
+    textbookRetentionStatus: $("#textbookRetentionStatus"),
     officialReadinessStatus: $("#officialReadinessStatus"),
     officialPracticeCoverageStatus: $("#officialPracticeCoverageStatus"),
     officialPracticeTrendStatus: $("#officialPracticeTrendStatus"),
@@ -775,7 +810,7 @@
       wrong: Number(input.wrong) || 0,
       weakAdded: Number(input.weakAdded) || 0,
       planIds: Array.isArray(input.planIds)
-        ? input.planIds.filter((id) => CURRICULUM_ORDER.includes(id)).slice(0, DAILY_TARGET)
+        ? input.planIds.filter((id) => STUDY_ORDER.includes(id)).slice(0, DAILY_TARGET)
         : [],
       planVersion: Number(input.planVersion) || 0,
       planMode: input.planMode === "mastery" ? "mastery" : "coverage",
@@ -1691,7 +1726,7 @@
     if (answeredDiff !== 0) return answeredDiff;
     const attemptDiff = effectiveAttempts(statsFor(leftId)) - effectiveAttempts(statsFor(rightId));
     if (attemptDiff !== 0) return attemptDiff;
-    return CURRICULUM_ORDER.indexOf(leftId) - CURRICULUM_ORDER.indexOf(rightId);
+    return STUDY_ORDER.indexOf(leftId) - STUDY_ORDER.indexOf(rightId);
   }
 
   function interleaveDailyPlan(newIds, reviewIds, fallbackIds) {
@@ -1771,7 +1806,7 @@
       state.daily.planVersion === STUDY_PLAN_VERSION &&
       state.daily.planScope === state.studyScope
     )
-      ? state.daily.planIds.filter((id) => CURRICULUM_ORDER.includes(id) && QUESTIONS[id])
+      ? state.daily.planIds.filter((id) => STUDY_ORDER.includes(id) && QUESTIONS[id])
       : [];
     const focusedPlan = state.studyScope === "all" && remainingFirstPassCount() === 0
       ? { ids: masteryQuestPlan(), mode: "mastery" }
@@ -2109,6 +2144,16 @@
     if (curriculumIndex >= 0) {
       return `${curriculumIndex + 1}/${CURRICULUM_ORDER.length}`;
     }
+    const supplementalIndex = SUPPLEMENTAL_ORDER.indexOf(id);
+    if (supplementalIndex >= 0) {
+      const part = idToChapter.get(id)?.textbookPart;
+      const partIds = SUPPLEMENTAL_ORDER.filter((candidate) =>
+        idToChapter.get(candidate)?.textbookPart === part
+      );
+      return part
+        ? `第${part}分冊補助${partIds.indexOf(id) + 1}/${partIds.length}`
+        : `補助${supplementalIndex + 1}/${SUPPLEMENTAL_ORDER.length}`;
+    }
     const legacyIndex = LEGACY_ORDER.indexOf(id);
     return legacyIndex >= 0 ? `旧業法${legacyIndex + 1}/${LEGACY_ORDER.length}` : "補助問題";
   }
@@ -2351,17 +2396,44 @@
     return STUDY_SCOPES.find((scope) => scope.id === scopeId) || STUDY_SCOPES[0];
   }
 
+  function studyScopeIdForChapter(chapter) {
+    const sectionIds = chapter?.sectionIds || [chapter?.sectionId];
+    if (sectionIds.includes("business")) return "business";
+    if (sectionIds.includes("rights")) return "rights";
+    return "law-other";
+  }
+
   function curriculumIdsForSections(sectionIds) {
     const allowed = new Set(sectionIds);
     return CURRICULUM_ORDER.filter((id) => allowed.has(QUESTIONS[id]?.sectionId));
   }
 
+  function textbookIdsForSections(sectionIds) {
+    const allowed = new Set(sectionIds);
+    return [...new Set(
+      TEXTBOOK_CHAPTERS
+        .filter((chapter) => chapter.sectionIds.some((id) => allowed.has(id)))
+        .flatMap((chapter) => chapter.ids)
+    )];
+  }
+
   function scopeNewIds(scopeId = state.studyScope) {
-    return curriculumIdsForSections(studyScopeConfig(scopeId).newSections);
+    const scope = studyScopeConfig(scopeId);
+    if (scopeId === "rights") {
+      const textbookIds = textbookIdsForSections(scope.newSections);
+      if (textbookIds.length) return textbookIds;
+    }
+    return curriculumIdsForSections(scope.newSections);
   }
 
   function scopeReviewIds(scopeId = state.studyScope) {
-    return curriculumIdsForSections(studyScopeConfig(scopeId).reviewSections);
+    const scope = studyScopeConfig(scopeId);
+    const textbookIds = textbookIdsForSections(scope.reviewSections);
+    const coreIds = curriculumIdsForSections(scope.reviewSections);
+    return [
+      ...coreIds,
+      ...textbookIds.filter((id) => !coreIds.includes(id) && isContacted(id))
+    ];
   }
 
   function isRetained(id) {
@@ -3824,6 +3896,13 @@
       : "7/31ゲート経過";
     elements.coreCoverageStatus.textContent = `接触 ${contactedCount()} / ${CURRICULUM_ORDER.length}`;
     elements.coreRetentionStatus.textContent = `定着 ${retainedCount()} / ${CURRICULUM_ORDER.length}`;
+    const completedTextbookUnits = TEXTBOOK_CHAPTERS.filter((chapter) =>
+      chapter.ids.every(isContacted)
+    ).length;
+    elements.textbookCoverageStatus.textContent =
+      `接触 ${TEXTBOOK_IDS.filter(isContacted).length} / ${TEXTBOOK_IDS.length}`;
+    elements.textbookRetentionStatus.textContent =
+      `単元完了 ${completedTextbookUnits} / ${TEXTBOOK_CHAPTERS.length}・定着 ${retainedCount(TEXTBOOK_IDS)} / ${TEXTBOOK_IDS.length}`;
     elements.officialReadinessStatus.textContent =
       `${readiness.stability}・初見${readiness.initial.length}/${OFFICIAL_INITIAL_TARGET}` +
       `・再${readiness.retests.length}/${OFFICIAL_RETEST_TARGET}`;
@@ -4251,7 +4330,11 @@
     if (isChapterEnd()) {
       return null;
     }
-    return ORDER[state.index + 1] || null;
+    const chapter = idToChapter.get(currentId());
+    const localIndex = chapter?.ids.indexOf(currentId()) ?? -1;
+    return localIndex >= 0
+      ? chapter.ids[localIndex + 1] || null
+      : ORDER[state.index + 1] || null;
   }
 
   function needsConfidenceCheck(answered = state.answered) {
@@ -4516,6 +4599,11 @@
     renderCampaignRoute(question);
 
     const curriculumIndex = CURRICULUM_ORDER.indexOf(question.id);
+    const supplementalIndex = SUPPLEMENTAL_ORDER.indexOf(question.id);
+    const supplementalPart = question.chapter?.textbookPart;
+    const supplementalPartIds = SUPPLEMENTAL_ORDER.filter((id) =>
+      idToChapter.get(id)?.textbookPart === supplementalPart
+    );
     const dailyIndex = dailyQuestIds().indexOf(question.id);
     const scopeIndex = scopeNewIds().indexOf(question.id);
     elements.roundLabel.textContent = isMockMode()
@@ -4526,7 +4614,9 @@
           ? `範囲 ${scopeIndex + 1} / ${scopeNewIds().length}`
           : curriculumIndex >= 0
             ? `${curriculumIndex + 1} / ${CURRICULUM_ORDER.length}`
-            : `旧業法 ${LEGACY_ORDER.indexOf(question.id) + 1} / ${LEGACY_ORDER.length}`;
+            : supplementalIndex >= 0
+              ? `第${supplementalPart}分冊 補助 ${supplementalPartIds.indexOf(question.id) + 1} / ${supplementalPartIds.length}`
+              : `旧業法 ${LEGACY_ORDER.indexOf(question.id) + 1} / ${LEGACY_ORDER.length}`;
     elements.tagBadge.textContent = question.format ? `${question.tag}・${question.format}` : question.tag;
     elements.markButton.hidden = isMockMode();
     elements.markButton.classList.toggle("is-marked", Boolean(state.marked[question.id]));
@@ -5562,7 +5652,9 @@
         const retained = retainedCount(chapter.ids);
         const option = document.createElement("option");
         option.value = String(chapterIndex);
-        option.textContent = `${chapter.topicLabel || chapter.label} 定着${retained}/${chapter.ids.length}`;
+        const pageLabel = chapter.textbookPart ? `（p.${chapter.page}〜）` : "";
+        option.textContent =
+          `${chapter.topicLabel || chapter.label}${pageLabel} 定着${retained}/${chapter.ids.length}`;
         option.selected = chapterIndex === activeChapter;
         optionGroup.append(option);
       });
@@ -5616,6 +5708,22 @@
       return;
     }
 
+    if (
+      question.chapter?.textbookPart &&
+      selectedTextbookChapterId === question.chapter.id &&
+      state.studyScope === studyScopeIdForChapter(question.chapter)
+    ) {
+      const chapter = question.chapter;
+      const contacted = chapter.ids.filter(isContacted).length;
+      const retained = retainedCount(chapter.ids);
+      elements.coachTitle.textContent =
+        `${chapter.topicLabel}・本文p.${chapter.page}直後`;
+      elements.coachText.textContent = contacted < chapter.ids.length
+        ? `本文のこの単元を読み切ったら、この範囲の${chapter.ids.length}問を続けて解く。現在は接触${contacted}/${chapter.ids.length}。正解でも勘・根拠なしは弱点へ残す。`
+        : `この単元は${chapter.ids.length}問に接触済み、定着${retained}/${chapter.ids.length}。異なる2日で根拠まで再現できれば定着扱い。`;
+      return;
+    }
+
     if (scopeState.contacted < scopeState.total) {
       elements.coachTitle.textContent =
         `${scopeState.scope.shortLabel} 接触${scopeState.contacted}/${scopeState.total}・定着${scopeState.retained}/${scopeState.total}`;
@@ -5639,9 +5747,11 @@
       `${scopeState.scope.shortLabel} 8割定着・弱点${weakCount}問`;
     if (!latestMock) {
       const nextText = scopeState.scope.id === "business"
-        ? "学習段階を②法令・税その他へ切り替え、業法の復習を4問残す。"
+        ? "学習段階を②第2分冊・権利関係へ切り替え、業法の復習を残す。"
+        : scopeState.scope.id === "rights"
+          ? "学習段階を③法令・税その他へ切り替え、業法と権利の復習を残す。"
         : scopeState.scope.id === "law-other"
-          ? "学習段階を③全分野へ切り替え、権利関係を追加する。"
+          ? "学習段階を④全分野へ切り替え、本試験比率で混ぜる。"
           : "全100問接触後に50問確認模試へ進み、初見力はRETIO公式過去問で測る。";
       elements.coachText.textContent = nextText;
       return;
@@ -5689,7 +5799,9 @@
 
       const label = document.createElement("span");
       label.className = "chapter-label";
-      label.textContent = chapter.topicLabel || chapter.label.replace(/^旧・業法 \/\s*/, "");
+      label.textContent = chapter.textbookPart
+        ? `${chapter.topicLabel}（p.${chapter.page}〜）`
+        : chapter.topicLabel || chapter.label.replace(/^旧・業法 \/\s*/, "");
 
       const score = document.createElement("span");
       score.className = "chapter-score";
@@ -5748,9 +5860,14 @@
   function selectChapter(chapterIndex) {
     const chapter = CHAPTERS[chapterIndex];
     if (!chapter) return;
+    selectedTextbookChapterId = chapter.textbookPart ? chapter.id : "";
     state.runMode = "quest";
     setFirstPassUrl(false);
     const isLegacyChapter = chapter.ids.every((id) => LEGACY_ID_SET.has(id));
+    if (!isLegacyChapter) {
+      const nextScope = studyScopeIdForChapter(chapter);
+      if (STUDY_SCOPE_IDS.has(nextScope)) state.studyScope = nextScope;
+    }
     const nextId = isLegacyChapter
       ? chapter.ids.find((id) => !isContacted(id)) ||
         [...chapter.ids].sort((a, b) =>
@@ -5763,6 +5880,7 @@
 
   function setStudyScope(scopeId) {
     if (!STUDY_SCOPE_IDS.has(scopeId) || scopeId === state.studyScope) return;
+    selectedTextbookChapterId = "";
     state.studyScope = scopeId;
     state.daily = createDailyState();
     state.daily.planScope = scopeId;
@@ -6456,7 +6574,7 @@
       showConfidenceCheck();
       return;
     }
-    if (dailyQuestIsComplete() && !isFirstPassMode()) {
+    if (isDailyQuestQuestion(currentId()) && dailyQuestIsComplete() && !isFirstPassMode()) {
       finishDailyQuest();
       return;
     }
@@ -6552,7 +6670,7 @@
       showFinished();
       return;
     }
-    if (dailyQuestIsComplete()) {
+    if (isDailyQuestQuestion(currentId()) && dailyQuestIsComplete()) {
       finishDailyQuest();
       return;
     }
@@ -6578,6 +6696,13 @@
         return;
       }
       showFinished();
+      return;
+    }
+    const chapter = idToChapter.get(currentId());
+    const localIndex = chapter?.ids.indexOf(currentId()) ?? -1;
+    const chapterNextId = localIndex >= 0 ? chapter.ids[localIndex + 1] : null;
+    if (chapterNextId) {
+      goToQuestion(chapterNextId);
       return;
     }
     state.index += 1;

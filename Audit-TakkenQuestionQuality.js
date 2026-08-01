@@ -13,6 +13,7 @@ const questions = Object.values(window.TAKKEN_EXAM_QUESTIONS);
 const issues = [];
 const allowedSourceHosts = new Set([
   "elaws.e-gov.go.jp",
+  "laws.e-gov.go.jp",
   "www.jhf.go.jp",
   "www.mlit.go.jp",
   "www.moj.go.jp",

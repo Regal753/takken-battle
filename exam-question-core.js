@@ -28,7 +28,8 @@
       explain,
       trap,
       memoryRule = explain,
-      level = "本試験標準"
+      level = "本試験標準",
+      verifiedAt = "2026-07-26"
     } = input;
     if (questions[id]) throw new Error(`Duplicate question id: ${id}`);
     if (!Array.isArray(choices) || choices.length !== 4) throw new Error(`${id}: choices must be 4`);
@@ -66,7 +67,7 @@
       sourceRef: source.label,
       sourceUrl: source.url,
       legalBaseline: blueprint.legalBaseline,
-      verifiedAt: "2026-07-26",
+      verifiedAt,
       level,
       qualityVersion: 1
     };
@@ -85,7 +86,8 @@
       explain,
       trap,
       memoryRule = explain,
-      level = "本試験標準"
+      level = "本試験標準",
+      verifiedAt = "2026-07-26"
     } = input;
     if (questions[id]) throw new Error(`Duplicate question id: ${id}`);
     if (!Array.isArray(statements) || statements.length !== 4) {
@@ -113,7 +115,7 @@
       sourceRef: source.label,
       sourceUrl: source.url,
       legalBaseline: blueprint.legalBaseline,
-      verifiedAt: "2026-07-26",
+      verifiedAt,
       level,
       qualityVersion: 1
     };
