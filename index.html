@@ -13,7 +13,7 @@
     <link rel="canonical" href="https://regal753.github.io/takken-battle/">
     <title>宅建バトル Study Quest</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./styles.css?v=20260731-pass-loop-v12">
+    <link rel="stylesheet" href="./styles.css?v=20260801-calculation-drill-v1">
   </head>
   <body>
     <div class="app-root">
@@ -336,6 +336,51 @@
         </nav>
       </details>
 
+      <details id="calculationDrillPanel" class="calculation-drill-panel" open>
+        <summary>
+          <span>
+            <small>計算だけを反復</small>
+            <strong>計算・金額特訓</strong>
+          </span>
+          <span id="calculationDrillSummary">初回 0 / 24・再出題 0</span>
+        </summary>
+        <div class="calculation-drill-body">
+          <div class="calculation-drill-head">
+            <div>
+              <span id="calculationDrillStage">初回24問</span>
+              <strong id="calculationDrillProgress">1 / 24</strong>
+              <p>金額帯を決め、式を立ててから答える。正解でも迷った問題は自動で再出題する。</p>
+            </div>
+            <button id="calculationDrillResetButton" class="today-command-secondary" type="button">24問を再セット</button>
+          </div>
+          <section id="calculationDrillQuestion" class="calculation-drill-question" aria-live="polite">
+            <div class="calculation-drill-meta">
+              <span id="calculationDrillCategory">売買媒介</span>
+              <strong id="calculationDrillRetryStatus">再出題 0</strong>
+            </div>
+            <p id="calculationDrillPrompt" class="calculation-drill-prompt"></p>
+            <div id="calculationDrillChoices" class="calculation-drill-choices" aria-label="計算問題の選択肢"></div>
+            <div id="calculationDrillFeedback" class="calculation-drill-feedback" hidden>
+              <strong id="calculationDrillVerdict"></strong>
+              <ol id="calculationDrillFormula" class="calculation-drill-formula"></ol>
+              <p id="calculationDrillTrap" class="calculation-drill-trap"></p>
+              <div id="calculationDrillSource" class="calculation-drill-sources" aria-label="公式根拠"></div>
+              <div id="calculationDrillConfidence" class="calculation-drill-confidence" hidden>
+                <span>正解の手応え</span>
+                <button type="button" data-calculation-confidence="confident">式まで再現できた</button>
+                <button type="button" data-calculation-confidence="uncertain">迷った・勘だった</button>
+              </div>
+              <button id="calculationDrillNextButton" class="today-command-primary" type="button">次の計算へ</button>
+            </div>
+          </section>
+          <section id="calculationDrillComplete" class="calculation-drill-complete" hidden aria-live="polite">
+            <strong>計算・金額特訓を完了</strong>
+            <p id="calculationDrillCompleteText">24問を解き、再出題キューも0件にしました。</p>
+            <button id="calculationDrillRestartButton" class="today-command-primary" type="button">もう一周する</button>
+          </section>
+        </div>
+      </details>
+
       <section class="quest-card" aria-label="今日のクエスト">
         <div class="quest-main">
           <div>
@@ -611,9 +656,10 @@
     <script src="./question-balance.js?v=20260711-feedback-v8"></script>
     <script src="./reward-system.js?v=20260713-confidence-v14"></script>
     <script src="./official-exam-data.js?v=20260731-pass-loop-v12"></script>
+    <script src="./calculation-drill.js?v=20260801-calculation-drill-v1"></script>
     <script src="./save-store.js?v=20260731-pass-loop-v12"></script>
     <script src="./save-transfer.js?v=20260731-pass-loop-v12"></script>
-    <script src="./app.js?v=20260731-pass-loop-v12"></script>
+    <script src="./app.js?v=20260801-calculation-drill-v1"></script>
     <noscript>宅建バトルを利用するにはJavaScriptを有効にしてください。</noscript>
   </body>
 </html>

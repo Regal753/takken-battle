@@ -6125,3 +6125,327 @@ button.mission-step {
     grid-column: 1 / -1;
   }
 }
+
+.calculation-drill-panel {
+  margin: 12px 0;
+  overflow: hidden;
+  border: 1px solid rgba(242, 194, 71, 0.42);
+  border-radius: 10px;
+  background:
+    linear-gradient(135deg, rgba(242, 194, 71, 0.08), transparent 42%),
+    rgba(7, 20, 16, 0.96);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.2);
+}
+
+.calculation-drill-panel > summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 62px;
+  gap: 16px;
+  padding: 10px 14px;
+  color: var(--text);
+  cursor: pointer;
+  list-style: none;
+}
+
+.calculation-drill-panel > summary::-webkit-details-marker {
+  display: none;
+}
+
+.calculation-drill-panel > summary > span:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.calculation-drill-panel > summary small,
+.calculation-drill-stage {
+  color: #efc95f;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+}
+
+.calculation-drill-panel > summary strong {
+  font-size: 18px;
+}
+
+#calculationDrillSummary {
+  color: #dbe9e4;
+  font-size: 11px;
+  font-weight: 900;
+  text-align: right;
+}
+
+.calculation-drill-body {
+  padding: 0 14px 14px;
+}
+
+.calculation-drill-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.calculation-drill-head > div {
+  display: grid;
+  gap: 4px;
+}
+
+#calculationDrillStage {
+  color: #efc95f;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+#calculationDrillProgress {
+  font-size: 17px;
+}
+
+.calculation-drill-head p {
+  max-width: 760px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.calculation-drill-question {
+  margin-top: 10px;
+  padding: 14px;
+  border: 1px solid rgba(117, 220, 91, 0.22);
+  border-radius: 8px;
+  background: rgba(2, 12, 9, 0.74);
+}
+
+.calculation-drill-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.calculation-drill-meta span,
+.calculation-drill-meta strong {
+  color: #91d9f4;
+  font-size: 10px;
+  font-weight: 950;
+}
+
+.calculation-drill-prompt {
+  margin: 12px 0;
+  color: #f3f8f5;
+  font-size: 18px;
+  font-weight: 850;
+  line-height: 1.5;
+}
+
+.calculation-drill-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.calculation-drill-choice {
+  min-height: 48px;
+  padding: 9px 12px;
+  border: 1px solid rgba(143, 212, 244, 0.28);
+  border-radius: 7px;
+  color: #eaf5f8;
+  background: rgba(14, 37, 43, 0.84);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.calculation-drill-choice:hover,
+.calculation-drill-choice:focus-visible {
+  border-color: #8fd4f4;
+  background: rgba(24, 66, 76, 0.95);
+}
+
+.calculation-drill-choice:disabled {
+  cursor: default;
+  opacity: 0.66;
+}
+
+.calculation-drill-choice.is-selected {
+  border-color: #efc95f;
+  color: #fff0ad;
+}
+
+.calculation-drill-choice.is-correct {
+  border-color: #75dc5b;
+  color: #dfffd6;
+  background: rgba(35, 102, 31, 0.4);
+}
+
+.calculation-drill-choice.is-wrong {
+  border-color: #e47c6e;
+  color: #ffd8d1;
+  background: rgba(110, 35, 30, 0.38);
+}
+
+.calculation-drill-feedback {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 12px;
+  border-left: 3px solid #efc95f;
+  background: rgba(239, 201, 95, 0.06);
+}
+
+.calculation-drill-feedback[hidden],
+.calculation-drill-complete[hidden],
+.calculation-drill-confidence[hidden],
+.calculation-drill-question[hidden] {
+  display: none;
+}
+
+#calculationDrillVerdict {
+  color: #fff0ad;
+  font-size: 15px;
+}
+
+.calculation-drill-formula {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding-left: 22px;
+  color: #e3eeea;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.calculation-drill-trap {
+  margin: 0;
+  color: #f0b7aa;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.calculation-drill-sources {
+  display: grid;
+  justify-items: start;
+  gap: 4px;
+}
+
+.calculation-drill-confidence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+}
+
+.calculation-drill-confidence span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.calculation-drill-confidence button {
+  min-height: 38px;
+  padding: 7px 10px;
+  border: 1px solid rgba(143, 212, 244, 0.26);
+  border-radius: 6px;
+  color: #e7f3f6;
+  background: rgba(13, 38, 45, 0.9);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.calculation-drill-confidence button.is-selected {
+  border-color: #efc95f;
+  color: #fff0ad;
+}
+
+.calculation-drill-feedback > .today-command-primary {
+  justify-self: start;
+}
+
+.calculation-drill-complete {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 16px;
+  border: 1px solid rgba(117, 220, 91, 0.34);
+  border-radius: 8px;
+  background: rgba(35, 102, 31, 0.16);
+}
+
+.calculation-drill-complete strong {
+  color: #dfffd6;
+  font-size: 18px;
+}
+
+.calculation-drill-complete p {
+  margin: 0;
+  color: #c9dad4;
+  font-size: 12px;
+}
+
+@media (max-width: 520px) {
+  .calculation-drill-panel > summary {
+    align-items: flex-start;
+    gap: 9px;
+    padding: 10px;
+  }
+
+  .calculation-drill-panel > summary strong {
+    font-size: 16px;
+  }
+
+  #calculationDrillSummary {
+    max-width: 46%;
+  }
+
+  .calculation-drill-body {
+    padding: 0 9px 10px;
+  }
+
+  .calculation-drill-head {
+    align-items: stretch;
+    flex-direction: column;
+    padding: 10px;
+  }
+
+  .calculation-drill-head > button {
+    width: 100%;
+  }
+
+  .calculation-drill-question {
+    padding: 11px;
+  }
+
+  .calculation-drill-prompt {
+    font-size: 16px;
+  }
+
+  .calculation-drill-choices {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .calculation-drill-choice {
+    width: 100%;
+  }
+
+  .calculation-drill-confidence {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .calculation-drill-confidence button,
+  .calculation-drill-feedback > .today-command-primary {
+    width: 100%;
+  }
+}
