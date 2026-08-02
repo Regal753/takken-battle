@@ -140,6 +140,19 @@ async function runDesktop(browser, baseUrl) {
 
   await selectTextbookUnit(page, "01-11 住宅瑕疵担保履行法");
   assert.equal((await currentQuestion(page)).id, "b103");
+  const chapterMode = await page.evaluate(() => {
+    const key = Object.keys(localStorage).find((candidate) =>
+      candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+      !candidate.includes("backup") &&
+      !candidate.includes("-before-") &&
+      !candidate.includes("previous") &&
+      !candidate.includes("corrupt") &&
+      !candidate.endsWith("event-outbox")
+    );
+    const saved = JSON.parse(localStorage.getItem(key) || "{}");
+    return { runMode: saved.runMode, chapterModeId: saved.chapterModeId };
+  });
+  assert.deepEqual(chapterMode, { runMode: "chapter", chapterModeId: "business-book-11" });
   let selection = await page.evaluate(() => ({
     scope: document.querySelector("#studyScopeSelect")?.value || "",
     coach: document.querySelector("#coachTitle")?.textContent || "",
@@ -154,10 +167,10 @@ async function runDesktop(browser, baseUrl) {
   assert.equal((await currentQuestion(page)).id, "l101");
   selection = await page.evaluate(() => ({
     scope: document.querySelector("#studyScopeSelect")?.value || "",
-    coach: document.querySelector("#coachTitle")?.textContent || ""
+    option: document.querySelector("#chapterSelect option:checked")?.textContent || ""
   }));
-  assert.equal(selection.scope, "law-other");
-  assert.match(selection.coach, /03-07 その他の法令上の制限・本文p\.543直後/);
+  assert.equal(selection.scope, "business");
+  assert.match(selection.option, /03-07 その他の法令上の制限.*p\.543/);
   await answerAndAdvance(page, "l102");
 
   await selectTextbookUnit(page, "04-02 不動産鑑定評価基準");
@@ -165,7 +178,7 @@ async function runDesktop(browser, baseUrl) {
   await answerAndAdvance(page, "o101");
   assert.equal(
     (await page.locator("#roundLabel").textContent()).replace(/\s+/g, " ").trim(),
-    "読後 2 / 2"
+    "テーマ 2 / 2"
   );
   await capture(page, "textbook-ranges-desktop.png");
   assert.deepEqual(errors, []);
@@ -200,7 +213,7 @@ async function runMobile(browser, baseUrl) {
   assert.equal(result.overflow, 0);
   assert.equal(result.groups, 4);
   assert.equal(result.rows, 53);
-  assert.equal(result.scope, "law-other");
+  assert.equal(result.scope, "business");
   assert.match(result.selected, /04-05 景品表示法/);
   await capture(page, "textbook-ranges-mobile.png");
   assert.deepEqual(errors, []);

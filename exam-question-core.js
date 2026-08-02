@@ -121,9 +121,10 @@
       2: "宅建業法には無免許営業などへの懲役・罰金規定があるため、違反を行政上の問題だけとは扱えない。"
     },
     b040: {
-      0: "改正は管理業者管理者方式に関する説明事項を追加したもので、35条の重要事項説明制度全体を廃止していない。",
-      1: "令和8年改正後も宅建士証の有効期間は5年であり、一律10年へ延長されていない。",
-      3: "改正の中心は管理業者管理者方式を導入した区分所有建物の追加説明事項で、既存の説明制度を置き換えるものではない。"
+      0: "管理業者管理者方式が導入された区分所有建物では、購入判断に必要な管理者の権限等が35条の追加説明事項となる。",
+      1: "事務所等に掲げる標識は、表示事項の整理と併せて様式や大きさが見直され、令和8年4月1日から新様式が適用される。",
+      2: "森林経営管理法・森林法の改正に合わせ、重要事項として説明する法令上の制限を列挙する施行令3条も令和8年4月1日に更新された。",
+      3: "港湾法関係の重要事項説明改正は令和7年10月1日に施行済みで、令和8年度試験の4月1日基準には含まれる。"
     },
     r009: {
       3: "相殺するには、原則として双方の債務が弁済期にあるなど相殺できる状態、すなわち相殺適状に達している必要がある。"
@@ -316,7 +317,7 @@
       3: "無免許営業は宅建業法が刑事罰を定める違反であり、行政指導だけで終わる行為ではない。"
     },
     b040: {
-      2: "令和8年改正後も35条の重要事項説明を行う者は宅建士であり、管理業者だけに担当が移ったわけではない。"
+      2: "森林経営管理法・森林法の制度改正を受け、宅建業法施行令3条の説明対象も更新されたため、旧列挙の丸暗記ではなく現行条文を使う。"
     },
     r001: {
       1: "未成年中の取消可能な契約でも、成年後は本人が有効な契約として確定させる追認をすることができる。"
@@ -596,6 +597,51 @@
     }
   };
 
+  // 条文全体へのリンクだけでは検証箇所が広すぎるため、頻出の業法40問には
+  // 画面上でそのまま引ける条文位置を付ける。その他の問題も論点名まで絞る。
+  const sourceLocatorByQuestionId = Object.freeze({
+    b001: "宅地建物取引業法2条2号",
+    b002: "宅地建物取引業法3条1項",
+    b003: "宅地建物取引業法5条1項",
+    b004: "宅地建物取引業法11条1項",
+    b005: "宅地建物取引業法18条",
+    b006: "宅地建物取引業法22条の2・35条4項",
+    b007: "宅地建物取引業法31条の3",
+    b008: "宅地建物取引業法19条の2・20条",
+    b009: "宅地建物取引業法25条",
+    b010: "宅地建物取引業法27条・28条",
+    b011: "宅地建物取引業法64条の4",
+    b012: "宅地建物取引業法64条の8・64条の9",
+    b013: "宅地建物取引業法48条〜50条",
+    b014: "宅地建物取引業法32条",
+    b015: "宅地建物取引業法33条・36条",
+    b016: "宅地建物取引業法45条・47条の2",
+    b017: "宅地建物取引業法34条の2",
+    b018: "宅地建物取引業法46条",
+    b019: "宅地建物取引業法35条",
+    b020: "宅地建物取引業法35条・施行規則16条の4の3",
+    b021: "宅地建物取引業法35条1項",
+    b022: "宅地建物取引業法35条（IT重説）",
+    b023: "宅地建物取引業法35条・施行規則16条の2",
+    b024: "宅地建物取引業法35条（貸借）",
+    b025: "宅地建物取引業法37条",
+    b026: "宅地建物取引業法37条1項",
+    b027: "宅地建物取引業法37条2項",
+    b028: "宅地建物取引業法37条（電磁的方法）",
+    b029: "宅地建物取引業法37条の2",
+    b030: "宅地建物取引業法39条",
+    b031: "宅地建物取引業法40条",
+    b032: "宅地建物取引業法33条の2",
+    b033: "宅地建物取引業法38条",
+    b034: "宅地建物取引業法37条の2・38条〜43条",
+    b035: "宅地建物取引業法41条・41条の2",
+    b036: "宅地建物取引業法42条",
+    b037: "宅地建物取引業法46条",
+    b038: "宅地建物取引業法65条〜67条",
+    b039: "宅地建物取引業法79条以下",
+    b040: "施行規則16条の4の6・19条の2の5／施行令3条（令和8年4月1日基準）"
+  });
+
   function upgradedReason(id, index, fallback) {
     return choiceReasonUpgradesFinal[id]?.[index]
       || choiceReasonUpgradesCompletion[id]?.[index]
@@ -624,7 +670,10 @@
       trap,
       memoryRule = explain,
       level = "本試験標準",
-      verifiedAt = "2026-07-26"
+      verifiedAt = "2026-07-26",
+      sourceLabelOverride = "",
+      sourceUrlOverride = "",
+      sourceLocator = ""
     } = input;
     if (questions[id]) throw new Error(`Duplicate question id: ${id}`);
     if (!Array.isArray(choices) || choices.length !== 4) throw new Error(`${id}: choices must be 4`);
@@ -659,8 +708,9 @@
       ),
       choiceOriginIndexes: originIndexes,
       memoryRule,
-      sourceRef: source.label,
-      sourceUrl: source.url,
+      sourceRef: sourceLabelOverride || source.label,
+      sourceLocator: sourceLocator || sourceLocatorByQuestionId[id] || `${source.label}｜論点「${tag}」`,
+      sourceUrl: sourceUrlOverride || source.url,
       legalBaseline: blueprint.legalBaseline,
       verifiedAt,
       level,
@@ -682,7 +732,10 @@
       trap,
       memoryRule = explain,
       level = "本試験標準",
-      verifiedAt = "2026-07-26"
+      verifiedAt = "2026-07-26",
+      sourceLabelOverride = "",
+      sourceUrlOverride = "",
+      sourceLocator = ""
     } = input;
     if (questions[id]) throw new Error(`Duplicate question id: ${id}`);
     if (!Array.isArray(statements) || statements.length !== 4) {
@@ -707,8 +760,9 @@
         `${kana[index]} ${truths[index] ? "○" : "×"} ${upgradedReason(id, index, notes[index])}`
       ),
       memoryRule,
-      sourceRef: source.label,
-      sourceUrl: source.url,
+      sourceRef: sourceLabelOverride || source.label,
+      sourceLocator: sourceLocator || sourceLocatorByQuestionId[id] || `${source.label}｜論点「${tag}」`,
+      sourceUrl: sourceUrlOverride || source.url,
       legalBaseline: blueprint.legalBaseline,
       verifiedAt,
       level,

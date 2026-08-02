@@ -55,7 +55,7 @@ async function gotoFresh(page, baseUrl, prefix) {
   await page.goto(url.toString(), { waitUntil: "networkidle", timeout: 20000 });
   await page.waitForFunction(() => {
     const source = document.querySelector("#dailyQuestSource")?.textContent || "";
-    return /読後\d+問|固定10問/.test(source) && !source.includes("読込中");
+    return /読後\d+問|固定10問|復習10問/.test(source) && !source.includes("読込中");
   });
   return page.url();
 }
@@ -69,15 +69,21 @@ async function openPanel(page) {
 
 async function currentQuestion(page) {
   return page.evaluate(() => {
-    const text = document.querySelector("#practicalDrillPrompt")?.textContent || "";
-    const question = (window.TAKKEN_PRACTICAL_VARIATIONS?.QUESTIONS || [])
-      .find((candidate) => candidate.text === text);
-    if (!question) throw new Error(`practical question not found: ${text.slice(0, 90)}`);
+    const key = Object.keys(localStorage).find((candidate) =>
+      candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+      !candidate.includes("backup") && !candidate.includes("previous") &&
+      !candidate.includes("corrupt") && !candidate.endsWith("event-outbox")
+    );
+    const state = JSON.parse(localStorage.getItem(key) || "{}");
+    const id = state.practicalDrill?.queue?.[state.practicalDrill?.position || 0];
+    const question = window.TAKKEN_PRACTICAL_VARIATIONS?.QUESTIONS_BY_ID?.[id];
+    if (!question) throw new Error(`practical question not found: ${id || "missing id"}`);
     return {
       id: question.id,
       answer: question.answer,
       unitId: question.unitId,
-      scopeId: question.scopeId
+      scopeId: question.scopeId,
+      format: question.format
     };
   });
 }
@@ -130,7 +136,7 @@ async function completeDesktopSet(page) {
   assert.match(feedback.verdict, /再出題/);
   assert.deepEqual(feedback.labels, [
     "判断軸",
-    "ア・イへの当てはめ",
+    "各肢への当てはめ",
     "間違いやすい境界",
     "次に再現する一文"
   ]);
@@ -197,10 +203,15 @@ async function runDesktop(browser, baseUrl) {
   const started = await savedPracticalState(page);
   assert.equal(started.stateSchemaVersion, 8);
   assert.equal(started.practicalDrill.stage, "active");
+  assert.equal(started.practicalDrill.version, 2);
   assert.equal(started.practicalDrill.scope, "business");
   assert.equal(started.practicalDrill.sessionIds.length, 10);
   assert.equal(new Set(started.practicalDrill.sessionIds).size, 10);
   assert.ok(started.practicalDrill.sessionIds.every((id) => id.startsWith("pv-business-book-")));
+  const sessionFormats = await page.evaluate((ids) => ids.map((id) =>
+    window.TAKKEN_PRACTICAL_VARIATIONS.QUESTIONS_BY_ID[id].format
+  ), started.practicalDrill.sessionIds);
+  assert.ok(new Set(sessionFormats).size >= 2);
 
   const completed = await completeDesktopSet(page);
   const firstSessionIds = completed.completed.practicalDrill.sessionIds;
@@ -220,6 +231,36 @@ async function runDesktop(browser, baseUrl) {
   assert.equal(afterReload.practicalDrill.stage, "active");
   assert.equal(afterReload.practicalDrill.position, beforeReload.practicalDrill.position);
   assert.deepEqual(afterReload.practicalDrill.sessionIds, beforeReload.practicalDrill.sessionIds);
+
+  const compatibilityFixture = await page.evaluate(() => {
+    const key = Object.keys(localStorage).find((candidate) =>
+      candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+      !candidate.includes("backup") && !candidate.includes("-before-") &&
+      !candidate.includes("previous") && !candidate.includes("corrupt") &&
+      !candidate.endsWith("event-outbox")
+    );
+    const state = JSON.parse(localStorage.getItem(key));
+    const drill = state.practicalDrill;
+    const id = drill.queue[drill.position];
+    drill.version = 1;
+    drill.history[id] = {
+      ...(drill.history[id] || {}),
+      attempts: 17,
+      correct: 12,
+      wrong: 5,
+      lastConfidence: "confident"
+    };
+    drill.currentAttempt = { id, selected: 0, correct: true, confidence: "confident" };
+    localStorage.setItem(key, JSON.stringify(state));
+    return { id, sessionIds: drill.sessionIds };
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  const compatible = await savedPracticalState(page);
+  assert.equal(compatible.practicalDrill.version, 2);
+  assert.equal(compatible.practicalDrill.history[compatibilityFixture.id].attempts, 17);
+  assert.equal(compatible.practicalDrill.history[compatibilityFixture.id].correct, 12);
+  assert.equal(compatible.practicalDrill.currentAttempt, null);
+  assert.deepEqual(compatible.practicalDrill.sessionIds, compatibilityFixture.sessionIds);
   assert.deepEqual(errors, []);
   if (screenshotDir) {
     fs.mkdirSync(screenshotDir, { recursive: true });
@@ -235,6 +276,7 @@ async function runDesktop(browser, baseUrl) {
     firstSessionAttempts: completed.completed.practicalDrill.attempts,
     secondSessionDifferent: true,
     reloadPosition: afterReload.practicalDrill.position,
+    v1HistoryPreserved: compatible.practicalDrill.history[compatibilityFixture.id].attempts,
     consoleErrors: errors.length
   };
 }

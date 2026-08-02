@@ -29,6 +29,7 @@ jobs:
       - run: node Audit-TakkenQuestionQuality.js
       - run: node Audit-TakkenExplanationMastery.js
       - run: node Audit-TakkenUnderstandingDepth.js
+      - run: node Audit-Takken2026Coverage.js
       - run: node Audit-TakkenPracticalVariations.js
       - run: node Audit-TakkenQuestionBank.js
       - run: node Audit-TakkenRewardSystem.js
@@ -66,4 +67,4 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
       - name: Verify deployed page
-        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260802-direct-explain-1"
+        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260802-practice-nav-v20-1"
