@@ -26,7 +26,11 @@
   const PRACTICAL_QUESTION_IDS = Object.freeze(PRACTICAL_QUESTIONS.map((item) => item.id));
   const PRACTICAL_SCOPES = Object.freeze(["all", "business", "rights", "restrictions", "taxOther"]);
   const PRACTICAL_SESSION_SIZES = Object.freeze([4, 10, 20, 45]);
-  const STATE_SCHEMA_VERSION = 7;
+  const UNDERSTANDING_SYSTEM = window.TAKKEN_UNDERSTANDING;
+  const UNDERSTANDING_CHECKS = UNDERSTANDING_SYSTEM?.CHECKS || {};
+  const UNDERSTANDING_VERSION = UNDERSTANDING_SYSTEM?.VERSION || 0;
+  const TEACHBACK_MIN_LENGTH = 15;
+  const STATE_SCHEMA_VERSION = 8;
   const DAILY_TARGET = 10;
   const FOUNDATION_UNIT_BATCH_MAX = 4;
   const SPRINT_MINUTES = 25;
@@ -889,6 +893,20 @@
     return [...new Set(keys)].sort().slice(-8);
   }
 
+  function normalizedUnderstandingDayKeys(stats) {
+    const lastPassedDay = localDateKey(stats?.lastUnderstandingPassedAt);
+    const lastAttemptDay = localDateKey(stats?.lastUnderstandingAt);
+    const includeLastPassed = Boolean(
+      lastPassedDay &&
+      (stats?.lastUnderstandingPassed !== false || lastPassedDay !== lastAttemptDay)
+    );
+    const keys = [
+      ...(Array.isArray(stats?.understandingDayKeys) ? stats.understandingDayKeys : []),
+      includeLastPassed ? lastPassedDay : ""
+    ].filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value));
+    return [...new Set(keys)].sort().slice(-8);
+  }
+
   function createDailyState() {
     return {
       date: todayKey(),
@@ -1637,6 +1655,7 @@
         }
         normalized.correctDayKeys = normalizedCorrectDayKeys(normalized);
         normalized.clearDayKeys = normalizedComprehensionDayKeys(normalized);
+        normalized.understandingDayKeys = normalizedUnderstandingDayKeys(normalized);
         return [id, normalized];
       })
     );
@@ -1675,6 +1694,16 @@
     if (next.answered && next.answered.id !== ORDER[next.index]) {
       next.answered = null;
       next.activeCutCheck = null;
+    }
+    if (
+      next.answered &&
+      !next.answered.mock &&
+      UNDERSTANDING_CHECKS[next.answered.id] &&
+      next.answered.understanding?.version !== UNDERSTANDING_VERSION
+    ) {
+      next.answered.understanding = createUnderstandingAttempt();
+      next.answered.teachback = String(next.answered.teachback || "").slice(0, 240);
+      next.answered.confidence = null;
     }
     if (
       next.answered?.correct === false &&
@@ -2747,7 +2776,7 @@
 
   function isRetained(id) {
     const stats = statsFor(id);
-    if (normalizedComprehensionDayKeys(stats).length < 2) return false;
+    if (normalizedUnderstandingDayKeys(stats).length < 2) return false;
     if (weaknessScore(id) > 0) return false;
     const lastCorrectAt = Date.parse(latestAt(stats.lastCorrectAt, stats.centralLastCorrectAt)) || 0;
     const lastWrongAt = Date.parse(latestAt(stats.lastWrongAt, stats.centralLastWrongAt)) || 0;
@@ -4231,7 +4260,7 @@
       return {
         stage: "読む＋読後問題",
         title: chapter.topicLabel,
-        text: `${chapter.textbookLabel} p.${chapter.page}〜を読み、${batchText}正解後は4肢の理由まで確認する。`,
+        text: `${chapter.textbookLabel} p.${chapter.page}〜を読み、${batchText}解説前に判断軸を選び、同じ単元の別事例を1問解く。`,
         button: batchStarted ? `残り${batchRemaining}問を続ける` : `読後${batchRemaining}問を始める`,
         action: "unit",
         unitId: chapter.id,
@@ -4444,8 +4473,8 @@
           kicker: "今やる・STEP 1 / 4",
           title: "固定10問を解く",
           text: isMockMode()
-            ? "模試を中断して日課へ戻り、各問の理解チェックまで通す。"
-            : `残り${Math.max(0, target - done)}問。正解でも4肢の理由を判定してから次へ進む。`
+            ? "模試を中断して日課へ戻り、各問の根拠再現まで通す。"
+            : `残り${Math.max(0, target - done)}問。正答後も判断軸を再現し、別事例へ使ってから次へ進む。`
         }
       : step === 2
         ? {
@@ -5009,19 +5038,69 @@
       : ORDER[state.index + 1] || null;
   }
 
-  function needsConfidenceCheck(answered = state.answered) {
-    return Boolean(answered?.correct === true && !answered.confidence);
+  function understandingCheckFor(id = currentId()) {
+    return UNDERSTANDING_CHECKS[id] || null;
+  }
+
+  function createUnderstandingAttempt() {
+    return {
+      version: UNDERSTANDING_VERSION,
+      rule: { answered: false, selected: null, correct: false },
+      transfer: { answered: false, selected: null, correct: false },
+      passed: false,
+      completedAt: ""
+    };
+  }
+
+  function understandingCompleted(answered = state.answered) {
+    return Boolean(
+      answered?.understanding?.version === UNDERSTANDING_VERSION &&
+      answered.understanding.rule?.answered === true &&
+      answered.understanding.transfer?.answered === true
+    );
+  }
+
+  function understandingStage(answered = state.answered) {
+    if (!answered?.understanding?.rule?.answered) return "rule";
+    if (!answered?.understanding?.transfer?.answered) return "transfer";
+    return "complete";
+  }
+
+  function teachbackLength(answered = state.answered) {
+    return String(answered?.teachback || "")
+      .normalize("NFKC")
+      .replace(/\s/g, "")
+      .length;
+  }
+
+  function needsUnderstandingCheck(answered = state.answered) {
+    return Boolean(
+      answered &&
+      answered.correct !== null &&
+      !answered.mock &&
+      understandingCheckFor(answered.id) &&
+      !understandingCompleted(answered)
+    );
+  }
+
+  function needsTeachback(answered = state.answered) {
+    if (!understandingCompleted(answered)) return false;
+    const passed = Boolean(answered?.understanding?.passed);
+    return Boolean((answered.correct === false || !passed) && teachbackLength(answered) < TEACHBACK_MIN_LENGTH);
   }
 
   function nextActionLabel() {
     if (isMockMode()) {
       return state.mock.position >= mockQuestionIds().length - 1 ? "採点結果を見る" : "次の問題へ";
     }
+    if (needsUnderstandingCheck()) {
+      return understandingStage() === "rule" ? "判断軸を選ぶ" : "別事例を解く";
+    }
+    if (needsTeachback()) {
+      return `再現文をあと${TEACHBACK_MIN_LENGTH - teachbackLength()}字`;
+    }
     if (state.answered?.correct === false && !mistakeRecorded()) {
       return "ミス入力へ";
-    }
-    if (needsConfidenceCheck()) {
-      return "理解を選ぶ";
     }
     if (isDailyQuestQuestion(currentId()) && dailyQuestDoneCount() >= dailyQuestIds().length) {
       return "今日の10問を終了";
@@ -5072,16 +5151,19 @@
     const xpResult = typeof answered.xpReward === "number" ? ` / EXP +${answered.xpReward}` : "";
     elements.dockResultText.textContent = `${resultParts.join("・")}${xpResult}`;
 
-    const needsUnderstandingCheck = needsConfidenceCheck(answered);
+    const gatePending = needsUnderstandingCheck(answered);
+    const teachbackPending = needsTeachback(answered);
     const dailyComplete = Boolean(
       isDailyQuestQuestion(currentId()) && dailyQuestDoneCount() >= dailyQuestIds().length
     );
-    const targetId = needsUnderstandingCheck ? null : nextTargetId();
+    const targetId = gatePending || teachbackPending ? null : nextTargetId();
     const targetQuestion = targetId ? QUESTIONS[targetId] : null;
-    if (needsUnderstandingCheck) {
-      elements.dockTargetText.textContent = answered.weakBreakCandidate
-        ? "弱点克服候補・4肢の理解を選ぶと報酬確定"
-        : "4肢の理解度を選ぶと次へ進める";
+    if (gatePending) {
+      elements.dockTargetText.textContent = understandingStage(answered) === "rule"
+        ? "解説を見る前に、判断軸を1つ選ぶ"
+        : "次に、同じ単元の別事例を1問解く";
+    } else if (teachbackPending) {
+      elements.dockTargetText.textContent = "抜けた条件を自分の言葉で15字以上にする";
     } else if (dailyComplete) {
       elements.dockTargetText.textContent = nextFirstPassId()
         ? "固定10問完走・次はRETIO公式20問"
@@ -5098,18 +5180,19 @@
     elements.dockNextLabel.textContent = nextActionLabel();
     if (elements.dockUnsureButton) {
       const uncertain = answered.confidence === "unsure" || answered.confidence === "cuts";
-      elements.dockUnsureButton.hidden = !answered.correct || answered.confidence === "clear";
+      elements.dockUnsureButton.hidden = !answered.correct || !understandingCompleted(answered);
       elements.dockUnsureButton.disabled = uncertain;
-      elements.dockUnsureButton.textContent = uncertain ? "迷い済" : "勘・迷い";
+      elements.dockUnsureButton.textContent = uncertain ? "迷い済" : "迷いに残す";
       elements.dockUnsureButton.classList.toggle("is-selected", uncertain);
     }
-    if (answered.correct === false && !mistakeRecorded(answered)) {
+    if (!gatePending && !teachbackPending && answered.correct === false && !mistakeRecorded(answered)) {
       elements.dockTargetText.textContent = mistakeRequirementText(answered);
     }
     elements.dockNextButton.classList.toggle(
       "is-reward",
       Boolean(
-        needsUnderstandingCheck ||
+        gatePending ||
+        teachbackPending ||
         answered.levelUp ||
         answered.chestOpened ||
         answered.milestone ||
@@ -6131,6 +6214,7 @@
     const answered = state.answered;
     removeAdaptiveFeedback();
     removeConfidenceCheck();
+    removeUnderstandingCheck();
     removeReasoningPath();
     elements.feedbackBox.hidden = !answered;
     if (!answered) {
@@ -6139,7 +6223,7 @@
     const answerGrid = elements.feedbackBox.querySelector(".answer-grid");
     if (answered.mock) {
       elements.feedbackBox
-        .querySelectorAll(".cut-list, .verdict-board, .reasoning-path, .mistake-capture, .memory-rule, .confidence-check, .adaptive-note")
+        .querySelectorAll(".cut-list, .verdict-board, .reasoning-path, .mistake-capture, .memory-rule, .confidence-check, .understanding-check, .adaptive-note")
         .forEach((node) => node.remove());
       if (answerGrid) answerGrid.hidden = true;
       elements.feedbackTitle.textContent = "解答を記録しました";
@@ -6151,17 +6235,28 @@
       elements.nextButton.textContent = nextActionLabel();
       return;
     }
-    if (answerGrid) answerGrid.hidden = false;
+    const checkAvailable = Boolean(understandingCheckFor(question.id));
+    const checkComplete = !checkAvailable || understandingCompleted(answered);
+    if (answerGrid) answerGrid.hidden = !checkComplete;
     elements.feedbackTitle.textContent = answered.correct
-      ? "撃破。4肢の判定を確認"
-      : "反撃。誤りの肢を確認";
+      ? (checkComplete ? "撃破。根拠まで照合" : "撃破。解説前に根拠を再現")
+      : (checkComplete ? "反撃。誤りの構造を修正" : "反撃。解説前に根拠を再現");
+    renderUnderstandingCheck(question);
+    if (!checkComplete) {
+      elements.correctAnswer.textContent = "";
+      elements.trapText.textContent = "";
+      elements.bookRef.textContent = "";
+      elements.explainText.textContent = "解説は判断軸を選び、同じ単元の別事例へ使った後に開きます。先に記憶から取り出してください。";
+      elements.explainText.hidden = false;
+      elements.nextButton.textContent = nextActionLabel();
+      return;
+    }
     elements.correctAnswer.textContent = `${question.answer + 1}. ${question.choices[question.answer]}`;
     elements.trapText.textContent = question.trap || "正解肢だけでなく、他の肢を切れる理由まで確認する。";
     renderBookReference(question);
     elements.explainText.textContent = question.explain;
     renderChoiceExplanations(question);
     renderReasoningPath(question);
-    renderConfidenceCheck(question);
     renderPriorMistakeRecall(question);
     renderMistakeCapture(question);
     renderMemoryRule(question);
@@ -6262,6 +6357,7 @@
     const list = document.createElement("ol");
     list.className = "reasoning-steps";
     [
+      { label: "適用場面", text: String(question.text || "").split("\n")[0] },
       { label: "判断軸", text: question.explain },
       { label: "この問題への当てはめ", text: reasoningApplicationText(question, facts) },
       { label: "間違いやすい境界", text: question.trap || "似た制度と適用条件を分けて判断する。" },
@@ -6563,41 +6659,283 @@
     }
   }
 
-  function renderConfidenceCheck(question) {
-    removeConfidenceCheck();
-    if (!state.answered?.correct) return;
+  function removeUnderstandingCheck() {
+    elements.feedbackBox.querySelector(".understanding-check")?.remove();
+  }
+
+  function renderUnderstandingCheck(question) {
+    removeUnderstandingCheck();
+    const answered = state.answered;
+    const check = understandingCheckFor(question.id);
+    if (!answered || answered.mock || !check) return;
+    answered.understanding = answered.understanding?.version === UNDERSTANDING_VERSION
+      ? answered.understanding
+      : createUnderstandingAttempt();
+
+    const complete = understandingCompleted(answered);
+    const stage = understandingStage(answered);
     const wrapper = document.createElement("section");
-    wrapper.className = "confidence-check";
+    wrapper.className = "understanding-check";
+    wrapper.classList.toggle("is-complete", complete);
+    wrapper.classList.toggle("is-pass", complete && answered.understanding.passed && answered.correct);
+    wrapper.classList.toggle("is-repair", complete && (!answered.understanding.passed || !answered.correct));
+    wrapper.setAttribute("aria-label", "解説前の根拠再現と別事例への転用");
 
-    const copy = document.createElement("div");
-    const title = document.createElement("strong");
-    title.textContent = "理解チェック（必須）";
+    const head = document.createElement("div");
+    head.className = "understanding-check-head";
+    const heading = document.createElement("strong");
+    heading.textContent = complete ? "根拠再現の結果" : "根拠再現（解説前）";
+    const progress = document.createElement("span");
+    const correctCount = ["rule", "transfer"]
+      .filter((kind) => answered.understanding[kind]?.correct).length;
+    progress.textContent = complete ? `${correctCount} / 2` : `${stage === "rule" ? 0 : 1} / 2`;
+    head.append(heading, progress);
+
     const lead = document.createElement("p");
-    lead.textContent = state.answered?.weakBreakCandidate
-      ? "翌日再テスト成功。4肢の○×理由まで説明できれば弱点克服を確定。"
-      : "選んだ肢だけでなく、4肢の○×理由を言えるか選ぶ。勘・迷いは弱点へ回す。";
-    copy.append(title, lead);
+    lead.className = "understanding-check-lead";
+    lead.textContent = complete
+      ? (answered.correct && answered.understanding.passed
+          ? "判断軸を記憶から取り出し、同じ単元の別事例にも使えました。"
+          : "答え・判断軸・転用のどこかに穴があります。全肢解説で直した後、自分の言葉で一文にします。")
+      : "答えを見て納得する前に、使った規則を記憶から取り出して別事例へ移します。分からない場合は推測せず弱点へ回せます。";
+    wrapper.append(head, lead);
 
-    const actions = document.createElement("div");
-    actions.className = "confidence-actions";
-    [
-      { value: "clear", label: "4肢を説明できる" },
-      { value: "unsure", label: "正解したが迷った" },
-      { value: "cuts", label: "切れない肢がある" }
-    ].forEach((item) => {
-      const button = document.createElement("button");
-      button.type = "button";
-      button.className = "confidence-button";
-      button.textContent = item.label;
-      const selected = state.answered?.confidence === item.value;
-      button.classList.toggle("is-selected", selected);
-      button.setAttribute("aria-pressed", String(selected));
-      button.addEventListener("click", () => setConfidence(question.id, item.value));
-      actions.append(button);
+    if (!complete) {
+      const phase = check[stage];
+      const fieldset = document.createElement("fieldset");
+      fieldset.className = "understanding-phase";
+      fieldset.dataset.understandingStage = stage;
+      const legend = document.createElement("legend");
+      const phaseLabel = stage === "rule" ? "1 判断軸" : "2 転用ミニ問";
+      legend.textContent = `${phaseLabel} — ${phase.prompt}`;
+      if (stage === "transfer") {
+        const scenario = document.createElement("p");
+        scenario.className = "understanding-transfer-scenario";
+        scenario.textContent = phase.scenario;
+        fieldset.append(scenario);
+      }
+      const choices = document.createElement("div");
+      choices.className = "understanding-choices";
+      phase.choices.forEach((choice, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "understanding-choice";
+        button.dataset.understandingKind = stage;
+        button.dataset.understandingIndex = String(index);
+        const marker = document.createElement("span");
+        marker.textContent = String(index + 1);
+        const copy = document.createElement("span");
+        copy.textContent = choice.text;
+        button.append(marker, copy);
+        button.addEventListener("click", () => submitUnderstandingChoice(question.id, stage, index));
+        choices.append(button);
+      });
+      const unknown = document.createElement("button");
+      unknown.type = "button";
+      unknown.className = "understanding-unknown";
+      unknown.dataset.understandingKind = stage;
+      unknown.dataset.understandingIndex = "unknown";
+      unknown.textContent = "分からない — 推測せず弱点へ";
+      unknown.addEventListener("click", () => submitUnderstandingChoice(question.id, stage, -1));
+      fieldset.append(legend, choices, unknown);
+      wrapper.append(fieldset);
+    } else {
+      const resultList = document.createElement("div");
+      resultList.className = "understanding-results";
+      [
+        { kind: "rule", label: "判断軸" },
+        { kind: "transfer", label: "別事例への転用" }
+      ].forEach(({ kind, label }) => {
+        const result = answered.understanding[kind];
+        const row = document.createElement("div");
+        row.className = result.correct ? "is-correct" : "is-wrong";
+        const mark = document.createElement("strong");
+        mark.textContent = result.correct ? "○" : "×";
+        const copy = document.createElement("div");
+        const name = document.createElement("span");
+        name.textContent = label;
+        const cue = document.createElement("small");
+        cue.textContent = check[kind].scenario;
+        const text = document.createElement("p");
+        text.textContent = check[kind].choices[check[kind].answer].text;
+        copy.append(name, cue, text);
+        if (check[kind].explain) {
+          const explanation = document.createElement("p");
+          explanation.className = "understanding-result-explain";
+          explanation.textContent = check[kind].explain;
+          copy.append(explanation);
+        }
+        row.append(mark, copy);
+        resultList.append(row);
+      });
+      wrapper.append(resultList);
+
+      if (answered.correct === false || !answered.understanding.passed || answered.teachback) {
+        const teachback = document.createElement("label");
+        teachback.className = "teachback-field";
+        const title = document.createElement("span");
+        title.textContent = "自分の言葉で再現（15字以上）";
+        const prompt = document.createElement("small");
+        prompt.textContent = check.teachbackPrompt;
+        const input = document.createElement("textarea");
+        input.className = "teachback-input";
+        input.rows = 3;
+        input.maxLength = 240;
+        input.placeholder = "例：業者が自ら売主で、買主が一般客なら…";
+        input.value = String(answered.teachback || "");
+        input.addEventListener("input", (event) => updateTeachback(event.target.value));
+        const status = document.createElement("strong");
+        status.className = "teachback-status";
+        const remaining = Math.max(0, TEACHBACK_MIN_LENGTH - teachbackLength(answered));
+        status.textContent = remaining ? `あと${remaining}字` : "再現文を保存済み";
+        teachback.append(title, prompt, input, status);
+        wrapper.append(teachback);
+      }
+
+      if (answered.correct && answered.understanding.passed) {
+        const reflection = document.createElement("div");
+        reflection.className = "understanding-reflection";
+        const text = document.createElement("span");
+        text.textContent = answered.confidence === "unsure"
+          ? "客観判定は通過。主観的な迷いは弱点として残しています。"
+          : "客観判定PASS。まだ勘や迷いがあれば弱点へ残せます。";
+        reflection.append(text);
+        if (answered.confidence !== "unsure") {
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "understanding-downgrade-button";
+          button.textContent = "迷いを弱点に残す";
+          button.addEventListener("click", () => setConfidence(question.id, "unsure"));
+          reflection.append(button);
+        }
+        wrapper.append(reflection);
+      }
+    }
+
+    const answerGrid = elements.feedbackBox.querySelector(".answer-grid");
+    elements.feedbackBox.insertBefore(wrapper, answerGrid || elements.explainText);
+  }
+
+  function submitUnderstandingChoice(id, kind, selectedIndex) {
+    const answered = state.answered;
+    const question = currentQuestion();
+    const check = understandingCheckFor(id);
+    if (!answered || answered.id !== id || question.id !== id || !check) return;
+    if (!['rule', 'transfer'].includes(kind) || understandingStage(answered) !== kind) return;
+    const selected = Number(selectedIndex);
+    if (!Number.isInteger(selected) || selected < -1 || selected > 3) return;
+
+    answered.understanding = answered.understanding?.version === UNDERSTANDING_VERSION
+      ? answered.understanding
+      : createUnderstandingAttempt();
+    const correct = selected === check[kind].answer;
+    answered.understanding[kind] = { answered: true, selected, correct };
+
+    if (!understandingCompleted(answered)) {
+      saveState();
+      logStudyEvent("understanding-choice", {
+        id,
+        kind,
+        correct,
+        unknown: selected === -1,
+        version: UNDERSTANDING_VERSION
+      });
+      render();
+      return;
+    }
+
+    const recordedAt = new Date().toISOString();
+    const reasonPassed = Boolean(
+      answered.understanding.rule.correct && answered.understanding.transfer.correct
+    );
+    const masteryPassed = Boolean(answered.correct && reasonPassed);
+    answered.understanding.passed = reasonPassed;
+    answered.understanding.completedAt = recordedAt;
+    answered.confidence = masteryPassed ? "clear" : (answered.correct ? "unsure" : "wrong");
+
+    const previous = statsFor(id);
+    const understandingDayKeys = normalizedUnderstandingDayKeys(previous)
+      .filter((day) => day !== todayKey());
+    const clearDayKeys = normalizedComprehensionDayKeys(previous)
+      .filter((day) => day !== todayKey());
+    if (masteryPassed) {
+      understandingDayKeys.push(todayKey());
+      clearDayKeys.push(todayKey());
+    }
+    state.questionStats[id] = {
+      ...previous,
+      understandingVersion: UNDERSTANDING_VERSION,
+      understandingAttempts: (Number(previous.understandingAttempts) || 0) + 1,
+      understandingCorrect: (Number(previous.understandingCorrect) || 0) + (masteryPassed ? 1 : 0),
+      lastUnderstandingAt: recordedAt,
+      lastUnderstandingPassed: masteryPassed,
+      lastUnderstandingPassedAt: masteryPassed ? recordedAt : previous.lastUnderstandingPassedAt,
+      lastUnderstandingRuleCorrect: Boolean(answered.understanding.rule.correct),
+      lastUnderstandingTransferCorrect: Boolean(answered.understanding.transfer.correct),
+      understandingDayKeys: [...new Set(understandingDayKeys)].sort().slice(-8),
+      lastConfidence: answered.confidence,
+      lastConfidenceAt: recordedAt,
+      lastClearAt: masteryPassed ? recordedAt : previous.lastClearAt,
+      clearDayKeys: [...new Set(clearDayKeys)].sort().slice(-8)
+    };
+
+    const wasMarked = Boolean(state.marked[id]);
+    if (!masteryPassed) {
+      state.marked[id] = true;
+      state.autoMarked[id] = true;
+      state.daily = normalizeDailyState(state.daily);
+      if (!wasMarked) state.daily.weakAdded += 1;
+    } else if (
+      state.autoMarked[id] &&
+      (previous.wrong || 0) === 0 &&
+      previous.correct >= previous.wrong &&
+      (previous.cutCheckCorrect || 0) >= (previous.cutCheckWrong || 0)
+    ) {
+      delete state.marked[id];
+      delete state.autoMarked[id];
+    }
+
+    const weakBreakReward = masteryPassed ? confirmWeakBreak(id) : null;
+    saveState();
+    logStudyEvent("understanding-check", {
+      id,
+      tag: question.tag,
+      answerCorrect: answered.correct,
+      ruleCorrect: answered.understanding.rule.correct,
+      transferCorrect: answered.understanding.transfer.correct,
+      masteryPassed,
+      marked: Boolean(state.marked[id]),
+      weakBreakConfirmed: Boolean(weakBreakReward),
+      version: UNDERSTANDING_VERSION,
+      runMode: state.runMode
     });
+    render();
+  }
 
-    wrapper.append(copy, actions);
-    elements.feedbackBox.insertBefore(wrapper, elements.nextButton);
+  function updateTeachback(value) {
+    const answered = state.answered;
+    if (!answered || !understandingCompleted(answered)) return;
+    answered.teachback = String(value || "").slice(0, 240);
+    const stats = statsFor(answered.id);
+    const complete = teachbackLength(answered) >= TEACHBACK_MIN_LENGTH;
+    state.questionStats[answered.id] = {
+      ...stats,
+      lastTeachback: answered.teachback.trim(),
+      lastTeachbackAt: complete ? new Date().toISOString() : stats.lastTeachbackAt
+    };
+    saveState();
+    const remaining = Math.max(0, TEACHBACK_MIN_LENGTH - teachbackLength(answered));
+    const status = elements.feedbackBox.querySelector(".teachback-status");
+    if (status) status.textContent = remaining ? `あと${remaining}字` : "再現文を保存済み";
+    elements.nextButton.textContent = nextActionLabel();
+    if (elements.dockNextLabel) elements.dockNextLabel.textContent = nextActionLabel();
+    if (elements.dockTargetText) {
+      elements.dockTargetText.textContent = remaining
+        ? "抜けた条件を自分の言葉で15字以上にする"
+        : (answered.correct === false && !mistakeRecorded(answered)
+            ? mistakeRequirementText(answered)
+            : "再現文を保存。次へ進めます");
+    }
   }
 
   function removeAdaptiveFeedback() {
@@ -7027,7 +7365,7 @@
         : snapshot.practicalGrounded < snapshot.practicalItems.length
           ? `読後問題は完了。次は同じ単元の実践4問を解き、ア・イ両方の根拠を言えた問題を${snapshot.practicalGrounded}/4から4/4へする。`
           : snapshot.baseRetained < snapshot.baseIds.length
-            ? `読後問題と実践4問は完了。翌日以降に${snapshot.baseIds.length}問を根拠から再現し、異なる2日で正解すれば定着扱い。`
+            ? `読後問題と実践4問は完了。翌日以降に${snapshot.baseIds.length}問の正答・判断軸・境界を再現し、異なる2日で客観判定を通れば定着扱い。`
             : "本文・読後問題・実践4問・翌日復習を通過。この単元は定着済み。次の未完了単元へ進む。";
       return;
     }
@@ -7044,7 +7382,7 @@
       elements.coachTitle.textContent =
         `${scopeState.scope.shortLabel} 定着${scopeState.retained}/${targetRetained}目標`;
       elements.coachText.textContent =
-        `全問接触済み。異なる2日で正解し、最新の誤答・迷いがない問題だけを定着扱いにする。あと${targetRetained - scopeState.retained}問で次段階の目安。`;
+        `全問接触済み。異なる2日で正答・判断軸・境界を再現し、最新の誤答・迷いがない問題だけを定着扱いにする。あと${targetRetained - scopeState.retained}問で次段階の目安。`;
       return;
     }
 
@@ -7643,6 +7981,8 @@
       selected: index,
       correct: isCorrect,
       confidence: null,
+      understanding: createUnderstandingAttempt(),
+      teachback: "",
       mistakeItems: [],
       mistakeUnknown: false,
       mistakeCause: "",
@@ -7739,6 +8079,7 @@
         ? [...new Set([...normalizedCorrectDayKeys(previous), todayKey()])].sort().slice(-8)
         : normalizedCorrectDayKeys(previous),
       clearDayKeys: normalizedComprehensionDayKeys(previous),
+      understandingDayKeys: normalizedUnderstandingDayKeys(previous),
       lastCutCheckAt: cutCheck ? state.answered.at : previous.lastCutCheckAt,
       lastCutCheckAllCorrect: cutCheck ? cutCheck.allCorrect : previous.lastCutCheckAllCorrect
     };
@@ -7923,6 +8264,14 @@
       }, 120);
       return;
     }
+    if (needsUnderstandingCheck()) {
+      showUnderstandingCheck();
+      return;
+    }
+    if (needsTeachback()) {
+      showTeachback();
+      return;
+    }
     if (!state.answered.correct) {
       if (!mistakeRecorded()) {
         showMistakeCapture();
@@ -7935,10 +8284,6 @@
         setAdvanceBusy(false);
         advanceQuestion();
       }, 360);
-      return;
-    }
-    if (needsConfidenceCheck()) {
-      showConfidenceCheck();
       return;
     }
     if (isDailyQuestQuestion(currentId()) && dailyQuestIsComplete() && !isFirstPassMode()) {
@@ -7967,7 +8312,8 @@
       elements.dockNextButton.disabled = busy;
     }
     if (elements.dockUnsureButton && !elements.dockUnsureButton.hidden) {
-      elements.dockUnsureButton.disabled = busy || Boolean(state.answered?.confidence);
+      const uncertain = state.answered?.confidence === "unsure" || state.answered?.confidence === "cuts";
+      elements.dockUnsureButton.disabled = busy || uncertain;
     }
     if (busy) {
       elements.nextButton.textContent = "進行中";
@@ -7988,12 +8334,24 @@
     elements.feedbackBox.scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
-  function showConfidenceCheck() {
-    const confidence = elements.feedbackBox.querySelector(".confidence-check");
-    if (!confidence) return;
-    confidence.scrollIntoView({ block: "center", behavior: "smooth" });
+  function showUnderstandingCheck() {
+    const check = elements.feedbackBox.querySelector(".understanding-check");
+    if (!check) return;
+    check.scrollIntoView({ block: "center", behavior: "smooth" });
     window.setTimeout(() => {
-      confidence.querySelector(".confidence-button")?.focus({ preventScroll: true });
+      check.querySelector(".understanding-choice, .understanding-unknown")?.focus({ preventScroll: true });
+    }, 260);
+  }
+
+  function showTeachback() {
+    const field = elements.feedbackBox.querySelector(".teachback-field");
+    if (!field) return;
+    field.classList.remove("needs-entry");
+    void field.offsetWidth;
+    field.classList.add("needs-entry");
+    field.scrollIntoView({ block: "center", behavior: "smooth" });
+    window.setTimeout(() => {
+      field.querySelector(".teachback-input")?.focus({ preventScroll: true });
     }, 260);
   }
 
@@ -8389,7 +8747,12 @@
     elements.dockNextButton?.addEventListener("click", nextQuestion);
     elements.dockExplainButton?.addEventListener("click", showFeedback);
     elements.dockUnsureButton?.addEventListener("click", () => {
-      if (state.answered?.correct && !state.answered.confidence) {
+      if (
+        state.answered?.correct &&
+        understandingCompleted(state.answered) &&
+        state.answered.confidence !== "unsure" &&
+        state.answered.confidence !== "cuts"
+      ) {
         setConfidence(currentId(), "unsure");
       }
     });

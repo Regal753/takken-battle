@@ -256,35 +256,28 @@ async function main() {
         const item = Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
           .find((candidate) => candidate.text === text);
         if (!item) throw new Error(`Full-exam question not found: ${text.slice(0, 60)}`);
-        return { id: item.id, sectionId: item.sectionId, answer: item.answer };
+        const check = window.TAKKEN_UNDERSTANDING.CHECKS[item.id];
+        return {
+          id: item.id,
+          sectionId: item.sectionId,
+          answer: item.answer,
+          ruleAnswer: check.rule.answer,
+          transferAnswer: check.transfer.answer
+        };
       });
       visitedIds.push(question.id);
       visitedSections.push(question.sectionId);
       await page.locator(`.choice-button[data-index="${question.answer}"]`).click();
       await page.locator("#feedbackBox").waitFor({ state: "visible" });
-      const sourceLink = await page.locator("#bookRef a.official-source-link").evaluate((link) => ({
-        host: new URL(link.href).hostname,
-        text: link.textContent || "",
-        target: link.target,
-        rel: link.rel
-      }));
-      if (
-        !sourceLink.text.includes("公式根拠") ||
-        sourceLink.target !== "_blank" ||
-        !sourceLink.rel.includes("noopener")
-      ) {
-        throw new Error(`Official source link invalid: ${JSON.stringify(sourceLink)}`);
-      }
-      visitedSourceHosts.push(sourceLink.host);
       const confidenceGate = await page.evaluate(() => ({
-        title: document.querySelector(".confidence-check strong")?.textContent?.trim() || "",
-        lead: document.querySelector(".confidence-check p")?.textContent?.trim() || "",
+        title: document.querySelector(".understanding-check-head strong")?.textContent?.trim() || "",
+        lead: document.querySelector(".understanding-check-lead")?.textContent?.trim() || "",
         next: document.querySelector("#dockNextLabel")?.textContent?.trim() || ""
       }));
       if (
-        confidenceGate.title !== "理解チェック（必須）" ||
-        !confidenceGate.lead.includes("4肢の○×理由") ||
-        confidenceGate.next !== "理解を選ぶ"
+        confidenceGate.title !== "根拠再現（解説前）" ||
+        !confidenceGate.lead.includes("記憶から取り出") ||
+        confidenceGate.next !== "判断軸を選ぶ"
       ) {
         throw new Error(`Comprehension gate missing: ${JSON.stringify(confidenceGate)}`);
       }
@@ -301,9 +294,25 @@ async function main() {
           throw new Error(`Unassessed correct answer advanced: ${question.id} -> ${blockedId}`);
         }
       }
-      await page.locator(".confidence-button")
-        .filter({ hasText: index === 0 ? "正解したが迷った" : "4肢を説明できる" })
-        .click();
+      await page.locator(`[data-understanding-kind="rule"][data-understanding-index="${question.ruleAnswer}"]`).click();
+      await page.locator(`[data-understanding-kind="transfer"][data-understanding-index="${question.transferAnswer}"]`).click();
+      const sourceLink = await page.locator("#bookRef a.official-source-link").evaluate((link) => ({
+        host: new URL(link.href).hostname,
+        text: link.textContent || "",
+        target: link.target,
+        rel: link.rel
+      }));
+      if (
+        !sourceLink.text.includes("公式根拠") ||
+        sourceLink.target !== "_blank" ||
+        !sourceLink.rel.includes("noopener")
+      ) {
+        throw new Error(`Official source link invalid: ${JSON.stringify(sourceLink)}`);
+      }
+      visitedSourceHosts.push(sourceLink.host);
+      if (index === 0) {
+        await page.locator(".understanding-downgrade-button").click();
+      }
       if (index < 9) {
         await page.locator("#dockNextButton").click();
         await page.waitForFunction(
@@ -837,7 +846,12 @@ async function main() {
           lastAnsweredAt: "2026-06-01T00:00:00.000Z",
           lastCorrectAt: weakIds.has(id) ? "" : "2026-06-01T00:00:00.000Z",
           lastWrongAt: weakIds.has(id) ? "2026-06-01T00:00:00.000Z" : "",
-          correctDayKeys: weakIds.has(id) ? [] : ["2026-05-31", "2026-06-01"]
+          correctDayKeys: weakIds.has(id) ? [] : ["2026-05-31", "2026-06-01"],
+          understandingDayKeys: weakIds.has(id) ? [] : ["2026-05-31", "2026-06-01"],
+          lastUnderstandingPassed: !weakIds.has(id),
+          lastUnderstandingPassedAt: weakIds.has(id) ? "" : "2026-06-01T00:00:00.000Z",
+          lastConfidence: weakIds.has(id) ? "wrong" : "clear",
+          lastConfidenceAt: "2026-06-01T00:00:00.000Z"
         }
       ]));
       foundationIds.forEach((id, index) => {
@@ -850,7 +864,12 @@ async function main() {
           lastAnsweredAt: "2026-06-01T00:00:00.000Z",
           lastCorrectAt: "2026-06-01T00:00:00.000Z",
           correctDayKeys: ["2026-05-31", "2026-06-01"],
-          clearDayKeys: []
+          clearDayKeys: ["2026-05-31", "2026-06-01"],
+          understandingDayKeys: ["2026-05-31", "2026-06-01"],
+          lastUnderstandingPassed: true,
+          lastUnderstandingPassedAt: "2026-06-01T00:00:00.000Z",
+          lastConfidence: "clear",
+          lastConfidenceAt: "2026-06-01T00:00:00.000Z"
         };
       });
       localStorage.setItem(storageId, JSON.stringify({

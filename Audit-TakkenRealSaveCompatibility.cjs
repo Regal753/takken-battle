@@ -94,7 +94,7 @@ async function main() {
       timeout: 15000
     });
     await page.waitForFunction(() =>
-      (document.querySelector("#saveProtectionStatus")?.textContent || "").includes("v7")
+      (document.querySelector("#saveProtectionStatus")?.textContent || "").includes("v8")
     );
 
     const readback = await page.evaluate((id) => {
@@ -102,14 +102,14 @@ async function main() {
       return {
         state,
         previousRaw: localStorage.getItem(`${id}-previous`) || "",
-        upgradeRaw: localStorage.getItem(`${id}-before-upgrade-v0-to-v7`) || "",
+        upgradeRaw: localStorage.getItem(`${id}-before-upgrade-v0-to-v8`) || "",
         protection: document.querySelector("#saveProtectionStatus")?.textContent || "",
         notice: document.querySelector("#saveTransferStatus")?.textContent || "",
         overflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
       };
     }, storageId);
     assert.deepEqual(semanticSnapshot(readback.state), expected);
-    assert.equal(readback.state.stateSchemaVersion, 7);
+    assert.equal(readback.state.stateSchemaVersion, 8);
     assert.equal(readback.state.calculationDrill?.queue?.length, 24);
     assert.equal(readback.state.practicalDrill?.stage, "idle");
     assert.deepEqual(semanticSnapshot(JSON.parse(readback.previousRaw)), expected);

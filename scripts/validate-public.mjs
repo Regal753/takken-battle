@@ -10,6 +10,7 @@ const required = [
   "index.html",
   "styles.css",
   "app.js",
+  "understanding-system.js",
   "practical-question-bank.js",
   "calculation-drill.js",
   "official-exam-data.js",
@@ -29,6 +30,8 @@ const required = [
   "Audit-TakkenTextbookRanges.js",
   "Audit-TakkenTextbookRangesUi.cjs",
   "Audit-TakkenQuestionQuality.js",
+  "Audit-TakkenUnderstandingDepth.js",
+  "Audit-TakkenUnderstandingDepthUi.cjs",
   "Audit-TakkenPracticalVariations.js",
   "Audit-TakkenPracticalVariationsUi.cjs",
   "Audit-TakkenOfficialDrill.js",
@@ -49,6 +52,7 @@ for (const path of required) {
 
 const index = text("index.html");
 const app = text("app.js");
+const understanding = text("understanding-system.js");
 const readme = text("README.md");
 const pagesWorkflow = text(".github/workflows/pages.yml");
 
@@ -61,7 +65,7 @@ assert.match(app, /function isRetained/);
 assert.match(app, /function legacyProgress/);
 assert.match(app, /以前の100問（解答履歴を保持）/);
 assert.match(app, /問題・履歴を保持　解答済/);
-assert.match(app, /normalizedComprehensionDayKeys\(stats\)\.length < 2/);
+assert.match(app, /normalizedUnderstandingDayKeys\(stats\)\.length < 2/);
 assert.match(app, /const maxReview = newPool\.length >= 6 \? 4 : DAILY_TARGET/);
 assert.match(app, /const CURRICULUM_ORDER/);
 assert.match(app, /const TEXTBOOK_IDS/);
@@ -74,7 +78,7 @@ assert.match(app, /function foundationLearningRoute/);
 assert.match(app, /function renderFoundationRoutePanel/);
 assert.match(app, /function startPracticalDrillForUnit/);
 assert.match(app, /const PRACTICAL_SESSION_SIZES = Object\.freeze\(\[4, 10, 20, 45\]\)/);
-assert.match(app, /const STATE_SCHEMA_VERSION = 7/);
+assert.match(app, /const STATE_SCHEMA_VERSION = 8/);
 assert.match(app, /const OFFICIAL_DAILY_DRILL_DEFINITIONS/);
 assert.match(app, /2025-balanced-c-v1/);
 assert.match(app, /const OFFICIAL_DRILL_EVIDENCE_VERSION = 3/);
@@ -134,15 +138,22 @@ assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 第2分冊・権利関係を固める/);
 assert.match(index, /③ 法令・税その他へ進む/);
 assert.match(index, /④ 全分野を混ぜる/);
-assert.match(index, /styles\.css\?v=20260802-learning-route-v17/);
-assert.match(index, /practical-question-bank\.js\?v=20260802-learning-route-v17/);
-assert.match(index, /calculation-drill\.js\?v=20260802-learning-route-v17/);
-assert.match(index, /app\.js\?v=20260802-learning-route-v17/);
-assert.match(index, /save-store\.js\?v=20260802-learning-route-v17/);
-assert.match(index, /official-exam-data\.js\?v=20260802-learning-route-v17/);
+assert.match(index, /styles\.css\?v=20260802-understanding-v18/);
+assert.match(index, /understanding-system\.js\?v=20260802-understanding-v18/);
+assert.match(index, /practical-question-bank\.js\?v=20260802-understanding-v18/);
+assert.match(index, /calculation-drill\.js\?v=20260802-understanding-v18/);
+assert.match(index, /app\.js\?v=20260802-understanding-v18/);
+assert.match(index, /save-store\.js\?v=20260802-understanding-v18/);
+assert.match(index, /official-exam-data\.js\?v=20260802-understanding-v18/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
-assert.match(app, /理解チェック（必須）/);
+assert.match(app, /根拠再現（解説前）/);
+assert.match(app, /function submitUnderstandingChoice/);
+assert.match(app, /function updateTeachback/);
+assert.match(understanding, /function ruleChoiceSet/);
+assert.match(understanding, /function transferSet/);
+assert.match(understanding, /TAKKEN_PRACTICAL_VARIATIONS/);
+assert.match(understanding, /sourceQuestionIds\.includes\(question\.id\)/);
 assert.match(app, /理解の順番/);
 assert.match(app, /この問題への当てはめ/);
 assert.match(app, /次に再現する一文/);
@@ -176,10 +187,12 @@ assert.match(pagesWorkflow, /node Audit-TakkenChapter2Range\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenTextbookRanges\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenQuestionQuality\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenExplanationMastery\.js/);
+assert.match(pagesWorkflow, /node Audit-TakkenUnderstandingDepth\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenPracticalVariations\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenLearningArchitecture\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
-assert.match(pagesWorkflow, /20260802-learning-route-v17/);
+assert.match(pagesWorkflow, /20260802-understanding-v18/);
+assert.match(pagesWorkflow, /cp [^\n]*understanding-system\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*calculation-drill\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*practical-question-bank\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*official-exam-data\.js[^\n]*_site\//);

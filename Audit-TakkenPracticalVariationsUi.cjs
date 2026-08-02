@@ -195,7 +195,7 @@ async function runDesktop(browser, baseUrl) {
   await page.locator("#practicalDrillSize").selectOption("10");
   await page.locator("#practicalDrillStartButton").click();
   const started = await savedPracticalState(page);
-  assert.equal(started.stateSchemaVersion, 7);
+  assert.equal(started.stateSchemaVersion, 8);
   assert.equal(started.practicalDrill.stage, "active");
   assert.equal(started.practicalDrill.scope, "business");
   assert.equal(started.practicalDrill.sessionIds.length, 10);
