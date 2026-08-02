@@ -23,7 +23,6 @@ jobs:
       - run: node Audit-TakkenQuestionQuality.js
       - run: node Audit-TakkenExplanationMastery.js
       - run: node Audit-TakkenUnderstandingDepth.js
-      - run: node Audit-TakkenRuleChoiceAmbiguity.js
       - run: node Audit-TakkenPracticalVariations.js
       - run: node Audit-TakkenQuestionBank.js
       - run: node Audit-TakkenRewardSystem.js

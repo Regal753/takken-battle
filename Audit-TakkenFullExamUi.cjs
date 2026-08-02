@@ -256,46 +256,33 @@ async function main() {
         const item = Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
           .find((candidate) => candidate.text === text);
         if (!item) throw new Error(`Full-exam question not found: ${text.slice(0, 60)}`);
-        const check = window.TAKKEN_UNDERSTANDING.CHECKS[item.id];
         return {
           id: item.id,
           sectionId: item.sectionId,
-          answer: item.answer,
-          ruleAnswer: check.rule.answer,
-          transferAnswer: check.transfer.answer
+          answer: item.answer
         };
       });
       visitedIds.push(question.id);
       visitedSections.push(question.sectionId);
       await page.locator(`.choice-button[data-index="${question.answer}"]`).click();
       await page.locator("#feedbackBox").waitFor({ state: "visible" });
-      const confidenceGate = await page.evaluate(() => ({
-        title: document.querySelector(".understanding-check-head strong")?.textContent?.trim() || "",
-        lead: document.querySelector(".understanding-check-lead")?.textContent?.trim() || "",
+      const directExplanation = await page.evaluate(() => ({
+        title: document.querySelector(".reasoning-path-head strong")?.textContent?.trim() || "",
+        receipt: document.querySelector(".answer-save-receipt")?.textContent?.trim() || "",
+        understandingInputs: document.querySelectorAll("[data-understanding-kind], .teachback-input").length,
         next: document.querySelector("#dockNextLabel")?.textContent?.trim() || ""
       }));
       if (
-        confidenceGate.title !== "根拠再現（解説前）" ||
-        !confidenceGate.lead.includes("記憶から取り出") ||
-        confidenceGate.next !== "判断軸を選ぶ"
+        directExplanation.title !== "こう解く" ||
+        !directExplanation.receipt.includes("自動保存済み") ||
+        directExplanation.understandingInputs !== 0 ||
+        directExplanation.next === "判断軸を選ぶ"
       ) {
-        throw new Error(`Comprehension gate missing: ${JSON.stringify(confidenceGate)}`);
+        throw new Error(`Direct explanation flow invalid: ${JSON.stringify(directExplanation)}`);
       }
       if (index === 0) {
-        await page.locator("#dockNextButton").click();
-        await page.waitForTimeout(80);
-        await capture(page, "comprehension-gate-desktop.png");
-        const blockedId = await page.evaluate(() => {
-          const text = document.querySelector("#questionText")?.textContent || "";
-          return Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-            .find((candidate) => candidate.text === text)?.id || "";
-        });
-        if (blockedId !== question.id) {
-          throw new Error(`Unassessed correct answer advanced: ${question.id} -> ${blockedId}`);
-        }
+        await capture(page, "direct-explanation-desktop.png");
       }
-      await page.locator(`[data-understanding-kind="rule"][data-understanding-index="${question.ruleAnswer}"]`).click();
-      await page.locator(`[data-understanding-kind="transfer"][data-understanding-index="${question.transferAnswer}"]`).click();
       const sourceLink = await page.locator("#bookRef a.official-source-link").evaluate((link) => ({
         host: new URL(link.href).hostname,
         text: link.textContent || "",
@@ -311,7 +298,7 @@ async function main() {
       }
       visitedSourceHosts.push(sourceLink.host);
       if (index === 0) {
-        await page.locator(".understanding-downgrade-button").click();
+        await page.locator("#dockUnsureButton").click();
       }
       if (index < 9) {
         await page.locator("#dockNextButton").click();

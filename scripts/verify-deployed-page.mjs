@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260802-understanding-v18-1";
+const expectedVersion = process.argv[3] || "20260802-direct-explain-1";
 const attempts = Math.max(1, Number(process.env.TAKKEN_DEPLOY_VERIFY_ATTEMPTS) || 12);
 const intervalMs = Math.max(0, Number(process.env.TAKKEN_DEPLOY_VERIFY_INTERVAL_MS) || 10000);
 
@@ -40,40 +40,31 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(html, /id="foundationGateStatus"/, "foundation gate status missing");
     const appReference = html.match(/src="([^"]*app\.js\?v=[^"]+)"/)?.[1] || "";
     const storeReference = html.match(/src="([^"]*save-store\.js\?v=[^"]+)"/)?.[1] || "";
-    const understandingReference =
-      html.match(/src="([^"]*understanding-system\.js\?v=[^"]+)"/)?.[1] || "";
     const officialDataReference =
       html.match(/src="([^"]*official-exam-data\.js\?v=[^"]+)"/)?.[1] || "";
     const styleReference = html.match(/href="([^"]*styles\.css\?v=[^"]+)"/)?.[1] || "";
     assert.ok(appReference.includes(expectedVersion), `app version missing: ${expectedVersion}`);
     assert.ok(storeReference.includes(expectedVersion), `save store version missing: ${expectedVersion}`);
     assert.ok(
-      understandingReference.includes(expectedVersion),
-      `understanding version missing: ${expectedVersion}`
-    );
-    assert.ok(
       officialDataReference.includes(expectedVersion),
       `official exam data version missing: ${expectedVersion}`
     );
     assert.ok(styleReference.includes(expectedVersion), `style version missing: ${expectedVersion}`);
     assert.match(html, /name="takken-runtime" content="public-static"/, "public-static marker missing");
-    const [appResponse, storeResponse, understandingResponse, officialDataResponse, styleResponse] = await Promise.all([
+    const [appResponse, storeResponse, officialDataResponse, styleResponse] = await Promise.all([
       fetch(new URL(appReference, response.url), { cache: "no-store" }),
       fetch(new URL(storeReference, response.url), { cache: "no-store" }),
-      fetch(new URL(understandingReference, response.url), { cache: "no-store" }),
       fetch(new URL(officialDataReference, response.url), { cache: "no-store" }),
       fetch(new URL(styleReference, response.url), { cache: "no-store" })
     ]);
-    const [appCode, storeCode, understandingCode, officialDataCode, styleCode] = await Promise.all([
+    const [appCode, storeCode, officialDataCode, styleCode] = await Promise.all([
       appResponse.text(),
       storeResponse.text(),
-      understandingResponse.text(),
       officialDataResponse.text(),
       styleResponse.text()
     ]);
     assert.equal(appResponse.status, 200, `app HTTP ${appResponse.status}`);
     assert.equal(storeResponse.status, 200, `save store HTTP ${storeResponse.status}`);
-    assert.equal(understandingResponse.status, 200, `understanding HTTP ${understandingResponse.status}`);
     assert.equal(officialDataResponse.status, 200, `official data HTTP ${officialDataResponse.status}`);
     assert.equal(styleResponse.status, 200, `style HTTP ${styleResponse.status}`);
     assert.match(appCode, /const DEFAULT_STUDY_SCOPE = "business"/, "study scope logic missing");
@@ -88,10 +79,11 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(appCode, /function renderFoundationRoutePanel/, "foundation route renderer missing");
     assert.match(appCode, /function startPracticalDrillForUnit/, "unit practical launcher missing");
     assert.match(appCode, /const STATE_SCHEMA_VERSION = 8/, "save schema v8 missing");
-    assert.match(appCode, /function submitUnderstandingChoice/, "understanding gate missing");
-    assert.match(understandingCode, /TEXTBOOK_QUESTION_IDS/, "understanding bank missing");
-    assert.match(understandingCode, /function transferSet/, "transfer check missing");
-    assert.match(understandingCode, /TAKKEN_PRACTICAL_VARIATIONS/, "practical transfer source missing");
+    assert.match(appCode, /title\.textContent = "こう解く"/, "direct explanation heading missing");
+    assert.match(appCode, /label: "見る条件"/, "direct condition step missing");
+    assert.match(appCode, /label: "使う根拠"/, "direct legal basis step missing");
+    assert.match(appCode, /解答・進捗をこの端末へ自動保存済み/, "answer autosave receipt missing");
+    assert.doesNotMatch(appCode, /TEACHBACK_MIN_LENGTH|submitUnderstandingChoice/, "removed answer gate remains");
     assert.match(appCode, /function submitOfficialDrill/, "official drill scorer missing");
     assert.match(appCode, /2025-balanced-c-v1/, "official drill set C missing");
     assert.match(appCode, /data-confidence-question/, "official evidence gate missing");

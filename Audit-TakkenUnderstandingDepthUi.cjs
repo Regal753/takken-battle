@@ -77,38 +77,8 @@ async function currentQuestion(page) {
     const question = Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
       .find((candidate) => candidate.text === text);
     if (!question) throw new Error(`current question not found: ${text.slice(0, 80)}`);
-    const check = window.TAKKEN_UNDERSTANDING.CHECKS[question.id];
-    return {
-      id: question.id,
-      answer: question.answer,
-      ruleAnswer: check.rule.answer,
-      transferAnswer: check.transfer.answer
-    };
+    return { id: question.id, answer: question.answer };
   });
-}
-
-async function answerQuestion(page, answerIndex) {
-  await page.locator(`.choice-button[data-index="${answerIndex}"]`).click();
-  await page.locator(".understanding-check").waitFor({ state: "visible" });
-}
-
-async function chooseUnderstanding(page, kind, index) {
-  const encoded = index === -1 ? "unknown" : String(index);
-  await page.locator(
-    `[data-understanding-kind="${kind}"][data-understanding-index="${encoded}"]`
-  ).click();
-}
-
-async function passUnderstanding(page, question, transferScreenshot = "") {
-  await chooseUnderstanding(page, "rule", question.ruleAnswer);
-  await page.locator('[data-understanding-stage="transfer"]').waitFor({ state: "visible" });
-  await page.locator(".understanding-transfer-scenario").waitFor({ state: "visible" });
-  if (transferScreenshot) {
-    fs.mkdirSync(path.dirname(transferScreenshot), { recursive: true });
-    await page.screenshot({ path: transferScreenshot, fullPage: true });
-  }
-  await chooseUnderstanding(page, "transfer", question.transferAnswer);
-  await page.locator(".reasoning-path").waitFor({ state: "visible" });
 }
 
 async function savedState(page) {
@@ -122,7 +92,15 @@ async function savedState(page) {
   });
 }
 
-async function runUnderstandingLoop(browser, baseUrl) {
+async function waitForQuestion(page, id) {
+  await page.waitForFunction((targetId) => {
+    const text = document.querySelector("#questionText")?.textContent || "";
+    return Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
+      .find((candidate) => candidate.text === text)?.id === targetId;
+  }, id);
+}
+
+async function runDirectExplanationLoop(browser, baseUrl) {
   const context = await browser.newContext({
     viewport: { width: 1440, height: 1000 },
     reducedMotion: "reduce",
@@ -136,148 +114,105 @@ async function runUnderstandingLoop(browser, baseUrl) {
     if (message.type() === "error") errors.push(message.text());
   });
 
-  await gotoFresh(page, baseUrl, "understanding-");
+  await gotoFresh(page, baseUrl, "direct-explain-");
   await selectUnit(page, "01-08 自ら売主となる場合の8つの制限");
 
   const first = await currentQuestion(page);
   assert.equal(first.id, "b029");
-  await answerQuestion(page, first.answer);
-  const locked = await page.evaluate(() => ({
+  await page.locator(`.choice-button[data-index="${first.answer}"]`).click();
+  await page.locator(".reasoning-path").waitFor({ state: "visible" });
+  const direct = await page.evaluate(() => ({
+    title: document.querySelector(".reasoning-path-head strong")?.textContent || "",
+    subtitle: document.querySelector(".reasoning-path-head span")?.textContent || "",
+    labels: [...document.querySelectorAll(".reasoning-steps strong")].map((node) => node.textContent),
+    receipt: document.querySelector(".answer-save-receipt")?.textContent || "",
+    dock: document.querySelector("#dockResultText")?.textContent || "",
     answerGridHidden: document.querySelector(".answer-grid")?.hidden,
-    reasoningCount: document.querySelectorAll(".reasoning-path").length,
-    verdictCount: document.querySelectorAll(".verdict-board").length,
-    optionCount: document.querySelectorAll('[data-understanding-kind="rule"]').length,
-    ruleTexts: [...document.querySelectorAll('[data-understanding-kind="rule"].understanding-choice')]
-      .map((node) => node.textContent?.replace(/^\d+/, "").trim()).filter(Boolean),
-    preAnswerCueCount: document.querySelectorAll('[data-understanding-kind="rule"] .understanding-choice-copy').length,
-    next: document.querySelector("#dockNextLabel")?.textContent,
+    verdictReasons: document.querySelectorAll(".verdict-reason").length,
+    understandingInputs: document.querySelectorAll("[data-understanding-kind], .teachback-input").length,
     overflow: Math.max(0, document.documentElement.scrollWidth - innerWidth)
   }));
-  assert.equal(locked.answerGridHidden, true);
-  assert.equal(locked.reasoningCount, 0);
-  assert.equal(locked.verdictCount, 0);
-  assert.equal(locked.optionCount, 5);
-  assert.equal(locked.ruleTexts.length, 4);
-  assert.ok(locked.ruleTexts.every((text) => text.length >= 8));
-  assert.equal(new Set(locked.ruleTexts).size, 4);
-  assert.equal(locked.preAnswerCueCount, 0);
-  assert.equal(locked.next, "判断軸を選ぶ");
-  assert.equal(locked.overflow, 0);
+  assert.equal(direct.title, "こう解く");
+  assert.equal(direct.subtitle, "見る条件 → 使う根拠 → 当てはめ");
+  assert.deepEqual(direct.labels, ["見る条件", "使う根拠", "この問題への当てはめ"]);
+  assert.match(direct.receipt, /自動保存済み/);
+  assert.match(direct.dock, /自動保存済み/);
+  assert.equal(direct.answerGridHidden, false);
+  assert.equal(direct.verdictReasons, 4);
+  assert.equal(direct.understandingInputs, 0);
+  assert.equal(direct.overflow, 0);
 
-  await passUnderstanding(
-    page,
-    first,
-    screenshotDir ? path.join(screenshotDir, "understanding-transfer-desktop.png") : ""
-  );
-  const passed = await page.evaluate(() => ({
-    result: document.querySelector(".understanding-check-head span")?.textContent,
-    reasoningLabels: [...document.querySelectorAll(".reasoning-steps strong")]
-      .map((node) => node.textContent),
-    verdictReasons: document.querySelectorAll(".verdict-reason").length,
-    answerGridHidden: document.querySelector(".answer-grid")?.hidden,
-    downgradeVisible: Boolean(document.querySelector(".understanding-downgrade-button")),
-    resultCues: [...document.querySelectorAll(".understanding-results small")]
-      .map((node) => node.textContent?.trim()).filter(Boolean)
-  }));
-  assert.equal(passed.result, "2 / 2");
-  assert.deepEqual(passed.reasoningLabels, [
-    "適用場面",
-    "判断軸",
-    "この問題への当てはめ",
-    "間違いやすい境界",
-    "次に再現する一文"
-  ]);
-  assert.equal(passed.verdictReasons, 4);
-  assert.equal(passed.answerGridHidden, false);
-  assert.equal(passed.downgradeVisible, true);
-  assert.equal(passed.resultCues.length, 2);
-  assert.ok(passed.resultCues.every((cue) => cue.length >= 8));
   const firstSave = await savedState(page);
   assert.equal(firstSave.state.stateSchemaVersion, 8);
-  assert.equal(firstSave.state.questionStats.b029.lastUnderstandingPassed, true);
-  assert.equal(firstSave.state.questionStats.b029.understandingDayKeys.length, 1);
+  assert.equal(firstSave.state.questionStats.b029.attempts, 1);
+  assert.equal(firstSave.state.questionStats.b029.correct, 1);
+  assert.equal(firstSave.state.questionStats.b029.clearDayKeys.length, 1);
   assert.equal(firstSave.state.answered.confidence, "clear");
 
-  await page.locator("#dockNextButton").click();
-  await page.waitForFunction(() => document.querySelector("#questionText")?.textContent.includes("手付を受領"));
-  await page.evaluate(() => {
-    const namespace = String(new URLSearchParams(location.search).get("review") || "default")
-      .replace(/[^a-z0-9-]/gi, "")
-      .slice(0, 24);
-    const key = `takken-battle-study-clean-v2-hard-review-${namespace || "default"}`;
-    const state = JSON.parse(localStorage.getItem(key) || "{}");
-    const now = new Date().toISOString();
-    const today = new Date().toLocaleDateString("sv-SE");
-    state.questionStats ||= {};
-    state.questionStats.b030 = {
-      ...(state.questionStats.b030 || {}),
-      understandingDayKeys: [today],
-      lastUnderstandingAt: now,
-      lastUnderstandingPassedAt: now,
-      lastUnderstandingPassed: true
-    };
-    localStorage.setItem(key, JSON.stringify(state));
-  });
   await page.reload({ waitUntil: "networkidle" });
-  await selectUnit(page, "01-08 自ら売主となる場合の8つの制限");
+  await page.locator(".reasoning-path").waitFor({ state: "visible" });
+  assert.equal((await currentQuestion(page)).id, "b029");
+  const reloaded = await savedState(page);
+  assert.equal(reloaded.state.questionStats.b029.attempts, 1);
+
+  await page.locator("#dockNextButton").click();
+  await waitForQuestion(page, "b030");
   const second = await currentQuestion(page);
-  assert.equal(second.id, "b030");
-  await answerQuestion(page, second.answer);
-  await chooseUnderstanding(page, "rule", -1);
-  await page.locator('[data-understanding-stage="transfer"]').waitFor({ state: "visible" });
-  await chooseUnderstanding(page, "transfer", second.transferAnswer);
-  await page.locator(".teachback-input").waitFor({ state: "visible" });
-  assert.equal(await page.locator(".understanding-check-head span").textContent(), "1 / 2");
-  assert.match(await page.locator("#dockNextLabel").textContent(), /再現文をあと15字/);
-  const failedSameDay = await savedState(page);
-  assert.deepEqual(failedSameDay.state.questionStats.b030.understandingDayKeys, []);
-  assert.equal(failedSameDay.state.questionStats.b030.lastUnderstandingPassed, false);
-  await page.reload({ waitUntil: "networkidle" });
-  const reloadedFailure = await savedState(page);
-  assert.deepEqual(reloadedFailure.state.questionStats.b030.understandingDayKeys, []);
+  const wrongIndex = (second.answer + 1) % 4;
+  await page.locator(`.choice-button[data-index="${wrongIndex}"]`).click();
+  await page.locator(".reasoning-path").waitFor({ state: "visible" });
+  const wrong = await page.evaluate(() => ({
+    title: document.querySelector("#feedbackTitle")?.textContent || "",
+    mistakeTitle: document.querySelector(".mistake-capture-head strong")?.textContent || "",
+    mistakeStatus: document.querySelector(".mistake-save-status")?.textContent || "",
+    teachbackCount: document.querySelectorAll(".teachback-input").length,
+    next: document.querySelector("#dockNextLabel")?.textContent || ""
+  }));
+  assert.match(wrong.title, /根拠からこう直す/);
+  assert.match(wrong.mistakeTitle, /任意/);
+  assert.match(wrong.mistakeStatus, /未記録でも次へ/);
+  assert.equal(wrong.teachbackCount, 0);
+  assert.doesNotMatch(wrong.next, /ミス入力|再現文|判断軸/);
+  const wrongSave = await savedState(page);
+  assert.equal(wrongSave.state.marked.b030, true);
+  assert.equal(wrongSave.state.questionStats.b030.wrong, 1);
 
   await page.locator("#dockNextButton").click();
-  assert.equal((await currentQuestion(page)).id, "b030");
-  await page.waitForFunction(() => document.activeElement?.classList.contains("teachback-input"));
-  await page.locator(".teachback-input").fill("手付だけ確認");
-  await page.locator("#dockNextButton").click();
-  assert.equal((await currentQuestion(page)).id, "b030");
-  await page.locator(".teachback-input").fill("業者売主では手付上限と保全措置を別々に確認する");
-  assert.equal(await page.locator(".teachback-status").textContent(), "再現文を保存済み");
-  await page.locator("#dockNextButton").click();
-  await page.waitForFunction(() => document.querySelector("#questionText")?.textContent.includes("契約不適合責任"));
-  const secondSave = await savedState(page);
-  assert.equal(secondSave.state.marked.b030, true);
-  assert.equal(secondSave.state.questionStats.b030.lastUnderstandingPassed, false);
-  assert.match(secondSave.state.questionStats.b030.lastTeachback, /手付上限と保全措置/);
-
+  await waitForQuestion(page, "b031");
   await page.setViewportSize({ width: 390, height: 844 });
   const third = await currentQuestion(page);
-  assert.equal(third.id, "b031");
-  await answerQuestion(page, third.answer);
-  await passUnderstanding(page, third);
+  await page.locator(`.choice-button[data-index="${third.answer}"]`).click();
+  await page.locator(".reasoning-path").waitFor({ state: "visible" });
   const b031 = await page.evaluate(() => ({
     explain: document.querySelector(".reasoning-steps li:nth-child(2) p")?.textContent || "",
-    boundary: document.querySelector(".reasoning-steps li:nth-child(4) p")?.textContent || "",
+    application: document.querySelector(".reasoning-steps li:nth-child(3) p")?.textContent || "",
+    boundary: document.querySelector("#trapText")?.textContent || "",
     source: document.querySelector("#bookRef")?.textContent || "",
     overflow: Math.max(0, document.documentElement.scrollWidth - innerWidth)
   }));
   assert.match(b031.explain, /宅建業法40条/);
   assert.match(b031.explain, /通知.*2年以上/);
+  assert.match(b031.application, /正解肢/);
   assert.match(b031.boundary, /責任が一律に消える期限ではない/);
   assert.match(b031.source, /宅地建物取引業法/);
   assert.equal(b031.overflow, 0);
+
+  await page.locator("#dockUnsureButton").click();
+  const unsureSave = await savedState(page);
+  assert.equal(unsureSave.state.answered.confidence, "unsure");
+  assert.deepEqual(unsureSave.state.questionStats.b031.clearDayKeys, []);
+  assert.equal(unsureSave.state.marked.b031, true);
   assert.deepEqual(errors, []);
 
   if (screenshotDir) {
     fs.mkdirSync(screenshotDir, { recursive: true });
     await page.screenshot({
-      path: path.join(screenshotDir, "understanding-depth-b031-mobile.png"),
+      path: path.join(screenshotDir, "direct-explanation-b031-mobile.png"),
       fullPage: true
     });
   }
   await context.close();
-  return { locked, passed, b031 };
+  return { direct, wrong, b031 };
 }
 
 async function runV7Migration(browser, baseUrl) {
@@ -288,7 +223,7 @@ async function runV7Migration(browser, baseUrl) {
     timezoneId: "Asia/Tokyo"
   });
   const page = await context.newPage();
-  await gotoFresh(page, baseUrl, "understanding-migrate-");
+  await gotoFresh(page, baseUrl, "direct-migrate-");
   const before = await savedState(page);
   await page.evaluate(({ key, state }) => {
     state.stateSchemaVersion = 7;
@@ -314,7 +249,6 @@ async function runV7Migration(browser, baseUrl) {
   assert.equal(after.state.stateSchemaVersion, 8);
   assert.deepEqual(after.state.questionStats.b029.correctDayKeys, ["2026-07-30", "2026-07-31"]);
   assert.deepEqual(after.state.questionStats.b029.clearDayKeys, ["2026-07-30", "2026-07-31"]);
-  assert.deepEqual(after.state.questionStats.b029.understandingDayKeys, []);
   assert.equal(migration.backupExists, true);
   assert.match(migration.notice, /更新前のセーブを自動退避/);
   await context.close();
@@ -327,7 +261,7 @@ async function runV7Migration(browser, baseUrl) {
     : await startStaticServer(process.cwd());
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   try {
-    const loop = await runUnderstandingLoop(browser, server.baseUrl);
+    const loop = await runDirectExplanationLoop(browser, server.baseUrl);
     const migration = await runV7Migration(browser, server.baseUrl);
     console.log(JSON.stringify({ status: "ok", loop, migration }, null, 2));
   } finally {

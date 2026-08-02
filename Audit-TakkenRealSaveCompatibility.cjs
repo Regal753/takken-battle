@@ -59,6 +59,7 @@ async function main() {
   );
   assert.equal(parsed.format, transfer.SAVE_FORMAT);
   const sourceState = parsed.state;
+  const sourceSchema = Math.max(0, Math.trunc(Number(sourceState.stateSchemaVersion) || 0));
   const expected = semanticSnapshot(sourceState);
   const sourceRaw = JSON.stringify(sourceState);
 
@@ -112,9 +113,20 @@ async function main() {
     assert.equal(readback.state.stateSchemaVersion, 8);
     assert.equal(readback.state.calculationDrill?.queue?.length, 24);
     assert.equal(readback.state.practicalDrill?.stage, "idle");
-    assert.deepEqual(semanticSnapshot(JSON.parse(readback.previousRaw)), expected);
-    assert.equal(readback.upgradeRaw, sourceRaw);
-    assert.match(readback.notice, /更新前のセーブを自動退避/);
+    if (sourceSchema < 8) {
+      assert.deepEqual(semanticSnapshot(JSON.parse(readback.previousRaw)), expected);
+      assert.equal(readback.upgradeRaw, sourceRaw);
+      assert.match(readback.notice, /更新前のセーブを自動退避/);
+    } else {
+      assert.equal(readback.upgradeRaw, "");
+      if (!readback.previousRaw) {
+        await page.locator("#markButton").click();
+        readback.previousRaw = await page.evaluate((id) =>
+          localStorage.getItem(`${id}-previous`) || ""
+        , storageId);
+      }
+      assert.deepEqual(semanticSnapshot(JSON.parse(readback.previousRaw)), expected);
+    }
     assert.equal(readback.overflow, 0);
 
     await page.evaluate((id) => {
@@ -169,7 +181,8 @@ async function main() {
       preservedQuestions: Object.keys(expected.questionStats).length,
       preservedCentralAnswers: Number(expected.centralProgress.answers) || 0,
       preservedMarked: expected.markedIds.length,
-      upgradeBackupExact: readback.upgradeRaw === sourceRaw,
+      sourceSchema,
+      upgradeBackupExact: sourceSchema < 8 ? readback.upgradeRaw === sourceRaw : "not-required",
       previousBackupSemantic: true,
       corruptRecovery: recovered.corruptCopies === 1,
       uiRestore: true,
