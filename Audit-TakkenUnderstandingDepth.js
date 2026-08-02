@@ -29,7 +29,7 @@ const answerPositions = {
 };
 let phases = 0;
 let options = 0;
-let sameUnitDistractors = 0;
+let sameSectionDistractors = 0;
 let directTransfers = 0;
 const uniqueTransferIds = new Set();
 
@@ -48,7 +48,7 @@ function expectedCue(question) {
   return firstLine.length > 72 ? `${firstLine.slice(0, 71)}…` : firstLine;
 }
 
-if (system.VERSION !== 1) issues.push(`understanding version must be 1, got ${system.VERSION}`);
+if (system.VERSION !== 2) issues.push(`understanding version must be 2, got ${system.VERSION}`);
 if (textbookIds.length !== 124) issues.push(`textbook check count must be 124, got ${textbookIds.length}`);
 if (new Set(textbookIds).size !== textbookIds.length) issues.push("textbook ids must be unique");
 
@@ -95,12 +95,24 @@ textbookIds.forEach((id) => {
         return;
       }
       if (choice.text !== source.memoryRule) issues.push(`${id}/rule/${index}: source memory rule drift`);
-      if (index !== rule.answer && unitByQuestionId[choice.sourceQuestionId] === unitByQuestionId[id]) {
-        localPeers += 1;
+      if (index !== rule.answer) {
+        if (unitByQuestionId[choice.sourceQuestionId] === unitByQuestionId[id]) {
+          issues.push(`${id}/rule/${index}: same-unit rule can create another substantively correct answer`);
+        }
+        if (source.sectionId === question.sectionId || source.tag === question.tag) {
+          localPeers += 1;
+        }
       }
     });
-    sameUnitDistractors += localPeers;
-    if (localPeers < 1) issues.push(`${id}/rule: needs a same-unit distractor`);
+    sameSectionDistractors += localPeers;
+    const availableLocalPeers = textbookIds.filter((candidateId) => {
+      if (candidateId === id || unitByQuestionId[candidateId] === unitByQuestionId[id]) return false;
+      const candidate = questions[candidateId];
+      return candidate && (candidate.sectionId === question.sectionId || candidate.tag === question.tag);
+    }).length;
+    if (availableLocalPeers > 0 && localPeers < 1) {
+      issues.push(`${id}/rule: needs a same-section distractor`);
+    }
   }
 
   phases += 1;
@@ -154,7 +166,7 @@ const report = {
   textbookQuestions: textbookIds.length,
   phases,
   options,
-  sameUnitDistractors,
+  sameSectionDistractors,
   directTransfers,
   uniqueTransferQuestions: uniqueTransferIds.size,
   answerPositions,
