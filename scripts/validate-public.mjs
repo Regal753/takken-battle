@@ -31,6 +31,7 @@ const required = [
   "Audit-TakkenTextbookRangesUi.cjs",
   "Audit-TakkenQuestionQuality.js",
   "Audit-TakkenUnderstandingDepth.js",
+  "Audit-TakkenRuleChoiceAmbiguity.js",
   "Audit-TakkenUnderstandingDepthUi.cjs",
   "Audit-TakkenPracticalVariations.js",
   "Audit-TakkenPracticalVariationsUi.cjs",
@@ -55,6 +56,7 @@ const app = text("app.js");
 const understanding = text("understanding-system.js");
 const readme = text("README.md");
 const pagesWorkflow = text(".github/workflows/pages.yml");
+const ciWorkflow = text(".github/workflows/ci.yml");
 
 assert.match(index, /name="takken-runtime" content="public-static"/);
 assert.match(app, /const PUBLIC_STATIC_MODE/);
@@ -77,6 +79,7 @@ assert.match(app, /function renderTodayCommand/);
 assert.match(app, /function foundationLearningRoute/);
 assert.match(app, /function renderFoundationRoutePanel/);
 assert.match(app, /function startPracticalDrillForUnit/);
+assert.match(understanding, /const VERSION = 2/);
 assert.match(app, /const PRACTICAL_SESSION_SIZES = Object\.freeze\(\[4, 10, 20, 45\]\)/);
 assert.match(app, /const STATE_SCHEMA_VERSION = 8/);
 assert.match(app, /const OFFICIAL_DAILY_DRILL_DEFINITIONS/);
@@ -138,13 +141,13 @@ assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 第2分冊・権利関係を固める/);
 assert.match(index, /③ 法令・税その他へ進む/);
 assert.match(index, /④ 全分野を混ぜる/);
-assert.match(index, /styles\.css\?v=20260802-understanding-v18/);
-assert.match(index, /understanding-system\.js\?v=20260802-understanding-v18/);
-assert.match(index, /practical-question-bank\.js\?v=20260802-understanding-v18/);
-assert.match(index, /calculation-drill\.js\?v=20260802-understanding-v18/);
-assert.match(index, /app\.js\?v=20260802-understanding-v18/);
-assert.match(index, /save-store\.js\?v=20260802-understanding-v18/);
-assert.match(index, /official-exam-data\.js\?v=20260802-understanding-v18/);
+assert.match(index, /styles\.css\?v=20260802-understanding-v18-1/);
+assert.match(index, /understanding-system\.js\?v=20260802-understanding-v18-1/);
+assert.match(index, /practical-question-bank\.js\?v=20260802-understanding-v18-1/);
+assert.match(index, /calculation-drill\.js\?v=20260802-understanding-v18-1/);
+assert.match(index, /app\.js\?v=20260802-understanding-v18-1/);
+assert.match(index, /save-store\.js\?v=20260802-understanding-v18-1/);
+assert.match(index, /official-exam-data\.js\?v=20260802-understanding-v18-1/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
 assert.match(app, /根拠再現（解説前）/);
@@ -188,10 +191,11 @@ assert.match(pagesWorkflow, /node Audit-TakkenTextbookRanges\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenQuestionQuality\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenExplanationMastery\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenUnderstandingDepth\.js/);
+assert.match(pagesWorkflow, /node Audit-TakkenRuleChoiceAmbiguity\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenPracticalVariations\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenLearningArchitecture\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
-assert.match(pagesWorkflow, /20260802-understanding-v18/);
+assert.match(pagesWorkflow, /20260802-understanding-v18-1/);
 assert.match(pagesWorkflow, /cp [^\n]*understanding-system\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*calculation-drill\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*practical-question-bank\.js[^\n]*_site\//);
@@ -199,6 +203,8 @@ assert.match(pagesWorkflow, /cp [^\n]*official-exam-data\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*save-store\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*save-transfer\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*exam-blueprint\.js[^\n]*_site\//);
+assert.match(ciWorkflow, /node Audit-TakkenUnderstandingDepth\.js/);
+assert.match(ciWorkflow, /node Audit-TakkenRuleChoiceAmbiguity\.js/);
 
 const forbiddenNames = new Set([
   ".env",

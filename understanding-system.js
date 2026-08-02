@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = 1;
+  const VERSION = 2;
   const blueprint = window.TAKKEN_EXAM_BLUEPRINT || {};
   const questions = {
     ...(window.TAKKEN_QUESTIONS || {}),
@@ -42,12 +42,9 @@
   }
 
   function peerPriority(question, candidate) {
-    const unit = unitByQuestionId[question.id]?.id || "";
-    const candidateUnit = unitByQuestionId[candidate.id]?.id || "";
-    if (unit && unit === candidateUnit) return 0;
-    if (question.tag && question.tag === candidate.tag) return 1;
-    if (question.sectionId && question.sectionId === candidate.sectionId) return 2;
-    return 3;
+    if (question.tag && question.tag === candidate.tag) return 0;
+    if (question.sectionId && question.sectionId === candidate.sectionId) return 1;
+    return 2;
   }
 
   function scenarioCue(question) {
@@ -70,9 +67,13 @@
     const kind = "rule";
     const correctText = String(question[field] || "").trim();
     const correctNormalized = normalized(correctText);
+    const sourceUnitId = unitByQuestionId[question.id]?.id || "";
     const used = new Set([correctNormalized]);
     const distractors = questionList
-      .filter((candidate) => candidate.id !== question.id)
+      .filter((candidate) =>
+        candidate.id !== question.id &&
+        (!sourceUnitId || unitByQuestionId[candidate.id]?.id !== sourceUnitId)
+      )
       .map((candidate) => ({
         sourceQuestionId: candidate.id,
         text: String(candidate[field] || "").trim(),
