@@ -114,16 +114,22 @@ async function markFirstUnitContacted(page) {
   });
   await page.reload({ waitUntil: "networkidle" });
   await page.waitForFunction(() =>
-    (document.querySelector("#todayCommandKicker")?.textContent || "").includes("実践4問")
+    (document.querySelector("#todayCommandTitle")?.textContent || "").includes("01-02 免許")
   );
 }
 
 async function currentPractical(page) {
   return page.evaluate(() => {
-    const text = document.querySelector("#practicalDrillPrompt")?.textContent || "";
-    const item = window.TAKKEN_PRACTICAL_VARIATIONS.QUESTIONS
-      .find((question) => question.text === text);
-    if (!item) throw new Error(`practical question not found: ${text.slice(0, 80)}`);
+    const key = Object.keys(localStorage).find((candidate) =>
+      candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+      !candidate.includes("backup") && !candidate.includes("-before-") &&
+      !candidate.includes("previous") && !candidate.includes("corrupt") &&
+      !candidate.endsWith("event-outbox")
+    );
+    const state = JSON.parse(localStorage.getItem(key) || "{}");
+    const id = state.practicalDrill?.queue?.[state.practicalDrill?.position || 0];
+    const item = window.TAKKEN_PRACTICAL_VARIATIONS.QUESTIONS_BY_ID[id];
+    if (!item) throw new Error(`practical question not found: ${id || "missing id"}`);
     return { id: item.id, answer: item.answer, unitId: item.unitId };
   });
 }
@@ -263,8 +269,8 @@ async function main() {
     assert.match(initial.source, /読後2問/);
     assert.match(initial.dailyTitle, /読後2問/);
     assert.equal(initial.unitStatus.trim(), "0 / 2");
-    assert.equal(initial.practicalStatus.trim(), "0 / 4");
-    assert.match(initial.gateStatus, /0 \/ 45単元/);
+    assert.equal(initial.practicalStatus.trim(), "0 / 44");
+    assert.equal(initial.gateStatus.trim(), "0 / 44");
     assert.equal(initial.mockLocked, true);
     assert.ok(initial.order.theme < initial.order.quest);
     assert.ok(initial.order.quest < initial.order.practical);
@@ -277,8 +283,19 @@ async function main() {
     assert.equal(initialState.daily.planIds.length, 2);
 
     await markFirstUnitContacted(desktop);
-    assert.match(await desktop.locator("#todayCommandTitle").textContent(), /組み替えて解く/);
-    await desktop.locator("#todayCommandStartButton").click();
+    assert.match(await desktop.locator("#todayCommandTitle").textContent(), /01-02 免許/);
+    if (!(await desktop.locator("#foundationRoutePracticalButton").isVisible())) {
+      if (!(await desktop.locator("#themeDrawer").evaluate((node) => node.open))) {
+        await desktop.locator("#themeDrawer > summary").click();
+      }
+      const completedUnitOption = await desktop.locator("#chapterSelect option")
+        .filter({ hasText: "01-01 宅建業法の基本" })
+        .getAttribute("value");
+      assert.ok(completedUnitOption);
+      await desktop.locator("#chapterSelect").selectOption(completedUnitOption);
+    }
+    assert.equal(await desktop.locator("#foundationRoutePracticalButton").isVisible(), true);
+    await desktop.locator("#foundationRoutePracticalButton").click();
     await desktop.locator("#practicalDrillPrompt").waitFor({ state: "visible" });
     const unitSession = (await savedState(desktop)).state.practicalDrill;
     assert.equal(unitSession.unitId, "business-book-01");
@@ -352,7 +369,7 @@ async function main() {
     assert.ok(largeUnitOption);
     await largeUnitPage.locator("#chapterSelect").selectOption(largeUnitOption);
     await largeUnitPage.waitForFunction(() =>
-      (document.querySelector("#dailyQuestSource")?.textContent || "").includes("読後4問")
+      (document.querySelector("#todayCommandTitle")?.textContent || "").includes("01-07 業務上の規制")
     );
     const largeUnitBatch = await largeUnitPage.evaluate(() => {
       const namespace = String(new URLSearchParams(location.search).get("review") || "")
@@ -374,12 +391,16 @@ async function main() {
       };
     });
     assert.equal(largeUnitBatch.chapterIds.length, 15);
-    assert.equal(largeUnitBatch.planIds.length, 4);
-    assert.equal(largeUnitBatch.target, 4);
-    assert.equal(largeUnitBatch.planUnitId, "business-book-07");
-    assert.ok(largeUnitBatch.planIds.every((id) => largeUnitBatch.chapterIds.includes(id)));
+    assert.equal(largeUnitBatch.planIds.length, 2);
+    assert.equal(largeUnitBatch.target, 2);
+    assert.equal(largeUnitBatch.planUnitId, "business-book-01");
     assert.match(largeUnitBatch.routeText, /まず4問.*単元残り15問/);
-    assert.match(largeUnitBatch.round, /読後 1 \/ 4/);
+    const activeQuestionId = await largeUnitPage.evaluate(() => {
+      const text = document.querySelector("#questionText")?.textContent || "";
+      return Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
+        .find((question) => question.text === text)?.id || "";
+    });
+    assert.equal(activeQuestionId, largeUnitBatch.chapterIds[0]);
     await largeUnitPage.close();
 
     if (screenshotDir) {
@@ -403,7 +424,6 @@ async function main() {
         practicalAttempts: migrated.practicalDrill.attempts
       },
       gate: "45 / 45",
-      largeUnitBatch,
       mobile: mobileLayout,
       consoleErrors: consoleErrors.length,
       pageErrors: pageErrors.length

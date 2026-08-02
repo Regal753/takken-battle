@@ -352,7 +352,9 @@ button {
 }
 
 #nextButton {
-  display: none;
+  display: grid;
+  place-items: center;
+  margin-top: 14px;
 }
 
 .answer-dock[hidden] {
@@ -7434,4 +7436,149 @@ button.mission-step {
   width: 100%;
   margin-left: 0;
   margin-right: 0;
+}
+
+/* 復習10問は常設の大カードにせず、一行の進捗から必要時だけ展開する。 */
+.quest-card,
+.quest-card.is-first-pass {
+  display: block;
+  min-height: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+.quest-compact-summary {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  min-height: 64px;
+  padding: 10px 14px;
+  gap: 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.quest-compact-summary::-webkit-details-marker {
+  display: none;
+}
+
+.quest-compact-summary .quest-main {
+  grid-area: auto;
+  grid-template-columns: minmax(150px, auto) minmax(120px, 260px);
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.quest-compact-toggle {
+  display: inline-flex;
+  align-items: center;
+  min-height: 38px;
+  padding: 0 12px;
+  border: 1px solid rgba(116, 204, 247, 0.36);
+  border-radius: 4px;
+  color: #dff3fb;
+  background: rgba(13, 42, 58, 0.72);
+  font-size: 12px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.quest-compact-toggle::after {
+  content: "＋";
+  margin-left: 8px;
+  color: #f2c25b;
+  font-size: 16px;
+}
+
+.quest-card[open] .quest-compact-toggle::after {
+  content: "−";
+}
+
+.quest-card:not([open]) > .quest-card-body {
+  display: none;
+}
+
+.quest-card:not([open]) .quest-compact-summary .quest-source {
+  display: none;
+}
+
+.quest-card-body {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) 210px minmax(250px, 320px);
+  grid-template-areas:
+    "route stats actions"
+    "reward sprint actions";
+  align-items: stretch;
+  gap: 10px;
+  padding: 0 14px 14px;
+  border-top: 1px solid rgba(116, 204, 247, 0.14);
+}
+
+.quest-card-body .campaign-route-wrap { grid-area: route; }
+.quest-card-body .quest-reward-rail { grid-area: reward; }
+.quest-card-body .quest-stats { grid-area: stats; }
+.quest-card-body .quest-actions { grid-area: actions; }
+.quest-card-body .sprint-line { grid-area: sprint; }
+
+@media (max-width: 899px) {
+  .quest-card-body {
+    grid-template-columns: minmax(0, 1fr) minmax(220px, 38%);
+    grid-template-areas:
+      "route actions"
+      "reward actions"
+      "stats sprint";
+  }
+}
+
+@media (max-width: 520px) {
+  .quest-compact-summary {
+    min-height: 58px;
+    padding: 7px 9px;
+    gap: 7px;
+  }
+
+  .quest-compact-summary .quest-main,
+  .quest-card.is-first-pass .quest-compact-summary .quest-main {
+    display: block;
+  }
+
+  .quest-compact-summary .quest-main strong {
+    font-size: 16px;
+  }
+
+  .quest-compact-summary .quest-source,
+  .quest-compact-summary .quest-meter {
+    display: none;
+  }
+
+  .quest-compact-toggle {
+    min-height: 36px;
+    padding: 0 8px;
+    font-size: 10px;
+  }
+
+  .quest-card-body {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "route"
+      "reward"
+      "actions"
+      "stats"
+      "sprint";
+    padding: 8px 9px 10px;
+  }
+
+  .answer-dock-inner {
+    grid-template-columns: 48px minmax(72px, 1fr) minmax(168px, 55%);
+  }
+
+  .dock-status strong {
+    display: none;
+  }
+
+  .dock-next-button {
+    min-height: 56px;
+    font-size: 14px;
+  }
 }

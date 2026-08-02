@@ -34,6 +34,7 @@
   const FIRST_PASS_PARAM = URL_PARAMS.has("pass") || URL_PARAMS.has("firstpass") || URL_PARAMS.has("onepass");
   const RUN_MODE_FIRST_PASS = "first-pass";
   const RUN_MODE_MOCK = "mock";
+  const RUN_MODE_CHAPTER = "chapter";
   const MOCK_DURATION_MINUTES = 120;
   const MOCK_DURATION_MS = MOCK_DURATION_MINUTES * 60 * 1000;
   const OFFICIAL_PAST_EXAMS_URL = "https://www.retio.or.jp/exam/past_ques_ans/other/";
@@ -799,6 +800,7 @@
     step: 0,
     sessionId: createOpaqueId("session"),
     runMode: FIRST_PASS_PARAM ? RUN_MODE_FIRST_PASS : "quest",
+    chapterModeId: "",
     adaptive: false,
     studyScope: DEFAULT_STUDY_SCOPE,
     questionStats: {},
@@ -1456,6 +1458,8 @@
   function normalizePracticalDrillState(input) {
     const fresh = createPracticalDrillState();
     if (!PRACTICAL_QUESTION_IDS.length) return fresh;
+    const currentBankVersion = PRACTICAL_VARIATIONS?.VERSION || 1;
+    const bankChanged = Number(input?.version || 1) !== currentBankVersion;
     const scope = PRACTICAL_SCOPES.includes(input?.scope) ? input.scope : "all";
     const unitId = PRACTICAL_VARIATIONS?.UNITS?.some((unit) => unit.id === input?.unitId)
       ? String(input.unitId)
@@ -1480,7 +1484,9 @@
     const rawAttempt = input?.currentAttempt;
     const selected = Number(rawAttempt?.selected);
     const currentQuestion = PRACTICAL_QUESTION_BY_ID[currentId];
-    const currentAttempt = currentQuestion && rawAttempt?.id === currentId &&
+    // 問題IDと履歴は維持する。問題本文・正答が更新された場合だけ、
+    // 途中で表示中だった一問の選択を外して旧正答の誤判定を防ぐ。
+    const currentAttempt = !bankChanged && currentQuestion && rawAttempt?.id === currentId &&
       Number.isInteger(selected) && selected >= 0 && selected < 4
       ? {
           id: currentId,
@@ -1492,7 +1498,7 @@
         }
       : null;
     return {
-      version: PRACTICAL_VARIATIONS?.VERSION || 1,
+      version: currentBankVersion,
       stage,
       scope,
       unitId,
@@ -1565,11 +1571,16 @@
         : ""
     };
     const requestedMock = input?.runMode === RUN_MODE_MOCK && mockFormById(next.mock.formId);
+    const requestedChapterModeId = String(input?.chapterModeId || "").slice(0, 80);
+    const requestedChapter = CHAPTERS.find((chapter) => chapter.id === requestedChapterModeId);
     next.runMode = FIRST_PASS_PARAM || next.runMode === RUN_MODE_FIRST_PASS
       ? RUN_MODE_FIRST_PASS
       : requestedMock
         ? RUN_MODE_MOCK
-        : "quest";
+        : input?.runMode === RUN_MODE_CHAPTER && requestedChapter
+          ? RUN_MODE_CHAPTER
+          : "quest";
+    next.chapterModeId = next.runMode === RUN_MODE_CHAPTER ? requestedChapter.id : "";
     next.adaptive = false;
     next.studyScope = STUDY_SCOPE_IDS.has(input?.studyScope)
       ? input.studyScope
@@ -1670,6 +1681,7 @@
       next.activeCutCheck = null;
       next.finished = false;
       next.runMode = "quest";
+      next.chapterModeId = "";
       next.adaptive = false;
       next.dailyFinishedDate = "";
       next.daily = createDailyState();
@@ -2835,11 +2847,9 @@
     ).length;
     const stage = baseContacted < baseIds.length
       ? "input"
-      : practicalGrounded < practicalItems.length
-        ? "practical"
-        : baseRetained < baseIds.length
-          ? "retention"
-          : "complete";
+      : baseRetained < baseIds.length
+        ? "retention"
+        : "complete";
     return {
       chapter,
       baseIds,
@@ -2904,22 +2914,17 @@
     if (selectedSnapshot?.baseContacted < selectedSnapshot?.baseIds.length) {
       return { kind: "unit", snapshot: selectedSnapshot };
     }
-    const dueIds = scopeReviewIds(scopeId).filter((id) =>
-      isContacted(id) && !answeredToday(id) && !isRetained(id)
-    );
-    if (dueIds.length) return { kind: "review", dueIds };
 
-    if (selectedSnapshot?.practicalGrounded < selectedSnapshot?.practicalItems.length) {
-      return { kind: "practical", snapshot: selectedSnapshot };
-    }
-
+    // 基礎一周中は同じ単元の実践4/4を通行証にしない。
+    // 読後問題が終わったら次の未接触単元へ進み、実践は別メニューで混ぜる。
     const nextInput = chapters.map(unitLearningSnapshot)
       .find((item) => item.baseContacted < item.baseIds.length);
     if (nextInput) return { kind: "unit", snapshot: nextInput };
 
-    const nextPractical = chapters.map(unitLearningSnapshot)
-      .find((item) => item.practicalGrounded < item.practicalItems.length);
-    if (nextPractical) return { kind: "practical", snapshot: nextPractical };
+    const dueIds = scopeReviewIds(scopeId).filter((id) =>
+      isContacted(id) && !answeredToday(id) && !isRetained(id)
+    );
+    if (dueIds.length) return { kind: "review", dueIds };
 
     const nextScope = nextFoundationScope(scopeId);
     if (nextScope && !foundationCoverageComplete()) {
@@ -2943,6 +2948,22 @@
 
   function isFirstPassMode() {
     return state.runMode === RUN_MODE_FIRST_PASS;
+  }
+
+  function chapterModeChapter() {
+    if (state.runMode !== RUN_MODE_CHAPTER) return null;
+    return CHAPTERS.find((chapter) => chapter.id === state.chapterModeId) || null;
+  }
+
+  function isChapterMode() {
+    return Boolean(chapterModeChapter());
+  }
+
+  function nextChapterModeId() {
+    const chapter = chapterModeChapter();
+    if (!chapter) return null;
+    const localIndex = chapter.ids.indexOf(currentId());
+    return localIndex >= 0 ? chapter.ids[localIndex + 1] || null : chapter.ids[0] || null;
   }
 
   function isMockMode() {
@@ -4260,11 +4281,11 @@
       const due = route.dueIds?.length || 0;
       return {
         stage: "翌日復習",
-        title: due ? `根拠を再現する${due}問` : "固定10問で定着を作る",
+        title: due ? `根拠を再現する${due}問` : "復習10問で定着を作る",
         text: due
           ? "昨日以前に触れた問題を、答えの記憶ではなく4肢の根拠から再判定する。"
-          : "新しい単元へ進む前に、学習済み範囲だけから固定10問を作る。",
-        button: "固定10問を始める",
+          : "学習済み範囲だけから10問を作り、古い理解から再確認する。",
+        button: "復習10問を始める",
         action: "review",
         unitId: "",
         scopeId: ""
@@ -4273,10 +4294,10 @@
     if (route.kind === "practical") {
       const { chapter, practicalGrounded, practicalItems } = route.snapshot;
       return {
-        stage: "実践4問",
-        title: `${chapter.topicLabel}を組み替えて解く`,
-        text: `読後問題に接触済み。ア・イを別々に判定し、根拠クリア${practicalGrounded}/${practicalItems.length}を4/4にする。`,
-        button: "この単元の実践4問",
+        stage: "任意の実践4問",
+        title: `${chapter.topicLabel}を別形式で解く`,
+        text: `基礎一周を止めずに使う追加演習。単一選択・組合せ・個数を混ぜ、根拠クリアは${practicalGrounded}/${practicalItems.length}。`,
+        button: "任意の実践4問を開く",
         action: "practical",
         unitId: chapter.id,
         scopeId: ""
@@ -4286,7 +4307,7 @@
       return {
         stage: "次の分冊へ",
         title: `${route.nextScope.shortLabel}へ進む`,
-        text: "今の範囲は読後問題と実践に接触済み。復習対象は残したまま、次の未学習範囲を開く。",
+        text: "今の範囲の読後問題に接触済み。復習対象と任意実践は残したまま、次の未学習範囲を開く。",
         button: `${route.nextScope.shortLabel}を開く`,
         action: "scope",
         unitId: "",
@@ -4327,8 +4348,7 @@
 
     const selected = selectedFoundationChapter();
     const selectedSnapshot = selected ? unitLearningSnapshot(selected) : null;
-    const showSecondaryPractical = route.kind !== "practical" &&
-      selectedSnapshot?.baseContacted === selectedSnapshot?.baseIds.length &&
+    const showSecondaryPractical = selectedSnapshot?.baseContacted === selectedSnapshot?.baseIds.length &&
       selectedSnapshot?.practicalGrounded < selectedSnapshot?.practicalItems.length;
     elements.foundationRoutePracticalButton.hidden = !showSecondaryPractical;
     if (showSecondaryPractical) {
@@ -4390,27 +4410,26 @@
     renderOfficialDrillPanel(mission, 0);
 
     elements.missionBattleLabel.textContent = "読後問題";
-    elements.missionOfficialLabel.textContent = "実践4問";
+    elements.missionOfficialLabel.textContent = "次の単元";
     elements.missionReviewLabel.textContent = "翌日復習";
-    elements.missionMinutesLabel.textContent = "公式演習";
+    elements.missionMinutesLabel.textContent = "任意実践";
     const activeSnapshot = route.snapshot || null;
     elements.missionBattleStatus.textContent = activeSnapshot
       ? `${activeSnapshot.baseContacted} / ${activeSnapshot.baseIds.length}`
       : `${scopeBaseIds.filter(isContacted).length} / ${scopeBaseIds.length}`;
-    elements.missionOfficialStatus.textContent = activeSnapshot
-      ? `${activeSnapshot.practicalGrounded} / ${activeSnapshot.practicalItems.length}`
-      : `${scopePracticalIds.filter((id) =>
-          state.practicalDrill?.history?.[id]?.lastConfidence === "confident"
-        ).length} / ${scopePracticalIds.length}`;
+    elements.missionOfficialStatus.textContent =
+      `${scopeBaseIds.filter(isContacted).length} / ${scopeBaseIds.length}`;
     elements.missionReviewStatus.textContent = due ? `${due}件` : "持越しなし";
-    elements.missionMinutesStatus.textContent = `${progress.completedUnits} / ${TEXTBOOK_CHAPTERS.length}単元`;
+    elements.missionMinutesStatus.textContent = `${scopePracticalIds.filter((id) =>
+      state.practicalDrill?.history?.[id]?.lastConfidence === "confident"
+    ).length} / ${scopePracticalIds.length}`;
 
     const routeStep = route.kind === "unit"
       ? elements.missionBattleStep
-      : route.kind === "practical"
-        ? elements.missionOfficialStep
-        : route.kind === "review"
-          ? elements.missionReviewStep
+      : route.kind === "review"
+        ? elements.missionReviewStep
+        : route.kind === "scope"
+          ? elements.missionOfficialStep
           : elements.missionMinutesStep;
     [
       elements.missionBattleStep,
@@ -5005,6 +5024,9 @@
     if (isFirstPassMode()) {
       return nextFirstPassId();
     }
+    if (isChapterMode()) {
+      return nextChapterModeId();
+    }
     if (state.index >= ORDER.length - 1) {
       return null;
     }
@@ -5030,6 +5052,9 @@
   function nextActionLabel() {
     if (isMockMode()) {
       return state.mock.position >= mockQuestionIds().length - 1 ? "採点結果を見る" : "次の問題へ";
+    }
+    if (isChapterMode()) {
+      return nextChapterModeId() ? "次のテーマ問題へ" : "テーマ結果を見る";
     }
     if (isDailyQuestQuestion(currentId()) && dailyQuestDoneCount() >= dailyQuestIds().length) {
       return "今日の10問を終了";
@@ -5081,7 +5106,7 @@
     const xpResult = typeof answered.xpReward === "number" ? ` / EXP +${answered.xpReward}` : "";
     elements.dockResultText.textContent = `${resultParts.join("・")}${xpResult}`;
 
-    const dailyComplete = Boolean(
+    const dailyComplete = !isChapterMode() && Boolean(
       isDailyQuestQuestion(currentId()) && dailyQuestDoneCount() >= dailyQuestIds().length
     );
     const targetId = nextTargetId();
@@ -5387,8 +5412,8 @@
       items.sort((left, right) =>
         practicalPriority(left, drill) - practicalPriority(right, drill) ||
         (drill.history[left.id]?.attempts || 0) - (drill.history[right.id]?.attempts || 0) ||
-        ((left.variantIndex - rotation) % 4 + 4) % 4 -
-          (((right.variantIndex - rotation) % 4 + 4) % 4) ||
+        ((left.queueRank - rotation) % 4 + 4) % 4 -
+          (((right.queueRank - rotation) % 4 + 4) % 4) ||
         left.id.localeCompare(right.id)
       );
     });
@@ -5418,8 +5443,8 @@
       .sort((left, right) =>
         practicalPriority(left, drill) - practicalPriority(right, drill) ||
         (drill.history[left.id]?.attempts || 0) - (drill.history[right.id]?.attempts || 0) ||
-        ((left.variantIndex - rotation) % 4 + 4) % 4 -
-          (((right.variantIndex - rotation) % 4 + 4) % 4) ||
+        ((left.queueRank - rotation) % 4 + 4) % 4 -
+          (((right.queueRank - rotation) % 4 + 4) % 4) ||
         left.id.localeCompare(right.id)
       )
       .map((question) => question.id);
@@ -5505,7 +5530,7 @@
       : `誤答。正解は「${question.choices[question.answer]}」。今回の再出題へ追加した。`;
     elements.practicalDrillReasoning.replaceChildren(
       practicalReasoningStep(1, "判断軸", question.explain),
-      practicalReasoningStep(2, "ア・イへの当てはめ", question.statementExplanations.join("\n")),
+      practicalReasoningStep(2, "各肢への当てはめ", question.statementExplanations.join("\n")),
       practicalReasoningStep(3, "間違いやすい境界", question.trap),
       practicalReasoningStep(4, "次に再現する一文", question.memoryRule)
     );
@@ -5716,6 +5741,10 @@
       showMockFinished();
       return;
     }
+    if (isChapterMode() && state.finished) {
+      showChapterFinished();
+      return;
+    }
     render();
   }
 
@@ -5733,8 +5762,9 @@
 
     elements.enemyName.textContent = battleProfile.name;
     elements.enemyClassLabel.textContent = battleProfile.classLabel;
-    elements.sourceLabel.textContent = question.sourceRef
-      ? `令和8年度 / ${question.sourceRef} / ${chapterText} / 基準日 ${question.legalBaseline}`
+    const sourceLocator = question.sourceLocator || question.sourceRef;
+    elements.sourceLabel.textContent = sourceLocator
+      ? `令和8年度 / ${sourceLocator} / ${chapterText} / 基準日 ${question.legalBaseline}`
       : `旧問題 / 第1分冊 宅建業法 / ${chapterText} / ${question.level || "本試験寄せ"}`;
     elements.enemyStateLabel.textContent = isMockMode() && answered
       ? "ANSWER LOCKED"
@@ -5835,8 +5865,12 @@
     );
     const dailyIndex = dailyQuestIds().indexOf(question.id);
     const scopeIndex = scopeNewIds().indexOf(question.id);
+    const activeChapter = chapterModeChapter();
+    const chapterIndex = activeChapter?.ids.indexOf(question.id) ?? -1;
     elements.roundLabel.textContent = isMockMode()
       ? `${state.mock.position + 1} / ${mockQuestionIds().length}`
+      : chapterIndex >= 0
+        ? `テーマ ${chapterIndex + 1} / ${activeChapter.ids.length}`
       : dailyIndex >= 0 && !isFirstPassMode()
         ? `${state.daily.planMode === "unit" ? "読後" : "今日"} ${dailyIndex + 1} / ${dailyQuestIds().length}`
         : scopeIndex >= 0
@@ -6113,7 +6147,7 @@
       link.href = question.sourceUrl;
       link.target = "_blank";
       link.rel = "noopener noreferrer";
-      link.textContent = `公式根拠: ${question.sourceRef}（基準日 ${question.legalBaseline}）`;
+      link.textContent = `公式根拠: ${question.sourceLocator || question.sourceRef}（基準日 ${question.legalBaseline}）`;
       elements.bookRef.append(link);
       return;
     }
@@ -6784,13 +6818,14 @@
 
   function isDailyQuestPaused() {
     return !isFirstPassMode() &&
+      !isChapterMode() &&
       !isMockMode() &&
       dailyQuestIsComplete() &&
       state.dailyFinishedDate === todayKey();
   }
 
   function finishDailyQuest() {
-    if (!dailyQuestIsComplete() || isFirstPassMode()) return false;
+    if (!dailyQuestIsComplete() || isFirstPassMode() || isChapterMode()) return false;
     state.dailyFinishedDate = todayKey();
     saveState();
     renderPassPlan();
@@ -6920,7 +6955,7 @@
         const pageLabel = chapter.textbookPart ? `（p.${chapter.page}〜）` : "";
         option.textContent =
           `${chapter.topicLabel || chapter.label}${pageLabel} ` +
-          `読後${snapshot.baseContacted}/${snapshot.baseIds.length}・実践${snapshot.practicalGrounded}/${snapshot.practicalItems.length}`;
+          `読後${snapshot.baseContacted}/${snapshot.baseIds.length}・任意実践${snapshot.practicalGrounded}/${snapshot.practicalItems.length}`;
         option.selected = chapterIndex === activeChapter;
         optionGroup.append(option);
       });
@@ -6983,13 +7018,11 @@
       const snapshot = unitLearningSnapshot(chapter);
       elements.coachTitle.textContent =
         `${chapter.topicLabel}・本文p.${chapter.page}直後`;
-    elements.coachText.textContent = snapshot.baseContacted < snapshot.baseIds.length
+      elements.coachText.textContent = snapshot.baseContacted < snapshot.baseIds.length
         ? `本文のこの単元を読み切り、読後問題を2〜4問ずつ解く。現在${snapshot.baseContacted}/${snapshot.baseIds.length}。正解でも勘・根拠なしは弱点へ残す。`
-        : snapshot.practicalGrounded < snapshot.practicalItems.length
-          ? `読後問題は完了。次は同じ単元の実践4問を解き、ア・イ両方の根拠を言えた問題を${snapshot.practicalGrounded}/4から4/4へする。`
-          : snapshot.baseRetained < snapshot.baseIds.length
-            ? `読後問題と実践4問は完了。翌日以降に${snapshot.baseIds.length}問をもう一度正答し、最新の誤答・迷いがなければ定着扱い。`
-            : "本文・読後問題・実践4問・翌日復習を通過。この単元は定着済み。次の未完了単元へ進む。";
+        : snapshot.baseRetained < snapshot.baseIds.length
+          ? `読後問題は完了。次の未接触単元へ進む。翌日復習と別形式の実践4問は独立して残るため、基礎一周を止めない。`
+          : "本文・読後問題・翌日復習を通過。この単元は定着済み。実践4問は必要なときだけ別メニューで使う。";
       return;
     }
 
@@ -7060,8 +7093,7 @@
         "is-done",
         legacy
           ? progressValue === chapter.ids.length
-          : snapshot.baseContacted === snapshot.baseIds.length &&
-            snapshot.practicalGrounded === snapshot.practicalItems.length
+          : snapshot.baseContacted === snapshot.baseIds.length
       );
       if (!legacy) row.dataset.learningStage = snapshot.stage;
       row.setAttribute(
@@ -7084,7 +7116,7 @@
       score.textContent = legacy
         ? `${progressLabel} ${progressValue}/${chapter.ids.length}`
         : `読後 ${snapshot.baseContacted}/${snapshot.baseIds.length}・` +
-          `実践 ${snapshot.practicalGrounded}/${snapshot.practicalItems.length}`;
+          `任意実践 ${snapshot.practicalGrounded}/${snapshot.practicalItems.length}`;
 
       row.append(dot, label, score);
       row.addEventListener("click", () => selectChapter(chapterIndex));
@@ -7157,29 +7189,17 @@
     const chapter = CHAPTERS[chapterIndex];
     if (!chapter) return;
     selectedTextbookChapterId = chapter.textbookPart ? chapter.id : "";
-    state.runMode = "quest";
+    state.runMode = RUN_MODE_CHAPTER;
+    state.chapterModeId = chapter.id;
     setFirstPassUrl(false);
     const isLegacyChapter = chapter.ids.every((id) => LEGACY_ID_SET.has(id));
-    let foundationBatchIds = [];
-    if (!isLegacyChapter) {
-      foundationBatchIds = prepareFoundationUnitPlan(chapter);
-      applyTodayQuest(normalizeTodayQuestPayload({
-        date: todayKey(),
-        questId: `unit-${todayKey()}-${chapter.id}`,
-        ids: foundationBatchIds,
-        target: foundationBatchIds.length,
-        mode: "unit",
-        scope: state.studyScope,
-        unitLabel: chapter.topicLabel
-      }, "browser"));
-    }
     const nextId = isLegacyChapter
       ? chapter.ids.find((id) => !isContacted(id)) ||
         [...chapter.ids].sort((a, b) =>
           weaknessScore(b) - weaknessScore(a) ||
           (Number(statsFor(a).lastStep) || 0) - (Number(statsFor(b).lastStep) || 0)
         )[0]
-      : foundationBatchIds.find((id) => !answeredToday(id) && !isRetained(id)) || foundationBatchIds[0];
+      : chapter.ids.find((id) => !answeredToday(id) && !isRetained(id)) || chapter.ids[0];
     goToQuestion(nextId);
   }
 
@@ -7191,6 +7211,7 @@
     state.daily.planScope = scopeId;
     state.dailyFinishedDate = "";
     state.runMode = "quest";
+    state.chapterModeId = "";
     state.answered = null;
     state.activeCutCheck = null;
     state.finished = false;
@@ -7223,6 +7244,7 @@
     const nextId = targets[0] || weakIds()[0];
     if (!nextId) return;
     state.runMode = "quest";
+    state.chapterModeId = "";
     setFirstPassUrl(false);
     goToQuestion(nextId);
   }
@@ -7272,6 +7294,7 @@
 
   function startDailyQuest() {
     state.runMode = "quest";
+    state.chapterModeId = "";
     setFirstPassUrl(false);
     if (dailyQuestIsComplete()) {
       finishDailyQuest();
@@ -7302,6 +7325,7 @@
   function startFirstPass() {
     state.dailyFinishedDate = "";
     state.runMode = RUN_MODE_FIRST_PASS;
+    state.chapterModeId = "";
     setFirstPassUrl(true);
     if (remainingFirstPassCount() === 0) {
       saveState();
@@ -7351,6 +7375,7 @@
       return;
     }
     state.runMode = RUN_MODE_MOCK;
+    state.chapterModeId = "";
     state.mock = {
       ...createMockState(form.id),
       startedAt: new Date().toISOString()
@@ -7378,6 +7403,7 @@
     }
     if (!window.confirm("この模試の途中結果を破棄して日課へ戻る？")) return;
     state.runMode = "quest";
+    state.chapterModeId = "";
     state.mock = createMockState();
     state.answered = null;
     state.activeCutCheck = null;
@@ -7912,7 +7938,12 @@
         });
       }
     }
-    if (isDailyQuestQuestion(currentId()) && dailyQuestIsComplete() && !isFirstPassMode()) {
+    if (
+      isDailyQuestQuestion(currentId()) &&
+      dailyQuestIsComplete() &&
+      !isFirstPassMode() &&
+      !isChapterMode()
+    ) {
       finishDailyQuest();
       return;
     }
@@ -7983,6 +8014,15 @@
         return;
       }
       showFinished();
+      return;
+    }
+    if (isChapterMode()) {
+      const nextId = nextChapterModeId();
+      if (nextId) {
+        goToQuestion(nextId);
+        return;
+      }
+      showChapterFinished();
       return;
     }
     if (isDailyQuestQuestion(currentId()) && dailyQuestIsComplete()) {
@@ -8179,7 +8219,7 @@
                 <div><dt>正解</dt><dd>${question.answer + 1}. ${escapeHtml(question.choices[question.answer])}</dd></div>
               </dl>
               <p>${escapeHtml(question.explain)}</p>
-              <a class="mock-source-link" href="${escapeHtml(question.sourceUrl)}" target="_blank" rel="noopener noreferrer">公式根拠: ${escapeHtml(question.sourceRef)}（基準日 ${escapeHtml(question.legalBaseline)}）</a>
+              <a class="mock-source-link" href="${escapeHtml(question.sourceUrl)}" target="_blank" rel="noopener noreferrer">公式根拠: ${escapeHtml(question.sourceLocator || question.sourceRef)}（基準日 ${escapeHtml(question.legalBaseline)}）</a>
             </details>`;
         }).join("")
       : `<p class="mock-perfect">全50問正解。誤答レビューはありません。</p>`;
@@ -8227,6 +8267,7 @@
     const reloadIntoMock = (targetFormId) => {
       const targetForm = mockFormById(targetFormId);
       state.runMode = RUN_MODE_MOCK;
+      state.chapterModeId = "";
       state.mock = {
         ...createMockState(targetForm.id),
         startedAt: new Date().toISOString()
@@ -8241,11 +8282,64 @@
     $("#mockOtherButton")?.addEventListener("click", () => reloadIntoMock(otherFormId));
     $("#mockDailyButton")?.addEventListener("click", () => {
       state.runMode = "quest";
+      state.chapterModeId = "";
       state.finished = false;
       state.answered = null;
       setFirstPassUrl(false);
       saveState();
       window.location.reload();
+    });
+  }
+
+  function showChapterFinished() {
+    const chapter = chapterModeChapter();
+    if (!chapter) {
+      showFinished();
+      return;
+    }
+    state.finished = true;
+    if (elements.answerDock) {
+      elements.answerDock.hidden = true;
+      document.body.classList.remove("has-answer-dock");
+    }
+    saveState();
+    const answeredCount = chapter.ids.filter(answeredToday).length;
+    const correctCount = chapter.ids.filter(correctToday).length;
+    const retainedCount = chapter.ids.filter(isRetained).length;
+    elements.quizCard.innerHTML = `
+      <div class="quiz-meta">
+        <strong id="roundLabel">${chapter.ids.length} / ${chapter.ids.length}</strong>
+        <span id="tagBadge">テーマ完了</span>
+      </div>
+      <section class="feedback" data-chapter-result="${escapeHtml(chapter.id)}">
+        <h3>${escapeHtml(chapter.label)}</h3>
+        <p class="question-text">選択テーマの問題だけを完了。固定10問は変更していません。</p>
+        <dl class="answer-grid">
+          <div><dt>テーマ問題</dt><dd>${chapter.ids.length}問</dd></div>
+          <div><dt>本日解答</dt><dd>${answeredCount}問</dd></div>
+          <div><dt>本日正解</dt><dd>${correctCount}問</dd></div>
+          <div><dt>定着</dt><dd>${retainedCount}問</dd></div>
+        </dl>
+        <div class="finish-actions">
+          <button id="chapterRetryButton" class="next-button" type="button">このテーマをもう一度</button>
+          <button id="chapterDailyButton" class="ghost-button" type="button">固定10問へ戻る</button>
+        </div>
+      </section>
+    `;
+    $("#chapterRetryButton")?.addEventListener("click", () => {
+      state.finished = false;
+      state.answered = null;
+      state.activeCutCheck = null;
+      selectChapter(CHAPTERS.indexOf(chapter));
+    });
+    $("#chapterDailyButton")?.addEventListener("click", () => {
+      state.runMode = "quest";
+      state.chapterModeId = "";
+      state.finished = false;
+      state.answered = null;
+      state.activeCutCheck = null;
+      saveState();
+      startDailyQuest();
     });
   }
 
@@ -8291,6 +8385,7 @@
     `;
     $("#finishDailyButton")?.addEventListener("click", () => {
       state.runMode = "quest";
+      state.chapterModeId = "";
       state.finished = false;
       saveState();
       const url = new URL(window.location.href);

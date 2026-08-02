@@ -13,7 +13,7 @@
     <link rel="canonical" href="https://regal753.github.io/takken-battle/">
     <title>宅建バトル Study Quest</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./styles.css?v=20260802-direct-explain-1">
+    <link rel="stylesheet" href="./styles.css?v=20260802-practice-nav-v20-1">
   </head>
   <body>
     <div class="app-root">
@@ -139,21 +139,21 @@
           <div id="missionOfficialStep" class="mission-step">
             <span>2</span>
             <div>
-              <strong id="missionOfficialLabel">翌日復習</strong>
+              <strong id="missionOfficialLabel">次の単元</strong>
               <small id="missionOfficialStatus">未完了</small>
             </div>
           </div>
           <div id="missionReviewStep" class="mission-step">
             <span>3</span>
             <div>
-              <strong id="missionReviewLabel">実践4問</strong>
+              <strong id="missionReviewLabel">翌日復習</strong>
               <small id="missionReviewStatus">未完了</small>
             </div>
           </div>
           <div id="missionMinutesStep" class="mission-step">
             <span>4</span>
             <div>
-              <strong id="missionMinutesLabel">合計90分</strong>
+              <strong id="missionMinutesLabel">任意実践</strong>
               <small id="missionMinutesStatus">0 / 90分</small>
             </div>
           </div>
@@ -316,7 +316,7 @@
           <summary>10/18までの攻略順</summary>
           <ol>
             <li data-pass-phase="foundation"><strong>基礎一周まで</strong><span>45単元を本文→読後2〜4問→「こう解く」の根拠確認で進み、未学習分野の公式演習は保留</span></li>
-            <li data-pass-phase="august"><strong>基礎一周後</strong><span>固定10問と実践4問で定着を作り、公式20問へ接続</span></li>
+            <li data-pass-phase="august"><strong>基礎一周後</strong><span>復習10問と形式を混ぜた実践で定着を作り、公式20問へ接続</span></li>
             <li data-pass-phase="september"><strong>9月</strong><span>公式10試験回を初見・120分で回し、14日後の再試験3回まで測定</span></li>
             <li data-pass-phase="october"><strong>10/1–10/11</strong><span>弱点・法改正・統計だけを補修し、新教材を止める</span></li>
             <li data-pass-phase="final"><strong>10/12–10/18</strong><span>40点の再現、受験票・会場・睡眠を固定</span></li>
@@ -339,11 +339,11 @@
           <div class="foundation-route-progress" aria-label="基礎ルート進捗">
             <div><span>単元完了</span><strong id="foundationUnitsProgress">0 / 45</strong></div>
             <div><span>読後問題</span><strong id="foundationQuestionsProgress">0 / 124</strong></div>
-            <div><span>実践クリア</span><strong id="foundationPracticalProgress">0 / 180</strong></div>
+            <div><span>任意実践</span><strong id="foundationPracticalProgress">0 / 180</strong></div>
           </div>
           <div class="foundation-route-actions">
             <button id="foundationRoutePrimaryButton" class="today-command-primary" type="button">この単元の問題へ</button>
-            <button id="foundationRoutePracticalButton" class="today-command-secondary" type="button" hidden>この単元の実践4問</button>
+            <button id="foundationRoutePracticalButton" class="today-command-secondary" type="button" hidden>任意: この単元の実践4問</button>
           </div>
         </section>
         <nav id="themeBar" class="theme-toolbar" aria-label="テーマ操作">
@@ -421,7 +421,7 @@
               <div id="practicalDrillSources" class="practical-drill-sources" aria-label="公式根拠"></div>
               <div id="practicalDrillConfidence" class="practical-drill-confidence" hidden>
                 <span>正解の手応え</span>
-                <button type="button" data-practical-confidence="confident">ア・イ両方の根拠を言えた</button>
+                <button type="button" data-practical-confidence="confident">各肢の根拠を言えた</button>
                 <button type="button" data-practical-confidence="uncertain">正解したが迷った</button>
               </div>
               <button id="practicalDrillNextButton" class="today-command-primary" type="button">次の実践問題へ</button>
@@ -480,57 +480,62 @@
         </div>
       </details>
 
-      <section class="quest-card" aria-label="今日のクエスト">
-        <div class="quest-main">
-          <div>
-            <span id="questLabel" class="section-label">今日のクエスト</span>
-            <strong id="dailyQuestTitle">0 / 10撃破</strong>
-            <small id="dailyQuestSource" class="quest-source">固定10問: 読込中</small>
+      <details class="quest-card" aria-label="復習10問メニュー">
+        <summary class="quest-compact-summary">
+          <div class="quest-main">
+            <div>
+              <span id="questLabel" class="section-label">復習10問</span>
+              <strong id="dailyQuestTitle">0 / 10撃破</strong>
+              <small id="dailyQuestSource" class="quest-source">復習10問: 読込中</small>
+            </div>
+            <div class="quest-meter" aria-hidden="true">
+              <div id="dailyQuestFill"></div>
+            </div>
           </div>
-          <div class="quest-meter" aria-hidden="true">
-            <div id="dailyQuestFill"></div>
+          <span class="quest-compact-toggle">10問メニュー</span>
+        </summary>
+        <div class="quest-card-body">
+          <div class="campaign-route-wrap" aria-label="現在の攻略ルート">
+            <div class="route-heading">
+              <strong id="routeSectorLabel">免許・免許換え / 区画1</strong>
+              <span>最終門まで進め</span>
+            </div>
+            <div id="campaignRoute" class="campaign-route"></div>
+          </div>
+          <div id="questRewardRail" class="quest-reward-rail" aria-label="復習10問の戦果報酬">
+            <span>戦果報酬</span>
+            <div id="questRewardTrack" class="quest-reward-track"></div>
+            <strong id="questRewardNext">3問で補給</strong>
+          </div>
+          <div class="quest-stats">
+            <div>
+              <span id="dailyAnswerLabel">今日</span>
+              <strong id="dailyAnswerText">0問</strong>
+            </div>
+            <div>
+              <span id="dailyCorrectLabel">正解</span>
+              <strong id="dailyCorrectText">0問</strong>
+            </div>
+            <div>
+              <span id="dailyWeakLabel">弱点</span>
+              <strong id="dailyWeakText">0件</strong>
+            </div>
+          </div>
+          <div class="quest-actions has-mock">
+            <button id="dailyQuestButton" class="quick-button quest-button" type="button">今日の10問</button>
+            <button id="passQuestButton" class="quick-button quest-button pass-button" type="button">全分野一周</button>
+            <button id="weakQuestButton" class="quick-button quest-button" type="button" disabled>弱点狩り</button>
+            <button id="sprintButton" class="quick-button quest-button sprint-button" type="button">25分開始</button>
+            <button id="mockAButton" class="quick-button quest-button mock-button" type="button">模試A</button>
+            <button id="mockBButton" class="quick-button quest-button mock-button" type="button">模試B</button>
+          </div>
+          <div class="sprint-line" aria-live="polite">
+            <span>集中</span>
+            <strong id="sprintTimer">25:00</strong>
+            <small id="sprintStatus">停止中</small>
           </div>
         </div>
-        <div class="campaign-route-wrap" aria-label="現在の攻略ルート">
-          <div class="route-heading">
-            <strong id="routeSectorLabel">免許・免許換え / 区画1</strong>
-            <span>最終門まで進め</span>
-          </div>
-          <div id="campaignRoute" class="campaign-route"></div>
-        </div>
-        <div id="questRewardRail" class="quest-reward-rail" aria-label="固定10問の戦果報酬">
-          <span>戦果報酬</span>
-          <div id="questRewardTrack" class="quest-reward-track"></div>
-          <strong id="questRewardNext">3問で補給</strong>
-        </div>
-        <div class="quest-stats">
-          <div>
-            <span id="dailyAnswerLabel">今日</span>
-            <strong id="dailyAnswerText">0問</strong>
-          </div>
-          <div>
-            <span id="dailyCorrectLabel">正解</span>
-            <strong id="dailyCorrectText">0問</strong>
-          </div>
-          <div>
-            <span id="dailyWeakLabel">弱点</span>
-            <strong id="dailyWeakText">0件</strong>
-          </div>
-        </div>
-        <div class="quest-actions has-mock">
-          <button id="dailyQuestButton" class="quick-button quest-button" type="button">今日の10問</button>
-          <button id="passQuestButton" class="quick-button quest-button pass-button" type="button">全分野一周</button>
-          <button id="weakQuestButton" class="quick-button quest-button" type="button" disabled>弱点狩り</button>
-          <button id="sprintButton" class="quick-button quest-button sprint-button" type="button">25分開始</button>
-          <button id="mockAButton" class="quick-button quest-button mock-button" type="button">模試A</button>
-          <button id="mockBButton" class="quick-button quest-button mock-button" type="button">模試B</button>
-        </div>
-        <div class="sprint-line" aria-live="polite">
-          <span>集中</span>
-          <strong id="sprintTimer">25:00</strong>
-          <small id="sprintStatus">停止中</small>
-        </div>
-      </section>
+      </details>
 
       <main class="study-shell">
         <section class="battle-card" aria-label="戦闘">
@@ -745,21 +750,21 @@
       </div>
     </aside>
 
-    <script src="./exam-blueprint.js?v=20260802-direct-explain-1"></script>
-    <script src="./exam-question-core.js?v=20260802-direct-explain-1"></script>
-    <script src="./exam-questions-rights.js?v=20260802-direct-explain-1"></script>
-    <script src="./exam-questions-restrictions.js?v=20260802-direct-explain-1"></script>
-    <script src="./exam-questions-tax-other.js?v=20260802-direct-explain-1"></script>
-    <script src="./exam-questions-business.js?v=20260802-direct-explain-1"></script>
-    <script src="./practical-question-bank.js?v=20260802-direct-explain-1"></script>
-    <script src="./question-bank.js?v=20260802-direct-explain-1"></script>
-    <script src="./question-balance.js?v=20260802-direct-explain-1"></script>
-    <script src="./reward-system.js?v=20260802-direct-explain-1"></script>
-    <script src="./official-exam-data.js?v=20260802-direct-explain-1"></script>
-    <script src="./calculation-drill.js?v=20260802-direct-explain-1"></script>
-    <script src="./save-store.js?v=20260802-direct-explain-1"></script>
-    <script src="./save-transfer.js?v=20260802-direct-explain-1"></script>
-    <script src="./app.js?v=20260802-direct-explain-1"></script>
+    <script src="./exam-blueprint.js?v=20260802-practice-nav-v20-1"></script>
+    <script src="./exam-question-core.js?v=20260802-practice-nav-v20-1"></script>
+    <script src="./exam-questions-rights.js?v=20260802-practice-nav-v20-1"></script>
+    <script src="./exam-questions-restrictions.js?v=20260802-practice-nav-v20-1"></script>
+    <script src="./exam-questions-tax-other.js?v=20260802-practice-nav-v20-1"></script>
+    <script src="./exam-questions-business.js?v=20260802-practice-nav-v20-1"></script>
+    <script src="./practical-question-bank.js?v=20260802-practice-nav-v20-1"></script>
+    <script src="./question-bank.js?v=20260802-practice-nav-v20-1"></script>
+    <script src="./question-balance.js?v=20260802-practice-nav-v20-1"></script>
+    <script src="./reward-system.js?v=20260802-practice-nav-v20-1"></script>
+    <script src="./official-exam-data.js?v=20260802-practice-nav-v20-1"></script>
+    <script src="./calculation-drill.js?v=20260802-practice-nav-v20-1"></script>
+    <script src="./save-store.js?v=20260802-practice-nav-v20-1"></script>
+    <script src="./save-transfer.js?v=20260802-practice-nav-v20-1"></script>
+    <script src="./app.js?v=20260802-practice-nav-v20-1"></script>
     <noscript>宅建バトルを利用するにはJavaScriptを有効にしてください。</noscript>
   </body>
 </html>

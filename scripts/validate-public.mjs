@@ -31,6 +31,7 @@ const required = [
   "Audit-TakkenQuestionQuality.js",
   "Audit-TakkenUnderstandingDepth.js",
   "Audit-TakkenUnderstandingDepthUi.cjs",
+  "Audit-Takken2026Coverage.js",
   "Audit-TakkenPracticalVariations.js",
   "Audit-TakkenPracticalVariationsUi.cjs",
   "Audit-TakkenOfficialDrill.js",
@@ -39,6 +40,7 @@ const required = [
   "Audit-TakkenCalculationDrill.js",
   "Audit-TakkenLearningArchitecture.js",
   "Audit-TakkenLearningArchitectureUi.cjs",
+  "Audit-TakkenChapterModeUi.cjs",
   "Audit-TakkenPassPlanUi.cjs",
   "Audit-TakkenPassLoopV12Ui.cjs",
   "scripts/verify-deployed-page.mjs",
@@ -70,6 +72,8 @@ assert.match(app, /const CURRICULUM_ORDER/);
 assert.match(app, /const TEXTBOOK_IDS/);
 assert.match(app, /function textbookIdsForSections/);
 assert.match(app, /const RUN_MODE_MOCK = "mock"/);
+assert.match(app, /const RUN_MODE_CHAPTER = "chapter"/);
+assert.match(app, /function showChapterFinished/);
 assert.match(app, /function showMockFinished/);
 assert.match(app, /function renderPassPlan/);
 assert.match(app, /function renderTodayCommand/);
@@ -137,12 +141,12 @@ assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 第2分冊・権利関係を固める/);
 assert.match(index, /③ 法令・税その他へ進む/);
 assert.match(index, /④ 全分野を混ぜる/);
-assert.match(index, /styles\.css\?v=20260802-direct-explain-1/);
-assert.match(index, /practical-question-bank\.js\?v=20260802-direct-explain-1/);
-assert.match(index, /calculation-drill\.js\?v=20260802-direct-explain-1/);
-assert.match(index, /app\.js\?v=20260802-direct-explain-1/);
-assert.match(index, /save-store\.js\?v=20260802-direct-explain-1/);
-assert.match(index, /official-exam-data\.js\?v=20260802-direct-explain-1/);
+assert.match(index, /styles\.css\?v=20260802-practice-nav-v20-1/);
+assert.match(index, /practical-question-bank\.js\?v=20260802-practice-nav-v20-1/);
+assert.match(index, /calculation-drill\.js\?v=20260802-practice-nav-v20-1/);
+assert.match(index, /app\.js\?v=20260802-practice-nav-v20-1/);
+assert.match(index, /save-store\.js\?v=20260802-practice-nav-v20-1/);
+assert.match(index, /official-exam-data\.js\?v=20260802-practice-nav-v20-1/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
 assert.doesNotMatch(index, /understanding-system\.js/);
@@ -183,10 +187,11 @@ assert.match(pagesWorkflow, /node Audit-TakkenTextbookRanges\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenQuestionQuality\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenExplanationMastery\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenUnderstandingDepth\.js/);
+assert.match(pagesWorkflow, /node Audit-Takken2026Coverage\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenPracticalVariations\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenLearningArchitecture\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
-assert.match(pagesWorkflow, /20260802-direct-explain-1/);
+assert.match(pagesWorkflow, /20260802-practice-nav-v20-1/);
 assert.doesNotMatch(pagesWorkflow, /cp [^\n]*understanding-system\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*calculation-drill\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*practical-question-bank\.js[^\n]*_site\//);
@@ -195,6 +200,7 @@ assert.match(pagesWorkflow, /cp [^\n]*save-store\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*save-transfer\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*exam-blueprint\.js[^\n]*_site\//);
 assert.match(ciWorkflow, /node Audit-TakkenUnderstandingDepth\.js/);
+assert.match(ciWorkflow, /node Audit-Takken2026Coverage\.js/);
 assert.doesNotMatch(ciWorkflow, /node Audit-TakkenRuleChoiceAmbiguity\.js/);
 
 const forbiddenNames = new Set([
