@@ -65,8 +65,7 @@ async function currentQuestion(page) {
     const question = Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
       .find((candidate) => candidate.text === text);
     if (!question) throw new Error(`question not found: ${text.slice(0, 80)}`);
-    const check = window.TAKKEN_UNDERSTANDING.CHECKS[question.id];
-    return { id: question.id, tag: question.tag, answer: question.answer, ruleAnswer: check.rule.answer, transferAnswer: check.transfer.answer };
+    return { id: question.id, tag: question.tag, answer: question.answer };
   });
 }
 
@@ -129,8 +128,6 @@ async function runDesktop(browser, baseUrl) {
 
   await page.locator(`.choice-button[data-index="${first.answer}"]`).click();
   await page.locator("#feedbackBox").waitFor({ state: "visible" });
-  await page.locator(`[data-understanding-kind="rule"][data-understanding-index="${first.ruleAnswer}"]`).click();
-  await page.locator(`[data-understanding-kind="transfer"][data-understanding-index="${first.transferAnswer}"]`).click();
   await page.locator("#dockNextButton").click();
   await page.waitForFunction(() => {
     const text = document.querySelector("#questionText")?.textContent || "";
@@ -172,8 +169,6 @@ async function runDesktop(browser, baseUrl) {
   const contractFirst = await currentQuestion(page);
   assert.equal(contractFirst.id, "r111");
   await page.locator(`.choice-button[data-index="${contractFirst.answer}"]`).click();
-  await page.locator(`[data-understanding-kind="rule"][data-understanding-index="${contractFirst.ruleAnswer}"]`).click();
-  await page.locator(`[data-understanding-kind="transfer"][data-understanding-index="${contractFirst.transferAnswer}"]`).click();
   await page.locator("#dockNextButton").click();
   await page.waitForFunction(() => {
     const text = document.querySelector("#questionText")?.textContent || "";

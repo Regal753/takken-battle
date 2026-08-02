@@ -83,15 +83,6 @@ async function currentQuestion(page) {
 
 async function answer(page, index) {
   await page.locator(`.choice-button[data-index="${index}"]`).click();
-  const check = await page.evaluate(() => {
-    const text = document.querySelector("#questionText")?.textContent || "";
-    const question = Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-      .find((candidate) => candidate.text === text);
-    const value = window.TAKKEN_UNDERSTANDING.CHECKS[question.id];
-    return { rule: value.rule.answer, transfer: value.transfer.answer };
-  });
-  await page.locator(`[data-understanding-kind="rule"][data-understanding-index="${check.rule}"]`).click();
-  await page.locator(`[data-understanding-kind="transfer"][data-understanding-index="${check.transfer}"]`).click();
   await page.locator(".reasoning-path").waitFor({ state: "visible" });
 }
 
@@ -150,19 +141,15 @@ async function runSingleChoice(browser, baseUrl) {
   const result = await readReasoning(page);
   assert.equal(result.id, "b005");
   assert.deepEqual(result.steps.map((step) => step.label), [
-    "適用場面",
-    "判断軸",
-    "この問題への当てはめ",
-    "間違いやすい境界",
-    "次に再現する一文"
+    "見る条件",
+    "使う根拠",
+    "この問題への当てはめ"
   ]);
   assert.match(result.steps[0].text, /宅建士|登録/);
   assert.equal(result.steps[1].text, result.explain);
   assert.match(result.steps[2].text, /選んだ肢/);
   assert.match(result.steps[2].text, /正解肢/);
   assert.match(result.steps[2].text, /登録|宅建士証|試験/);
-  assert.equal(result.steps[3].text, result.trap);
-  assert.equal(result.steps[4].text, result.memoryRule);
   assert.equal(result.reasons.length, 4);
   assert.ok(result.reasonLengths.every((length) => length >= 16));
   assert.equal(result.explainHidden, true);

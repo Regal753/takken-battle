@@ -79,8 +79,7 @@ async function currentQuestion(page) {
     const question = Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
       .find((candidate) => candidate.text === text);
     if (!question) throw new Error(`question not found: ${text.slice(0, 80)}`);
-    const check = window.TAKKEN_UNDERSTANDING.CHECKS[question.id];
-    return { id: question.id, answer: question.answer, ruleAnswer: check.rule.answer, transferAnswer: check.transfer.answer };
+    return { id: question.id, answer: question.answer };
   });
 }
 
@@ -88,8 +87,6 @@ async function answerAndAdvance(page, expectedNextId) {
   const question = await currentQuestion(page);
   await page.locator(`.choice-button[data-index="${question.answer}"]`).click();
   await page.locator("#feedbackBox").waitFor({ state: "visible" });
-  await page.locator(`[data-understanding-kind="rule"][data-understanding-index="${question.ruleAnswer}"]`).click();
-  await page.locator(`[data-understanding-kind="transfer"][data-understanding-index="${question.transferAnswer}"]`).click();
   await page.locator("#dockNextButton").click();
   await page.waitForFunction((id) => {
     const text = document.querySelector("#questionText")?.textContent || "";

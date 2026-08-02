@@ -1141,8 +1141,15 @@ body.has-answer-dock {
 }
 
 .feedback h3 {
-  margin: 0 0 12px;
+  margin: 0 0 6px;
   font-size: 20px;
+}
+
+.answer-save-receipt {
+  margin: 0 0 12px;
+  color: #9fe8c4;
+  font-size: 12px;
+  font-weight: 850;
 }
 
 .answer-grid {

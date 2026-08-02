@@ -63,7 +63,7 @@ if (app.includes("JULY_GATE_DEADLINE") || html.includes("7/31学習ゲート")) 
 ].forEach((id) => requireText(html, `id=\"${id}\"`, `${id} is missing from the page`));
 requireText(html, "本文＋読後問題", "foundation-first mission label is missing");
 requireText(html, "45単元の読後問題完了で公式演習を解放", "official foundation gate copy is missing");
-requireText(html, "20260802-understanding-v18-1", "v18 hotfix cache version is missing");
+requireText(html, "20260802-direct-explain-1", "direct explanation cache version is missing");
 requireText(css, "#themeDrawer { order: 3; }", "foundation route must precede the question workspace");
 requireText(css, ".quest-card { order: 4; }", "question workspace order is missing");
 requireText(css, "#passPlanPanel { order: 8; }", "measurement panel must follow foundation and practice lanes");
