@@ -585,6 +585,11 @@ async function main() {
     }, storageId);
     await page.reload({ waitUntil: "domcontentloaded" });
     await page.waitForFunction(() => !document.querySelector("#mockAButton")?.disabled);
+    const mockMenu = page.locator("details.quest-card");
+    if (!await mockMenu.evaluate((panel) => panel.open)) {
+      await page.locator("details.quest-card > summary").click();
+    }
+    await page.locator("#mockAButton").waitFor({ state: "visible" });
     await page.locator("#mockAButton").click();
     await page.waitForFunction(() => {
       const text = document.querySelector("#questionText")?.textContent || "";
@@ -945,16 +950,16 @@ async function main() {
       throw new Error(`Mastery quest reload drift: ${JSON.stringify({ masteryAudit, masteryReload, masteryErrors })}`);
     }
 
-    const reviewMixContext = await browser.newContext({
+    const unitResumeContext = await browser.newContext({
       viewport: { width: 390, height: 844 },
       reducedMotion: "reduce",
       locale: "ja-JP",
       timezoneId: "Asia/Tokyo"
     });
-    const reviewMixPage = await reviewMixContext.newPage();
-    const reviewMixNamespace = `reviewmix${Date.now().toString(36)}`;
-    const reviewMixStorageId = `takken-battle-study-clean-v2-hard-review-${reviewMixNamespace}`;
-    await reviewMixPage.addInitScript(({ storageId }) => {
+    const unitResumePage = await unitResumeContext.newPage();
+    const unitResumeNamespace = `unitresume${Date.now().toString(36)}`;
+    const unitResumeStorageId = `takken-battle-study-clean-v2-hard-review-${unitResumeNamespace}`;
+    await unitResumePage.addInitScript(({ storageId }) => {
       const reviewedIds = ["b001", "b002", "b003", "b004"];
       const questionStats = Object.fromEntries(reviewedIds.map((id, index) => [
         id,
@@ -975,18 +980,19 @@ async function main() {
         autoMarked: Object.fromEntries(reviewedIds.map((id) => [id, true])),
         questionStats
       }));
-    }, { storageId: reviewMixStorageId });
-    const reviewMixUrl = new URL(baseUrl);
-    reviewMixUrl.searchParams.set("review", reviewMixNamespace);
-    reviewMixUrl.searchParams.set("today", "1");
-    await reviewMixPage.goto(reviewMixUrl.toString(), {
+    }, { storageId: unitResumeStorageId });
+    const unitResumeUrl = new URL(baseUrl);
+    unitResumeUrl.searchParams.set("review", unitResumeNamespace);
+    unitResumeUrl.searchParams.set("today", "1");
+    await unitResumePage.goto(unitResumeUrl.toString(), {
       waitUntil: "domcontentloaded",
       timeout: 15000
     });
-    await reviewMixPage.waitForFunction(() =>
-      (document.querySelector("#dailyQuestSource")?.textContent || "").includes("宅建業法・新規＋復習")
-    );
-    const reviewMixAudit = await reviewMixPage.evaluate((storageId) => {
+    await unitResumePage.waitForFunction(() => {
+      const source = document.querySelector("#dailyQuestSource")?.textContent || "";
+      return source.includes("読後1問") && !source.includes("読込中");
+    });
+    const unitResumeAudit = await unitResumePage.evaluate((storageId) => {
       const saved = JSON.parse(localStorage.getItem(storageId) || "{}");
       const planIds = saved.daily?.planIds || [];
       const reviewedIds = new Set(["b001", "b002", "b003", "b004"]);
@@ -1000,17 +1006,19 @@ async function main() {
         sections: [...new Set(planIds.map((id) => window.TAKKEN_EXAM_QUESTIONS?.[id]?.sectionId))],
         overflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
       };
-    }, reviewMixStorageId);
-    await reviewMixContext.close();
+    }, unitResumeStorageId);
+    await unitResumeContext.close();
     if (
-      reviewMixAudit.planIds.length !== 10 ||
-      new Set(reviewMixAudit.planIds).size !== 10 ||
-      reviewMixAudit.reviewCount !== 4 ||
-      reviewMixAudit.newCount !== 6 ||
-      JSON.stringify(reviewMixAudit.sections) !== JSON.stringify(["business"]) ||
-      reviewMixAudit.overflow
+      JSON.stringify(unitResumeAudit.planIds) !== JSON.stringify(["b101"]) ||
+      unitResumeAudit.source !== "読後1問: 01-01 宅建業法の基本" ||
+      unitResumeAudit.planMode !== "unit" ||
+      unitResumeAudit.planUnitId !== "business-book-01" ||
+      unitResumeAudit.reviewCount !== 0 ||
+      unitResumeAudit.newCount !== 1 ||
+      JSON.stringify(unitResumeAudit.sections) !== JSON.stringify(["business"]) ||
+      unitResumeAudit.overflow
     ) {
-      throw new Error(`New/review mix mismatch: ${JSON.stringify(reviewMixAudit)}`);
+      throw new Error(`Foundation unit resume mismatch: ${JSON.stringify(unitResumeAudit)}`);
     }
 
     if (consoleErrors.length || pageErrors.length) {
@@ -1234,7 +1242,7 @@ async function main() {
       formBStart,
       masteryAudit,
       masteryReloadStable: JSON.stringify(masteryReload.planIds) === JSON.stringify(masteryAudit.planIds),
-      reviewMixAudit,
+      foundationUnitResume: unitResumeAudit,
       migration,
       handoff,
       zeroReviewAudit,
