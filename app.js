@@ -2222,6 +2222,7 @@
     if (
       firstQuestId &&
       !isFirstPassMode() &&
+      !isChapterMode() &&
       !isMockMode() &&
       (TODAY_QUEST_PARAM || state.daily.answers === 0) &&
       !state.answered &&
@@ -2957,6 +2958,13 @@
 
   function isChapterMode() {
     return Boolean(chapterModeChapter());
+  }
+
+  function activeDisplayScopeConfig() {
+    const chapter = chapterModeChapter();
+    return chapter
+      ? studyScopeConfig(studyScopeIdForChapter(chapter))
+      : studyScopeConfig();
   }
 
   function nextChapterModeId() {
@@ -6606,11 +6614,12 @@
     removeAdaptiveFeedback();
     const note = document.createElement("section");
     note.className = "adaptive-note";
+    const displayScope = activeDisplayScopeConfig();
 
     const title = document.createElement("strong");
     title.textContent = isFirstPassMode()
-      ? `${studyScopeConfig().shortLabel}の追加演習`
-      : `${studyScopeConfig().shortLabel}の合格ロード`;
+      ? `${displayScope.shortLabel}の追加演習`
+      : `${displayScope.shortLabel}の合格ロード`;
 
     const text = document.createElement("p");
     if (isFirstPassMode()) {
@@ -6983,8 +6992,9 @@
       elements.studyScopeSelect.disabled = isMockMode();
     }
     if (elements.themeDrawerSummary) {
+      const displayScope = activeDisplayScopeConfig();
       elements.themeDrawerSummary.textContent =
-        `${studyScopeConfig().shortLabel}・${question.chapter?.topicLabel || question.chapter?.label || "現在のテーマ"}`;
+        `${displayScope.shortLabel}・${question.chapter?.topicLabel || question.chapter?.label || "現在のテーマ"}`;
     }
   }
 
@@ -7009,10 +7019,17 @@
       return;
     }
 
+    const activeChapter = chapterModeChapter();
+    const selectedChapterIsActive = activeChapter?.id === question.chapter?.id;
     if (
       question.chapter?.textbookPart &&
-      selectedTextbookChapterId === question.chapter.id &&
-      state.studyScope === studyScopeIdForChapter(question.chapter)
+      (
+        selectedChapterIsActive ||
+        (
+          selectedTextbookChapterId === question.chapter.id &&
+          state.studyScope === studyScopeIdForChapter(question.chapter)
+        )
+      )
     ) {
       const chapter = question.chapter;
       const snapshot = unitLearningSnapshot(chapter);
@@ -8602,7 +8619,8 @@
     checkDayRollover();
   }, 1000);
   const hasMockResult = isMockMode() && state.mock.finalized;
-  if (state.finished && !hasMockResult) {
+  const hasChapterResult = isChapterMode() && state.finished;
+  if (state.finished && !hasMockResult && !hasChapterResult) {
     state.finished = false;
     saveState();
   }

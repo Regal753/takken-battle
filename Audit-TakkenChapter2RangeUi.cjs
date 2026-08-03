@@ -114,20 +114,25 @@ async function runDesktop(browser, baseUrl) {
   assert.match(initial.retention, /^単元完了 0 \/ 45・定着 0 \/ 124$/);
 
   await selectTextbookUnit(page, "02-02 意思表示");
-  await page.waitForFunction(() => document.querySelector("#studyScopeSelect")?.value === "rights");
   const first = await currentQuestion(page);
   const unit2Ui = await page.evaluate(() => ({
     scope: document.querySelector("#studyScopeSelect")?.value || "",
     coachTitle: document.querySelector("#coachTitle")?.textContent || "",
+    themeSummary: document.querySelector("#themeDrawerSummary")?.textContent || "",
     selected: document.querySelector("#chapterSelect option:checked")?.textContent || ""
   }));
   assert.equal(first.id, "r002");
-  assert.equal(unit2Ui.scope, "rights");
+  assert.equal(unit2Ui.scope, "business");
   assert.match(unit2Ui.coachTitle, /02-02 意思表示・本文p\.172直後/);
+  assert.match(unit2Ui.themeSummary, /第2分冊・権利・02-02 意思表示/);
   assert.match(unit2Ui.selected, /p\.172/);
 
   await page.locator(`.choice-button[data-index="${first.answer}"]`).click();
   await page.locator("#feedbackBox").waitFor({ state: "visible" });
+  assert.match(
+    await page.locator(".adaptive-note strong").textContent(),
+    /第2分冊・権利の合格ロード/
+  );
   await page.locator("#dockNextButton").click();
   await page.waitForFunction(() => {
     const text = document.querySelector("#questionText")?.textContent || "";
@@ -207,11 +212,13 @@ async function runMobile(browser, baseUrl) {
   const result = await page.evaluate(() => ({
     overflow: Math.max(0, document.documentElement.scrollWidth - innerWidth),
     scope: document.querySelector("#studyScopeSelect")?.value || "",
+    themeSummary: document.querySelector("#themeDrawerSummary")?.textContent || "",
     selected: document.querySelector("#chapterSelect option:checked")?.textContent || "",
     rightsRows: document.querySelectorAll('#chapterList details[data-group="rights"] .chapter-row').length
   }));
   assert.equal(result.overflow, 0);
-  assert.equal(result.scope, "rights");
+  assert.equal(result.scope, "business");
+  assert.match(result.themeSummary, /第2分冊・権利・02-02 意思表示/);
   assert.match(result.selected, /02-02 意思表示/);
   assert.equal(result.rightsRows, 21);
   assert.deepEqual(errors, []);

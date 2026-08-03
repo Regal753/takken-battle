@@ -83,28 +83,156 @@ async function currentQuestion(page) {
 }
 
 async function selectChapter(page, label) {
-  await page.locator("#themeDrawer > summary").click();
+  const drawer = page.locator("#themeDrawer");
+  if (!await drawer.evaluate((details) => details.open)) {
+    await page.locator("#themeDrawer > summary").click();
+  }
   const value = await page.locator("#chapterSelect option").filter({ hasText: label }).getAttribute("value");
   assert.ok(value, `missing chapter option: ${label}`);
   await page.locator("#chapterSelect").selectOption(value);
 }
 
-async function finishChapter(page, chapter) {
+function dailyContract(state) {
+  const daily = state.daily || {};
+  const planIds = [...(daily.planIds || [])];
+  return {
+    planIds,
+    target: daily.target,
+    planUnitId: daily.planUnitId,
+    planMode: daily.planMode,
+    planScope: daily.planScope,
+    planQuestionStats: Object.fromEntries(planIds.map((id) => [id, {
+      attempts: Number(state.questionStats?.[id]?.attempts) || 0,
+      correct: Number(state.questionStats?.[id]?.correct) || 0,
+      wrong: Number(state.questionStats?.[id]?.wrong) || 0
+    }]))
+  };
+}
+
+async function waitForQuestion(page, id) {
+  await page.waitForFunction((questionId) => {
+    const text = document.querySelector("#questionText")?.textContent || "";
+    return Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
+      .find((candidate) => candidate.text === text)?.id === questionId;
+  }, id);
+}
+
+async function chapterUi(page) {
+  return page.evaluate(() => ({
+    dailyScope: document.querySelector("#studyScopeSelect")?.value || "",
+    themeSummary: document.querySelector("#themeDrawerSummary")?.textContent || "",
+    selected: document.querySelector("#chapterSelect option:checked")?.textContent || "",
+    coachTitle: document.querySelector("#coachTitle")?.textContent || ""
+  }));
+}
+
+async function finishChapter(page, chapter, expectedAdaptiveTitle = null) {
   for (let index = 0; index < chapter.ids.length; index += 1) {
     const question = await currentQuestion(page);
     assert.equal(question.id, chapter.ids[index]);
     await page.locator(`.choice-button[data-index="${question.answer}"]`).click();
     await page.locator("#feedbackBox").waitFor({ state: "visible" });
+    if (index === 0 && expectedAdaptiveTitle) {
+      assert.match(
+        await page.locator(".adaptive-note strong").textContent(),
+        expectedAdaptiveTitle
+      );
+    }
     await page.locator("#dockNextButton").click();
     if (index < chapter.ids.length - 1) {
-      await page.waitForFunction((nextId) => {
-        const text = document.querySelector("#questionText")?.textContent || "";
-        return Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-          .find((candidate) => candidate.text === text)?.id === nextId;
-      }, chapter.ids[index + 1]);
+      await waitForQuestion(page, chapter.ids[index + 1]);
     }
   }
   await page.locator(`[data-chapter-result="${chapter.id}"]`).waitFor();
+}
+
+async function auditReloadBoundaries(page, baseUrl) {
+  await gotoFresh(page, baseUrl, "chapter-mode-reload");
+  const dailyBefore = dailyContract(await savedState(page));
+  const chapter = await textbookChapter(page, "rights-book-02");
+  assert.deepEqual(chapter.ids, ["r002", "r102"]);
+
+  await selectChapter(page, "02-02 意思表示");
+  await waitForQuestion(page, "r002");
+  let state = await savedState(page);
+  assert.equal(state.runMode, "chapter");
+  assert.equal(state.chapterModeId, chapter.id);
+  assert.deepEqual(dailyContract(state), dailyBefore);
+
+  await page.reload({ waitUntil: "networkidle" });
+  await waitForQuestion(page, "r002");
+  state = await savedState(page);
+  let ui = await chapterUi(page);
+  assert.equal(state.runMode, "chapter");
+  assert.equal(state.chapterModeId, chapter.id);
+  assert.deepEqual(dailyContract(state), dailyBefore);
+  assert.equal(ui.dailyScope, "business");
+  assert.match(ui.themeSummary, /第2分冊・権利・02-02 意思表示/);
+  assert.match(ui.selected, /02-02 意思表示/);
+  assert.match(ui.coachTitle, /02-02 意思表示・本文p\.172直後/);
+
+  const first = await currentQuestion(page);
+  await page.locator(`.choice-button[data-index="${first.answer}"]`).click();
+  await page.locator("#feedbackBox").waitFor({ state: "visible" });
+  assert.match(
+    await page.locator(".adaptive-note strong").textContent(),
+    /第2分冊・権利の合格ロード/
+  );
+  assert.deepEqual(dailyContract(await savedState(page)), dailyBefore);
+
+  await page.reload({ waitUntil: "networkidle" });
+  await waitForQuestion(page, "r002");
+  await page.locator("#feedbackBox").waitFor({ state: "visible" });
+  state = await savedState(page);
+  assert.equal(state.answered?.id, "r002");
+  assert.deepEqual(dailyContract(state), dailyBefore);
+  assert.match(
+    await page.locator(".adaptive-note strong").textContent(),
+    /第2分冊・権利の合格ロード/
+  );
+
+  await page.locator("#dockNextButton").click();
+  await waitForQuestion(page, "r102");
+  await page.reload({ waitUntil: "networkidle" });
+  await waitForQuestion(page, "r102");
+  state = await savedState(page);
+  ui = await chapterUi(page);
+  assert.equal(state.runMode, "chapter");
+  assert.equal(state.chapterModeId, chapter.id);
+  assert.equal(state.answered, null);
+  assert.deepEqual(dailyContract(state), dailyBefore);
+  assert.equal(ui.dailyScope, "business");
+  assert.match(ui.themeSummary, /第2分冊・権利・02-02 意思表示/);
+
+  const second = await currentQuestion(page);
+  await page.locator(`.choice-button[data-index="${second.answer}"]`).click();
+  await page.locator("#dockNextButton").click();
+  await page.locator(`[data-chapter-result="${chapter.id}"]`).waitFor();
+  state = await savedState(page);
+  assert.equal(state.finished, true);
+  assert.deepEqual(dailyContract(state), dailyBefore);
+
+  await page.reload({ waitUntil: "networkidle" });
+  await page.locator(`[data-chapter-result="${chapter.id}"]`).waitFor();
+  state = await savedState(page);
+  assert.equal(state.runMode, "chapter");
+  assert.equal(state.chapterModeId, chapter.id);
+  assert.equal(state.finished, true);
+  assert.deepEqual(dailyContract(state), dailyBefore);
+  assert.match(
+    await page.locator(`[data-chapter-result="${chapter.id}"]`).textContent(),
+    /固定10問は変更していません/
+  );
+
+  return {
+    id: chapter.id,
+    questions: chapter.ids.length,
+    selectionReload: "r002",
+    answeredReload: "r002",
+    nextReload: "r102",
+    resultReload: true,
+    dailyScopePreserved: "business"
+  };
 }
 
 async function main() {
@@ -116,28 +244,31 @@ async function main() {
   const consoleErrors = [];
   const pageErrors = [];
   try {
+    const reloadDesktop = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    reloadDesktop.on("console", (message) => {
+      if (message.type() === "error") consoleErrors.push(message.text());
+    });
+    reloadDesktop.on("pageerror", (error) => pageErrors.push(error.message));
+    const reloadBoundaries = await auditReloadBoundaries(reloadDesktop, server.baseUrl);
+
     const desktop = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     desktop.on("console", (message) => {
       if (message.type() === "error") consoleErrors.push(message.text());
     });
     desktop.on("pageerror", (error) => pageErrors.push(error.message));
     await gotoFresh(desktop, server.baseUrl, "chapter-mode-desktop");
-    const dailyBefore = (await savedState(desktop)).daily;
+    const dailyBefore = dailyContract(await savedState(desktop));
     const chapter = await textbookChapter(desktop, "business-book-07");
     assert.equal(chapter.ids.length, 15);
     await selectChapter(desktop, "01-07 業務上の規制");
     const selected = await savedState(desktop);
     assert.equal(selected.runMode, "chapter");
     assert.equal(selected.chapterModeId, chapter.id);
-    assert.deepEqual(selected.daily.planIds, dailyBefore.planIds);
-    assert.equal(selected.daily.target, dailyBefore.target);
-    assert.equal(selected.daily.planUnitId, dailyBefore.planUnitId);
+    assert.deepEqual(dailyContract(selected), dailyBefore);
     await finishChapter(desktop, chapter);
     assert.match(await desktop.locator(`[data-chapter-result="${chapter.id}"]`).textContent(), /固定10問は変更していません/);
-    const dailyAfter = (await savedState(desktop)).daily;
-    assert.deepEqual(dailyAfter.planIds, dailyBefore.planIds);
-    assert.equal(dailyAfter.target, dailyBefore.target);
-    assert.equal(dailyAfter.planUnitId, dailyBefore.planUnitId);
+    const dailyAfter = dailyContract(await savedState(desktop));
+    assert.deepEqual(dailyAfter, dailyBefore);
 
     const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
     mobile.on("console", (message) => {
@@ -145,9 +276,14 @@ async function main() {
     });
     mobile.on("pageerror", (error) => pageErrors.push(error.message));
     await gotoFresh(mobile, server.baseUrl, "chapter-mode-mobile");
+    const mobileDailyBefore = dailyContract(await savedState(mobile));
     const mobileChapter = await textbookChapter(mobile, "tax-other-book-02");
     await selectChapter(mobile, "04-02 不動産鑑定評価基準");
-    await finishChapter(mobile, mobileChapter);
+    const mobileUi = await chapterUi(mobile);
+    assert.equal(mobileUi.dailyScope, "business");
+    assert.match(mobileUi.themeSummary, /法令・税その他・04-02 不動産鑑定評価基準/);
+    await finishChapter(mobile, mobileChapter, /法令・税その他の合格ロード/);
+    assert.deepEqual(dailyContract(await savedState(mobile)), mobileDailyBefore);
     const overflow = await mobile.evaluate(() => ({
       body: Math.max(0, document.documentElement.scrollWidth - window.innerWidth),
       items: [...document.querySelectorAll("body *")]
@@ -163,6 +299,7 @@ async function main() {
     assert.deepEqual(pageErrors, []);
     console.log(JSON.stringify({
       status: "ok",
+      reloadBoundaries,
       desktopChapter: { id: chapter.id, questions: chapter.ids.length },
       mobileChapter: { id: mobileChapter.id, questions: mobileChapter.ids.length },
       fixedPlanPreserved: true,

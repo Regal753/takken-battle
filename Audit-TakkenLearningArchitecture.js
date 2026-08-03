@@ -75,7 +75,7 @@ if (app.includes("JULY_GATE_DEADLINE") || html.includes("7/31学習ゲート")) 
 ].forEach((id) => requireText(html, `id=\"${id}\"`, `${id} is missing from the page`));
 requireText(html, "本文＋読後問題", "foundation-first mission label is missing");
 requireText(html, "45単元の読後問題完了で公式演習を解放", "official foundation gate copy is missing");
-requireText(html, "20260802-practice-nav-v20-1", "practice navigation cache version is missing");
+requireText(html, "20260803-chapter-reload-v20-2", "chapter reload cache version is missing");
 requireText(html, '<details class="quest-card"', "review-10 menu must be collapsed by default");
 requireText(html, 'id="nextButton"', "inline next-question button is missing");
 requireText(css, ".quest-card:not([open]) > .quest-card-body", "collapsed review menu rule is missing");
