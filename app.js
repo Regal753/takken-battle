@@ -2194,7 +2194,13 @@
     if (PUBLIC_STATIC_MODE) {
       const hasActiveDailyProgress = (state.daily.planIds || []).some(answeredToday) ||
         Number(state.daily.answers) > 0;
-      if (!foundationCoverageComplete() && !hasActiveDailyProgress) {
+      if (
+        !foundationCoverageComplete() &&
+        !hasActiveDailyProgress &&
+        !isChapterMode() &&
+        !isMockMode() &&
+        !isFirstPassMode()
+      ) {
         const route = foundationLearningRoute();
         if (route.kind === "unit") prepareFoundationUnitPlan(route.snapshot.chapter);
       }
