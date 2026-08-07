@@ -64,10 +64,16 @@ async function main() {
     url.searchParams.set("review", reviewNamespace);
     url.searchParams.set("today", "1");
     await page.goto(url.toString(), { waitUntil: "domcontentloaded", timeout: 15000 });
-    await page.waitForFunction(() => {
-      const source = document.querySelector("#dailyQuestSource")?.textContent || "";
-      return source.includes("読後2問") && !source.includes("読込中");
-    });
+    try {
+      await page.waitForFunction(() => {
+        const title = document.querySelector("#todayCommandTitle")?.textContent || "";
+        const action = document.querySelector("#foundationRoutePrimaryButton")?.textContent || "";
+        return title.includes("01-01 宅建業法の基本") && action.includes("読後2問");
+      });
+    } catch (error) {
+      const route = await page.locator("#foundationRoutePrimaryButton").textContent().catch(() => "missing");
+      throw new Error(`pass-plan foundation entry did not settle: ${route}; console=${JSON.stringify(consoleErrors)}; page=${JSON.stringify(pageErrors)}`, { cause: error });
+    }
 
     const initial = await page.evaluate(() => ({
       phase: document.querySelector("#passPhaseTitle")?.textContent?.trim() || "",

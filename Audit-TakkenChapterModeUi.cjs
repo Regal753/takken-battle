@@ -268,6 +268,15 @@ async function auditReloadBoundaries(page, baseUrl) {
     /固定10問は変更していません/
   );
 
+  await page.locator("#chapterDailyButton").click();
+  const returnedQuestion = await currentQuestion(page);
+  state = await savedState(page);
+  assert.equal(state.runMode, "quest");
+  assert.equal(state.chapterModeId, "");
+  assert.equal(state.finished, false);
+  assert.ok(dailyBefore.planIds.includes(returnedQuestion.id));
+  assert.deepEqual(dailyContract(state), dailyBefore);
+
   return {
     id: chapter.id,
     questions: chapter.ids.length,
@@ -275,7 +284,64 @@ async function auditReloadBoundaries(page, baseUrl) {
     answeredReload: "r002",
     nextReload: "r102",
     resultReload: true,
+    dailyReturn: returnedQuestion.id,
     dailyScopePreserved: "business"
+  };
+}
+
+async function auditFoundationNextUnit(page, baseUrl) {
+  await gotoFresh(page, baseUrl, "chapter-mode-next-unit");
+  const dailyBefore = dailyContract(await savedState(page));
+  const unitIds = [
+    "rights-book-01",
+    "rights-book-02",
+    "rights-book-03",
+    "rights-book-04",
+    "rights-book-05"
+  ];
+  const unitLabels = [
+    "02-01 制限行為能力者",
+    "02-02 意思表示",
+    "02-03 代理",
+    "02-04 時効",
+    "02-05 債務不履行・解除"
+  ];
+  const units = [];
+  for (const id of unitIds) units.push(await textbookChapter(page, id));
+  const transitions = [];
+
+  await selectChapter(page, unitLabels[0]);
+  for (let index = 0; index < units.length - 1; index += 1) {
+    const chapter = units[index];
+    const nextChapter = units[index + 1];
+    await finishChapter(page, chapter);
+
+    const nextButton = page.locator("#chapterNextButton");
+    await nextButton.waitFor({ state: "visible" });
+    assert.match(await nextButton.textContent(), new RegExp(`次の単元.*${unitLabels[index + 1]}`));
+    assert.match(
+      await page.locator(`[data-chapter-result="${chapter.id}"]`).textContent(),
+      new RegExp(`読む＋読後問題.*${unitLabels[index + 1]}`, "s")
+    );
+    assert.deepEqual(dailyContract(await savedState(page)), dailyBefore);
+
+    await nextButton.click();
+    const state = await savedState(page);
+    assert.equal(state.runMode, "chapter");
+    assert.equal(state.chapterModeId, nextChapter.id);
+    assert.deepEqual(dailyContract(state), dailyBefore);
+    const renderedQuestion = await currentQuestion(page);
+    assert.equal(renderedQuestion.id, nextChapter.ids[0]);
+    transitions.push({
+      from: chapter.id,
+      to: nextChapter.id,
+      firstQuestion: nextChapter.ids[0]
+    });
+  }
+
+  return {
+    transitions,
+    fixedPlanPreserved: true
   };
 }
 
@@ -295,6 +361,13 @@ async function main() {
     reloadDesktop.on("pageerror", (error) => pageErrors.push(error.message));
     const reloadBoundaries = await auditReloadBoundaries(reloadDesktop, server.baseUrl);
 
+    const nextUnitDesktop = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    nextUnitDesktop.on("console", (message) => {
+      if (message.type() === "error") consoleErrors.push(message.text());
+    });
+    nextUnitDesktop.on("pageerror", (error) => pageErrors.push(error.message));
+    const foundationNextUnit = await auditFoundationNextUnit(nextUnitDesktop, server.baseUrl);
+
     const desktop = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     desktop.on("console", (message) => {
       if (message.type() === "error") consoleErrors.push(message.text());
@@ -313,6 +386,13 @@ async function main() {
     assert.match(await desktop.locator(`[data-chapter-result="${chapter.id}"]`).textContent(), /固定10問は変更していません/);
     const dailyAfter = dailyContract(await savedState(desktop));
     assert.deepEqual(dailyAfter, dailyBefore);
+    await desktop.locator("#chapterRetryButton").click();
+    assert.equal((await currentQuestion(desktop)).id, chapter.ids[0]);
+    const retryState = await savedState(desktop);
+    assert.equal(retryState.runMode, "chapter");
+    assert.equal(retryState.chapterModeId, chapter.id);
+    assert.equal(retryState.finished, false);
+    assert.deepEqual(dailyContract(retryState), dailyBefore);
 
     const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
     mobile.on("console", (message) => {
@@ -365,7 +445,9 @@ async function main() {
     console.log(JSON.stringify({
       status: "ok",
       reloadBoundaries,
+      foundationNextUnit,
       desktopChapter: { id: chapter.id, questions: chapter.ids.length },
+      chapterRetry: chapter.ids[0],
       mobileChapter: { id: mobileChapter.id, questions: mobileChapter.ids.length },
       fixedPlanPreserved: true,
       roundLabels: {

@@ -116,7 +116,7 @@ Pages配信後は公開HTMLを最大12回再取得し、模試A/Bボタンと配
 
 `Audit-TakkenLearningArchitectureUi.cjs`は、基礎ルート、読後2〜4問への分割、読後問題数に一致する終了CTA、任意の単元実践、誤答再出題、45単元ゲート、v7→v8移行、PC／390px幅を一続きで確認します。`Audit-TakkenUnderstandingDepthUi.cjs`は、解答直後の3段階解説、全肢理由、入力なしの次問遷移、解答単位の自動保存、任意の迷い登録、旧セーブ退避、契約不適合責任の2年論点、390px幅をChromeで通します。`Audit-TakkenFullExamUi.cjs`は基礎ゲート通過後の復習10問、直接解説と自動保存、単元途中の読後問題再開、折りたたみメニューからの確認模試までをChromeで通します。`Audit-TakkenPassLoopV12Ui.cjs`は、公式50問の1問入力・自動採点、即時再試験拒否、自己申告除外、日跨ぎ未復習、日次20問の1問表示、直近3回の安定度、JSON書出し日時、容量警告、PC／390px幅を確認します。`Audit-TakkenChapter2RangeUi.cjs`は第2分冊内の非連続ID遷移を、`Audit-TakkenTextbookRangesUi.cjs`は全45単元の選択、本文ページ、補助問題への遷移、PC／390px幅の横あふれをChromeで確認します。`Audit-TakkenExplanationMasteryUi.cjs`は単一選択の誤答時と個数問題の正答時に、3段階の解き方、選択肢への当てはめ、全4肢の理由、PC／390px幅を実ブラウザで確認します。`Audit-TakkenPracticalVariationsUi.cjs`は10問セット完走、誤答・迷いの再出題、別セット生成、再読込復帰、v1履歴を保持したv2移行、PC／390px幅を確認します。`Audit-TakkenCalculationDrill.js`は24問の正答金額、途中式、公式根拠、保存・再出題の実装を検算します。`Audit-TakkenOfficialDrill.js`はA/B/Cの公式解答と法令基準メタデータ、`Audit-TakkenOfficialExamData.js`は12試験回・各50解答・複数正解・初見10回の達成可能性を検算します。`Audit-TakkenSaveStore.js`は更新前退避・3世代整理・破損復旧・直前復元を、`Audit-TakkenRealSaveCompatibility.cjs`は公開しない実バックアップを使って主要進捗の意味的完全保持を確認します。
 
-`Audit-TakkenChapterModeUi.cjs`は、選択直後・1問解答後・テーマ完了後の再読込でもchapter modeと結果を維持すること、選択テーマの全問が固定10問へ切り替わらず完走すること、日課scope／固定計画を変えずactive chapterの分野名を表示すること、PC／390px／320px幅、通常の進捗ラベル1行・最長クラス2行以内、コンソールエラー0件をChromeで確認します。
+`Audit-TakkenChapterModeUi.cjs`は、選択直後・1問解答後・テーマ完了後の再読込でもchapter modeと結果を維持すること、選択テーマの全問が固定10問へ切り替わらず完走すること、完了画面から次の未接触単元・再挑戦・固定10問の3出口が動作すること、日課scope／固定計画を変えずactive chapterの分野名を表示すること、PC／390px／320px幅、通常の進捗ラベル1行・最長クラス2行以内、コンソールエラー0件をChromeで確認します。
 
 ## 問題と権利
 

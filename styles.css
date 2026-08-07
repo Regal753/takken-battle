@@ -607,6 +607,22 @@ body.has-answer-dock {
   align-items: stretch;
 }
 
+.chapter-finish-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.chapter-finish-actions .chapter-next-button {
+  grid-column: 1 / -1;
+}
+
+.chapter-finish-actions .ghost-button {
+  width: 100%;
+}
+
+.quiz-result-view {
+  display: contents;
+}
+
 .finish-reset {
   min-width: 150px;
   padding: 0 14px;
@@ -2981,6 +2997,14 @@ body.has-answer-dock {
 
   .finish-actions {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .chapter-finish-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .chapter-finish-actions .chapter-next-button {
+    grid-column: auto;
   }
 
   .finish-reset {
