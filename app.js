@@ -8361,6 +8361,11 @@
       showFinished();
       return;
     }
+    const question = currentQuestion();
+    if (question) {
+      renderChapters(question.id);
+      renderThemeControls(question);
+    }
     const nextRoute = chapter.textbookPart
       ? foundationLearningRoute(studyScopeIdForChapter(chapter))
       : null;
