@@ -262,6 +262,10 @@ async function main() {
       (await desktop.locator("#dockNextLabel").textContent()).trim(),
       "読後2問を終了"
     );
+    assert.equal(
+      (await desktop.locator("#dockTargetText").textContent()).trim(),
+      "読後2問完了・次の単元へ"
+    );
     await desktop.locator("#dockNextButton").click();
     await desktop.waitForFunction(() =>
       (document.querySelector("#todayCommandTitle")?.textContent || "").includes("01-02 免許")

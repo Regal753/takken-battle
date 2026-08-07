@@ -5129,9 +5129,17 @@
     const targetId = nextTargetId();
     const targetQuestion = targetId ? QUESTIONS[targetId] : null;
     if (dailyComplete) {
-      elements.dockTargetText.textContent = nextFirstPassId()
-        ? "固定10問完走・次はRETIO公式20問"
-        : "固定10問完走・全分野接触完了。次は公式20問";
+      const nextFoundationId = nextFirstPassId();
+      if (state.daily.planMode === "unit") {
+        const questionCount = dailyQuestIds().length || DAILY_TARGET;
+        elements.dockTargetText.textContent = nextFoundationId
+          ? `読後${questionCount}問完了・次の単元へ`
+          : `読後${questionCount}問完了・全45単元接触`;
+      } else {
+        elements.dockTargetText.textContent = nextFoundationId
+          ? "固定10問完走・次はRETIO公式20問"
+          : "固定10問完走・全分野接触完了。次は公式20問";
+      }
     } else if (targetQuestion) {
       elements.dockTargetText.textContent = `次 ${questionPositionText(targetId)} ・ ${targetQuestion.tag}`;
     } else if (isFirstPassMode()) {
