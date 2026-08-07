@@ -263,6 +263,10 @@ async function auditReloadBoundaries(page, baseUrl) {
   assert.equal(state.chapterModeId, chapter.id);
   assert.equal(state.finished, true);
   assert.deepEqual(dailyContract(state), dailyBefore);
+  ui = await chapterUi(page);
+  assert.equal(ui.dailyScope, "business");
+  assert.match(ui.themeSummary, /第2分冊・権利・02-02 意思表示/);
+  assert.match(ui.selected, /02-02 意思表示/);
   assert.match(
     await page.locator(`[data-chapter-result="${chapter.id}"]`).textContent(),
     /固定10問は変更していません/
