@@ -90,7 +90,7 @@ if (!app.includes("const STATE_SCHEMA_VERSION = 8;")) issues.push("State schema 
 if (!app.includes("normalizeCalculationDrillState")) issues.push("Calculation save normalization is missing.");
 if (!app.includes("drill.retryIds = addCalculationId")) issues.push("Wrong/uncertain retry queue is missing.");
 if (!html.includes("id=\"calculationDrillPanel\"")) issues.push("Calculation drill panel is missing.");
-if (!html.includes("calculation-drill.js?v=20260803-chapter-reload-v20-2")) issues.push("Calculation data script is not loaded.");
+if (!html.includes("calculation-drill.js?v=20260807-mobile-round-label-v20-3")) issues.push("Calculation data script is not loaded.");
 
 const report = {
   status: issues.length ? "error" : "ok",

@@ -126,6 +126,50 @@ async function chapterUi(page) {
   }));
 }
 
+async function roundLabelLayout(page, text = null) {
+  return page.evaluate((candidateText) => {
+    const roundLabel = document.querySelector("#roundLabel");
+    const tagBadge = document.querySelector("#tagBadge");
+    const markButton = document.querySelector("#markButton");
+    if (!roundLabel || !tagBadge || !markButton) return null;
+    const originalText = roundLabel.textContent;
+    if (candidateText !== null) roundLabel.textContent = candidateText;
+    const range = document.createRange();
+    range.selectNodeContents(roundLabel);
+    const lineCount = new Set(
+      [...range.getClientRects()]
+        .filter((rect) => rect.width > 0 && rect.height > 0)
+        .map((rect) => Math.round(rect.top * 10) / 10)
+    ).size;
+    const roundRect = roundLabel.getBoundingClientRect();
+    const tagRect = tagBadge.getBoundingClientRect();
+    const markRect = markButton.getBoundingClientRect();
+    const layout = {
+      text: roundLabel.textContent?.trim() || "",
+      lineCount,
+      clientWidth: roundLabel.clientWidth,
+      scrollWidth: roundLabel.scrollWidth,
+      tagWidth: Math.round(tagRect.width),
+      roundRight: Math.round(roundRect.right),
+      tagLeft: Math.round(tagRect.left),
+      tagRight: Math.round(tagRect.right),
+      markLeft: Math.round(markRect.left),
+      overflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
+    };
+    roundLabel.textContent = originalText;
+    return layout;
+  }, text);
+}
+
+function assertRoundLabelSingleLine(layout, context) {
+  assert.ok(layout, `${context}: round label missing`);
+  assert.equal(layout.lineCount, 1, `${context}: ${JSON.stringify(layout)}`);
+  assert.ok(
+    layout.scrollWidth <= layout.clientWidth + 1,
+    `${context}: ${JSON.stringify(layout)}`
+  );
+}
+
 async function finishChapter(page, chapter, expectedAdaptiveTitle = null) {
   for (let index = 0; index < chapter.ids.length; index += 1) {
     const question = await currentQuestion(page);
@@ -276,10 +320,31 @@ async function main() {
     });
     mobile.on("pageerror", (error) => pageErrors.push(error.message));
     await gotoFresh(mobile, server.baseUrl, "chapter-mode-mobile");
+    const mobileInitialLabel = await roundLabelLayout(mobile);
+    assertRoundLabelSingleLine(mobileInitialLabel, "390px daily label");
+    await mobile.setViewportSize({ width: 320, height: 844 });
+    const narrowInitialLabel = await roundLabelLayout(mobile);
+    assertRoundLabelSingleLine(narrowInitialLabel, "320px daily label");
+    const narrowThemeLabel = await roundLabelLayout(mobile, "テーマ 15 / 15");
+    assertRoundLabelSingleLine(narrowThemeLabel, "320px longest chapter label");
+    const narrowSupplementalLabel = await roundLabelLayout(mobile, "第3分冊 補助 18 / 18");
+    assert.ok(narrowSupplementalLabel, "320px supplemental label missing");
+    assert.ok(narrowSupplementalLabel.lineCount <= 2, JSON.stringify(narrowSupplementalLabel));
+    assert.ok(narrowSupplementalLabel.tagWidth >= 90, JSON.stringify(narrowSupplementalLabel));
+    assert.ok(narrowSupplementalLabel.roundRight <= narrowSupplementalLabel.tagLeft);
+    assert.ok(narrowSupplementalLabel.tagRight <= narrowSupplementalLabel.markLeft);
+    assert.equal(narrowSupplementalLabel.overflow, 0);
+    const narrowOverflow = await mobile.evaluate(() =>
+      Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
+    );
+    assert.equal(narrowOverflow, 0);
+    await mobile.setViewportSize({ width: 390, height: 844 });
     const mobileDailyBefore = dailyContract(await savedState(mobile));
     const mobileChapter = await textbookChapter(mobile, "tax-other-book-02");
     await selectChapter(mobile, "04-02 不動産鑑定評価基準");
     const mobileUi = await chapterUi(mobile);
+    const mobileChapterLabel = await roundLabelLayout(mobile);
+    assertRoundLabelSingleLine(mobileChapterLabel, "390px chapter label");
     assert.equal(mobileUi.dailyScope, "business");
     assert.match(mobileUi.themeSummary, /法令・税その他・04-02 不動産鑑定評価基準/);
     await finishChapter(mobile, mobileChapter, /法令・税その他の合格ロード/);
@@ -303,6 +368,14 @@ async function main() {
       desktopChapter: { id: chapter.id, questions: chapter.ids.length },
       mobileChapter: { id: mobileChapter.id, questions: mobileChapter.ids.length },
       fixedPlanPreserved: true,
+      roundLabels: {
+        mobileDaily: mobileInitialLabel,
+        narrowDaily: narrowInitialLabel,
+        narrowTheme: narrowThemeLabel,
+        narrowSupplemental: narrowSupplementalLabel,
+        mobileChapter: mobileChapterLabel
+      },
+      narrowOverflow,
       mobileOverflow: overflow.body,
       consoleErrors: consoleErrors.length,
       pageErrors: pageErrors.length
