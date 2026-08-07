@@ -2706,14 +2706,17 @@ body.has-answer-dock {
 
   .quiz-meta {
     display: grid;
-    grid-template-columns: 78px minmax(0, 1fr) auto;
+    grid-template-columns: 108px minmax(0, 1fr) auto;
     gap: 6px;
   }
 
   #roundLabel {
     min-width: 0;
-    height: 42px;
-    font-size: 21px;
+    min-height: 42px;
+    height: auto;
+    padding: 4px;
+    font-size: 18px;
+    line-height: 1.15;
   }
 
   #tagBadge,

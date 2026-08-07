@@ -5071,7 +5071,10 @@
       return nextChapterModeId() ? "次のテーマ問題へ" : "テーマ結果を見る";
     }
     if (isDailyQuestQuestion(currentId()) && dailyQuestDoneCount() >= dailyQuestIds().length) {
-      return "今日の10問を終了";
+      const questionCount = dailyQuestIds().length || DAILY_TARGET;
+      return state.daily.planMode === "unit"
+        ? `読後${questionCount}問を終了`
+        : `今日の${questionCount}問を終了`;
     }
     if (isFirstPassMode()) {
       return nextFirstPassId() ? "次の未接触へ" : "一周完了";
@@ -5126,9 +5129,17 @@
     const targetId = nextTargetId();
     const targetQuestion = targetId ? QUESTIONS[targetId] : null;
     if (dailyComplete) {
-      elements.dockTargetText.textContent = nextFirstPassId()
-        ? "固定10問完走・次はRETIO公式20問"
-        : "固定10問完走・全分野接触完了。次は公式20問";
+      const nextFoundationId = nextFirstPassId();
+      if (state.daily.planMode === "unit") {
+        const questionCount = dailyQuestIds().length || DAILY_TARGET;
+        elements.dockTargetText.textContent = nextFoundationId
+          ? `読後${questionCount}問完了・次の単元へ`
+          : `読後${questionCount}問完了・全45単元接触`;
+      } else {
+        elements.dockTargetText.textContent = nextFoundationId
+          ? "固定10問完走・次はRETIO公式20問"
+          : "固定10問完走・全分野接触完了。次は公式20問";
+      }
     } else if (targetQuestion) {
       elements.dockTargetText.textContent = `次 ${questionPositionText(targetId)} ・ ${targetQuestion.tag}`;
     } else if (isFirstPassMode()) {
