@@ -52,6 +52,10 @@ requireText(app, "const RUN_MODE_CHAPTER = \"chapter\";", "manual chapter run mo
 requireText(app, "function chapterModeChapter", "manual chapter state resolver is missing");
 requireText(app, "state.runMode = RUN_MODE_CHAPTER;", "manual chapter selection does not enter chapter mode");
 requireText(app, "function showChapterFinished", "manual chapter completion view is missing");
+requireText(app, "function showQuizResult", "completion views must preserve the live question DOM");
+requireText(app, "resetQuizCardView();", "question rendering does not restore the live question DOM");
+requireText(app, "id=\"chapterNextButton\"", "chapter completion has no next-route action");
+requireText(app, "runFoundationRouteAction(chapterNextButton)", "chapter completion bypasses the shared foundation route");
 requireText(app, "if (isChapterMode())", "manual chapter navigation branch is missing");
 requireText(app, "function startPracticalDrillForUnit", "unit-specific practical session is missing");
 requireText(app, "function foundationCoverageComplete", "foundation coverage gate is missing");
@@ -75,7 +79,7 @@ if (app.includes("JULY_GATE_DEADLINE") || html.includes("7/31学習ゲート")) 
 ].forEach((id) => requireText(html, `id=\"${id}\"`, `${id} is missing from the page`));
 requireText(html, "本文＋読後問題", "foundation-first mission label is missing");
 requireText(html, "45単元の読後問題完了で公式演習を解放", "official foundation gate copy is missing");
-requireText(html, "20260807-mobile-round-label-v20-3", "mobile round label cache version is missing");
+requireText(html, "20260807-foundation-next-unit-v21-1", "foundation next-unit cache version is missing");
 requireText(html, '<details class="quest-card"', "review-10 menu must be collapsed by default");
 requireText(html, 'id="nextButton"', "inline next-question button is missing");
 requireText(css, ".quest-card:not([open]) > .quest-card-body", "collapsed review menu rule is missing");

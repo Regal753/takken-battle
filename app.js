@@ -4339,10 +4339,10 @@
     };
   }
 
-  function setRouteAction(button, descriptor) {
+  function setRouteAction(button, descriptor, buttonLabel = descriptor.button) {
     if (!button) return;
     button.hidden = false;
-    button.textContent = descriptor.button;
+    button.textContent = buttonLabel;
     button.dataset.routeAction = descriptor.action;
     button.dataset.unitId = descriptor.unitId || "";
     button.dataset.scopeId = descriptor.scopeId || "";
@@ -5774,6 +5774,7 @@
   }
 
   function render() {
+    resetQuizCardView();
     renderCalculationDrill();
     renderPracticalDrill();
     const question = currentQuestion();
@@ -8184,6 +8185,35 @@
       .replaceAll("'", "&#039;");
   }
 
+  function resetQuizCardView() {
+    elements.quizCard?.querySelector("[data-quiz-result-view]")?.remove();
+    [
+      elements.roundLabel?.closest(".quiz-meta"),
+      elements.questionText,
+      elements.choices,
+      elements.feedbackBox
+    ].forEach((element) => {
+      if (element) element.hidden = false;
+    });
+  }
+
+  function showQuizResult(markup) {
+    resetQuizCardView();
+    [
+      elements.roundLabel?.closest(".quiz-meta"),
+      elements.questionText,
+      elements.choices,
+      elements.feedbackBox
+    ].forEach((element) => {
+      if (element) element.hidden = true;
+    });
+    const view = document.createElement("div");
+    view.className = "quiz-result-view";
+    view.dataset.quizResultView = "";
+    view.innerHTML = markup;
+    elements.quizCard.append(view);
+  }
+
   function showMockFinished() {
     const form = currentMockForm();
     if (!form || !state.mock.finalized) return;
@@ -8258,7 +8288,7 @@
         }).join("")
       : `<p class="mock-perfect">全50問正解。誤答レビューはありません。</p>`;
 
-    elements.quizCard.innerHTML = `
+    showQuizResult(`
       <div class="quiz-meta">
         <strong>${escapeHtml(mockFormShortLabel(form))}</strong>
         <span>模試完了</span>
@@ -8297,7 +8327,7 @@
           <button id="mockRetryButton" class="ghost-button" type="button">同じフォームを再挑戦</button>
         </div>
       </section>
-    `;
+    `);
     const reloadIntoMock = (targetFormId) => {
       const targetForm = mockFormById(targetFormId);
       state.runMode = RUN_MODE_MOCK;
@@ -8331,6 +8361,13 @@
       showFinished();
       return;
     }
+    const nextRoute = chapter.textbookPart
+      ? foundationLearningRoute(studyScopeIdForChapter(chapter))
+      : null;
+    const nextDescriptor = nextRoute ? foundationRouteDescriptor(nextRoute) : null;
+    const nextActionLabel = nextRoute?.kind === "unit"
+      ? `次の単元「${nextDescriptor.title}」へ`
+      : nextDescriptor?.button || "";
     state.finished = true;
     if (elements.answerDock) {
       elements.answerDock.hidden = true;
@@ -8340,10 +8377,10 @@
     const answeredCount = chapter.ids.filter(answeredToday).length;
     const correctCount = chapter.ids.filter(correctToday).length;
     const retainedCount = chapter.ids.filter(isRetained).length;
-    elements.quizCard.innerHTML = `
+    showQuizResult(`
       <div class="quiz-meta">
-        <strong id="roundLabel">${chapter.ids.length} / ${chapter.ids.length}</strong>
-        <span id="tagBadge">テーマ完了</span>
+        <strong>${chapter.ids.length} / ${chapter.ids.length}</strong>
+        <span>テーマ完了</span>
       </div>
       <section class="feedback" data-chapter-result="${escapeHtml(chapter.id)}">
         <h3>${escapeHtml(chapter.label)}</h3>
@@ -8354,12 +8391,21 @@
           <div><dt>本日正解</dt><dd>${correctCount}問</dd></div>
           <div><dt>定着</dt><dd>${retainedCount}問</dd></div>
         </dl>
-        <div class="finish-actions">
-          <button id="chapterRetryButton" class="next-button" type="button">このテーマをもう一度</button>
+        ${nextDescriptor ? `
+          <p class="explain-text"><strong>${escapeHtml(nextDescriptor.stage)}：</strong>${escapeHtml(nextDescriptor.title)}。${escapeHtml(nextDescriptor.text)}</p>
+        ` : ""}
+        <div class="finish-actions chapter-finish-actions">
+          ${nextDescriptor ? `<button id="chapterNextButton" class="next-button chapter-next-button" type="button">${escapeHtml(nextActionLabel)}</button>` : ""}
+          <button id="chapterRetryButton" class="${nextDescriptor ? "ghost-button" : "next-button"}" type="button">このテーマをもう一度</button>
           <button id="chapterDailyButton" class="ghost-button" type="button">固定10問へ戻る</button>
         </div>
       </section>
-    `;
+    `);
+    const chapterNextButton = $("#chapterNextButton");
+    if (chapterNextButton && nextDescriptor) {
+      setRouteAction(chapterNextButton, nextDescriptor, nextActionLabel);
+      chapterNextButton.addEventListener("click", () => runFoundationRouteAction(chapterNextButton));
+    }
     $("#chapterRetryButton")?.addEventListener("click", () => {
       state.finished = false;
       state.answered = null;
@@ -8398,10 +8444,10 @@
         <button id="finishDailyButton" class="next-button" type="button">固定10問へ戻る</button>
         <button id="finishResetButton" class="ghost-button finish-reset" type="button">全記録リセット</button>
       </div>`;
-    elements.quizCard.innerHTML = `
+    showQuizResult(`
       <div class="quiz-meta">
-        <strong id="roundLabel">${scopeState.contacted} / ${scopeState.total}</strong>
-        <span id="tagBadge">完了</span>
+        <strong>${scopeState.contacted} / ${scopeState.total}</strong>
+        <span>完了</span>
       </div>
       <p class="question-text">${finishText}</p>
       <section class="feedback">
@@ -8416,7 +8462,7 @@
         <p class="explain-text">${nextText}</p>
         ${finishActions}
       </section>
-    `;
+    `);
     $("#finishDailyButton")?.addEventListener("click", () => {
       state.runMode = "quest";
       state.chapterModeId = "";

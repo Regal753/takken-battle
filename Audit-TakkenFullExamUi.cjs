@@ -98,19 +98,26 @@ async function main() {
     url.searchParams.set("review", reviewNamespace);
     url.searchParams.set("today", "1");
     await page.goto(url.toString(), { waitUntil: "domcontentloaded", timeout: 15000 });
-    await page.waitForFunction(() =>
-      (document.querySelector("#dailyQuestSource")?.textContent || "").includes("読後2問")
-    );
+    try {
+      await page.waitForFunction(() => {
+        const title = document.querySelector("#todayCommandTitle")?.textContent || "";
+        const action = document.querySelector("#foundationRoutePrimaryButton")?.textContent || "";
+        return title.includes("01-01 宅建業法の基本") && action.includes("読後2問");
+      });
+    } catch (error) {
+      const route = await page.locator("#foundationRoutePrimaryButton").textContent().catch(() => "missing");
+      throw new Error(`foundation entry did not settle: ${route}; console=${JSON.stringify(consoleErrors)}; page=${JSON.stringify(pageErrors)}`, { cause: error });
+    }
     const foundationEntry = await page.evaluate(() => ({
       title: document.querySelector("#todayCommandTitle")?.textContent?.trim() || "",
-      source: document.querySelector("#dailyQuestSource")?.textContent?.trim() || "",
+      action: document.querySelector("#foundationRoutePrimaryButton")?.textContent?.trim() || "",
       gate: document.querySelector("#foundationGateStatus")?.textContent?.trim() || "",
       mockDisabled: Boolean(document.querySelector("#mockAButton")?.disabled),
       mockTitle: document.querySelector("#mockAButton")?.title || ""
     }));
     if (
       foundationEntry.title !== "01-01 宅建業法の基本" ||
-      !foundationEntry.source.includes("読後2問") ||
+      !foundationEntry.action.includes("読後2問") ||
       foundationEntry.gate !== "単元 0 / 45" ||
       !foundationEntry.mockDisabled ||
       !foundationEntry.mockTitle.includes("45単元")
