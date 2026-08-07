@@ -5071,7 +5071,10 @@
       return nextChapterModeId() ? "次のテーマ問題へ" : "テーマ結果を見る";
     }
     if (isDailyQuestQuestion(currentId()) && dailyQuestDoneCount() >= dailyQuestIds().length) {
-      return "今日の10問を終了";
+      const questionCount = dailyQuestIds().length || DAILY_TARGET;
+      return state.daily.planMode === "unit"
+        ? `読後${questionCount}問を終了`
+        : `今日の${questionCount}問を終了`;
     }
     if (isFirstPassMode()) {
       return nextFirstPassId() ? "次の未接触へ" : "一周完了";

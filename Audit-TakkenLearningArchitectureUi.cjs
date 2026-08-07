@@ -76,46 +76,16 @@ async function savedState(page) {
   });
 }
 
-async function markFirstUnitContacted(page) {
-  await page.evaluate(() => {
-    const key = Object.keys(localStorage).find((candidate) =>
-      candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
-      !candidate.includes("backup") &&
-      !candidate.includes("-before-") &&
-      !candidate.includes("previous") &&
-      !candidate.includes("corrupt") &&
-      !candidate.endsWith("event-outbox")
-    );
-    const state = JSON.parse(localStorage.getItem(key));
-    const unit = Object.values(window.TAKKEN_EXAM_BLUEPRINT.textbookRanges)
-      .flatMap((range) => range.chapters)
-      .find((chapter) => chapter.id === "business-book-01");
-    const now = new Date().toISOString();
-    const local = new Date();
-    const day = `${local.getFullYear()}-${String(local.getMonth() + 1).padStart(2, "0")}-${String(local.getDate()).padStart(2, "0")}`;
-    unit.ids.forEach((id, index) => {
-      state.questionStats[id] = {
-        attempts: 1,
-        correct: 1,
-        wrong: 0,
-        lastStep: index + 1,
-        lastAnsweredAt: now,
-        lastCorrectAt: now,
-        lastClearAt: now,
-        correctDayKeys: [day],
-        clearDayKeys: [day],
-        lastConfidence: "clear",
-        lastConfidenceAt: now
-      };
-    });
-    state.daily.answers = unit.ids.length;
-    state.daily.correct = unit.ids.length;
-    localStorage.setItem(key, JSON.stringify(state));
+async function answerCurrentCorrect(page) {
+  const answer = await page.evaluate(() => {
+    const text = document.querySelector("#questionText")?.textContent || "";
+    const question = Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
+      .find((candidate) => candidate.text === text);
+    if (!question) throw new Error(`question not found: ${text.slice(0, 80)}`);
+    return question.answer;
   });
-  await page.reload({ waitUntil: "networkidle" });
-  await page.waitForFunction(() =>
-    (document.querySelector("#todayCommandTitle")?.textContent || "").includes("01-02 免許")
-  );
+  await page.locator(`.choice-button[data-index="${answer}"]`).click();
+  await page.locator("#feedbackBox").waitFor({ state: "visible" });
 }
 
 async function currentPractical(page) {
@@ -282,7 +252,20 @@ async function main() {
     assert.equal(initialState.daily.planUnitId, "business-book-01");
     assert.equal(initialState.daily.planIds.length, 2);
 
-    await markFirstUnitContacted(desktop);
+    await answerCurrentCorrect(desktop);
+    await desktop.locator("#dockNextButton").click();
+    await desktop.waitForFunction(() =>
+      (document.querySelector("#roundLabel")?.textContent || "").includes("2 / 2")
+    );
+    await answerCurrentCorrect(desktop);
+    assert.equal(
+      (await desktop.locator("#dockNextLabel").textContent()).trim(),
+      "読後2問を終了"
+    );
+    await desktop.locator("#dockNextButton").click();
+    await desktop.waitForFunction(() =>
+      (document.querySelector("#todayCommandTitle")?.textContent || "").includes("01-02 免許")
+    );
     assert.match(await desktop.locator("#todayCommandTitle").textContent(), /01-02 免許/);
     if (!(await desktop.locator("#foundationRoutePracticalButton").isVisible())) {
       if (!(await desktop.locator("#themeDrawer").evaluate((node) => node.open))) {
