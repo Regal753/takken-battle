@@ -332,6 +332,8 @@ async function main() {
       quizBeforePractice: document.querySelector("#quizCard")?.getBoundingClientRect().top <
         document.querySelector("#practicalDrillPanel")?.getBoundingClientRect().top,
       buttonWidth: document.querySelector("#foundationRoutePrimaryButton")?.getBoundingClientRect().width,
+      progressButtonHeight: document.querySelector("#progressDrawerLink")?.getBoundingClientRect().height,
+      resetButtonHeight: document.querySelector("#resetButton")?.getBoundingClientRect().height,
       overflowElements: [...document.querySelectorAll("body *")]
         .map((element) => ({
           tag: element.tagName,
@@ -347,6 +349,8 @@ async function main() {
     assert.equal(mobileLayout.quizBeforePractice, true);
     assert.ok(mobileLayout.routeWidth <= mobileLayout.viewport);
     assert.ok(mobileLayout.buttonWidth > 250);
+    assert.ok(mobileLayout.progressButtonHeight >= 44, JSON.stringify(mobileLayout));
+    assert.ok(mobileLayout.resetButtonHeight >= 44, JSON.stringify(mobileLayout));
 
     const largeUnitPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     largeUnitPage.on("console", (message) => {

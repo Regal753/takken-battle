@@ -68,9 +68,6 @@ async function gotoReview(page, baseUrl, namespace) {
   url.searchParams.set("review", namespace);
   await page.goto(url.toString(), { waitUntil: "networkidle", timeout: 15000 });
   await page.locator("#calculationDrillPanel").waitFor({ state: "visible" });
-  if (!(await page.locator("#calculationDrillPanel").evaluate((node) => node.open))) {
-    await page.locator("#calculationDrillPanel > summary").click();
-  }
 }
 
 async function noHorizontalOverflow(page) {
@@ -132,16 +129,55 @@ async function answerCurrentCorrectly(page) {
     });
     await gotoReview(desktop, server.baseUrl, "calc-desktop");
 
-    const initial = await desktop.evaluate(() => ({
+    const initial = await desktop.evaluate((storageId) => ({
       open: document.querySelector("#calculationDrillPanel")?.open,
-      prompt: document.querySelector("#calculationDrillPrompt")?.textContent?.trim(),
-      choices: document.querySelectorAll("#calculationDrillChoices .calculation-drill-choice").length,
-      summary: document.querySelector("#calculationDrillSummary")?.textContent?.trim()
-    }));
-    assert.equal(initial.open, true);
-    assert.ok(initial.prompt.includes("200万円"));
-    assert.equal(initial.choices, 4);
-    assert.equal(initial.summary, "初回 0 / 24・再出題 0");
+      quickAction: document.querySelector("#todayCommandCalculationButton")?.textContent?.trim(),
+      quickActionHidden: document.querySelector("#todayCommandCalculationButton")?.hidden,
+      summary: document.querySelector("#calculationDrillSummary")?.textContent?.trim(),
+      saved: JSON.parse(localStorage.getItem(storageId) || "{}").calculationDrill
+    }), storageIdFor("calc-desktop"));
+    assert.equal(initial.open, false);
+    assert.equal(initial.quickActionHidden, false);
+    assert.equal(initial.quickAction, "計算・金額を24問で特訓する");
+    assert.equal(initial.summary, "累計接触 0 / 24・再出題 0");
+    assert.equal(initial.saved?.stage, "idle");
+    assert.deepEqual(initial.saved?.queue, []);
+
+    await desktop.locator("#todayCommandCalculationButton").click();
+    const started = await desktop.evaluate((storageId) => {
+      const saved = JSON.parse(localStorage.getItem(storageId) || "{}").calculationDrill;
+      return {
+        open: document.querySelector("#calculationDrillPanel")?.open,
+        prompt: document.querySelector("#calculationDrillPrompt")?.textContent?.trim(),
+        choices: document.querySelectorAll("#calculationDrillChoices .calculation-drill-choice").length,
+        stage: saved?.stage,
+        queue: saved?.queue?.length
+      };
+    }, storageIdFor("calc-desktop"));
+    assert.equal(started.open, true);
+    assert.ok(started.prompt.includes("200万円"));
+    assert.equal(started.choices, 4);
+    assert.equal(started.stage, "active");
+    assert.equal(started.queue, 24);
+
+    await desktop.reload({ waitUntil: "networkidle" });
+    const immediateReload = await desktop.evaluate((storageId) => {
+      const drill = JSON.parse(localStorage.getItem(storageId) || "{}").calculationDrill;
+      return {
+        open: document.querySelector("#calculationDrillPanel")?.open,
+        stage: drill.stage,
+        queue: drill.queue.length,
+        position: drill.position,
+        attempts: drill.attempts
+      };
+    }, storageIdFor("calc-desktop"));
+    assert.deepEqual(immediateReload, {
+      open: true,
+      stage: "active",
+      queue: 24,
+      position: 0,
+      attempts: 0
+    });
 
     await desktop.locator("#calculationDrillChoices .calculation-drill-choice").nth(0).click();
     assert.match(await desktop.locator("#calculationDrillVerdict").textContent(), /誤答/);
@@ -169,9 +205,7 @@ async function answerCurrentCorrectly(page) {
     assert.equal(persistedBeforeReload.attempts, 2);
 
     await desktop.reload({ waitUntil: "networkidle" });
-    if (!(await desktop.locator("#calculationDrillPanel").evaluate((node) => node.open))) {
-      await desktop.locator("#calculationDrillPanel > summary").click();
-    }
+    assert.equal(await desktop.locator("#calculationDrillPanel").evaluate((node) => node.open), true);
     assert.equal(await desktop.locator('[data-calculation-confidence="uncertain"]').getAttribute("class"), "is-selected");
     await desktop.locator("#calculationDrillNextButton").click();
     for (let guard = 0; guard < 80; guard += 1) {
@@ -204,6 +238,44 @@ async function answerCurrentCorrectly(page) {
     assert.equal(desktopOverflow.rootOverflow, 0, JSON.stringify(desktopOverflow));
     assert.deepEqual(desktopOverflow.offenders, [], JSON.stringify(desktopOverflow));
     await desktop.screenshot({ path: path.join(screenshotDir, "desktop-complete.png"), fullPage: true });
+
+    await desktop.reload({ waitUntil: "networkidle" });
+    assert.equal(await desktop.locator("#calculationDrillPanel").evaluate((node) => node.open), true);
+    assert.equal(await desktop.locator("#calculationDrillComplete").isVisible(), true);
+    assert.equal(await desktop.locator("#calculationDrillResetButton").isVisible(), false);
+    assert.equal(await desktop.locator("#calculationDrillRestartButton").textContent(), "同じ24問をもう一周");
+    assert.equal(await desktop.locator("#calculationDrillExitButton").textContent(), "学習画面へ戻る");
+
+    await desktop.locator("#calculationDrillExitButton").click();
+    assert.equal(await desktop.locator("#calculationDrillPanel").evaluate((node) => node.open), false);
+    assert.equal(await desktop.locator("#todayCommandCalculationButton").textContent(), "計算特訓の結果を確認する");
+    await desktop.locator("#todayCommandCalculationButton").click();
+    assert.equal(await desktop.locator("#calculationDrillComplete").isVisible(), true);
+
+    await desktop.locator("#calculationDrillRestartButton").click();
+    const restarted = await desktop.evaluate((storageId) => {
+      const drill = JSON.parse(localStorage.getItem(storageId) || "{}").calculationDrill;
+      return {
+        stage: drill.stage,
+        queue: drill.queue.length,
+        attempts: drill.attempts,
+        correct: drill.correctAttempts,
+        history: Object.keys(drill.history || {}).length,
+        mastered: drill.masteredIds.length,
+        completedAt: drill.completedAt
+      };
+    }, storageIdFor("calc-desktop"));
+    assert.deepEqual(restarted, {
+      stage: "active",
+      queue: 24,
+      attempts: 26,
+      correct: 25,
+      history: 24,
+      mastered: 24,
+      completedAt: ""
+    });
+    assert.equal(await desktop.locator("#calculationDrillSummary").textContent(), "累計接触 24 / 24・再出題 0");
+    assert.equal(await desktop.locator("#calculationDrillPanel").evaluate((node) => node.open), true);
     await desktopContext.close();
 
     const legacyContext = await newContext(browser, { width: 1280, height: 900 });
@@ -239,9 +311,10 @@ async function answerCurrentCorrectly(page) {
       correct: 25,
       q1Correct: 2,
       centralAnswered: true,
-      calcQueue: 24,
-      calcStage: "first"
+      calcQueue: 0,
+      calcStage: "idle"
     });
+    assert.equal(await legacyPage.locator("#calculationDrillPanel").evaluate((node) => node.open), false);
     await legacyContext.close();
 
     const mobileContext = await newContext(browser, { width: 390, height: 844 });
@@ -251,6 +324,8 @@ async function answerCurrentCorrectly(page) {
       if (message.type() === "error") errors.push(`mobile console: ${message.text()}`);
     });
     await gotoReview(mobile, server.baseUrl, "calc-mobile");
+    await mobile.locator("#todayCommandCalculationButton").click();
+    assert.equal(await mobile.locator("#calculationDrillPanel").evaluate((node) => node.open), true);
     const mobileLayout = await mobile.evaluate(() => {
       const choice = document.querySelector(".calculation-drill-choice")?.getBoundingClientRect();
       const question = document.querySelector(".calculation-drill-question")?.getBoundingClientRect();
@@ -273,7 +348,7 @@ async function answerCurrentCorrectly(page) {
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({
       status: "ok",
-      desktop: { completed, overflow: desktopOverflow },
+      desktop: { initial, started, immediateReload, completed, restarted, overflow: desktopOverflow },
       legacyMigration: migrated,
       mobile390: { ...mobileLayout, overflow: mobileOverflow },
       screenshots: screenshotDir

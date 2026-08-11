@@ -52,6 +52,19 @@
   min-width: 0;
 }
 
+.foundation-route-context {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 7px;
+  padding: 3px 7px;
+  border: 1px solid rgba(242, 185, 77, 0.38);
+  border-radius: 999px;
+  color: #ffe39a;
+  background: rgba(242, 185, 77, 0.08);
+  font-size: 11px;
+  font-weight: 900;
+}
+
 .foundation-route-copy > span {
   display: block;
   margin-bottom: 5px;
@@ -283,6 +296,23 @@ button {
   grid-template-columns: minmax(0, 1fr) auto auto;
   gap: 10px;
   margin: 0 0 14px;
+}
+
+.theme-control-field {
+  display: grid;
+  min-width: 0;
+  gap: 4px;
+}
+
+.theme-control-field > span {
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.theme-toolbar > .quick-button {
+  align-self: end;
 }
 
 .chapter-select,
@@ -2516,7 +2546,7 @@ body.has-answer-dock {
   }
 
   .ghost-button {
-    min-height: 34px;
+    min-height: 44px;
     padding: 0 8px;
     font-size: 13px;
   }
@@ -2552,6 +2582,18 @@ body.has-answer-dock {
 
   .study-scope-select {
     grid-column: 1;
+  }
+
+  .theme-control-field-chapter {
+    grid-column: 1 / -1;
+  }
+
+  .theme-control-field-scope {
+    grid-column: 1;
+  }
+
+  .theme-toolbar > .quick-button {
+    grid-column: 2;
   }
 
   .quest-card {
@@ -7275,7 +7317,8 @@ button.mission-step:disabled {
 .calculation-drill-feedback[hidden],
 .calculation-drill-complete[hidden],
 .calculation-drill-confidence[hidden],
-.calculation-drill-question[hidden] {
+.calculation-drill-question[hidden],
+.calculation-drill-head > button[hidden] {
   display: none;
 }
 
@@ -7363,6 +7406,16 @@ button.mission-step:disabled {
   margin: 0;
   color: #c9dad4;
   font-size: 12px;
+}
+
+.calculation-drill-complete-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.calculation-drill-complete-actions > button {
+  min-height: 44px;
 }
 
 @media (max-width: 520px) {

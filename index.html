@@ -13,7 +13,7 @@
     <link rel="canonical" href="https://regal753.github.io/takken-battle/">
     <title>宅建バトル Study Quest</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./styles.css?v=20260811-practical-review-ux-v22-1">
+    <link rel="stylesheet" href="./styles.css?v=20260811-study-route-audit-v22-2">
   </head>
   <body>
     <div class="app-root">
@@ -64,6 +64,7 @@
           <div class="today-command-actions">
             <button id="todayCommandStartButton" class="today-command-primary" type="button">この単元の問題へ</button>
             <button id="todayCommandPracticalButton" class="today-command-secondary" type="button" hidden>宅建業法を10問で振り返る</button>
+            <button id="todayCommandCalculationButton" class="today-command-secondary" type="button" hidden>計算・金額を24問で特訓する</button>
             <div id="todayCommandOfficialActions" class="today-command-action-group" hidden>
               <button id="officialDrillOpenButton" class="today-command-primary" type="button">公式20問シートを開く</button>
             </div>
@@ -328,11 +329,12 @@
 
       <details id="themeDrawer" class="theme-drawer">
         <summary>
-          <span>1 基礎ルート・45単元</span>
+          <span>1 日課ルート・45単元</span>
           <strong id="themeDrawerSummary">宅建業法</strong>
         </summary>
-        <section class="foundation-route-card" aria-label="現在の単元学習ルート">
+        <section class="foundation-route-card" aria-label="日課の単元学習ルート">
           <div class="foundation-route-copy">
+            <small id="foundationRouteContext" class="foundation-route-context">日課: 宅建業法</small>
             <span id="foundationRouteStage">読む＋読後問題</span>
             <strong id="foundationRouteTitle">01-01 宅建業法の基本</strong>
             <p id="foundationRouteText">本文p.3〜を読み、この単元の問題で理解を確認する。</p>
@@ -348,13 +350,19 @@
           </div>
         </section>
         <nav id="themeBar" class="theme-toolbar" aria-label="テーマ操作">
-          <select id="chapterSelect" class="chapter-select" aria-label="テーマを選択"></select>
-          <select id="studyScopeSelect" class="study-scope-select" aria-label="現在の学習段階">
-            <option value="business">① 宅建業法を固める</option>
-            <option value="rights">② 第2分冊・権利関係を固める</option>
-            <option value="law-other">③ 法令・税その他へ進む</option>
-            <option value="all">④ 全分野を混ぜる</option>
-          </select>
+          <label class="theme-control-field theme-control-field-chapter">
+            <span>単発で解くテーマ（日課は変わりません）</span>
+            <select id="chapterSelect" class="chapter-select" aria-label="単発で解くテーマ。日課の範囲は変更しない"></select>
+          </label>
+          <label class="theme-control-field theme-control-field-scope">
+            <span>日課の学習範囲</span>
+            <select id="studyScopeSelect" class="study-scope-select" aria-label="日課の学習範囲">
+              <option value="business">① 宅建業法を固める</option>
+              <option value="rights">② 第2分冊・権利関係を固める</option>
+              <option value="law-other">③ 法令・税その他へ進む</option>
+              <option value="all">④ 全分野を混ぜる</option>
+            </select>
+          </label>
           <button id="weakButton" class="quick-button" type="button" disabled>弱点 0</button>
         </nav>
       </details>
@@ -447,7 +455,7 @@
             <small>3 計算だけを反復</small>
             <strong>計算・金額特訓</strong>
           </span>
-          <span id="calculationDrillSummary">初回 0 / 24・再出題 0</span>
+          <span id="calculationDrillSummary">累計接触 0 / 24・再出題 0</span>
         </summary>
         <div class="calculation-drill-body">
           <div class="calculation-drill-head">
@@ -456,7 +464,7 @@
               <strong id="calculationDrillProgress">1 / 24</strong>
               <p>金額帯を決め、式を立ててから答える。正解でも迷った問題は自動で再出題する。</p>
             </div>
-            <button id="calculationDrillResetButton" class="today-command-secondary" type="button">24問を再セット</button>
+            <button id="calculationDrillResetButton" class="today-command-secondary" type="button">24問を始める</button>
           </div>
           <section id="calculationDrillQuestion" class="calculation-drill-question" aria-live="polite">
             <div class="calculation-drill-meta">
@@ -481,7 +489,10 @@
           <section id="calculationDrillComplete" class="calculation-drill-complete" hidden aria-live="polite">
             <strong>計算・金額特訓を完了</strong>
             <p id="calculationDrillCompleteText">24問を解き、再出題キューも0件にしました。</p>
-            <button id="calculationDrillRestartButton" class="today-command-primary" type="button">もう一周する</button>
+            <div class="calculation-drill-complete-actions">
+              <button id="calculationDrillRestartButton" class="today-command-primary" type="button">同じ24問をもう一周</button>
+              <button id="calculationDrillExitButton" class="today-command-secondary" type="button">学習画面へ戻る</button>
+            </div>
           </section>
         </div>
       </details>
@@ -756,21 +767,21 @@
       </div>
     </aside>
 
-    <script src="./exam-blueprint.js?v=20260811-practical-review-ux-v22-1"></script>
-    <script src="./exam-question-core.js?v=20260811-practical-review-ux-v22-1"></script>
-    <script src="./exam-questions-rights.js?v=20260811-practical-review-ux-v22-1"></script>
-    <script src="./exam-questions-restrictions.js?v=20260811-practical-review-ux-v22-1"></script>
-    <script src="./exam-questions-tax-other.js?v=20260811-practical-review-ux-v22-1"></script>
-    <script src="./exam-questions-business.js?v=20260811-practical-review-ux-v22-1"></script>
-    <script src="./practical-question-bank.js?v=20260811-practical-review-ux-v22-1"></script>
-    <script src="./question-bank.js?v=20260811-practical-review-ux-v22-1"></script>
-    <script src="./question-balance.js?v=20260811-practical-review-ux-v22-1"></script>
-    <script src="./reward-system.js?v=20260811-practical-review-ux-v22-1"></script>
-    <script src="./official-exam-data.js?v=20260811-practical-review-ux-v22-1"></script>
-    <script src="./calculation-drill.js?v=20260811-practical-review-ux-v22-1"></script>
-    <script src="./save-store.js?v=20260811-practical-review-ux-v22-1"></script>
-    <script src="./save-transfer.js?v=20260811-practical-review-ux-v22-1"></script>
-    <script src="./app.js?v=20260811-practical-review-ux-v22-1"></script>
+    <script src="./exam-blueprint.js?v=20260811-study-route-audit-v22-2"></script>
+    <script src="./exam-question-core.js?v=20260811-study-route-audit-v22-2"></script>
+    <script src="./exam-questions-rights.js?v=20260811-study-route-audit-v22-2"></script>
+    <script src="./exam-questions-restrictions.js?v=20260811-study-route-audit-v22-2"></script>
+    <script src="./exam-questions-tax-other.js?v=20260811-study-route-audit-v22-2"></script>
+    <script src="./exam-questions-business.js?v=20260811-study-route-audit-v22-2"></script>
+    <script src="./practical-question-bank.js?v=20260811-study-route-audit-v22-2"></script>
+    <script src="./question-bank.js?v=20260811-study-route-audit-v22-2"></script>
+    <script src="./question-balance.js?v=20260811-study-route-audit-v22-2"></script>
+    <script src="./reward-system.js?v=20260811-study-route-audit-v22-2"></script>
+    <script src="./official-exam-data.js?v=20260811-study-route-audit-v22-2"></script>
+    <script src="./calculation-drill.js?v=20260811-study-route-audit-v22-2"></script>
+    <script src="./save-store.js?v=20260811-study-route-audit-v22-2"></script>
+    <script src="./save-transfer.js?v=20260811-study-route-audit-v22-2"></script>
+    <script src="./app.js?v=20260811-study-route-audit-v22-2"></script>
     <noscript>宅建バトルを利用するにはJavaScriptを有効にしてください。</noscript>
   </body>
 </html>

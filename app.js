@@ -592,6 +592,7 @@
     todayCommandText: $("#todayCommandText"),
     todayCommandStartButton: $("#todayCommandStartButton"),
     todayCommandPracticalButton: $("#todayCommandPracticalButton"),
+    todayCommandCalculationButton: $("#todayCommandCalculationButton"),
     todayCommandOfficialActions: $("#todayCommandOfficialActions"),
     officialDrillOpenButton: $("#officialDrillOpenButton"),
     officialDrillPanel: $("#officialDrillPanel"),
@@ -617,6 +618,7 @@
     todayCommandReviewButton: $("#todayCommandReviewButton"),
     todayCommandMinutesActions: $("#todayCommandMinutesActions"),
     todayCommandStatus: $("#todayCommandStatus"),
+    foundationRouteContext: $("#foundationRouteContext"),
     foundationRouteStage: $("#foundationRouteStage"),
     foundationRouteTitle: $("#foundationRouteTitle"),
     foundationRouteText: $("#foundationRouteText"),
@@ -699,6 +701,7 @@
     calculationDrillComplete: $("#calculationDrillComplete"),
     calculationDrillCompleteText: $("#calculationDrillCompleteText"),
     calculationDrillRestartButton: $("#calculationDrillRestartButton"),
+    calculationDrillExitButton: $("#calculationDrillExitButton"),
     practicalDrillPanel: $("#practicalDrillPanel"),
     practicalDrillSummary: $("#practicalDrillSummary"),
     practicalDrillOverview: $("#practicalDrillOverview"),
@@ -748,8 +751,8 @@
   function createCalculationDrillState() {
     return {
       version: CALCULATION_DRILL?.VERSION || 1,
-      stage: "first",
-      queue: [...CALCULATION_QUESTION_IDS],
+      stage: "idle",
+      queue: [],
       position: 0,
       currentAttempt: null,
       retryIds: [],
@@ -1390,12 +1393,19 @@
     const retryIds = calculationIds(input?.retryIds);
     const masteredIds = calculationIds(input?.masteredIds)
       .filter((id) => !retryIds.includes(id));
-    let stage = ["first", "retry", "complete"].includes(input?.stage)
-      ? input.stage
-      : "first";
+    const legacyIdleDefaults = (input?.stage || "first") === "first" &&
+      !(Number(input?.position) > 0) && !input?.currentAttempt &&
+      !(Number(input?.attempts) > 0) && !(Number(input?.correctAttempts) > 0) &&
+      !Object.keys(input?.history || {}).length && !retryIds.length && !masteredIds.length &&
+      !input?.completedAt;
+    let stage = legacyIdleDefaults
+      ? "idle"
+      : ["idle", "active", "first", "retry", "complete"].includes(input?.stage)
+        ? input.stage
+        : fresh.stage;
     if (stage === "complete" && retryIds.length) stage = "retry";
-    let queue = calculationIds(input?.queue);
-    if (!queue.length && stage !== "complete") {
+    let queue = stage === "idle" ? [] : calculationIds(input?.queue);
+    if (!queue.length && !["idle", "complete"].includes(stage)) {
       queue = stage === "retry" && retryIds.length
         ? [...retryIds]
         : [...CALCULATION_QUESTION_IDS];
@@ -1407,7 +1417,8 @@
     const rawAttempt = input?.currentAttempt;
     const selected = Number(rawAttempt?.selected);
     const currentQuestion = CALCULATION_QUESTION_BY_ID[currentId];
-    const currentAttempt = rawAttempt?.id === currentId && Number.isInteger(selected) && selected >= 0 && selected < 4
+    const currentAttempt = currentQuestion && rawAttempt?.id === currentId &&
+      Number.isInteger(selected) && selected >= 0 && selected < 4
       ? {
           id: currentId,
           selected,
@@ -4372,13 +4383,17 @@
     if (!elements.foundationRouteTitle) return;
     const progress = foundationProgress();
     const descriptor = foundationRouteDescriptor(route);
+    const dailyScope = studyScopeConfig(state.studyScope);
+    if (elements.foundationRouteContext) {
+      elements.foundationRouteContext.textContent = `日課: ${dailyScope.shortLabel}`;
+    }
     elements.foundationRouteStage.textContent = descriptor.stage;
     elements.foundationRouteTitle.textContent = descriptor.title;
     elements.foundationRouteText.textContent = descriptor.text;
     elements.foundationUnitsProgress.textContent = `${progress.completedUnits} / ${TEXTBOOK_CHAPTERS.length}`;
     elements.foundationQuestionsProgress.textContent = `${progress.contactedQuestions} / ${TEXTBOOK_IDS.length}`;
     elements.foundationPracticalProgress.textContent = `${progress.practicalGrounded} / ${PRACTICAL_QUESTION_IDS.length}`;
-    setRouteAction(elements.foundationRoutePrimaryButton, descriptor);
+    setRouteAction(elements.foundationRoutePrimaryButton, descriptor, `日課: ${descriptor.button}`);
 
     const selected = selectedFoundationChapter();
     const selectedSnapshot = selected ? unitLearningSnapshot(selected) : null;
@@ -4448,6 +4463,13 @@
         : `${practicalLabel}を10問で振り返る`;
     elements.todayCommandPracticalButton.hidden = false;
     elements.todayCommandPracticalButton.textContent = practicalActionText;
+    const calculationStage = state.calculationDrill?.stage || "idle";
+    elements.todayCommandCalculationButton.hidden = false;
+    elements.todayCommandCalculationButton.textContent = calculationStage === "idle"
+      ? "計算・金額を24問で特訓する"
+      : calculationStage === "complete"
+        ? "計算特訓の結果を確認する"
+        : "計算特訓を再開する";
     elements.todayCommandOfficialActions.hidden = true;
     elements.todayCommandReviewActions.hidden = true;
     elements.todayCommandMinutesActions.hidden = true;
@@ -4573,6 +4595,7 @@
     elements.todayCommandTitle.textContent = command.title;
     elements.todayCommandText.textContent = command.text;
     elements.todayCommandPracticalButton.hidden = true;
+    elements.todayCommandCalculationButton.hidden = true;
     elements.missionBattleLabel.textContent = "固定10問";
     elements.missionOfficialLabel.textContent = "公式問題20問";
     elements.missionReviewLabel.textContent = "誤答を1行化";
@@ -5275,12 +5298,21 @@
     const drill = state.calculationDrill;
     const contacted = CALCULATION_QUESTION_IDS.filter((id) => (drill.history[id]?.attempts || 0) > 0).length;
     const retryCount = drill.retryIds.length;
-    elements.calculationDrillSummary.textContent = `初回 ${contacted} / ${CALCULATION_QUESTION_IDS.length}・再出題 ${retryCount}`;
+    elements.calculationDrillSummary.textContent = `累計接触 ${contacted} / ${CALCULATION_QUESTION_IDS.length}・再出題 ${retryCount}`;
     elements.calculationDrillRetryStatus.textContent = `再出題 ${retryCount}`;
 
+    const idle = drill.stage === "idle";
     const complete = drill.stage === "complete";
-    elements.calculationDrillQuestion.hidden = complete;
+    if (!idle) elements.calculationDrillPanel.open = true;
+    elements.calculationDrillQuestion.hidden = idle || complete;
     elements.calculationDrillComplete.hidden = !complete;
+    elements.calculationDrillResetButton.hidden = complete;
+    elements.calculationDrillResetButton.textContent = idle ? "24問を始める" : "24問を最初から";
+    if (idle) {
+      elements.calculationDrillStage.textContent = "計算ルールを確認";
+      elements.calculationDrillProgress.textContent = "未開始";
+      return;
+    }
     if (complete) {
       elements.calculationDrillStage.textContent = "全件クリア";
       elements.calculationDrillProgress.textContent = `${CALCULATION_QUESTION_IDS.length} / ${CALCULATION_QUESTION_IDS.length}`;
@@ -5435,15 +5467,47 @@
     }
     saveState();
     renderCalculationDrill();
+    renderPassPlan();
     window.requestAnimationFrame(() =>
       elements.calculationDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
     );
   }
 
-  function resetCalculationDrill() {
-    state.calculationDrill = createCalculationDrillState();
+  function startCalculationDrill() {
+    state.calculationDrill = {
+      ...state.calculationDrill,
+      version: CALCULATION_DRILL?.VERSION || 1,
+      stage: "active",
+      queue: [...CALCULATION_QUESTION_IDS],
+      position: 0,
+      currentAttempt: null,
+      retryIds: [],
+      completedAt: ""
+    };
+    if (elements.calculationDrillPanel) elements.calculationDrillPanel.open = true;
     saveState();
     renderCalculationDrill();
+    renderPassPlan();
+    window.requestAnimationFrame(() =>
+      elements.calculationDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
+    );
+  }
+
+  function openCalculationDrill() {
+    if (state.calculationDrill?.stage === "idle") {
+      startCalculationDrill();
+      return;
+    }
+    if (elements.calculationDrillPanel) elements.calculationDrillPanel.open = true;
+    renderCalculationDrill();
+    window.requestAnimationFrame(() =>
+      elements.calculationDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
+    );
+  }
+
+  function exitCalculationDrill() {
+    if (elements.calculationDrillPanel) elements.calculationDrillPanel.open = false;
+    elements.todayCommandPanel?.scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
   function addPracticalId(list, id) {
@@ -8649,6 +8713,7 @@
       );
     });
     elements.todayCommandPracticalButton?.addEventListener("click", startStudyScopePracticalReview);
+    elements.todayCommandCalculationButton?.addEventListener("click", openCalculationDrill);
     elements.missionMinutesStep?.addEventListener("click", () => {
       if (elements.missionMinutesStep.dataset.action === "practical") {
         startStudyScopePracticalReview();
@@ -8706,8 +8771,9 @@
     elements.saveShareButton?.addEventListener("click", shareSaveTransfer);
     elements.saveRestorePreviousButton?.addEventListener("click", restorePreviousSave);
     elements.saveImportInput?.addEventListener("change", importSaveFile);
-    elements.calculationDrillResetButton?.addEventListener("click", resetCalculationDrill);
-    elements.calculationDrillRestartButton?.addEventListener("click", resetCalculationDrill);
+    elements.calculationDrillResetButton?.addEventListener("click", startCalculationDrill);
+    elements.calculationDrillRestartButton?.addEventListener("click", startCalculationDrill);
+    elements.calculationDrillExitButton?.addEventListener("click", exitCalculationDrill);
     elements.calculationDrillNextButton?.addEventListener("click", advanceCalculationDrill);
     elements.calculationDrillConfidence?.addEventListener("click", (event) => {
       const button = event.target.closest("[data-calculation-confidence]");

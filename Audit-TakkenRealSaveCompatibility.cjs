@@ -111,7 +111,8 @@ async function main() {
     }, storageId);
     assert.deepEqual(semanticSnapshot(readback.state), expected);
     assert.equal(readback.state.stateSchemaVersion, 8);
-    assert.equal(readback.state.calculationDrill?.queue?.length, 24);
+    assert.equal(readback.state.calculationDrill?.stage, "idle");
+    assert.equal(readback.state.calculationDrill?.queue?.length, 0);
     assert.equal(readback.state.practicalDrill?.stage, "idle");
     if (sourceSchema < 8) {
       assert.deepEqual(semanticSnapshot(JSON.parse(readback.previousRaw)), expected);
