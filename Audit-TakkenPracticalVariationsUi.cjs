@@ -102,7 +102,10 @@ async function savedPracticalState(page) {
     return {
       stateSchemaVersion: parsed.stateSchemaVersion,
       practicalDrill: parsed.practicalDrill,
-      baseQuestionStats: Object.keys(parsed.questionStats || {}).length
+      baseQuestionStats: Object.keys(parsed.questionStats || {}).length,
+      studyScope: parsed.studyScope,
+      dailyPlanScope: parsed.daily?.planScope || "",
+      dailyQuestionIds: [...(parsed.daily?.ids || [])]
     };
   });
 }
@@ -180,13 +183,48 @@ async function runDesktop(browser, baseUrl) {
     if (message.type() === "error") errors.push(message.text());
   });
   const url = await gotoFresh(page, baseUrl, "practical-desktop-");
+  await page.evaluate(() => {
+    const key = Object.keys(localStorage).find((candidate) =>
+      candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+      !candidate.includes("backup") && !candidate.includes("previous") &&
+      !candidate.includes("corrupt") && !candidate.endsWith("event-outbox")
+    );
+    const saved = JSON.parse(localStorage.getItem(key) || "{}");
+    saved.practicalDrill = {
+      ...saved.practicalDrill,
+      stage: "idle",
+      scope: "all",
+      unitId: "",
+      sessionSize: 20,
+      sessionIds: [],
+      queue: [],
+      position: 0,
+      currentAttempt: null,
+      retryIds: [],
+      history: {},
+      attempts: 0,
+      correctAttempts: 0,
+      sessionsCompleted: 0
+    };
+    localStorage.setItem(key, JSON.stringify(saved));
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  await page.waitForFunction(() => !document.querySelector("#dailyQuestSource")?.textContent.includes("読込中"));
   const initial = await page.evaluate(() => ({
     baseQuestions: Object.keys(window.TAKKEN_EXAM_QUESTIONS || {}).length,
     practicalQuestions: window.TAKKEN_PRACTICAL_VARIATIONS?.QUESTIONS?.length || 0,
     units: window.TAKKEN_PRACTICAL_VARIATIONS?.UNITS?.length || 0,
     panelOpen: document.querySelector("#practicalDrillPanel")?.open,
     calculationPresent: Boolean(document.querySelector("#calculationDrillPanel")),
-    summary: document.querySelector("#practicalDrillSummary")?.textContent || ""
+    summary: document.querySelector("#practicalDrillSummary")?.textContent || "",
+    missionLabel: document.querySelector("#missionMinutesLabel")?.textContent || "",
+    quickAction: document.querySelector("#todayCommandPracticalButton")?.textContent || "",
+    quickActionHidden: document.querySelector("#todayCommandPracticalButton")?.hidden,
+    missionTag: document.querySelector("#missionMinutesStep")?.tagName,
+    missionAction: document.querySelector("#missionMinutesStep")?.dataset.action,
+    defaultScope: document.querySelector("#practicalDrillScope")?.value,
+    defaultSize: document.querySelector("#practicalDrillSize")?.value,
+    startLabel: document.querySelector("#practicalDrillStartButton")?.textContent || ""
   }));
   assert.deepEqual(initial, {
     baseQuestions: 124,
@@ -194,19 +232,61 @@ async function runDesktop(browser, baseUrl) {
     units: 45,
     panelOpen: false,
     calculationPresent: true,
-    summary: "接触 0 / 180・根拠クリア 0・再出題 0"
+    summary: "接触 0 / 180・根拠クリア 0・再出題 0",
+    missionLabel: "宅建業法を復習",
+    quickAction: "宅建業法を10問で振り返る",
+    quickActionHidden: false,
+    missionTag: "BUTTON",
+    missionAction: "practical",
+    defaultScope: "business",
+    defaultSize: "10",
+    startLabel: "宅建業法を10問で始める"
   });
-  await openPanel(page);
-  await page.locator("#practicalDrillScope").selectOption("business");
-  await page.locator("#practicalDrillSize").selectOption("10");
-  await page.locator("#practicalDrillStartButton").click();
+  if (screenshotDir) {
+    fs.mkdirSync(screenshotDir, { recursive: true });
+    await page.screenshot({ path: path.join(screenshotDir, "practical-review-entry-desktop.png") });
+  }
+  const priorityRetryIds = await page.evaluate(() => {
+    const key = Object.keys(localStorage).find((candidate) =>
+      candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+      !candidate.includes("backup") && !candidate.includes("previous") &&
+      !candidate.includes("corrupt") && !candidate.endsWith("event-outbox")
+    );
+    const saved = JSON.parse(localStorage.getItem(key) || "{}");
+    const ids = window.TAKKEN_PRACTICAL_VARIATIONS.QUESTIONS
+      .filter((question) => question.unitId === "business-book-01")
+      .slice(0, 2)
+      .map((question) => question.id);
+    saved.practicalDrill.retryIds = [...ids];
+    ids.forEach((id) => {
+      saved.practicalDrill.history[id] = {
+        attempts: 1,
+        correct: 0,
+        wrong: 1,
+        uncertain: 0,
+        lastConfidence: "wrong"
+      };
+    });
+    localStorage.setItem(key, JSON.stringify(saved));
+    return ids;
+  });
+  await page.reload({ waitUntil: "networkidle" });
+  await page.waitForFunction(() => !document.querySelector("#dailyQuestSource")?.textContent.includes("読込中"));
+  const beforeQuickStart = await savedPracticalState(page);
+  await page.locator("#missionMinutesStep").click();
+  assert.equal(await page.locator("#practicalDrillPanel").evaluate((node) => node.open), true);
   const started = await savedPracticalState(page);
   assert.equal(started.stateSchemaVersion, 8);
   assert.equal(started.practicalDrill.stage, "active");
   assert.equal(started.practicalDrill.version, 2);
   assert.equal(started.practicalDrill.scope, "business");
   assert.equal(started.practicalDrill.sessionIds.length, 10);
+  assert.equal(started.studyScope, beforeQuickStart.studyScope);
+  assert.equal(started.dailyPlanScope, beforeQuickStart.dailyPlanScope);
+  assert.deepEqual(started.dailyQuestionIds, beforeQuickStart.dailyQuestionIds);
+  assert.equal(started.baseQuestionStats, beforeQuickStart.baseQuestionStats);
   assert.equal(new Set(started.practicalDrill.sessionIds).size, 10);
+  assert.ok(priorityRetryIds.every((id) => started.practicalDrill.sessionIds.includes(id)));
   assert.ok(started.practicalDrill.sessionIds.every((id) => id.startsWith("pv-business-book-")));
   const sessionFormats = await page.evaluate((ids) => ids.map((id) =>
     window.TAKKEN_PRACTICAL_VARIATIONS.QUESTIONS_BY_ID[id].format
@@ -216,7 +296,33 @@ async function runDesktop(browser, baseUrl) {
   const completed = await completeDesktopSet(page);
   const firstSessionIds = completed.completed.practicalDrill.sessionIds;
   assert.equal(await page.locator("#practicalDrillComplete").isVisible(), true);
-  await page.locator("#practicalDrillRestartButton").click();
+  if (screenshotDir) {
+    await page.locator("#practicalDrillPanel").screenshot({
+      path: path.join(screenshotDir, "practical-review-complete-desktop.png")
+    });
+  }
+  await page.reload({ waitUntil: "networkidle" });
+  await page.waitForFunction(() => !document.querySelector("#dailyQuestSource")?.textContent.includes("読込中"));
+  const completedAfterReload = await savedPracticalState(page);
+  assert.equal(completedAfterReload.practicalDrill.stage, "complete");
+  assert.equal(await page.locator("#practicalDrillPanel").evaluate((node) => node.open), true);
+  assert.equal(await page.locator("#practicalDrillComplete").isVisible(), true);
+  assert.equal(await page.locator("#todayCommandPracticalButton").textContent(), "実践結果を確認する");
+  assert.equal(
+    await page.locator("#practicalDrillRestartButton").textContent(),
+    "宅建業法を10問続ける"
+  );
+  assert.equal(await page.locator("#practicalDrillExitButton").textContent(), "学習画面へ戻る");
+  await page.locator("#practicalDrillChangeButton").click();
+  const returnedToLauncher = await savedPracticalState(page);
+  assert.equal(returnedToLauncher.practicalDrill.stage, "idle");
+  assert.equal(await page.locator("#practicalDrillOverview").isVisible(), true);
+  assert.equal(await page.locator("#practicalDrillScope").inputValue(), "business");
+  assert.equal(await page.locator("#practicalDrillSize").inputValue(), "10");
+  await page.locator("#practicalDrillSize").selectOption("45");
+  assert.equal(await page.locator("#practicalDrillStartButton").textContent(), "宅建業法を44問で始める");
+  await page.locator("#practicalDrillSize").selectOption("10");
+  await page.locator("#practicalDrillStartButton").click();
   const restarted = await savedPracticalState(page);
   assert.equal(restarted.practicalDrill.stage, "active");
   assert.equal(restarted.practicalDrill.sessionIds.length, 10);
@@ -231,6 +337,12 @@ async function runDesktop(browser, baseUrl) {
   assert.equal(afterReload.practicalDrill.stage, "active");
   assert.equal(afterReload.practicalDrill.position, beforeReload.practicalDrill.position);
   assert.deepEqual(afterReload.practicalDrill.sessionIds, beforeReload.practicalDrill.sessionIds);
+  assert.equal(await page.locator("#practicalDrillPanel").evaluate((node) => node.open), true);
+  assert.equal(await page.locator("#todayCommandPracticalButton").textContent(), "実践セットを再開する");
+  await page.locator("#todayCommandPracticalButton").click();
+  const afterResumeAction = await savedPracticalState(page);
+  assert.equal(afterResumeAction.practicalDrill.position, afterReload.practicalDrill.position);
+  assert.deepEqual(afterResumeAction.practicalDrill.sessionIds, afterReload.practicalDrill.sessionIds);
 
   const compatibilityFixture = await page.evaluate(() => {
     const key = Object.keys(localStorage).find((candidate) =>
@@ -295,9 +407,17 @@ async function runMobile(browser, baseUrl) {
     if (message.type() === "error") errors.push(message.text());
   });
   await gotoFresh(page, baseUrl, "practical-mobile-");
+  if (screenshotDir) {
+    fs.mkdirSync(screenshotDir, { recursive: true });
+    await page.screenshot({ path: path.join(screenshotDir, "practical-review-entry-mobile.png") });
+  }
   await openPanel(page);
-  await page.locator("#practicalDrillScope").selectOption("rights");
-  await page.locator("#practicalDrillSize").selectOption("20");
+  await page.locator("#practicalDrillScope").selectOption("lawOther");
+  await page.locator("#practicalDrillSize").selectOption("10");
+  assert.equal(
+    await page.locator("#practicalDrillStartButton").textContent(),
+    "法令・税その他を10問で始める"
+  );
   await page.locator("#practicalDrillStartButton").click();
   const question = await answerCorrectWithConfidence(page, "confident");
   const layout = await page.evaluate(() => ({
@@ -310,15 +430,22 @@ async function runMobile(browser, baseUrl) {
       ))
     ).practicalDrill.scope
   }));
-  assert.equal(question.scopeId, "rights");
-  assert.deepEqual(layout, { overflow: 0, choices: 4, reasoningSteps: 4, scope: "rights" });
+  assert.ok(["restrictions", "taxOther"].includes(question.scopeId));
+  assert.deepEqual(layout, { overflow: 0, choices: 4, reasoningSteps: 4, scope: "lawOther" });
+  await page.setViewportSize({ width: 320, height: 800 });
+  const compact = await page.evaluate(() => ({
+    overflow: Math.max(0, document.documentElement.scrollWidth - innerWidth),
+    missionHeight: Math.round(document.querySelector("#missionMinutesStep")?.getBoundingClientRect().height || 0)
+  }));
+  assert.equal(compact.overflow, 0);
+  assert.ok(compact.missionHeight >= 44);
   assert.deepEqual(errors, []);
   if (screenshotDir) {
     fs.mkdirSync(screenshotDir, { recursive: true });
     await page.screenshot({ path: path.join(screenshotDir, "practical-variations-mobile.png"), fullPage: true });
   }
   await context.close();
-  return { question, layout, consoleErrors: errors.length };
+  return { question, layout, compact, consoleErrors: errors.length };
 }
 
 (async () => {

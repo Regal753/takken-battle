@@ -122,7 +122,12 @@ async function chapterUi(page) {
     dailyScope: document.querySelector("#studyScopeSelect")?.value || "",
     themeSummary: document.querySelector("#themeDrawerSummary")?.textContent || "",
     selected: document.querySelector("#chapterSelect option:checked")?.textContent || "",
-    coachTitle: document.querySelector("#coachTitle")?.textContent || ""
+    coachTitle: document.querySelector("#coachTitle")?.textContent || "",
+    routeContext: document.querySelector("#foundationRouteContext")?.textContent || "",
+    routeButton: document.querySelector("#foundationRoutePrimaryButton")?.textContent || "",
+    routeUnitId: document.querySelector("#foundationRoutePrimaryButton")?.dataset?.unitId || "",
+    chapterControlLabel: document.querySelector(".theme-control-field-chapter > span")?.textContent || "",
+    scopeControlLabel: document.querySelector(".theme-control-field-scope > span")?.textContent || ""
   }));
 }
 
@@ -214,6 +219,11 @@ async function auditReloadBoundaries(page, baseUrl) {
   assert.match(ui.themeSummary, /第2分冊・権利・02-02 意思表示/);
   assert.match(ui.selected, /02-02 意思表示/);
   assert.match(ui.coachTitle, /02-02 意思表示・本文p\.172直後/);
+  assert.equal(ui.routeContext, "日課: 宅建業法");
+  assert.match(ui.routeButton, /^日課:/);
+  assert.match(ui.routeUnitId, /^business-book-/);
+  assert.match(ui.chapterControlLabel, /単発で解くテーマ/);
+  assert.equal(ui.scopeControlLabel, "日課の学習範囲");
 
   const first = await currentQuestion(page);
   await page.locator(`.choice-button[data-index="${first.answer}"]`).click();
@@ -431,6 +441,9 @@ async function main() {
     assertRoundLabelSingleLine(mobileChapterLabel, "390px chapter label");
     assert.equal(mobileUi.dailyScope, "business");
     assert.match(mobileUi.themeSummary, /法令・税その他・04-02 不動産鑑定評価基準/);
+    assert.equal(mobileUi.routeContext, "日課: 宅建業法");
+    assert.match(mobileUi.routeButton, /^日課:/);
+    assert.match(mobileUi.routeUnitId, /^business-book-/);
     await finishChapter(mobile, mobileChapter, /法令・税その他の合格ロード/);
     assert.deepEqual(dailyContract(await savedState(mobile)), mobileDailyBefore);
     const overflow = await mobile.evaluate(() => ({

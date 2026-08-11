@@ -240,7 +240,7 @@ async function main() {
     assert.match(initial.dailyTitle, /読後2問/);
     assert.equal(initial.unitStatus.trim(), "0 / 2");
     assert.equal(initial.practicalStatus.trim(), "0 / 44");
-    assert.equal(initial.gateStatus.trim(), "0 / 44");
+    assert.equal(initial.gateStatus.trim(), "10問・0/44定着");
     assert.equal(initial.mockLocked, true);
     assert.ok(initial.order.theme < initial.order.quest);
     assert.ok(initial.order.quest < initial.order.practical);
@@ -300,6 +300,11 @@ async function main() {
       ).length,
       4
     );
+    assert.match(await desktop.locator("#practicalDrillCompleteText").textContent(), /01-01 宅建業法の基本/);
+    assert.equal(
+      await desktop.locator("#practicalDrillRestartButton").textContent(),
+      "同じ単元を4問続ける"
+    );
     assert.match(await desktop.locator("#todayCommandTitle").textContent(), /01-02 免許/);
 
     const migrated = await migrateV6(desktop);
@@ -327,6 +332,8 @@ async function main() {
       quizBeforePractice: document.querySelector("#quizCard")?.getBoundingClientRect().top <
         document.querySelector("#practicalDrillPanel")?.getBoundingClientRect().top,
       buttonWidth: document.querySelector("#foundationRoutePrimaryButton")?.getBoundingClientRect().width,
+      progressButtonHeight: document.querySelector("#progressDrawerLink")?.getBoundingClientRect().height,
+      resetButtonHeight: document.querySelector("#resetButton")?.getBoundingClientRect().height,
       overflowElements: [...document.querySelectorAll("body *")]
         .map((element) => ({
           tag: element.tagName,
@@ -342,6 +349,8 @@ async function main() {
     assert.equal(mobileLayout.quizBeforePractice, true);
     assert.ok(mobileLayout.routeWidth <= mobileLayout.viewport);
     assert.ok(mobileLayout.buttonWidth > 250);
+    assert.ok(mobileLayout.progressButtonHeight >= 44, JSON.stringify(mobileLayout));
+    assert.ok(mobileLayout.resetButtonHeight >= 44, JSON.stringify(mobileLayout));
 
     const largeUnitPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
     largeUnitPage.on("console", (message) => {
