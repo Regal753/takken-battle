@@ -24,7 +24,15 @@
     PRACTICAL_QUESTIONS.map((item) => [item.id, item])
   );
   const PRACTICAL_QUESTION_IDS = Object.freeze(PRACTICAL_QUESTIONS.map((item) => item.id));
-  const PRACTICAL_SCOPES = Object.freeze(["all", "business", "rights", "restrictions", "taxOther"]);
+  const PRACTICAL_SCOPES = Object.freeze(["all", "business", "rights", "lawOther", "restrictions", "taxOther"]);
+  const PRACTICAL_SCOPE_LABELS = Object.freeze({
+    all: "全分野",
+    business: "宅建業法",
+    rights: "権利関係",
+    lawOther: "法令・税その他",
+    restrictions: "法令上の制限",
+    taxOther: "税・その他"
+  });
   const PRACTICAL_SESSION_SIZES = Object.freeze([4, 10, 20, 45]);
   const STATE_SCHEMA_VERSION = 8;
   const DAILY_TARGET = 10;
@@ -583,6 +591,7 @@
     todayCommandTitle: $("#todayCommandTitle"),
     todayCommandText: $("#todayCommandText"),
     todayCommandStartButton: $("#todayCommandStartButton"),
+    todayCommandPracticalButton: $("#todayCommandPracticalButton"),
     todayCommandOfficialActions: $("#todayCommandOfficialActions"),
     officialDrillOpenButton: $("#officialDrillOpenButton"),
     officialDrillPanel: $("#officialDrillPanel"),
@@ -712,7 +721,9 @@
     practicalDrillCancelButton: $("#practicalDrillCancelButton"),
     practicalDrillComplete: $("#practicalDrillComplete"),
     practicalDrillCompleteText: $("#practicalDrillCompleteText"),
-    practicalDrillRestartButton: $("#practicalDrillRestartButton")
+    practicalDrillRestartButton: $("#practicalDrillRestartButton"),
+    practicalDrillChangeButton: $("#practicalDrillChangeButton"),
+    practicalDrillExitButton: $("#practicalDrillExitButton")
   };
 
   let fallbackIdSequence = 0;
@@ -754,9 +765,9 @@
     return {
       version: PRACTICAL_VARIATIONS?.VERSION || 1,
       stage: "idle",
-      scope: "all",
+      scope: "business",
       unitId: "",
-      sessionSize: 20,
+      sessionSize: 10,
       sessionIds: [],
       queue: [],
       position: 0,
@@ -1460,12 +1471,21 @@
     if (!PRACTICAL_QUESTION_IDS.length) return fresh;
     const currentBankVersion = PRACTICAL_VARIATIONS?.VERSION || 1;
     const bankChanged = Number(input?.version || 1) !== currentBankVersion;
-    const scope = PRACTICAL_SCOPES.includes(input?.scope) ? input.scope : "all";
+    const legacyIdleDefaults = (input?.stage || "idle") === "idle" &&
+      input?.scope === "all" && Number(input?.sessionSize) === 20 && !input?.unitId &&
+      !(Number(input?.attempts) > 0) && !(Number(input?.sessionsCompleted) > 0) &&
+      !Object.keys(input?.history || {}).length && !(input?.retryIds || []).length &&
+      !(input?.sessionIds || []).length && !(input?.queue || []).length;
+    const scope = legacyIdleDefaults
+      ? fresh.scope
+      : PRACTICAL_SCOPES.includes(input?.scope) ? input.scope : fresh.scope;
     const unitId = PRACTICAL_VARIATIONS?.UNITS?.some((unit) => unit.id === input?.unitId)
       ? String(input.unitId)
       : "";
     const requestedSize = Number(input?.sessionSize);
-    const sessionSize = PRACTICAL_SESSION_SIZES.includes(requestedSize) ? requestedSize : 20;
+    const sessionSize = legacyIdleDefaults
+      ? fresh.sessionSize
+      : PRACTICAL_SESSION_SIZES.includes(requestedSize) ? requestedSize : fresh.sessionSize;
     const retryIds = practicalIds(input?.retryIds);
     const sessionIds = practicalIds(input?.sessionIds);
     let stage = ["idle", "active", "retry", "complete"].includes(input?.stage)
@@ -4418,6 +4438,16 @@
     elements.todayCommandText.textContent = descriptor.text;
     elements.todayCommandPanel.classList.remove("is-complete");
     setRouteAction(elements.todayCommandStartButton, descriptor);
+    const practicalScope = practicalScopeForStudyScope();
+    const practicalLabel = practicalScopeLabel(practicalScope);
+    const practicalStage = state.practicalDrill?.stage || "idle";
+    const practicalActionText = ["active", "retry"].includes(practicalStage)
+      ? "実践セットを再開する"
+      : practicalStage === "complete"
+        ? "実践結果を確認する"
+        : `${practicalLabel}を10問で振り返る`;
+    elements.todayCommandPracticalButton.hidden = false;
+    elements.todayCommandPracticalButton.textContent = practicalActionText;
     elements.todayCommandOfficialActions.hidden = true;
     elements.todayCommandReviewActions.hidden = true;
     elements.todayCommandMinutesActions.hidden = true;
@@ -4426,7 +4456,14 @@
     elements.missionBattleLabel.textContent = "読後問題";
     elements.missionOfficialLabel.textContent = "次の単元";
     elements.missionReviewLabel.textContent = "翌日復習";
-    elements.missionMinutesLabel.textContent = "任意実践";
+    elements.missionMinutesLabel.textContent = ["active", "retry"].includes(practicalStage)
+      ? "実践を再開"
+      : practicalStage === "complete"
+        ? "実践結果"
+        : `${practicalLabel}を復習`;
+    elements.missionMinutesStep.disabled = false;
+    elements.missionMinutesStep.dataset.action = "practical";
+    elements.missionMinutesStep.setAttribute("aria-label", practicalActionText);
     const activeSnapshot = route.snapshot || null;
     elements.missionBattleStatus.textContent = activeSnapshot
       ? `${activeSnapshot.baseContacted} / ${activeSnapshot.baseIds.length}`
@@ -4434,9 +4471,13 @@
     elements.missionOfficialStatus.textContent =
       `${scopeBaseIds.filter(isContacted).length} / ${scopeBaseIds.length}`;
     elements.missionReviewStatus.textContent = due ? `${due}件` : "持越しなし";
-    elements.missionMinutesStatus.textContent = `${scopePracticalIds.filter((id) =>
-      state.practicalDrill?.history?.[id]?.lastConfidence === "confident"
-    ).length} / ${scopePracticalIds.length}`;
+    elements.missionMinutesStatus.textContent = ["active", "retry"].includes(practicalStage)
+      ? `${state.practicalDrill.position + 1}/${state.practicalDrill.queue.length}問を再開`
+      : practicalStage === "complete"
+        ? "次の進み方を選ぶ"
+        : `10問・${scopePracticalIds.filter((id) =>
+            state.practicalDrill?.history?.[id]?.lastConfidence === "confident"
+          ).length}/${scopePracticalIds.length}定着`;
 
     const routeStep = route.kind === "unit"
       ? elements.missionBattleStep
@@ -4531,10 +4572,16 @@
     elements.todayCommandKicker.textContent = command.kicker;
     elements.todayCommandTitle.textContent = command.title;
     elements.todayCommandText.textContent = command.text;
+    elements.todayCommandPracticalButton.hidden = true;
     elements.missionBattleLabel.textContent = "固定10問";
     elements.missionOfficialLabel.textContent = "公式問題20問";
     elements.missionReviewLabel.textContent = "誤答を1行化";
     elements.missionMinutesLabel.textContent = "合計90分";
+    elements.missionMinutesStep.disabled = step !== 4;
+    elements.missionMinutesStep.dataset.action = step === 4 ? "minutes" : "";
+    elements.missionMinutesStep.setAttribute("aria-label", step === 4
+      ? "今日の合計学習時間を入力する"
+      : "合計学習時間の記録");
     elements.todayCommandPanel.classList.toggle("is-complete", step === 5);
     elements.todayCommandStartButton.hidden = step !== 1;
     elements.todayCommandStartButton.dataset.routeAction = "";
@@ -5407,10 +5454,34 @@
     return list.filter((item) => item !== id);
   }
 
+  function practicalScopeLabel(scope) {
+    return PRACTICAL_SCOPE_LABELS[scope] || PRACTICAL_SCOPE_LABELS.business;
+  }
+
+  function practicalScopeForStudyScope(scope = state.studyScope) {
+    if (["business", "rights", "law-other", "all"].includes(scope)) {
+      return scope === "law-other" ? "lawOther" : scope;
+    }
+    return "business";
+  }
+
   function practicalScopeQuestions(scope) {
     return PRACTICAL_QUESTIONS.filter((question) =>
-      scope === "all" || question.scopeId === scope
+      scope === "all" ||
+      question.scopeId === scope ||
+      (scope === "lawOther" && ["restrictions", "taxOther"].includes(question.scopeId))
     );
+  }
+
+  function renderPracticalDrillLauncher() {
+    if (!elements.practicalDrillStartButton) return;
+    const requestedScope = String(elements.practicalDrillScope?.value || state.practicalDrill.scope);
+    const scope = PRACTICAL_SCOPES.includes(requestedScope) ? requestedScope : "business";
+    const requestedSize = Number(elements.practicalDrillSize?.value || state.practicalDrill.sessionSize);
+    const sessionSize = PRACTICAL_SESSION_SIZES.includes(requestedSize) ? requestedSize : 10;
+    const visibleSize = Math.min(sessionSize, practicalScopeQuestions(scope).length);
+    elements.practicalDrillStartButton.textContent =
+      `${practicalScopeLabel(scope)}を${visibleSize}問で始める`;
   }
 
   function practicalPriority(question, drill = state.practicalDrill) {
@@ -5452,11 +5523,19 @@
             ((((right.part * 31 + right.page - rotation * 7) % 997) + 997) % 997);
       });
     const result = [];
-    for (let round = 0; result.length < target && round < 4; round += 1) {
-      unitOrder.forEach((unit) => {
-        const question = groups.get(unit.id)?.[round];
-        if (question && result.length < target) result.push(question.id);
-      });
+    for (const priority of [0, 1, 2]) {
+      const priorityGroups = new Map(unitOrder.map((unit) => [
+        unit.id,
+        (groups.get(unit.id) || []).filter((question) => practicalPriority(question, drill) === priority)
+      ]));
+      const rounds = Math.max(0, ...[...priorityGroups.values()].map((items) => items.length));
+      for (let round = 0; result.length < target && round < rounds; round += 1) {
+        unitOrder.forEach((unit) => {
+          const question = priorityGroups.get(unit.id)?.[round];
+          if (question && result.length < target) result.push(question.id);
+        });
+      }
+      if (result.length >= target) break;
     }
     return result;
   }
@@ -5503,16 +5582,27 @@
       `接触 ${contacted} / ${PRACTICAL_QUESTION_IDS.length}・根拠クリア ${grounded}・再出題 ${drill.retryIds.length}`;
     elements.practicalDrillScope.value = drill.scope;
     elements.practicalDrillSize.value = String(drill.sessionSize);
+    renderPracticalDrillLauncher();
 
     const idle = drill.stage === "idle";
     const complete = drill.stage === "complete";
+    const unitSession = drill.unitId
+      ? PRACTICAL_VARIATIONS?.UNITS?.find((unit) => unit.id === drill.unitId)
+      : null;
+    if (!idle && elements.practicalDrillPanel) elements.practicalDrillPanel.open = true;
     elements.practicalDrillOverview.hidden = !idle;
     elements.practicalDrillSession.hidden = idle || complete;
     elements.practicalDrillComplete.hidden = !complete;
     if (idle) return;
     if (complete) {
+      const scopeLabel = practicalScopeLabel(drill.scope);
+      const completionLabel = unitSession ? unitSession.label : scopeLabel;
       elements.practicalDrillCompleteText.textContent =
-        `今回${drill.sessionIds.length}問と再出題を完了。累計${drill.attempts}解答、根拠クリア${grounded}問です。`;
+        `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計${drill.attempts}解答、根拠クリア${grounded}問です。`;
+      elements.practicalDrillRestartButton.textContent =
+        unitSession
+          ? `同じ単元を${drill.sessionIds.length}問続ける`
+          : `${scopeLabel}を${drill.sessionIds.length}問続ける`;
       return;
     }
 
@@ -5520,9 +5610,6 @@
     if (!question) return;
     const attempt = drill.currentAttempt;
     const sessionRetryCount = drill.retryIds.filter((id) => drill.sessionIds.includes(id)).length;
-    const unitSession = drill.unitId
-      ? PRACTICAL_VARIATIONS?.UNITS?.find((unit) => unit.id === drill.unitId)
-      : null;
     elements.practicalDrillStage.textContent = drill.stage === "retry"
       ? "迷い・誤答を再出題"
       : unitSession
@@ -5586,11 +5673,7 @@
       : (sessionRetryCount ? "再出題へ進む" : "今回のセットを完了する");
   }
 
-  function startPracticalDrill() {
-    const requestedScope = String(elements.practicalDrillScope?.value || state.practicalDrill.scope);
-    const scope = PRACTICAL_SCOPES.includes(requestedScope) ? requestedScope : "all";
-    const requestedSize = Number(elements.practicalDrillSize?.value || state.practicalDrill.sessionSize);
-    const sessionSize = PRACTICAL_SESSION_SIZES.includes(requestedSize) ? requestedSize : 20;
+  function startPracticalDrillWith(scope, sessionSize) {
     const queue = buildPracticalQueue(scope, sessionSize);
     state.practicalDrill = {
       ...state.practicalDrill,
@@ -5612,6 +5695,26 @@
     window.requestAnimationFrame(() =>
       elements.practicalDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
     );
+  }
+
+  function startPracticalDrill() {
+    const requestedScope = String(elements.practicalDrillScope?.value || state.practicalDrill.scope);
+    const scope = PRACTICAL_SCOPES.includes(requestedScope) ? requestedScope : "business";
+    const requestedSize = Number(elements.practicalDrillSize?.value || state.practicalDrill.sessionSize);
+    const sessionSize = PRACTICAL_SESSION_SIZES.includes(requestedSize) ? requestedSize : 10;
+    startPracticalDrillWith(scope, sessionSize);
+  }
+
+  function startStudyScopePracticalReview() {
+    if (state.practicalDrill?.stage !== "idle") {
+      if (elements.practicalDrillPanel) elements.practicalDrillPanel.open = true;
+      renderPracticalDrill();
+      window.requestAnimationFrame(() =>
+        elements.practicalDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
+      );
+      return;
+    }
+    startPracticalDrillWith(practicalScopeForStudyScope(), 10);
   }
 
   function startPracticalDrillForUnit(unitId) {
@@ -5749,6 +5852,7 @@
     state.practicalDrill = {
       ...state.practicalDrill,
       stage: "idle",
+      unitId: "",
       sessionIds: [],
       queue: [],
       position: 0,
@@ -5759,6 +5863,12 @@
     saveState();
     renderPracticalDrill();
     renderPassPlan();
+  }
+
+  function exitPracticalDrill() {
+    cancelPracticalDrill();
+    if (elements.practicalDrillPanel) elements.practicalDrillPanel.open = false;
+    elements.todayCommandPanel?.scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
   function renderCurrentView() {
@@ -8538,6 +8648,16 @@
         elements.quizCard?.scrollIntoView({ block: "start", behavior: "smooth" })
       );
     });
+    elements.todayCommandPracticalButton?.addEventListener("click", startStudyScopePracticalReview);
+    elements.missionMinutesStep?.addEventListener("click", () => {
+      if (elements.missionMinutesStep.dataset.action === "practical") {
+        startStudyScopePracticalReview();
+        return;
+      }
+      if (elements.missionMinutesStep.dataset.action !== "minutes") return;
+      elements.todayCommandPanel?.scrollIntoView({ block: "start", behavior: "smooth" });
+      window.requestAnimationFrame(() => elements.missionMinutesInput?.focus());
+    });
     elements.foundationRoutePrimaryButton?.addEventListener("click", (event) => {
       runFoundationRouteAction(event.currentTarget);
     });
@@ -8595,8 +8715,12 @@
     });
     elements.practicalDrillStartButton?.addEventListener("click", startPracticalDrill);
     elements.practicalDrillRestartButton?.addEventListener("click", restartPracticalDrill);
+    elements.practicalDrillChangeButton?.addEventListener("click", cancelPracticalDrill);
+    elements.practicalDrillExitButton?.addEventListener("click", exitPracticalDrill);
     elements.practicalDrillNextButton?.addEventListener("click", advancePracticalDrill);
     elements.practicalDrillCancelButton?.addEventListener("click", cancelPracticalDrill);
+    elements.practicalDrillScope?.addEventListener("change", renderPracticalDrillLauncher);
+    elements.practicalDrillSize?.addEventListener("change", renderPracticalDrillLauncher);
     elements.practicalDrillConfidence?.addEventListener("click", (event) => {
       const button = event.target.closest("[data-practical-confidence]");
       if (button) setPracticalConfidence(button.dataset.practicalConfidence);

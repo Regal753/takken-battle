@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260807-foundation-result-reload-v22-1";
+const expectedVersion = process.argv[3] || "20260811-practical-review-ux-v22-1";
 const attempts = Math.max(1, Number(process.env.TAKKEN_DEPLOY_VERIFY_ATTEMPTS) || 12);
 const intervalMs = Math.max(0, Number(process.env.TAKKEN_DEPLOY_VERIFY_INTERVAL_MS) || 10000);
 
@@ -38,6 +38,9 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(html, /id="foundationRoutePrimaryButton"/, "foundation route action missing");
     assert.match(html, /id="foundationUnitsProgress"/, "foundation unit progress missing");
     assert.match(html, /id="foundationGateStatus"/, "foundation gate status missing");
+    assert.match(html, /id="todayCommandPracticalButton"/, "practical review launcher missing");
+    assert.match(html, /id="practicalDrillChangeButton"/, "practical review condition action missing");
+    assert.match(html, /id="practicalDrillExitButton"/, "practical review exit action missing");
     const appReference = html.match(/src="([^"]*app\.js\?v=[^"]+)"/)?.[1] || "";
     const storeReference = html.match(/src="([^"]*save-store\.js\?v=[^"]+)"/)?.[1] || "";
     const officialDataReference =
