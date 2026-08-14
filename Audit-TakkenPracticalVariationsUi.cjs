@@ -276,7 +276,7 @@ async function runDesktop(browser, baseUrl) {
   await page.locator("#missionMinutesStep").click();
   assert.equal(await page.locator("#practicalDrillPanel").evaluate((node) => node.open), true);
   const started = await savedPracticalState(page);
-  assert.equal(started.stateSchemaVersion, 8);
+  assert.equal(started.stateSchemaVersion, 9);
   assert.equal(started.practicalDrill.stage, "active");
   assert.equal(started.practicalDrill.version, 2);
   assert.equal(started.practicalDrill.scope, "business");
@@ -355,6 +355,7 @@ async function runDesktop(browser, baseUrl) {
     const drill = state.practicalDrill;
     const id = drill.queue[drill.position];
     drill.version = 1;
+    drill.bankVersion = 1;
     drill.history[id] = {
       ...(drill.history[id] || {}),
       attempts: 17,

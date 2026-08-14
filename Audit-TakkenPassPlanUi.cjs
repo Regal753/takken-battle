@@ -323,7 +323,7 @@ async function main() {
     });
     await touchedPage.locator("#officialExamStartButton").click();
     await touchedPage.waitForFunction(() =>
-      (document.querySelector("#officialExamStatus")?.textContent || "").includes("公式20問で接触済み")
+      (document.querySelector("#officialExamStatus")?.textContent || "").includes("接触済み")
     );
     const touchedYearGuard = {
       message: await touchedPage.locator("#officialExamStatus").textContent(),

@@ -378,9 +378,9 @@ async function main() {
       !sameDayRetention.commandTitle.includes("35分") ||
       sameDayRetention.commandStep !== "今やる・STEP 2 / 4" ||
       sameDayRetention.mission !== "1 / 4" ||
-      !sameDayRetention.officialHref.startsWith("https://goukaku.retio.or.jp/") ||
-      sameDayRetention.officialTarget !== "_blank" ||
-      !sameDayRetention.officialRel.includes("noopener") ||
+      sameDayRetention.officialHref !== "" ||
+      sameDayRetention.officialTarget !== "" ||
+      sameDayRetention.officialRel !== "" ||
       sameDayRetention.confidence[0]?.lastConfidence !== "unsure" ||
       sameDayRetention.confidence[0]?.clearDays.length !== 0 ||
       !sameDayRetention.confidence[0]?.marked ||
@@ -724,9 +724,8 @@ async function main() {
         })),
         calibration: {
           text: document.querySelector(".mock-calibration")?.textContent?.replace(/\s+/g, " ").trim() || "",
-          href: document.querySelector(".mock-calibration a")?.href || "",
-          target: document.querySelector(".mock-calibration a")?.target || "",
-          rel: document.querySelector(".mock-calibration a")?.rel || ""
+          button: document.querySelector("#mockOfficialExamButton")?.textContent?.trim() || "",
+          href: document.querySelector(".mock-calibration a")?.href || ""
         },
         stats: {
           scoreLabel: document.querySelector("#accuracyLabel")?.textContent?.trim() || "",
@@ -762,9 +761,8 @@ async function main() {
         !link.rel.includes("noopener")
       ) ||
       !mockResult.calibration.text.includes("初見実力は公式過去問で確認") ||
-      mockResult.calibration.href !== "https://www.retio.or.jp/exam/past_ques_ans/other/" ||
-      mockResult.calibration.target !== "_blank" ||
-      !mockResult.calibration.rel.includes("noopener") ||
+      mockResult.calibration.button !== "露出記録つき公式50問へ" ||
+      mockResult.calibration.href !== "" ||
       mockResult.stats.scoreLabel !== "得点" ||
       mockResult.stats.score !== "40/50" ||
       mockResult.stats.timeLabel !== "所要時間" ||
