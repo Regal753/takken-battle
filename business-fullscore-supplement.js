@@ -8,9 +8,9 @@
     root.window.TAKKEN_BUSINESS_FULLSCORE_SUPPLEMENT = api;
   }
 })(typeof globalThis !== "undefined" ? globalThis : this, function createBusinessFullScoreSupplement() {
-  const VERSION = 1;
+  const VERSION = 2;
   const LEGAL_BASELINE = "2026-04-01";
-  const VERIFIED_AT = "2026-08-14";
+  const VERIFIED_AT = "2026-08-15";
 
   const rawAnchors = [
     {
@@ -403,11 +403,42 @@
       sourceLocator: "特定住宅瑕疵担保責任の履行の確保等に関する法律2条、11条、13条／住宅品質確保法2条2項、94条1項、95条1項",
       verifiedAt: VERIFIED_AT,
       diagnosticTags: ["counterparty", "timing", "number", "principle-exception"]
+    },
+    {
+      id: "bs018",
+      unitId: "business-book-07",
+      tag: "2022年の押印廃止・書面電子化",
+      prompt: "35条・37条等の書面電子化と、宅地建物取引士の記名・押印の現行要件を判定する。",
+      statements: [
+        "2022年5月18日以降、相手方の承諾等の要件を満たせば、35条書面や37条書面を電磁的方法で提供できる。",
+        "37条書面には現在も宅地建物取引士の記名押印が必要であり、押印を欠く書面は交付義務を満たさない。",
+        "37条書面には宅地建物取引士の記名が必要だが、2022年5月18日施行の改正後は押印を要しない。",
+        "35条書面を電磁的方法で提供する場合は、相手方の承諾を得なくても、送信後に閲覧できたことを確認すれば足りる。"
+      ],
+      truths: [true, false, true, false],
+      reasons: [
+        "2022年5月18日施行の改正により、相手方の承諾等を前提として35条書面・37条書面等を電磁的方法で提供できるようになった。",
+        "改正後も宅地建物取引士の記名は必要だが、押印は不要である。『記名押印』を要求する過去問の肢は現行法では誤りとなる。",
+        "法37条3項により宅地建物取引士の記名は必要だが、2022年5月18日施行の改正後は押印は不要である。",
+        "電磁的方法による提供には、相手方の承諾等の法定要件を満たす必要がある。送信後の確認だけで一方的に電子化できない。"
+      ],
+      sourceUrl: "https://www.mlit.go.jp/report/press/tochi_fudousan_kensetsugyo16_hh_000001_00036.html",
+      sourceLocator: "宅地建物取引業法35条・37条3項／国土交通省『不動産取引時の書面が電子書面で提供できるようになります』2022年5月18日施行",
+      verifiedAt: VERIFIED_AT,
+      diagnosticTags: ["article-35", "article-37", "amendment", "principle-exception"]
     }
   ];
 
   function freezeStrings(values) {
     return Object.freeze(values.map((value) => String(value).trim()));
+  }
+
+  function pinnedSourceUrl(value) {
+    const source = String(value || "").trim();
+    if (!source.startsWith("https://laws.e-gov.go.jp/law/") || source.includes("occasion_date=")) {
+      return source;
+    }
+    return `${source}${source.includes("?") ? "&" : "?"}occasion_date=${LEGAL_BASELINE.replaceAll("-", "")}`;
   }
 
   function freezeAnchor(anchor) {
@@ -419,7 +450,7 @@
       statements: freezeStrings(anchor.statements),
       truths: Object.freeze(anchor.truths.map(Boolean)),
       reasons: freezeStrings(anchor.reasons),
-      sourceUrl: anchor.sourceUrl,
+      sourceUrl: pinnedSourceUrl(anchor.sourceUrl),
       sourceLocator: anchor.sourceLocator,
       verifiedAt: anchor.verifiedAt,
       diagnosticTags: freezeStrings(anchor.diagnosticTags)

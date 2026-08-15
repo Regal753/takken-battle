@@ -30,13 +30,13 @@ const expectedUnitTotals = Object.freeze({
   "business-book-04": 10,
   "business-book-05": 10,
   "business-book-06": 10,
-  "business-book-07": 24,
+  "business-book-07": 26,
   "business-book-08": 16,
   "business-book-09": 10,
   "business-book-10": 10,
   "business-book-11": 10
 });
-const expectedFormats = Object.freeze({ single: 33, combination: 33, count: 33, case: 33 });
+const expectedFormats = Object.freeze({ single: 33, combination: 34, count: 33, case: 34 });
 const allowedDiagnosticTags = new Set([
   "subject",
   "timing",
@@ -117,12 +117,12 @@ function answerDistributionByFormat(questions) {
   ]));
 }
 
-assert.equal(supplement.VERSION, 1);
+assert.equal(supplement.VERSION, 2);
 assert.equal(supplement.LEGAL_BASELINE, blueprint.legalBaseline);
-assert.equal(supplement.ANCHORS.length, 17);
-assert.equal(supplement.FACTS.length, 68);
-assert.equal(Object.keys(supplement.ANCHORS_BY_ID).length, 17);
-assert.equal(Object.keys(supplement.FACTS_BY_KEY).length, 68);
+assert.equal(supplement.ANCHORS.length, 18);
+assert.equal(supplement.FACTS.length, 72);
+assert.equal(Object.keys(supplement.ANCHORS_BY_ID).length, 18);
+assert.equal(Object.keys(supplement.FACTS_BY_KEY).length, 72);
 
 const bankSource = fs.readFileSync(path.join(__dirname, "business-fullscore-bank.js"), "utf8");
 function isolatedBankRuntime(supplementValue, includeSupplement) {
@@ -147,22 +147,22 @@ assert.throws(
     ...supplement,
     FACTS: supplement.FACTS.slice(0, 67)
   }, true)),
-  /17 anchors and 68 facts/,
+  /18 anchors and 72 facts/,
   "bank must fail closed when the supplement is invalid"
 );
 
-assert.equal(bank.VERSION, 2);
+assert.equal(bank.VERSION, 3);
 assert.equal(bank.LEGAL_BASELINE, blueprint.legalBaseline);
-assert.equal(bank.QUESTIONS.length, 132);
-assert.equal(Object.keys(bank.QUESTIONS_BY_ID).length, 132);
+assert.equal(bank.QUESTIONS.length, 134);
+assert.equal(Object.keys(bank.QUESTIONS_BY_ID).length, 134);
 assert.equal(bank.UNITS.length, 11);
 assert.deepEqual(formatCounts(bank.QUESTIONS), expectedFormats);
-assert.deepEqual(answerDistribution(bank.QUESTIONS), [33, 33, 33, 33]);
+assert.deepEqual(answerDistribution(bank.QUESTIONS), [34, 33, 34, 33]);
 assert.deepEqual(answerDistributionByFormat(bank.QUESTIONS), {
   single: [9, 8, 8, 8],
-  combination: [8, 9, 8, 8],
+  combination: [8, 9, 9, 8],
   count: [8, 8, 9, 8],
-  case: [8, 8, 8, 9]
+  case: [9, 8, 8, 9]
 });
 assert.deepEqual(new Set(bank.ALLOWED_DIAGNOSTIC_TAGS), allowedDiagnosticTags);
 
@@ -217,10 +217,10 @@ for (const unit of bank.UNITS) {
 }
 
 const ids = bank.QUESTIONS.map((question) => question.id);
-assert.equal(new Set(ids).size, 132, "stable IDs must be unique");
+assert.equal(new Set(ids).size, 134, "stable IDs must be unique");
 assert.equal(
   new Set(bank.QUESTIONS.map((question) => JSON.stringify([question.text, question.choices]))).size,
-  132,
+  134,
   "question bodies must be unique"
 );
 
@@ -238,14 +238,14 @@ assert.deepEqual(
   "the original 100 mastery IDs and order must remain unchanged"
 );
 const supplementalQuestions = bank.QUESTIONS.slice(100);
-assert.equal(supplementalQuestions.length, 32);
+assert.equal(supplementalQuestions.length, 34);
 assert.ok(supplementalQuestions.every((question) => question.id.includes("-supplement-")));
-assert.deepEqual(formatCounts(supplementalQuestions), { single: 8, combination: 8, count: 8, case: 8 });
+assert.deepEqual(formatCounts(supplementalQuestions), { single: 8, combination: 9, count: 8, case: 9 });
 assert.deepEqual(answerDistributionByFormat(supplementalQuestions), {
   single: [2, 2, 2, 2],
-  combination: [2, 2, 2, 2],
+  combination: [2, 2, 3, 2],
   count: [2, 2, 2, 2],
-  case: [2, 2, 2, 2]
+  case: [3, 2, 2, 2]
 });
 
 const expectedBaseFactKeys = businessUnits.flatMap((unit) =>
@@ -255,10 +255,10 @@ const expectedSupplementFactKeys = supplement.FACTS.map((fact) => fact.key);
 const expectedFactKeys = [...expectedBaseFactKeys, ...expectedSupplementFactKeys];
 assert.equal(expectedBaseFactKeys.length, 176);
 assert.equal(new Set(expectedBaseFactKeys).size, 176);
-assert.equal(expectedSupplementFactKeys.length, 68);
-assert.equal(new Set(expectedSupplementFactKeys).size, 68);
-assert.equal(expectedFactKeys.length, 244);
-assert.equal(new Set(expectedFactKeys).size, 244);
+assert.equal(expectedSupplementFactKeys.length, 72);
+assert.equal(new Set(expectedSupplementFactKeys).size, 72);
+assert.equal(expectedFactKeys.length, 248);
+assert.equal(new Set(expectedFactKeys).size, 248);
 assert.deepEqual([...bank.BASE_FACT_KEYS].sort(), [...expectedBaseFactKeys].sort());
 assert.deepEqual([...bank.SUPPLEMENT_FACT_KEYS].sort(), [...expectedSupplementFactKeys].sort());
 assert.deepEqual([...bank.FACT_KEYS].sort(), [...expectedFactKeys].sort());
@@ -271,9 +271,9 @@ coveredFactKeys.forEach((key) => {
   assert.ok(Object.hasOwn(factUsage, key), `${key}: known source fact`);
   factUsage[key] += 1;
 });
-assert.equal(new Set(coveredFactKeys).size, 244, "all 244 facts must be covered");
+assert.equal(new Set(coveredFactKeys).size, 248, "all 248 facts must be covered");
 assert.equal(new Set(coveredFactKeys.filter((key) => expectedBaseFactKeys.includes(key))).size, 176, "all 176 base facts");
-assert.equal(new Set(coveredFactKeys.filter((key) => expectedSupplementFactKeys.includes(key))).size, 68, "all 68 supplement facts");
+assert.equal(new Set(coveredFactKeys.filter((key) => expectedSupplementFactKeys.includes(key))).size, 72, "all 72 supplement facts");
 assert.equal(Object.values(factUsage).filter((count) => count === 0).length, 0);
 assert.ok(Math.max(...Object.values(factUsage)) <= 5, "fact use must remain at or below five");
 assert.ok(expectedSupplementFactKeys.every((key) => factUsage[key] === 1), "supplement facts are placed exactly once");
@@ -305,7 +305,7 @@ for (const question of bank.QUESTIONS) {
   assert.equal(question.unitLabel, unitById[question.unitId].label, `${question.id}: unit label`);
   assert.equal(question.unitPage, unitById[question.unitId].page, `${question.id}: unit page`);
   assert.equal(question.legalBaseline, blueprint.legalBaseline, `${question.id}: legal baseline`);
-  assert.equal(question.qualityVersion, 2, `${question.id}: quality version`);
+  assert.equal(question.qualityVersion, 3, `${question.id}: quality version`);
   assert.ok(Object.hasOwn(expectedFormats, question.formatKey), `${question.id}: known format`);
   assert.equal(question.format, bank.FORMAT_LABELS[question.formatKey], `${question.id}: format label`);
   assert.equal(question.choices.length, 4, `${question.id}: four choices`);
@@ -410,7 +410,7 @@ const mixedSupplementQuestions = supplementalQuestions.filter((question) =>
 const crossAnchorQuestions = supplementalQuestions.filter((question) =>
   question.sourceTypes.length === 1 && question.sourceTypes[0] === "supplement"
 );
-assert.equal(mixedSupplementQuestions.length, 30, "30 added questions mix base and supplement facts");
+assert.equal(mixedSupplementQuestions.length, 32, "32 added questions mix base and supplement facts");
 assert.equal(crossAnchorQuestions.length, 2, "two added questions cross supplement anchors");
 for (const question of mixedSupplementQuestions) {
   assert.equal(question.sourceFacts.filter((fact) => fact.sourceType === "base").length, 2, `${question.id}: two base supports`);
@@ -453,10 +453,10 @@ const presentedExtremePlacements = bank.QUESTIONS.flatMap((question) => question
 assert.equal(presentedExtremePlacements.length, 0, "presented statements remove the false-only cue");
 
 const caseQuestions = bank.QUESTIONS.filter((question) => question.formatKey === "case");
-assert.equal(caseQuestions.length, 33);
+assert.equal(caseQuestions.length, 34);
 assert.equal(
   new Set(caseQuestions.map((question) => question.sourceFacts.map((fact) => fact.key).sort().join("|"))).size,
-  33,
+  34,
   "case source-fact sets must be unique"
 );
 for (const question of caseQuestions) {
@@ -495,7 +495,7 @@ const presentations = presentationKeys.map((key) =>
   bank.QUESTIONS.map((question) => bank.presentQuestion(question, key))
 );
 presentations.forEach((presentedQuestions, keyIndex) => {
-  assert.deepEqual(answerDistribution(presentedQuestions), [33, 33, 33, 33]);
+  assert.deepEqual([...answerDistribution(presentedQuestions)].sort((a, b) => a - b), [33, 33, 34, 34]);
   Object.entries(answerDistributionByFormat(presentedQuestions)).forEach(([formatKey, distribution]) => {
     assert.ok(
       Math.max(...distribution) - Math.min(...distribution) <= 1,

@@ -11,13 +11,16 @@ const required = [
   "styles.css",
   "app.js",
   "business-mastery.js",
+  "business-pace.js",
   "business-fullscore-supplement.js",
   "business-fullscore-bank.js",
   "practical-question-bank.js",
   "calculation-drill.js",
   "official-exam-data.js",
+  "official-law-baseline.js",
   "save-store.js",
   "save-transfer.js",
+  "state-sync.js",
   "reward-system.js",
   "question-bank.js",
   "question-balance.js",
@@ -48,8 +51,11 @@ const required = [
   "Audit-TakkenPassLoopV12Ui.cjs",
   "Audit-TakkenBusinessMastery.js",
   "Audit-TakkenBusinessMasteryUi.cjs",
+  "Audit-TakkenBusinessPace.js",
   "Audit-TakkenBusinessFullScoreSupplement.js",
   "Audit-TakkenBusinessFullScoreBank.js",
+  "Audit-TakkenOfficialLawBaseline.js",
+  "Audit-TakkenStateSync.js",
   "scripts/verify-deployed-page.mjs",
   "README.md",
 ];
@@ -88,9 +94,9 @@ assert.match(app, /function foundationLearningRoute/);
 assert.match(app, /function renderFoundationRoutePanel/);
 assert.match(app, /function startPracticalDrillForUnit/);
 assert.match(app, /const PRACTICAL_SESSION_SIZES = Object\.freeze\(\[4, 10, 20, 45\]\)/);
-assert.match(app, /const STATE_SCHEMA_VERSION = 9/);
-assert.match(app, /const BUSINESS_FULLSCORE_EXPECTED_QUESTIONS = 132/);
-assert.match(app, /const OFFICIAL_EXAM_EVIDENCE_VERSION = 2/);
+assert.match(app, /const STATE_SCHEMA_VERSION = 10/);
+assert.match(app, /const BUSINESS_FULLSCORE_EXPECTED_QUESTIONS = 134/);
+assert.match(app, /const OFFICIAL_EXAM_EVIDENCE_VERSION = 3/);
 assert.match(app, /const OFFICIAL_DAILY_DRILL_DEFINITIONS/);
 assert.match(app, /2025-balanced-c-v1/);
 assert.match(app, /const OFFICIAL_DRILL_EVIDENCE_VERSION = 3/);
@@ -116,6 +122,7 @@ assert.match(index, /id="saveShareButton"/);
 assert.match(index, /id="saveRestorePreviousButton"/);
 assert.match(index, /id="saveProtectionStatus"/);
 assert.match(index, /id="saveImportInput"/);
+assert.match(index, /id="saveImportButton"/);
 assert.match(index, /スマホへ渡す/);
 assert.match(index, /id="mockAButton"/);
 assert.match(index, /id="mockBButton"/);
@@ -128,7 +135,8 @@ assert.match(index, /id="progressDrawer"/);
 assert.match(index, /id="dailyMissionStatus"/);
 assert.match(index, /id="officialExamSessionForm"/);
 assert.match(index, /id="officialExamManualForm"/);
-assert.match(index, /id="officialExamLawChecked"/);
+assert.match(index, /id="officialLawNotice"/);
+assert.doesNotMatch(index, /id="officialExamLawChecked"/);
 assert.match(index, /id="officialExamHistory"/);
 assert.doesNotMatch(index, /href="https:\/\/www\.retio\.or\.jp\/exam\/past_ques_ans\/other\//);
 assert.match(index, /id="officialDrillOpenButton"/);
@@ -160,15 +168,18 @@ assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 第2分冊・権利関係を固める/);
 assert.match(index, /③ 法令・税その他へ進む/);
 assert.match(index, /④ 全分野を混ぜる/);
-assert.match(index, /styles\.css\?v=20260814-business-fullscore-v25-2/);
-assert.match(index, /business-mastery\.js\?v=20260814-business-fullscore-v25-2/);
-assert.match(index, /business-fullscore-supplement\.js\?v=20260814-business-fullscore-v25-2/);
-assert.match(index, /business-fullscore-bank\.js\?v=20260814-business-fullscore-v25-2/);
-assert.match(index, /practical-question-bank\.js\?v=20260814-business-fullscore-v25-2/);
-assert.match(index, /calculation-drill\.js\?v=20260814-business-fullscore-v25-2/);
-assert.match(index, /app\.js\?v=20260814-business-fullscore-v25-2/);
-assert.match(index, /save-store\.js\?v=20260814-business-fullscore-v25-2/);
-assert.match(index, /official-exam-data\.js\?v=20260814-business-fullscore-v25-2/);
+assert.match(index, /styles\.css\?v=20260815-business-hardening-v26-1/);
+assert.match(index, /business-mastery\.js\?v=20260815-business-hardening-v26-1/);
+assert.match(index, /business-pace\.js\?v=20260815-business-hardening-v26-1/);
+assert.match(index, /business-fullscore-supplement\.js\?v=20260815-business-hardening-v26-1/);
+assert.match(index, /business-fullscore-bank\.js\?v=20260815-business-hardening-v26-1/);
+assert.match(index, /practical-question-bank\.js\?v=20260815-business-hardening-v26-1/);
+assert.match(index, /calculation-drill\.js\?v=20260815-business-hardening-v26-1/);
+assert.match(index, /app\.js\?v=20260815-business-hardening-v26-1/);
+assert.match(index, /save-store\.js\?v=20260815-business-hardening-v26-1/);
+assert.match(index, /official-exam-data\.js\?v=20260815-business-hardening-v26-1/);
+assert.match(index, /official-law-baseline\.js\?v=20260815-business-hardening-v26-1/);
+assert.match(index, /state-sync\.js\?v=20260815-business-hardening-v26-1/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
 assert.doesNotMatch(index, /understanding-system\.js/);
@@ -214,22 +225,31 @@ assert.match(pagesWorkflow, /node Audit-TakkenPracticalVariations\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenLearningArchitecture\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenBusinessFullScoreSupplement\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenBusinessFullScoreBank\.js/);
+assert.match(pagesWorkflow, /node Audit-TakkenBusinessPace\.js/);
+assert.match(pagesWorkflow, /node Audit-TakkenOfficialLawBaseline\.js/);
+assert.match(pagesWorkflow, /node Audit-TakkenStateSync\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
-assert.match(pagesWorkflow, /20260814-business-fullscore-v25-2/);
+assert.match(pagesWorkflow, /20260815-business-hardening-v26-1/);
 assert.doesNotMatch(pagesWorkflow, /cp [^\n]*understanding-system\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*calculation-drill\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*business-mastery\.js[^\n]*_site\//);
+assert.match(pagesWorkflow, /cp [^\n]*business-pace\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*business-fullscore-supplement\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*business-fullscore-bank\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*practical-question-bank\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*official-exam-data\.js[^\n]*_site\//);
+assert.match(pagesWorkflow, /cp [^\n]*official-law-baseline\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*save-store\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*save-transfer\.js[^\n]*_site\//);
+assert.match(pagesWorkflow, /cp [^\n]*state-sync\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*exam-blueprint\.js[^\n]*_site\//);
 assert.match(ciWorkflow, /node Audit-TakkenUnderstandingDepth\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenBusinessMastery\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenBusinessFullScoreSupplement\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenBusinessFullScoreBank\.js/);
+assert.match(ciWorkflow, /node Audit-TakkenBusinessPace\.js/);
+assert.match(ciWorkflow, /node Audit-TakkenOfficialLawBaseline\.js/);
+assert.match(ciWorkflow, /node Audit-TakkenStateSync\.js/);
 assert.match(ciWorkflow, /node Audit-Takken2026Coverage\.js/);
 assert.doesNotMatch(ciWorkflow, /node Audit-TakkenRuleChoiceAmbiguity\.js/);
 

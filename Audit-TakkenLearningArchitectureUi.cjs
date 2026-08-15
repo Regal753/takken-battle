@@ -247,7 +247,7 @@ async function main() {
     assert.ok(initial.order.practical < initial.order.measurement);
 
     const initialState = (await savedState(desktop)).state;
-    assert.equal(initialState.stateSchemaVersion, 9);
+    assert.equal(initialState.stateSchemaVersion, 10);
     assert.equal(initialState.daily.planMode, "unit");
     assert.equal(initialState.daily.planUnitId, "business-book-01");
     assert.equal(initialState.daily.planIds.length, 2);
@@ -308,7 +308,7 @@ async function main() {
     assert.match(await desktop.locator("#todayCommandTitle").textContent(), /01-02 免許/);
 
     const migrated = await migrateV6(desktop);
-    assert.equal(migrated.stateSchemaVersion, 9);
+    assert.equal(migrated.stateSchemaVersion, 10);
     assert.equal(typeof migrated.practicalDrill.unitId, "string");
     assert.equal(migrated.practicalDrill.attempts, 5);
 

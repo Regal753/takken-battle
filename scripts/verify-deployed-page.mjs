@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260814-business-fullscore-v25-2";
+const expectedVersion = process.argv[3] || "20260815-business-hardening-v26-1";
 const attempts = Math.max(1, Number(process.env.TAKKEN_DEPLOY_VERIFY_ATTEMPTS) || 12);
 const intervalMs = Math.max(0, Number(process.env.TAKKEN_DEPLOY_VERIFY_INTERVAL_MS) || 10000);
 
@@ -50,10 +50,16 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
       html.match(/src="([^"]*official-exam-data\.js\?v=[^"]+)"/)?.[1] || "";
     const masteryReference =
       html.match(/src="([^"]*business-mastery\.js\?v=[^"]+)"/)?.[1] || "";
+    const paceReference =
+      html.match(/src="([^"]*business-pace\.js\?v=[^"]+)"/)?.[1] || "";
     const supplementReference =
       html.match(/src="([^"]*business-fullscore-supplement\.js\?v=[^"]+)"/)?.[1] || "";
     const bankReference =
       html.match(/src="([^"]*business-fullscore-bank\.js\?v=[^"]+)"/)?.[1] || "";
+    const lawBaselineReference =
+      html.match(/src="([^"]*official-law-baseline\.js\?v=[^"]+)"/)?.[1] || "";
+    const stateSyncReference =
+      html.match(/src="([^"]*state-sync\.js\?v=[^"]+)"/)?.[1] || "";
     const styleReference = html.match(/href="([^"]*styles\.css\?v=[^"]+)"/)?.[1] || "";
     assert.ok(appReference.includes(expectedVersion), `app version missing: ${expectedVersion}`);
     assert.ok(storeReference.includes(expectedVersion), `save store version missing: ${expectedVersion}`);
@@ -62,8 +68,11 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
       `official exam data version missing: ${expectedVersion}`
     );
     assert.ok(masteryReference.includes(expectedVersion), `business mastery version missing: ${expectedVersion}`);
+    assert.ok(paceReference.includes(expectedVersion), `business pace version missing: ${expectedVersion}`);
     assert.ok(supplementReference.includes(expectedVersion), `business supplement version missing: ${expectedVersion}`);
     assert.ok(bankReference.includes(expectedVersion), `business full-score bank version missing: ${expectedVersion}`);
+    assert.ok(lawBaselineReference.includes(expectedVersion), `official law baseline version missing: ${expectedVersion}`);
+    assert.ok(stateSyncReference.includes(expectedVersion), `state sync version missing: ${expectedVersion}`);
     assert.ok(styleReference.includes(expectedVersion), `style version missing: ${expectedVersion}`);
     assert.match(html, /name="takken-runtime" content="public-static"/, "public-static marker missing");
     const fetchAsset = async (reference, label) => {
@@ -78,8 +87,11 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const storeCode = await fetchAsset(storeReference, "save store");
     const officialDataCode = await fetchAsset(officialDataReference, "official data");
     const masteryCode = await fetchAsset(masteryReference, "business mastery");
+    const paceCode = await fetchAsset(paceReference, "business pace");
     const supplementCode = await fetchAsset(supplementReference, "business supplement");
     const bankCode = await fetchAsset(bankReference, "business full-score bank");
+    const lawBaselineCode = await fetchAsset(lawBaselineReference, "official law baseline");
+    const stateSyncCode = await fetchAsset(stateSyncReference, "state sync");
     const styleCode = await fetchAsset(styleReference, "style");
     assert.match(appCode, /const DEFAULT_STUDY_SCOPE = "business"/, "study scope logic missing");
     assert.match(appCode, /const TEXTBOOK_IDS/, "textbook range logic missing");
@@ -92,7 +104,7 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(appCode, /function foundationLearningRoute/, "foundation route logic missing");
     assert.match(appCode, /function renderFoundationRoutePanel/, "foundation route renderer missing");
     assert.match(appCode, /function startPracticalDrillForUnit/, "unit practical launcher missing");
-    assert.match(appCode, /const STATE_SCHEMA_VERSION = 9/, "save schema v9 missing");
+    assert.match(appCode, /const STATE_SCHEMA_VERSION = 10/, "save schema v10 missing");
     assert.match(appCode, /title\.textContent = "こう解く"/, "direct explanation heading missing");
     assert.match(appCode, /label: "見る条件"/, "direct condition step missing");
     assert.match(appCode, /label: "使う根拠"/, "direct legal basis step missing");
@@ -108,8 +120,11 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(officialDataCode, /2021-12/, "December 2021 exam missing");
     assert.match(officialDataCode, /2020-10/, "October 2020 exam missing");
     assert.match(masteryCode, /REVIEW_INTERVAL_DAYS/, "business mastery schedule missing");
+    assert.match(paceCode, /calculateBusinessPace/, "business pace calculator missing");
     assert.match(supplementCode, /TAKKEN_BUSINESS_FULLSCORE_SUPPLEMENT/, "business supplement API missing");
     assert.match(bankCode, /TAKKEN_BUSINESS_FULLSCORE_BANK/, "business full-score bank API missing");
+    assert.match(lawBaselineCode, /assessCurrentLawProof/, "official law baseline guard missing");
+    assert.match(stateSyncCode, /reconcileForSave/, "state sync reconciler missing");
     assert.match(styleCode, /\.study-scope-select/, "study scope style missing");
     assert.match(styleCode, /\.pass-plan-panel/, "pass plan style missing");
     assert.match(styleCode, /\.foundation-route-card/, "foundation route style missing");

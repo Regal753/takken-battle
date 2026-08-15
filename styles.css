@@ -6963,6 +6963,13 @@ button.mission-step:disabled {
   overflow-wrap: anywhere;
 }
 
+.practical-confidence-hint {
+  margin: -2px 0 10px;
+  color: #c7cfe2;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
 .practical-drill-choices {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -7708,6 +7715,9 @@ button.mission-step:disabled {
 .business-fullscore-gates span, .business-fullscore-gates small { color: #365c53; overflow-wrap: anywhere; }
 .business-fullscore-gates strong { color: #143d34; font-size: 1.12rem; overflow-wrap: anywhere; }
 .business-mastery-metrics { margin: 14px 0; padding: 10px 12px; border-radius: 10px; color: #173d35; background: #dcefe7; font-weight: 800; line-height: 1.55; }
+.business-mastery-pace { margin: -5px 0 10px; padding: 9px 11px; border: 1px solid #b8d7ca; border-radius: 9px; color: #234c42; background: #f2faf6; font-size: .9rem; font-weight: 780; line-height: 1.55; overflow-wrap: anywhere; }
+.business-mastery-pace[data-pace-status="urgent"] { border-color: #d2972c; color: #684600; background: #fff7df; }
+.business-mastery-pace[data-pace-status="impossible"] { border-color: #c36b59; color: #7e2e20; background: #fff0ec; }
 .business-mastery-weakness { margin: -5px 0 10px; color: #274f46; font-size: .9rem; line-height: 1.55; overflow-wrap: anywhere; }
 .business-mastery-disclaimer { margin: 0 0 13px; color: #594000; font-size: .88rem; line-height: 1.55; }
 .business-mastery-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }

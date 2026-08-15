@@ -281,12 +281,12 @@ async function main() {
     assert.equal(realBusiness.summary.questions.durable, 0);
     assert.equal(realBusiness.summary.durableUnits, 0);
     assert.match(realBusiness.metrics, /基礎\s*接触40\/44・定着6\/44/);
-    assert.match(realBusiness.metrics, /変形\s*再挑戦・期限0・未接触132・長期定着0\/132/);
+    assert.match(realBusiness.metrics, /変形\s*再挑戦・期限0・未接触134・定着起点未確立134・長期定着0\/134/);
     assert.match(realBusiness.metrics, /公式\s*初見満点0\/3/);
     const realFullScore = await fullScoreSnapshot(page, storageId);
-    assert.equal(realFullScore.ids.length, 132);
-    assert.equal(new Set(realFullScore.ids).size, 132);
-    assert.equal(realFullScore.transfer.questions.untouched, 132);
+    assert.equal(realFullScore.ids.length, 134);
+    assert.equal(new Set(realFullScore.ids).size, 134);
+    assert.equal(realFullScore.transfer.questions.untouched, 134);
     assert.equal(realFullScore.transfer.questions.durable, 0);
     assert.equal(realFullScore.official.required, 3);
     assert.equal(realFullScore.official.qualifying, 0);
@@ -314,7 +314,7 @@ async function main() {
     );
     const expected = {
       ...sourceExpected,
-      // schema 9 derives a durable no-peek exposure ledger from the existing
+      // schema 10 derives a durable no-peek exposure ledger from the existing
       // daily-drill record; this is a migration, not a legacy full-score proof.
       officialExamExposure: readback.state.officialExamExposure || {},
       practicalDrill: practicalSnapshot(readback.state, businessIds)
@@ -324,10 +324,11 @@ async function main() {
       "2025": {
         firstOpenedAt: "2026-07-31T10:57:49.627Z",
         firstOpenedDayKey: "2026-07-31",
+        firstOpenedUtcOffsetMinutes: 0,
         source: "daily-drill"
       }
     });
-    assert.equal(targetSchema, 9);
+    assert.equal(targetSchema, 10);
     assert.ok(targetSchema >= sourceSchema);
     assert.equal(readback.state.calculationDrill?.stage, "idle");
     assert.equal(readback.state.calculationDrill?.queue?.length, 0);
@@ -390,7 +391,7 @@ async function main() {
         .filter(([id]) => !String(id).startsWith("bf-business-book-"))
     );
     const fullScoreBank = await fullScoreSnapshot(page, storageId);
-    assert.equal(fullScoreBank.ids.length, 132);
+    assert.equal(fullScoreBank.ids.length, 134);
     const fullScoreIds = [...businessIds, ...fullScoreBank.ids];
     const durableHistory = Object.fromEntries(fullScoreBank.ids.map((id, index) => [
       id,
@@ -470,7 +471,7 @@ async function main() {
     assert.equal(fullBusiness.transfer.questions.retry, 0);
     assert.equal(fullBusiness.transfer.questions.due, 0);
     assert.equal(fullBusiness.transfer.questions.untouched, 0);
-    assert.equal(fullBusiness.transfer.questions.durable, 132);
+    assert.equal(fullBusiness.transfer.questions.durable, 134);
     assert.equal(fullBusiness.transfer.durableUnits, 11);
     assert.equal(fullBusiness.official.required, 3);
     assert.equal(fullBusiness.official.ready, false);
@@ -517,7 +518,7 @@ async function main() {
     assert.equal(normalizedMalformed.reviewLevel, 0);
     assert.equal(normalizedMalformed.masteryDueKey, "");
     const malformedBusiness = await fullScoreSnapshot(malformedPage, malformedStorageId);
-    assert.equal(malformedBusiness.transfer.questions.durable, 131);
+    assert.equal(malformedBusiness.transfer.questions.durable, 133);
     assert.equal(malformedBusiness.transfer.durableUnits, 10);
 
     const importNamespace = `rsi-${Date.now().toString(36)}`;
@@ -544,7 +545,7 @@ async function main() {
     , importStorageId);
     assert.deepEqual(practicalSnapshot(importedState, fullScoreIds), fullScoreExpected);
     let importedBusiness = await fullScoreSnapshot(importPage, importStorageId);
-    assert.equal(importedBusiness.transfer.questions.durable, 132);
+    assert.equal(importedBusiness.transfer.questions.durable, 134);
     assert.equal(importedBusiness.transfer.durableUnits, 11);
     await importPage.reload({ waitUntil: "domcontentloaded" });
     await importPage.waitForFunction(() =>
@@ -609,7 +610,7 @@ async function main() {
     assert.deepEqual(importedState.practicalDrill.history[wrongTarget.id].confidentDayKeys, []);
     importedBusiness = await fullScoreSnapshot(importPage, importStorageId);
     assert.equal(importedBusiness.transfer.questions.retry, 1);
-    assert.equal(importedBusiness.transfer.questions.durable, 131);
+    assert.equal(importedBusiness.transfer.questions.durable, 133);
     assert.equal(importedBusiness.transfer.durableUnits, 10);
     await importPage.reload({ waitUntil: "domcontentloaded" });
     await importPage.waitForFunction(() =>
@@ -622,7 +623,7 @@ async function main() {
     assert.deepEqual(importedState.practicalDrill.history[wrongTarget.id].confidentDayKeys, []);
     importedBusiness = await fullScoreSnapshot(importPage, importStorageId);
     assert.equal(importedBusiness.transfer.questions.retry, 1);
-    assert.equal(importedBusiness.transfer.questions.durable, 131);
+    assert.equal(importedBusiness.transfer.questions.durable, 133);
     assert.equal(importedBusiness.transfer.durableUnits, 10);
 
     if (screenshotDir) {
@@ -655,7 +656,7 @@ async function main() {
       syntheticCorruptRecovery: fullRecovered.corruptCopies === 1,
       syntheticUiRestore: true,
       wrongDemotion: importedBusiness.transfer.questions.retry === 1,
-      malformedMasteryFailClosed: malformedBusiness.transfer.questions.durable === 131,
+      malformedMasteryFailClosed: malformedBusiness.transfer.questions.durable === 133,
       sourceSchema,
       targetSchema,
       upgradeBackupExact: sourceSchema < targetSchema ? readback.upgradeRaw === sourceRaw : "not-required",

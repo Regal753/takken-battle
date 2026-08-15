@@ -3,6 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
     <meta name="description" content="全45単元を、本文・読後演習124問・解答直後の根拠と当てはめ・翌日復習・実践180問・公式過去問の順で学べる令和8年度向け宅建学習ツールです。">
     <meta name="theme-color" content="#17261f">
     <meta name="takken-runtime" content="public-static">
@@ -13,7 +14,28 @@
     <link rel="canonical" href="https://regal753.github.io/takken-battle/">
     <title>宅建バトル Study Quest</title>
     <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./styles.css?v=20260814-business-fullscore-v25-2">
+    <link rel="stylesheet" href="./styles.css?v=20260815-business-hardening-v26-1">
+    <script defer src="./exam-blueprint.js?v=20260815-business-hardening-v26-1"></script>
+    <script defer src="./exam-question-core.js?v=20260815-business-hardening-v26-1"></script>
+    <script defer src="./exam-questions-rights.js?v=20260815-business-hardening-v26-1"></script>
+    <script defer src="./exam-questions-restrictions.js?v=20260815-business-hardening-v26-1"></script>
+    <script defer src="./exam-questions-tax-other.js?v=20260815-business-hardening-v26-1"></script>
+    <script defer src="./exam-questions-business.js?v=20260815-business-hardening-v26-1"></script>
+    <script defer src="./business-fullscore-supplement.js?v=20260815-business-hardening-v26-1"></script>
+    <script defer src="./business-fullscore-bank.js?v=20260815-business-hardening-v26-1"></script>
+    <script defer src="./practical-question-bank.js?v=20260815-business-hardening-v26-1"></script>
+    <script defer src="./question-bank.js?v=20260815-business-hardening-v26-1"></script>
+    <script defer src="./question-balance.js?v=20260815-business-hardening-v26-1"></script>
+    <script defer src="./reward-system.js?v=20260815-business-hardening-v26-1"></script>
+    <script defer src="./official-exam-data.js?v=20260815-business-hardening-v26-1"></script>
+    <script defer src="./official-law-baseline.js?v=20260815-business-hardening-v26-1"></script>
+    <script defer src="./calculation-drill.js?v=20260815-business-hardening-v26-1"></script>
+    <script defer src="./save-store.js?v=20260815-business-hardening-v26-1"></script>
+    <script defer src="./save-transfer.js?v=20260815-business-hardening-v26-1"></script>
+    <script defer src="./state-sync.js?v=20260815-business-hardening-v26-1"></script>
+    <script defer src="./business-mastery.js?v=20260815-business-hardening-v26-1"></script>
+    <script defer src="./business-pace.js?v=20260815-business-hardening-v26-1"></script>
+    <script defer src="./app.js?v=20260815-business-hardening-v26-1"></script>
   </head>
   <body>
     <div class="app-root">
@@ -43,10 +65,8 @@
             <button id="saveExportButton" class="save-transfer-button" type="button">バックアップ</button>
             <button id="saveShareButton" class="save-transfer-button save-share-button" type="button">スマホへ渡す</button>
             <button id="saveRestorePreviousButton" class="save-transfer-button" type="button">直前セーブへ戻す</button>
-            <label class="save-transfer-button" for="saveImportInput">
-              読み込む
-              <input id="saveImportInput" type="file" accept=".json,application/json" hidden>
-            </label>
+            <button id="saveImportButton" class="save-transfer-button" type="button">読み込む</button>
+            <input id="saveImportInput" type="file" accept=".json,application/json" hidden>
             <small id="saveTransferStatus" class="save-transfer-status" aria-live="polite"></small>
             <small id="saveProtectionStatus" class="save-protection-status">セーブ保護を確認中</small>
             <small class="save-transfer-help">「スマホへ渡す」は現在のセーブを本人用リンクにします。次の端末で開いて確認すると取込み、その後は端末内へ自動保存します。リンクは他人へ送らず、使用後に削除してください。</small>
@@ -163,17 +183,18 @@
       </section>
 
       <section id="businessMasteryPanel" class="business-mastery-panel" aria-label="宅建業法 満点モード">
-        <div class="business-mastery-heading"><span>2026年4月1日現在法</span><strong>宅建業法 満点モード</strong><p>基礎44問、変形132問、公式初見20/20を別々に測ります。</p></div>
+        <div class="business-mastery-heading"><span>2026年4月1日現在法</span><strong>宅建業法 満点モード</strong><p>基礎44問、現行法の変形134問、公式過去問の当時法20/20を別々に測ります。</p></div>
         <strong id="businessMasteryStatus" class="business-mastery-status">基礎回収中</strong>
         <div class="business-fullscore-gates" aria-label="満点圏の3条件">
           <article><span>1 基礎再現</span><strong id="businessFoundationGate">0 / 44</strong><small>2日以上・弱点なし</small></article>
-          <article><span>2 変形長期定着</span><strong id="businessTransferGate">0 / 132</strong><small>1・3・7・14・30日</small></article>
-          <article><span>3 公式満点再現</span><strong id="businessOfficialGate">0 / 3</strong><small>初見・別試験回・別日</small></article>
+          <article><span>2 変形長期定着</span><strong id="businessTransferGate">0 / 134</strong><small>1・3・7・14・30日</small></article>
+          <article><span>3 公式過去問再現</span><strong id="businessOfficialGate">0 / 3</strong><small>当時法・初見・別試験回・別日</small></article>
         </div>
-        <p id="businessMasteryMetrics" class="business-mastery-metrics">基礎未定着 44問 / 変形未接触 132問 / 公式 0/3</p>
+        <p id="businessMasteryMetrics" class="business-mastery-metrics">基礎未定着 44問 / 変形未接触 134問 / 公式 0/3</p>
+        <p id="businessMasteryPace" class="business-mastery-pace" aria-live="polite">試験日から必要ペースを計算中です。</p>
         <p id="businessMasteryWeakness" class="business-mastery-weakness">弱点上位　まだ誤答・不安回答の記録はありません。</p>
-        <p class="business-mastery-disclaimer">満点圏（アプリ内判定）は学習証拠の条件です。本試験の満点を保証する表示ではありません。</p>
-        <div class="business-mastery-actions"><button id="businessMasteryPrimary" class="today-command-primary" type="button">基礎から回収する</button><button id="businessMasteryFull" class="today-command-secondary" type="button">変形132問総点検</button></div>
+        <p class="business-mastery-disclaimer">現在法は変形134問の長期定着、公式過去問は出題当時の正答で測ります。満点圏（アプリ内判定）は本試験の満点を保証しません。</p>
+        <div class="business-mastery-actions"><button id="businessMasteryPrimary" class="today-command-primary" type="button">基礎から回収する</button><button id="businessMasteryFull" class="today-command-secondary" type="button">変形134問総点検</button></div>
         <div id="businessMasteryGrid" class="business-mastery-grid"></div>
         <p class="business-mastery-law">2026法改正: 35条・標識は、学習前に<a href="https://www.mlit.go.jp/totikensangyo/const/1_6_bt_000268.html" target="_blank" rel="noopener">国土交通省の案内</a>で確認。</p>
       </section>
@@ -237,7 +258,7 @@
           </summary>
           <div class="official-ledger-body">
             <div class="official-ledger-copy">
-              <p>RETIO公式PDFを120分で解き、この解答シートへ1問ずつ入力します。2020・2021年の10月／12月試験は別試験として扱います。過去問は現在法と異なる可能性があるため、採点後に2026年度教材との照合を必須にします。</p>
+              <p>RETIO公式PDFを120分で解き、この解答シートへ1問ずつ入力します。2020・2021年の10月／12月試験は別試験として扱います。得点は出題当時の公式正答で採点し、2026年現在法の習熟は変形134問で別に判定します。</p>
               <span class="official-exam-access-note">未接触の試験回は、下の「120分の初見測定を開始」で露出記録を保存した後にPDFを開けます。</span>
             </div>
 
@@ -281,10 +302,7 @@
                   <strong id="officialExamProgress">1 / 50</strong>
                   <button id="officialExamNextButton" class="today-command-secondary" type="button">次の問</button>
                 </div>
-                <label class="official-law-check">
-                  <input id="officialExamLawChecked" type="checkbox">
-                  <span>この試験回で法改正の影響がある肢を、2026年4月1日現在法の教材で照合した</span>
-                </label>
+                <p id="officialLawNotice" class="official-law-check" aria-live="polite">当時法の公式キーで採点します。現行法得点には換算しません。</p>
                 <div class="official-exam-session-actions">
                   <button id="officialExamSubmitButton" class="today-command-primary" type="submit">50問を採点して記録</button>
                   <button id="officialExamAbandonButton" class="today-command-secondary" type="button">中断する（この回は接触済み）</button>
@@ -443,7 +461,8 @@
               <strong id="practicalDrillRetryStatus">今回の再出題 0</strong>
             </div>
             <p id="practicalDrillPrompt" class="practical-drill-prompt"></p>
-            <div id="practicalDrillChoices" class="practical-drill-choices" aria-label="実践問題の選択肢"></div>
+            <p id="practicalConfidenceHint" class="practical-confidence-hint">正解後に「根拠を言えた」か「迷った」かを記録し、迷いは復習へ戻します。</p>
+            <div id="practicalDrillChoices" class="practical-drill-choices" aria-label="実践問題の選択肢" aria-describedby="practicalConfidenceHint"></div>
             <div id="practicalDrillFeedback" class="practical-drill-feedback" hidden>
               <strong id="practicalDrillVerdict"></strong>
               <ol id="practicalDrillReasoning" class="practical-drill-reasoning" aria-label="正解を再現する理解経路"></ol>
@@ -786,24 +805,6 @@
       </div>
     </aside>
 
-    <script src="./exam-blueprint.js?v=20260814-business-fullscore-v25-2"></script>
-    <script src="./exam-question-core.js?v=20260814-business-fullscore-v25-2"></script>
-    <script src="./exam-questions-rights.js?v=20260814-business-fullscore-v25-2"></script>
-    <script src="./exam-questions-restrictions.js?v=20260814-business-fullscore-v25-2"></script>
-    <script src="./exam-questions-tax-other.js?v=20260814-business-fullscore-v25-2"></script>
-    <script src="./exam-questions-business.js?v=20260814-business-fullscore-v25-2"></script>
-    <script src="./business-fullscore-supplement.js?v=20260814-business-fullscore-v25-2"></script>
-    <script src="./business-fullscore-bank.js?v=20260814-business-fullscore-v25-2"></script>
-    <script src="./practical-question-bank.js?v=20260814-business-fullscore-v25-2"></script>
-    <script src="./question-bank.js?v=20260814-business-fullscore-v25-2"></script>
-    <script src="./question-balance.js?v=20260814-business-fullscore-v25-2"></script>
-    <script src="./reward-system.js?v=20260814-business-fullscore-v25-2"></script>
-    <script src="./official-exam-data.js?v=20260814-business-fullscore-v25-2"></script>
-    <script src="./calculation-drill.js?v=20260814-business-fullscore-v25-2"></script>
-    <script src="./save-store.js?v=20260814-business-fullscore-v25-2"></script>
-    <script src="./save-transfer.js?v=20260814-business-fullscore-v25-2"></script>
-    <script src="./business-mastery.js?v=20260814-business-fullscore-v25-2"></script>
-    <script src="./app.js?v=20260814-business-fullscore-v25-2"></script>
     <noscript>宅建バトルを利用するにはJavaScriptを有効にしてください。</noscript>
   </body>
 </html>
