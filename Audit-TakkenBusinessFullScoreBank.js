@@ -117,6 +117,48 @@ function answerDistributionByFormat(questions) {
   ]));
 }
 
+function assertDeepFrozen(value, owner) {
+  assert.ok(Object.isFrozen(value), `${owner}: frozen`);
+  if (!value || typeof value !== "object") return;
+  Object.entries(value).forEach(([key, child]) => {
+    if (child && typeof child === "object") assertDeepFrozen(child, `${owner}.${key}`);
+  });
+}
+
+function assertDisplayModel(question) {
+  const model = question.displayModel;
+  const expectedItems = question.formatKey === "combination" ? 2 :
+    (question.formatKey === "count" || question.formatKey === "case" ? 4 : 0);
+  const expectedChoiceBlocks = question.formatKey === "single" ? 4 : 0;
+  assert.ok(model, `${question.id}: display model exists`);
+  assertDeepFrozen(model, `${question.id}: display model`);
+  assert.ok(cleanText(model.intro), `${question.id}: display intro`);
+  assert.equal(model.items.length, expectedItems, `${question.id}: display item count`);
+  assert.equal(model.choiceBlocks.length, expectedChoiceBlocks, `${question.id}: display choice block count`);
+  const sourceFactKeys = new Set(question.sourceFacts.map((fact) => fact.key));
+  const displayedFactKeys = new Set();
+  [...model.items, ...model.choiceBlocks].forEach((block, index) => {
+    assert.equal(typeof block.label, "string", `${question.id}: display block ${index} label`);
+    assert.ok(cleanText(block.judgment), `${question.id}: display block ${index} judgment`);
+    assert.ok(block.sourceFactKeys.length >= 1, `${question.id}: display block ${index} source keys`);
+    assert.equal(new Set(block.premises).size, block.premises.length, `${question.id}: display premises deduplicated`);
+    block.sourceFactKeys.forEach((key) => {
+      assert.ok(sourceFactKeys.has(key), `${question.id}: display source key exists ${key}`);
+      displayedFactKeys.add(key);
+    });
+  });
+  assert.deepEqual([...displayedFactKeys].sort(), [...sourceFactKeys].sort(), `${question.id}: display fact-key coverage`);
+  if (question.formatKey === "single") {
+    model.choiceBlocks.forEach((block, index) => {
+      const fact = question.sourceFacts[index];
+      assert.equal(block.label, "", `${question.id}: single display choice label`);
+      assert.deepEqual(block.sourceFactKeys, [fact.key], `${question.id}: single display choice fact`);
+      assert.equal(block.judgment, fact.presentedStatement, `${question.id}: single display choice judgment`);
+      assert.equal(question.choices[index], `【前提】${fact.context} 【判断】${fact.presentedStatement}`, `${question.id}: single raw choice retained`);
+    });
+  }
+}
+
 assert.equal(supplement.VERSION, 2);
 assert.equal(supplement.LEGAL_BASELINE, blueprint.legalBaseline);
 assert.equal(supplement.ANCHORS.length, 18);
@@ -318,6 +360,7 @@ for (const question of bank.QUESTIONS) {
   assert.ok(question.sourceTypes.length >= 1, `${question.id}: source types`);
   assert.ok(question.sourceUrls.length >= 1, `${question.id}: source URLs`);
   assert.equal(question.reasoningSteps.length, 4, `${question.id}: four reasoning steps`);
+  assertDisplayModel(question);
   question.reasoningSteps.forEach((step) => {
     assert.ok(cleanText(step.label), `${question.id}: reasoning label`);
     assert.ok(cleanText(step.text), `${question.id}: reasoning text`);
@@ -509,6 +552,16 @@ presentations.forEach((presentedQuestions, keyIndex) => {
     assert.equal(presented.presentationKey, presentationKeys[keyIndex], `${stable.id}: presentation key`);
     assert.equal(presented.choices[presented.answer], stable.choices[stable.answer], `${stable.id}: rotated answer content`);
     assert.strictEqual(presented.sourceFacts, stable.sourceFacts, `${stable.id}: source facts remain stable`);
+    assertDeepFrozen(presented.displayModel, `${stable.id}: presented display model`);
+    assert.equal(presented.displayModel.items.length, stable.displayModel.items.length, `${stable.id}: presented display items`);
+    assert.equal(presented.displayModel.choiceBlocks.length, stable.displayModel.choiceBlocks.length, `${stable.id}: presented display choice blocks`);
+    if (stable.formatKey === "single") {
+      presented.displayModel.choiceBlocks.forEach((block, presentedIndex) => {
+        const stableIndex = presented.presentationOrder[presentedIndex];
+        assert.strictEqual(block, stable.displayModel.choiceBlocks[stableIndex], `${stable.id}: choice block rotates with choice`);
+        assert.equal(presented.choices[presentedIndex], stable.choices[stableIndex], `${stable.id}: displayed choice rotates with block`);
+      });
+    }
     assert.deepEqual(bank.diagnosticsForSelection(presented, presented.answer), [], `${stable.id}: presented correct diagnosis`);
     assert.ok(
       bank.diagnosticsForSelection(presented, (presented.answer + 1) % 4).length >= 1,
