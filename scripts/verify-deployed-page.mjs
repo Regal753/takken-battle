@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260815-business-hardening-v26-1";
+const expectedVersion = process.argv[3] || "20260815-business-knock-v27-1";
 const attempts = Math.max(1, Number(process.env.TAKKEN_DEPLOY_VERIFY_ATTEMPTS) || 12);
 const intervalMs = Math.max(0, Number(process.env.TAKKEN_DEPLOY_VERIFY_INTERVAL_MS) || 10000);
 
@@ -44,12 +44,16 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(html, /id="businessMasteryPanel"/, "business full-score panel missing");
     assert.match(html, /id="businessMasteryPrimary"/, "business full-score primary action missing");
     assert.match(html, /id="businessMasteryFull"/, "business full-score scan action missing");
+    assert.match(html, /id="businessKnockPanel"/, "business knock panel missing");
+    assert.match(html, /id="businessKnockStart"/, "business knock launcher missing");
     const appReference = html.match(/src="([^"]*app\.js\?v=[^"]+)"/)?.[1] || "";
     const storeReference = html.match(/src="([^"]*save-store\.js\?v=[^"]+)"/)?.[1] || "";
     const officialDataReference =
       html.match(/src="([^"]*official-exam-data\.js\?v=[^"]+)"/)?.[1] || "";
     const masteryReference =
       html.match(/src="([^"]*business-mastery\.js\?v=[^"]+)"/)?.[1] || "";
+    const knockReference =
+      html.match(/src="([^"]*business-knock\.js\?v=[^"]+)"/)?.[1] || "";
     const paceReference =
       html.match(/src="([^"]*business-pace\.js\?v=[^"]+)"/)?.[1] || "";
     const supplementReference =
@@ -68,6 +72,7 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
       `official exam data version missing: ${expectedVersion}`
     );
     assert.ok(masteryReference.includes(expectedVersion), `business mastery version missing: ${expectedVersion}`);
+    assert.ok(knockReference.includes(expectedVersion), `business knock version missing: ${expectedVersion}`);
     assert.ok(paceReference.includes(expectedVersion), `business pace version missing: ${expectedVersion}`);
     assert.ok(supplementReference.includes(expectedVersion), `business supplement version missing: ${expectedVersion}`);
     assert.ok(bankReference.includes(expectedVersion), `business full-score bank version missing: ${expectedVersion}`);
@@ -87,6 +92,7 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const storeCode = await fetchAsset(storeReference, "save store");
     const officialDataCode = await fetchAsset(officialDataReference, "official data");
     const masteryCode = await fetchAsset(masteryReference, "business mastery");
+    const knockCode = await fetchAsset(knockReference, "business knock");
     const paceCode = await fetchAsset(paceReference, "business pace");
     const supplementCode = await fetchAsset(supplementReference, "business supplement");
     const bankCode = await fetchAsset(bankReference, "business full-score bank");
@@ -120,6 +126,7 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(officialDataCode, /2021-12/, "December 2021 exam missing");
     assert.match(officialDataCode, /2020-10/, "October 2020 exam missing");
     assert.match(masteryCode, /REVIEW_INTERVAL_DAYS/, "business mastery schedule missing");
+    assert.match(knockCode, /TAKKEN_BUSINESS_KNOCK/, "business knock API missing");
     assert.match(paceCode, /calculateBusinessPace/, "business pace calculator missing");
     assert.match(supplementCode, /TAKKEN_BUSINESS_FULLSCORE_SUPPLEMENT/, "business supplement API missing");
     assert.match(bankCode, /TAKKEN_BUSINESS_FULLSCORE_BANK/, "business full-score bank API missing");

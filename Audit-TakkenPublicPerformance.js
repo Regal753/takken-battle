@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const ROOT = __dirname;
-const EXPECTED_CACHE_VERSION = "20260815-business-hardening-v26-1";
+const EXPECTED_CACHE_VERSION = "20260815-business-knock-v27-1";
 const MAX_PUBLIC_JS_BYTES = 1_100_000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",

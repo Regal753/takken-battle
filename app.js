@@ -22,6 +22,7 @@
   const CALCULATION_QUESTION_IDS = Object.freeze(CALCULATION_QUESTIONS.map((item) => item.id));
   const PRACTICAL_VARIATIONS = window.TAKKEN_PRACTICAL_VARIATIONS;
   const BUSINESS_MASTERY = window.TAKKEN_BUSINESS_MASTERY;
+  const BUSINESS_KNOCK = window.TAKKEN_BUSINESS_KNOCK;
   const BUSINESS_PACE = window.TAKKEN_BUSINESS_PACE;
   const BUSINESS_FULLSCORE_BANK = window.TAKKEN_BUSINESS_FULLSCORE_BANK;
   const PRACTICAL_QUESTIONS = PRACTICAL_VARIATIONS?.QUESTIONS || [];
@@ -32,6 +33,8 @@
   const BUSINESS_FULLSCORE_BANK_ID = "business-fullscore";
   const LEGACY_PRACTICAL_BANK_ID = "legacy-practical";
   const BUSINESS_FULLSCORE_EXPECTED_QUESTIONS = 134;
+  const BUSINESS_KNOCK_MODES = Object.freeze(["weak-due", "untouched", "unit", "all-random"]);
+  const BUSINESS_KNOCK_SIZES = Object.freeze([10, 20, 50, 100]);
   const CURRENT_LAW_DELTA_QUESTION_MAP = Object.freeze({
     "2016-q30": "bf-business-book-07-supplement-bs018-01",
     "2021-10-q41": "bf-business-book-07-supplement-bs018-02"
@@ -126,6 +129,8 @@
       BUSINESS_FULLSCORE_UNITS.some((unit) => unit.id === question.unitId)
     )
   );
+  const BUSINESS_KNOCK_READY = BUSINESS_FULLSCORE_BANK_READY &&
+    Boolean(BUSINESS_KNOCK?.plan && typeof BUSINESS_FULLSCORE_BANK?.presentQuestion === "function");
   const ALL_PRACTICAL_QUESTION_BY_ID = Object.freeze({
     ...PRACTICAL_QUESTION_BY_ID,
     ...BUSINESS_FULLSCORE_QUESTION_BY_ID
@@ -852,7 +857,18 @@
     businessMasteryWeakness: $("#businessMasteryWeakness"),
     businessMasteryGrid: $("#businessMasteryGrid"),
     businessMasteryPrimary: $("#businessMasteryPrimary"),
-    businessMasteryFull: $("#businessMasteryFull")
+    businessMasteryFull: $("#businessMasteryFull"),
+    businessKnockPanel: $("#businessKnockPanel"),
+    businessKnockAttempts: $("#businessKnockAttempts"),
+    businessKnockAccuracy: $("#businessKnockAccuracy"),
+    businessKnockRecovery: $("#businessKnockRecovery"),
+    businessKnockUntouched: $("#businessKnockUntouched"),
+    businessKnockMode: $("#businessKnockMode"),
+    businessKnockUnitField: $("#businessKnockUnitField"),
+    businessKnockUnit: $("#businessKnockUnit"),
+    businessKnockSize: $("#businessKnockSize"),
+    businessKnockStart: $("#businessKnockStart"),
+    businessKnockStatus: $("#businessKnockStatus")
   };
 
   let fallbackIdSequence = 0;
@@ -896,6 +912,13 @@
       bankId: LEGACY_PRACTICAL_BANK_ID,
       bankVersion: PRACTICAL_VARIATIONS?.VERSION || 1,
       presentationKey: "",
+      planMode: "",
+      knockPreset: {
+        mode: "untouched",
+        size: 20,
+        unitId: "",
+        lastPresentationOffset: null
+      },
       stage: "idle",
       scope: "business",
       unitId: "",
@@ -1885,6 +1908,25 @@
     const unitId = validUnits.some((unit) => unit.id === input?.unitId)
       ? String(input.unitId)
       : "";
+    const planMode = ["mastery", "knock", "legacy"].includes(input?.planMode)
+      ? String(input.planMode)
+      : bankId === BUSINESS_FULLSCORE_BANK_ID ? "mastery" : "legacy";
+    const rawKnockPreset = input?.knockPreset && typeof input.knockPreset === "object"
+      ? input.knockPreset
+      : fresh.knockPreset;
+    const knockMode = BUSINESS_KNOCK_MODES.includes(rawKnockPreset?.mode)
+      ? String(rawKnockPreset.mode)
+      : fresh.knockPreset.mode;
+    const knockSize = BUSINESS_KNOCK_SIZES.includes(Number(rawKnockPreset?.size))
+      ? Number(rawKnockPreset.size)
+      : fresh.knockPreset.size;
+    const knockUnitId = validUnits.some((unit) => unit.id === rawKnockPreset?.unitId)
+      ? String(rawKnockPreset.unitId)
+      : "";
+    const knockLastPresentationOffset = Number.isInteger(rawKnockPreset?.lastPresentationOffset) &&
+      rawKnockPreset.lastPresentationOffset >= 0 && rawKnockPreset.lastPresentationOffset <= 3
+      ? rawKnockPreset.lastPresentationOffset
+      : null;
     const requestedSize = Number(input?.sessionSize);
     const sessionSize = legacyIdleDefaults
       ? fresh.sessionSize
@@ -1935,6 +1977,13 @@
       bankId,
       bankVersion: currentBankVersion,
       presentationKey,
+      planMode,
+      knockPreset: {
+        mode: knockMode,
+        size: knockSize,
+        unitId: knockUnitId,
+        lastPresentationOffset: knockLastPresentationOffset
+      },
       stage,
       scope,
       unitId,
@@ -3648,7 +3697,9 @@
       return {
         kind: "practical",
         label: state.practicalDrill.bankId === BUSINESS_FULLSCORE_BANK_ID
-          ? "進行中の満点変形セット"
+          ? state.practicalDrill.planMode === "knock"
+            ? "進行中の業法ノック"
+            : "進行中の満点変形セット"
           : "進行中の実践セット"
       };
     }
@@ -6575,7 +6626,8 @@
     const activeIds = activeQuestions.map((question) => question.id);
     const contacted = activeIds.filter((id) => (drill.history[id]?.attempts || 0) > 0).length;
     const grounded = activeIds.filter((id) => drill.history[id]?.lastConfidence === "confident").length;
-    const bankLabel = drill.bankId === BUSINESS_FULLSCORE_BANK_ID ? "満点変形" : "実践";
+    const knockSession = drill.bankId === BUSINESS_FULLSCORE_BANK_ID && drill.planMode === "knock";
+    const bankLabel = knockSession ? "業法ノック" : drill.bankId === BUSINESS_FULLSCORE_BANK_ID ? "満点変形" : "実践";
     const summaryPrefix = drill.bankId === BUSINESS_FULLSCORE_BANK_ID ? `${bankLabel} ` : "";
     elements.practicalDrillSummary.textContent =
       `${summaryPrefix}接触 ${contacted} / ${activeIds.length}・根拠クリア ${grounded}・再出題 ${drill.retryIds.length}`;
@@ -6592,16 +6644,26 @@
     elements.practicalDrillOverview.hidden = !idle;
     elements.practicalDrillSession.hidden = idle || complete;
     elements.practicalDrillComplete.hidden = !complete;
+    elements.practicalDrillRestartButton.disabled = false;
     if (idle) return;
     if (complete) {
       const scopeLabel = practicalScopeLabel(drill.scope);
-      const completionLabel = unitSession ? unitSession.label : scopeLabel;
-      elements.practicalDrillCompleteText.textContent =
-        `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計${drill.attempts}解答、根拠クリア${grounded}問です。`;
-      elements.practicalDrillRestartButton.textContent =
-        unitSession
+      const knockPreset = knockSession ? normalizeBusinessKnockPreset(drill.knockPreset) : null;
+      const nextKnockPlan = knockSession ? businessKnockPlan(knockPreset) : null;
+      const completionLabel = knockSession
+        ? businessKnockModeLabel(knockPreset.mode)
+        : unitSession ? unitSession.label : scopeLabel;
+      elements.practicalDrillCompleteText.textContent = knockSession
+        ? `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計${drill.attempts}解答です。${nextKnockPlan?.size ? `同じ条件の次セットは${nextKnockPlan.size}問。` : "この条件の対象はすべて回収しました。"}同日正答だけでは長期定着レベルは進みません。`
+        : `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計${drill.attempts}解答、根拠クリア${grounded}問です。`;
+      elements.practicalDrillRestartButton.textContent = knockSession
+        ? nextKnockPlan?.size
+          ? `同じ条件でさらに${nextKnockPlan.size}問`
+          : "この条件は完了"
+        : unitSession
           ? `同じ単元を${drill.sessionIds.length}問続ける`
           : `${scopeLabel}を${drill.sessionIds.length}問続ける`;
+      elements.practicalDrillRestartButton.disabled = knockSession && !(nextKnockPlan?.size > 0);
       return;
     }
 
@@ -6932,6 +6994,123 @@
     return { kind: "ready", label: "満点圏の証拠を確認" };
   }
 
+  function normalizeBusinessKnockPreset(input = state.practicalDrill?.knockPreset) {
+    const mode = BUSINESS_KNOCK_MODES.includes(input?.mode) ? String(input.mode) : "untouched";
+    const size = BUSINESS_KNOCK_SIZES.includes(Number(input?.size)) ? Number(input.size) : 20;
+    const unitId = BUSINESS_FULLSCORE_UNITS.some((unit) => unit.id === input?.unitId)
+      ? String(input.unitId)
+      : BUSINESS_FULLSCORE_UNITS[0]?.id || "";
+    const lastPresentationOffset = Number.isInteger(input?.lastPresentationOffset) &&
+      input.lastPresentationOffset >= 0 && input.lastPresentationOffset <= 3
+      ? input.lastPresentationOffset
+      : null;
+    return { mode, size, unitId, lastPresentationOffset };
+  }
+
+  function businessKnockModeLabel(mode) {
+    return ({
+      "weak-due": "弱点・期限",
+      untouched: "未接触",
+      unit: "単元指定",
+      "all-random": "全範囲混合"
+    })[mode] || "業法";
+  }
+
+  function businessFullScoreHistory() {
+    return Object.fromEntries(BUSINESS_FULLSCORE_QUESTION_IDS
+      .filter((id) => state.practicalDrill?.history?.[id])
+      .map((id) => [id, state.practicalDrill.history[id]]));
+  }
+
+  function businessKnockPlan(preset, seed = "preview") {
+    if (!BUSINESS_KNOCK_READY) return null;
+    const normalized = normalizeBusinessKnockPreset(preset);
+    return BUSINESS_KNOCK.plan({
+      questions: BUSINESS_FULLSCORE_QUESTIONS,
+      history: businessFullScoreHistory(),
+      mode: normalized.mode,
+      unitId: normalized.unitId,
+      size: normalized.size,
+      now: new Date(),
+      seed,
+      presentationKey: `${todayKey()}:knock:${seed}`
+    });
+  }
+
+  function renderBusinessKnock() {
+    if (!elements.businessKnockPanel) return;
+    const preset = normalizeBusinessKnockPreset();
+    if (elements.businessKnockUnit && elements.businessKnockUnit.options.length !== BUSINESS_FULLSCORE_UNITS.length) {
+      elements.businessKnockUnit.replaceChildren(...BUSINESS_FULLSCORE_UNITS.map((unit) => {
+        const option = document.createElement("option");
+        option.value = unit.id;
+        option.textContent = unit.label;
+        return option;
+      }));
+    }
+    if (elements.businessKnockMode) elements.businessKnockMode.value = preset.mode;
+    if (elements.businessKnockSize) elements.businessKnockSize.value = String(preset.size);
+    if (elements.businessKnockUnit) elements.businessKnockUnit.value = preset.unitId;
+    if (elements.businessKnockUnitField) elements.businessKnockUnitField.hidden = preset.mode !== "unit";
+
+    const historySummary = BUSINESS_KNOCK?.summarizeHistory?.(businessFullScoreHistory(), new Date()) || {
+      attempts: 0,
+      accuracy: 0
+    };
+    const transfer = businessTransferSummary().questions || {};
+    elements.businessKnockAttempts.textContent = String(historySummary.attempts || 0);
+    elements.businessKnockAccuracy.textContent = `${historySummary.accuracy || 0}%`;
+    elements.businessKnockRecovery.textContent = String((transfer.retry || 0) + (transfer.due || 0));
+    elements.businessKnockUntouched.textContent = String(transfer.untouched || 0);
+
+    const active = activeLearningSession();
+    const plan = businessKnockPlan(preset);
+    const controlsDisabled = Boolean(active) || !BUSINESS_KNOCK_READY;
+    [elements.businessKnockMode, elements.businessKnockUnit, elements.businessKnockSize]
+      .filter(Boolean)
+      .forEach((control) => { control.disabled = controlsDisabled; });
+    if (!elements.businessKnockStart || !elements.businessKnockStatus) return;
+    if (active) {
+      elements.businessKnockStart.disabled = false;
+      elements.businessKnockStart.textContent = `${active.label}を再開`;
+      elements.businessKnockStatus.textContent = `${active.label}があります。新しいノックで上書きせず、先に再開します。`;
+      return;
+    }
+    if (!BUSINESS_KNOCK_READY || !plan) {
+      elements.businessKnockStart.disabled = true;
+      elements.businessKnockStart.textContent = "ノック問題を読み込めません";
+      elements.businessKnockStatus.textContent = "変形134問またはノック選問エンジンの読込を確認してください。";
+      return;
+    }
+    const modeLabel = businessKnockModeLabel(preset.mode);
+    elements.businessKnockStart.disabled = plan.size === 0;
+    elements.businessKnockStart.textContent = plan.size
+      ? `${modeLabel}を${plan.size}問ノック開始`
+      : `${modeLabel}の対象なし`;
+    elements.businessKnockStatus.textContent = plan.size
+      ? `対象${plan.available}問から${plan.size}問を出題。完了後も同じ条件で次セットへ進めます。`
+      : preset.mode === "weak-due"
+        ? "現在、誤答・不安・期限到来はありません。未接触または全範囲を選べます。"
+        : preset.mode === "untouched"
+          ? "134問すべてに接触済みです。弱点・期限、単元、全範囲を選べます。"
+          : "この条件で出題できる問題がありません。";
+  }
+
+  function updateBusinessKnockPresetFromControls() {
+    if (activeLearningSession()) {
+      renderBusinessKnock();
+      return;
+    }
+    state.practicalDrill.knockPreset = normalizeBusinessKnockPreset({
+      mode: elements.businessKnockMode?.value,
+      size: Number(elements.businessKnockSize?.value),
+      unitId: elements.businessKnockUnit?.value,
+      lastPresentationOffset: state.practicalDrill.knockPreset?.lastPresentationOffset
+    });
+    saveState();
+    renderBusinessKnock();
+  }
+
   function renderBusinessMastery() {
     if (!elements.businessMasteryPanel || !BUSINESS_MASTERY) return;
     const summary = businessFullScoreSummary();
@@ -6988,6 +7167,7 @@
     elements.businessMasteryPrimary.disabled = actionState.kind === "unavailable" || actionState.kind === "wait";
     elements.businessMasteryPrimary.dataset.action = actionState.kind;
     elements.businessMasteryFull.disabled = Boolean(activeLearningSession()) || !BUSINESS_FULLSCORE_BANK_READY;
+    renderBusinessKnock();
     elements.businessMasteryGrid.replaceChildren(...(summary.transfer?.units || []).map((item) => {
       const base = businessFoundationChapters().find((chapter) => chapter.id === item.unit.id);
       const baseIds = base?.ids || [];
@@ -7026,7 +7206,16 @@
     render();
   }
 
-  function startBusinessFullScoreSession({ size = 10, unitId = "", states = null, questionIds = null, fullScan = false } = {}) {
+  function startBusinessFullScoreSession({
+    size = 10,
+    unitId = "",
+    states = null,
+    questionIds = null,
+    fullScan = false,
+    planMode = "mastery",
+    knockPreset = null,
+    presentationKey = ""
+  } = {}) {
     if (resumeActiveLearningSession() || !BUSINESS_FULLSCORE_BANK_READY) return;
     const requestedIds = Array.isArray(questionIds) ? new Set(questionIds) : null;
     const eligible = requestedIds
@@ -7046,7 +7235,11 @@
       { ...state.practicalDrill, bankId: BUSINESS_FULLSCORE_BANK_ID }
     );
     if (!queue.length) return;
-    const presentationKey = `${todayKey()}:bank-${BUSINESS_FULLSCORE_BANK.VERSION}`;
+    const sessionPlanMode = planMode === "knock" ? "knock" : "mastery";
+    const sessionPresentationKey = sessionPlanMode === "knock"
+      ? String(presentationKey || `${todayKey()}:knock:${createOpaqueId("cycle")}`)
+        .replace(/[^0-9a-z:_-]/gi, "").slice(0, 80)
+      : `${todayKey()}:bank-${BUSINESS_FULLSCORE_BANK.VERSION}`;
     const retryIds = BUSINESS_FULLSCORE_QUESTION_IDS.filter((id) =>
       ["wrong", "uncertain"].includes(state.practicalDrill?.history?.[id]?.lastConfidence)
     );
@@ -7055,7 +7248,9 @@
       version: PRACTICAL_VARIATIONS?.VERSION || 1,
       bankId: BUSINESS_FULLSCORE_BANK_ID,
       bankVersion: BUSINESS_FULLSCORE_BANK.VERSION,
-      presentationKey,
+      presentationKey: sessionPresentationKey,
+      planMode: sessionPlanMode,
+      knockPreset: normalizeBusinessKnockPreset(knockPreset || state.practicalDrill.knockPreset),
       stage: "active",
       scope: "business",
       unitId,
@@ -7076,6 +7271,39 @@
     window.requestAnimationFrame(() =>
       elements.practicalDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
     );
+  }
+
+  function nextBusinessKnockPresentation(cycleId, previousOffset) {
+    const base = `${todayKey()}:knock:${cycleId}`
+      .replace(/[^0-9a-z:_-]/gi, "")
+      .slice(0, 76);
+    for (const suffix of ["a", "b", "c", "d"]) {
+      const key = `${base}:${suffix}`;
+      const offset = BUSINESS_FULLSCORE_BANK.presentQuestion(BUSINESS_FULLSCORE_QUESTION_IDS[0], key)
+        .presentationOffset;
+      if (!Number.isInteger(previousOffset) || offset !== previousOffset) return { key, offset };
+    }
+    throw new Error("次の業法ノックの肢順を生成できませんでした。");
+  }
+
+  function startBusinessKnockSession() {
+    if (resumeActiveLearningSession()) return;
+    const preset = normalizeBusinessKnockPreset();
+    const cycleId = createOpaqueId("cycle");
+    const plan = businessKnockPlan(preset, cycleId);
+    if (!plan?.ids?.length) {
+      renderBusinessKnock();
+      return;
+    }
+    const presentation = nextBusinessKnockPresentation(cycleId, preset.lastPresentationOffset);
+    startBusinessFullScoreSession({
+      size: plan.size,
+      unitId: preset.mode === "unit" ? preset.unitId : "",
+      questionIds: plan.ids,
+      planMode: "knock",
+      knockPreset: { ...preset, lastPresentationOffset: presentation.offset },
+      presentationKey: presentation.key
+    });
   }
 
   function startBusinessMasterySession() {
@@ -7109,6 +7337,7 @@
       bankId: LEGACY_PRACTICAL_BANK_ID,
       bankVersion: PRACTICAL_VARIATIONS?.VERSION || 1,
       presentationKey: "",
+      planMode: "legacy",
       stage: "active",
       scope,
       unitId: "",
@@ -7170,6 +7399,7 @@
       bankId: LEGACY_PRACTICAL_BANK_ID,
       bankVersion: PRACTICAL_VARIATIONS?.VERSION || 1,
       presentationKey: "",
+      planMode: "legacy",
       stage: "active",
       scope,
       unitId,
@@ -7194,6 +7424,10 @@
 
   function restartPracticalDrill() {
     if (state.practicalDrill?.bankId === BUSINESS_FULLSCORE_BANK_ID) {
+      if (state.practicalDrill.planMode === "knock") {
+        startBusinessKnockSession();
+        return;
+      }
       if (state.practicalDrill.unitId) {
         startBusinessFullScoreSession({ unitId: state.practicalDrill.unitId, fullScan: true });
       } else {
@@ -7322,6 +7556,7 @@
     state.practicalDrill = {
       ...state.practicalDrill,
       stage: "idle",
+      planMode: "",
       unitId: "",
       sessionIds: [],
       queue: [],
@@ -7334,6 +7569,17 @@
     renderPracticalDrill();
     renderBusinessMastery();
     renderPassPlan();
+  }
+
+  function changePracticalDrillSettings() {
+    const wasBusinessKnock = state.practicalDrill?.bankId === BUSINESS_FULLSCORE_BANK_ID &&
+      state.practicalDrill?.planMode === "knock";
+    cancelPracticalDrill();
+    if (wasBusinessKnock) {
+      window.requestAnimationFrame(() =>
+        elements.businessKnockPanel?.scrollIntoView({ block: "center", behavior: "smooth" })
+      );
+    }
   }
 
   function exitPracticalDrill() {
@@ -10249,10 +10495,14 @@
     });
     elements.practicalDrillStartButton?.addEventListener("click", startPracticalDrill);
     elements.practicalDrillRestartButton?.addEventListener("click", restartPracticalDrill);
-    elements.practicalDrillChangeButton?.addEventListener("click", cancelPracticalDrill);
+    elements.practicalDrillChangeButton?.addEventListener("click", changePracticalDrillSettings);
     elements.practicalDrillExitButton?.addEventListener("click", exitPracticalDrill);
     elements.practicalDrillNextButton?.addEventListener("click", advancePracticalDrill);
     elements.practicalDrillCancelButton?.addEventListener("click", cancelPracticalDrill);
+    elements.businessKnockStart?.addEventListener("click", startBusinessKnockSession);
+    [elements.businessKnockMode, elements.businessKnockUnit, elements.businessKnockSize]
+      .filter(Boolean)
+      .forEach((control) => control.addEventListener("change", updateBusinessKnockPresetFromControls));
     elements.practicalDrillScope?.addEventListener("change", renderPracticalDrillLauncher);
     elements.practicalDrillSize?.addEventListener("change", renderPracticalDrillLauncher);
     elements.practicalDrillConfidence?.addEventListener("click", (event) => {

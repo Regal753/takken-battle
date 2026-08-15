@@ -36,6 +36,7 @@ jobs:
       - run: node Audit-TakkenBusinessFullScoreSupplement.js
       - run: node Audit-TakkenBusinessFullScoreBank.js
       - run: node Audit-TakkenBusinessMastery.js
+      - run: node Audit-TakkenBusinessKnock.js
       - run: node Audit-TakkenBusinessPace.js
       - run: node Audit-TakkenOfficialLawBaseline.js
       - run: node Audit-TakkenStateSync.js
@@ -72,4 +73,5 @@ jobs:
           done
           curl --fail --silent --show-error "$TAKKEN_BASE_URL" >/dev/null
           node Audit-TakkenBusinessMasteryUi.cjs
+          node Audit-TakkenBusinessKnockUi.cjs
           node Audit-TakkenFullExamUi.cjs

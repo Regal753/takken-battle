@@ -7701,7 +7701,7 @@ button.mission-step:disabled {
     font-size: 14px;
   }
 }
-/* 宅建業法・44問の間隔反復。狭幅でもカードを一列に保つ。 */
+/* 宅建業法の間隔反復と134問ノック。狭幅でもカードを一列に保つ。 */
 .business-mastery-panel { margin: 16px 0; padding: 18px; border: 1px solid #53786e; border-radius: 16px; background: linear-gradient(135deg, #effaf4, #fff); }
 .business-mastery-heading { display: grid; gap: 5px; }
 .business-mastery-heading span, .business-mastery-heading p, .business-mastery-law, .business-mastery-tile small { color: #365c53; }
@@ -7724,6 +7724,26 @@ button.mission-step:disabled {
 .business-mastery-actions button, .business-mastery-tile button { min-height: 44px; }
 .business-mastery-actions .today-command-secondary { border-color: #c9911c; color: #5f4200; background: #fff8e3; }
 .business-mastery-actions .today-command-secondary:disabled { border-color: #b8c6c1; color: #5d6b67; background: #e8eeeb; opacity: 1; }
+.business-knock-panel { display: grid; gap: 14px; margin: 2px 0 16px; padding: 16px; border: 2px solid #9a6712; border-radius: 15px; background: linear-gradient(145deg, #2b2418 0%, #16382f 58%, #0d2922 100%); box-shadow: 0 10px 24px rgba(20, 61, 52, .17); color: #fff; }
+.business-knock-heading { display: grid; gap: 5px; }
+.business-knock-heading span { color: #ffd77a; font-size: .76rem; font-weight: 800; letter-spacing: .13em; }
+.business-knock-heading strong { color: #fff7dc; font-size: clamp(1.08rem, 4vw, 1.42rem); }
+.business-knock-heading p { margin: 0; color: #d8eee7; font-size: .9rem; line-height: 1.55; }
+.business-knock-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.business-knock-stats > div { display: grid; gap: 3px; min-width: 0; padding: 10px; border: 1px solid rgba(255, 215, 122, .32); border-radius: 10px; background: rgba(255, 255, 255, .08); }
+.business-knock-stats span { color: #cfe3dd; font-size: .72rem; line-height: 1.35; }
+.business-knock-stats strong { color: #fff5d0; font-size: 1rem; overflow-wrap: anywhere; }
+.business-knock-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.business-knock-controls label { display: grid; gap: 5px; min-width: 0; color: #f5df9d; font-size: .78rem; font-weight: 800; }
+.business-knock-controls label[hidden] { display: none; }
+.business-knock-controls select { width: 100%; min-width: 0; min-height: 44px; padding: 8px 34px 8px 10px; border: 1px solid #c7ac67; border-radius: 9px; background: #fffdf6; color: #173d35; font: inherit; }
+.business-knock-controls select:focus-visible, .business-knock-start:focus-visible { outline: 3px solid #ffe08a; outline-offset: 3px; }
+.business-knock-start { width: 100%; min-height: 52px; padding: 11px 15px; border: 1px solid #ffe08a; border-radius: 11px; background: linear-gradient(180deg, #ffd76e, #efad24); color: #342200; font-size: 1rem; font-weight: 900; box-shadow: 0 4px 0 #9a6712; cursor: pointer; }
+.business-knock-start:hover:not(:disabled) { filter: brightness(1.06); transform: translateY(-1px); }
+.business-knock-start:active:not(:disabled) { box-shadow: 0 2px 0 #9a6712; transform: translateY(2px); }
+.business-knock-start:disabled { border-color: #82918c; background: #55645f; box-shadow: none; color: #d9e2df; cursor: not-allowed; }
+.business-knock-status { margin: 0; color: #f1f8f5; font-size: .9rem; line-height: 1.5; }
+.business-knock-note { color: #bbd7ce; font-size: .77rem; line-height: 1.5; }
 .business-mastery-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 10px; }
 .business-mastery-tile { display: grid; gap: 7px; min-width: 0; padding: 12px; border: 1px solid #c1d8cf; border-radius: 12px; background: #fff; }
 .business-mastery-tile > strong { color: #173d35; line-height: 1.45; }
@@ -7739,4 +7759,5 @@ button.mission-step:disabled {
 .official-exam-access-note { display: block; color: var(--muted); font-size: .9rem; line-height: 1.55; }
 #officialExamQuestionLink.is-disabled { border-color: #9aa9a4; color: #5d6b67; background: #e8eeeb; cursor: not-allowed; }
 @media (max-width: 520px) { .business-fullscore-gates { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 360px) { .business-mastery-panel { padding: 12px; } .business-mastery-grid { grid-template-columns: minmax(0, 1fr); } .business-mastery-actions { display: grid; grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 620px) { .business-knock-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .business-knock-controls { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 360px) { .business-mastery-panel { padding: 12px; } .business-knock-panel { padding: 12px; } .business-mastery-grid { grid-template-columns: minmax(0, 1fr); } .business-mastery-actions { display: grid; grid-template-columns: minmax(0, 1fr); } }
