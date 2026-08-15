@@ -28,6 +28,17 @@ async function chooseDrillConfidence(page, storageId, number, confidence) {
   }, { id: storageId, number, confidence });
 }
 
+async function chooseDrillAnswer(page, storageId, number, answer) {
+  await page.locator(
+    `input[name="official-drill-q${number}"][value="${answer}"]`
+  ).click({ force: true });
+  await page.waitForFunction(({ id, number: questionNumber, answer: value }) => {
+    const saved = JSON.parse(localStorage.getItem(id) || "{}");
+    const date = new Date().toLocaleDateString("sv-SE");
+    return saved.missionLog?.[date]?.officialDrill?.answers?.[questionNumber] === value;
+  }, { id: storageId, number, answer });
+}
+
 async function seedAdvancedFoundation(page, storageId) {
   await page.evaluate((id) => {
     const saved = JSON.parse(localStorage.getItem(id) || "{}");
@@ -429,8 +440,7 @@ async function main() {
       const answer = index === 0
         ? (officialAnswerKey[number] % 4) + 1
         : officialAnswerKey[number];
-      await page.locator(`input[name="official-drill-q${number}"][value="${answer}"]`)
-        .check({ force: true });
+      await chooseDrillAnswer(page, storageId, number, answer);
       if (index < drillNumbers.length - 1) {
         await page.locator("#officialDrillNextButton").click();
       }
@@ -547,9 +557,7 @@ async function main() {
     await page.locator("#officialDrillStartButton").click();
     const perfectNumbers = drillNumbers;
     for (const [index, number] of perfectNumbers.entries()) {
-      await page.locator(
-        `input[name="official-drill-q${number}"][value="${officialAnswerKey[number]}"]`
-      ).check({ force: true });
+      await chooseDrillAnswer(page, storageId, number, officialAnswerKey[number]);
       await chooseDrillConfidence(page, storageId, number, "grounded");
       if (index < perfectNumbers.length - 1) {
         await page.locator("#officialDrillNextButton").click();
