@@ -67,6 +67,67 @@
       .sort((left, right) => parsedTime(left) - parsedTime(right))[0] || "";
   }
 
+  function normalizedClock(state) {
+    const meta = isObject(state?.syncMeta) ? state.syncMeta : {};
+    const entries = Object.entries(isObject(meta.clock) ? meta.clock : {})
+      .map(([writerId, revision]) => [
+        String(writerId).slice(0, 180),
+        Math.max(0, Math.trunc(Number(revision) || 0))
+      ])
+      .filter(([writerId, revision]) => writerId && revision > 0);
+    const legacyWriter = String(meta.writerId || state?.writerId || "").slice(0, 180);
+    const legacyRevision = Math.max(0, Math.trunc(Number(meta.revision ?? state?.revision) || 0));
+    if (legacyWriter && legacyRevision > 0) entries.push([legacyWriter, legacyRevision]);
+    const merged = new Map();
+    entries.forEach(([writerId, revision]) => {
+      merged.set(writerId, Math.max(revision, merged.get(writerId) || 0));
+    });
+    return Object.fromEntries(
+      [...merged.entries()]
+        .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    );
+  }
+
+  function mergeClocks(...states) {
+    const merged = new Map();
+    states.forEach((state) => {
+      Object.entries(normalizedClock(state)).forEach(([writerId, revision]) => {
+        merged.set(writerId, Math.max(Number(revision) || 0, merged.get(writerId) || 0));
+      });
+    });
+    return Object.fromEntries(
+      [...merged.entries()]
+        .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+    );
+  }
+
+  function clockStrictlyDominates(left, right) {
+    const leftEntries = Object.entries(left || {});
+    const rightEntries = Object.entries(right || {});
+    if (!leftEntries.length || !rightEntries.length) return false;
+    const covers = rightEntries.every(([writerId, revision]) =>
+      (Number(left?.[writerId]) || 0) >= (Number(revision) || 0)
+    );
+    if (!covers) return false;
+    return leftEntries.some(([writerId, revision]) =>
+      (Number(revision) || 0) > (Number(right?.[writerId]) || 0)
+    );
+  }
+
+  function mergeMonotonicCounter(base, local, remote, context = {}) {
+    const baseValue = Math.max(0, Number(base) || 0);
+    const localValue = Math.max(0, Number(local) || 0);
+    const remoteValue = Math.max(0, Number(remote) || 0);
+    if (localValue === baseValue) return remoteValue;
+    if (remoteValue === baseValue) return localValue;
+    if (localValue === remoteValue && context.clocksEqual) return localValue;
+    if (context.localDominatesRemote) return localValue;
+    if (context.remoteDominatesLocal) return remoteValue;
+    return baseValue +
+      Math.max(0, localValue - baseValue) +
+      Math.max(0, remoteValue - baseValue);
+  }
+
   function validDayKey(value) {
     return /^\d{4}-\d{2}-\d{2}$/.test(String(value || "")) ? String(value) : "";
   }
@@ -87,7 +148,8 @@
       generation: Math.max(0, Math.trunc(Number(meta.generation) || 0)),
       revision: Math.max(0, Math.trunc(Number(meta.revision ?? state?.revision) || 0)),
       updatedAt: validTimestamp(meta.updatedAt || state?.updatedAt),
-      writerId: String(meta.writerId || state?.writerId || "")
+      writerId: String(meta.writerId || state?.writerId || ""),
+      clock: normalizedClock(state)
     };
   }
 
@@ -159,7 +221,6 @@
   function mergeValue(base, local, remote, path = [], context = {}) {
     if (equal(local, base)) return remote === MISSING ? MISSING : clone(remote);
     if (equal(remote, base)) return local === MISSING ? MISSING : clone(local);
-    if (equal(local, remote)) return local === MISSING ? MISSING : clone(local);
     if (local === MISSING) return remote === MISSING ? MISSING : clone(remote);
     if (remote === MISSING) return clone(local);
 
@@ -168,8 +229,15 @@
       COUNTER_KEYS.has(key) &&
       [local, remote].every((value) => Number.isFinite(Number(value)))
     ) {
-      return Math.max(0, Number(local), Number(remote));
+      if (equal(local, remote) && context.clocksEqual) return clone(local);
+      const additive = key !== "weakAdded" &&
+        (key !== "answers" || path.includes("centralProgress"));
+      return additive
+        ? mergeMonotonicCounter(base, local, remote, context)
+        : Math.max(0, Number(local), Number(remote));
     }
+
+    if (equal(local, remote)) return clone(local);
 
     if (typeof local === "string" && typeof remote === "string") {
       if (/^first.*At$/i.test(key)) return earliestTimestamp(local, remote) || local || remote;
@@ -261,12 +329,12 @@
     });
   }
 
-  function mergeNumberMap(...maps) {
+  function mergeNumberMap(base, local, remote, context) {
     const result = {};
+    const maps = [base, local, remote];
     const keys = new Set(maps.flatMap((map) => isObject(map) ? Object.keys(map) : []));
     keys.forEach((key) => {
-      const values = maps.map((map) => Number(map?.[key])).filter(Number.isFinite);
-      if (values.length) result[key] = Math.max(0, ...values);
+      result[key] = mergeMonotonicCounter(base?.[key], local?.[key], remote?.[key], context);
     });
     return result;
   }
@@ -289,13 +357,16 @@
     outcomeFields.forEach((key) => {
       if (own(winner, key)) merged[key] = clone(winner[key]);
     });
-    maxNumericFields(merged, [safeBase, safeLocal, safeRemote], ["attempts", "correct", "wrong"]);
+    ["attempts", "correct", "wrong"].forEach((key) => {
+      merged[key] = mergeMonotonicCounter(safeBase[key], safeLocal[key], safeRemote[key], context);
+    });
     // `uncertain` can decrease when the latest correct answer is confirmed, so it follows the latest outcome.
     if (Number.isFinite(Number(winner.uncertain))) merged.uncertain = Math.max(0, Number(winner.uncertain));
     merged.mistakeTags = mergeNumberMap(
       safeBase.mistakeTags,
       safeLocal.mistakeTags,
-      safeRemote.mistakeTags
+      safeRemote.mistakeTags,
+      context
     );
     const lastTags = unionPrimitiveArrays(
       safeLocal.lastMistakeTags,
@@ -357,9 +428,14 @@
     const safeLocal = isObject(local) ? local : {};
     const safeRemote = isObject(remote) ? remote : {};
     const merged = mergeValue(safeBase, safeLocal, safeRemote, ["questionStats", "item"], context);
-    maxNumericFields(merged, [safeBase, safeLocal, safeRemote], [
+    [
       "attempts", "correct", "wrong", "cutCheckAttempts", "cutCheckCorrect", "cutCheckWrong",
-      "centralAttempts", "centralCorrect", "centralWrong", "lastStep", "lastCorrectStep", "lastWrongStep"
+      "centralAttempts", "centralCorrect", "centralWrong"
+    ].forEach((key) => {
+      merged[key] = mergeMonotonicCounter(safeBase[key], safeLocal[key], safeRemote[key], context);
+    });
+    maxNumericFields(merged, [safeBase, safeLocal, safeRemote], [
+      "lastStep", "lastCorrectStep", "lastWrongStep"
     ]);
 
     const outcomeWinner = mostRecentObject(
@@ -549,9 +625,9 @@
       mergePracticalHistoryEntry,
       context
     );
-    maxNumericFields(merged, [safeBase, safeLocal, safeRemote], [
-      "attempts", "correctAttempts", "sessionsCompleted"
-    ]);
+    ["attempts", "correctAttempts", "sessionsCompleted"].forEach((key) => {
+      merged[key] = mergeMonotonicCounter(safeBase[key], safeLocal[key], safeRemote[key], context);
+    });
     const baseSession = practicalSessionView(safeBase);
     const localSession = practicalSessionView(safeLocal);
     const remoteSession = practicalSessionView(safeRemote);
@@ -575,7 +651,9 @@
       ["centralProgress"],
       context
     );
-    maxNumericFields(merged, [base, local, remote], ["sourceEvents", "answers", "correct", "wrong"]);
+    ["sourceEvents", "answers", "correct", "wrong"].forEach((key) => {
+      merged[key] = mergeMonotonicCounter(base?.[key], local?.[key], remote?.[key], context);
+    });
     merged.generatedAt = latestTimestamp(base?.generatedAt, local?.generatedAt, remote?.generatedAt);
     merged.lastEventAt = latestTimestamp(base?.lastEventAt, local?.lastEventAt, remote?.lastEventAt);
     return merged;
@@ -617,17 +695,24 @@
         localStamp.revision,
         remoteStamp.revision
       );
+      const replacementWriterId = String(options.writerId || replacement.syncMeta?.writerId || "").slice(0, 180);
+      const replacementRevision = maximumRevision + (options.incrementRevision ? 1 : 0);
+      const replacementClock = normalizedClock(winner);
+      if (options.incrementRevision && replacementWriterId) {
+        replacementClock[replacementWriterId] = replacementRevision;
+      }
       replacement.syncMeta = {
         ...(isObject(replacement.syncMeta) ? replacement.syncMeta : {}),
         generation: maximumGeneration,
-        revision: maximumRevision + (options.incrementRevision ? 1 : 0),
+        revision: replacementRevision,
         updatedAt: requestedAt || latestTimestamp(
           baseStamp.updatedAt,
           localStamp.updatedAt,
           remoteStamp.updatedAt
         ),
-        writerId: String(options.writerId || replacement.syncMeta?.writerId || ""),
-        baseRevision: baseStamp.revision
+        writerId: replacementWriterId,
+        baseRevision: baseStamp.revision,
+        clock: replacementClock
       };
       return {
         state: replacement,
@@ -643,7 +728,27 @@
         appliedUpdatedAt: replacement.syncMeta.updatedAt
       };
     }
-    const context = { preferred: preferredSide(safeLocal, safeRemote) };
+    const localClock = normalizedClock(safeLocal);
+    const remoteClock = normalizedClock(safeRemote);
+    const effectiveLocalClock = { ...localClock };
+    const pendingWriterId = String(options.writerId || "").slice(0, 180);
+    if (options.incrementRevision && pendingWriterId) {
+      const pendingRevision = Math.max(
+        baseStamp.revision,
+        localStamp.revision,
+        remoteStamp.revision
+      ) + 1;
+      effectiveLocalClock[pendingWriterId] = Math.max(
+        Number(effectiveLocalClock[pendingWriterId]) || 0,
+        pendingRevision
+      );
+    }
+    const context = {
+      preferred: preferredSide(safeLocal, safeRemote),
+      localDominatesRemote: clockStrictlyDominates(effectiveLocalClock, remoteClock),
+      remoteDominatesLocal: clockStrictlyDominates(remoteClock, effectiveLocalClock),
+      clocksEqual: equal(effectiveLocalClock, remoteClock)
+    };
     const merged = mergeValue(safeBase, safeLocal, safeRemote, [], context);
     merged.stateSchemaVersion = Math.max(
       0,
@@ -692,12 +797,11 @@
     merged.centralMarked = clone(
       centralPreferred === "remote" ? safeRemote.centralMarked || {} : safeLocal.centralMarked || {}
     );
-    const lifetimeCrystals = Math.max(
-      0,
-      ...[safeBase, safeLocal, safeRemote].map((item) =>
-        Math.max(0, Number(item.crystals) || 0) +
-        Math.max(0, Number(item.crystalSpent) || 0)
-      )
+    const lifetimeCrystals = mergeMonotonicCounter(
+      Math.max(0, Number(safeBase.crystals) || 0) + Math.max(0, Number(safeBase.crystalSpent) || 0),
+      Math.max(0, Number(safeLocal.crystals) || 0) + Math.max(0, Number(safeLocal.crystalSpent) || 0),
+      Math.max(0, Number(safeRemote.crystals) || 0) + Math.max(0, Number(safeRemote.crystalSpent) || 0),
+      context
     );
     merged.crystalSpent = Math.max(
       0,
@@ -719,13 +823,17 @@
     const shouldIncrement = Boolean(options.incrementRevision);
     const requestedAt = validTimestamp(options.updatedAt);
     const mergedUpdatedAt = requestedAt || latestTimestamp(...stamps.map((stamp) => stamp.updatedAt));
+    const mergedClock = mergeClocks(safeBase, safeLocal, safeRemote);
+    const mergedWriterId = String(options.writerId || merged.syncMeta?.writerId || "").slice(0, 180);
+    if (shouldIncrement && mergedWriterId) mergedClock[mergedWriterId] = maximumRevision + 1;
     merged.syncMeta = {
       ...(isObject(merged.syncMeta) ? merged.syncMeta : {}),
       generation: maximumGeneration,
       revision: maximumRevision + (shouldIncrement ? 1 : 0),
       updatedAt: mergedUpdatedAt,
-      writerId: String(options.writerId || merged.syncMeta?.writerId || ""),
-      baseRevision: syncStamp(safeBase).revision
+      writerId: mergedWriterId,
+      baseRevision: syncStamp(safeBase).revision,
+      clock: mergedClock
     };
 
     return {

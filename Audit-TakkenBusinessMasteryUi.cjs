@@ -232,8 +232,8 @@ async function installFullScoreUnitFixture(page) {
   });
 }
 
-async function installOfficialUnlockFixture(page) {
-  return page.evaluate(() => {
+async function installOfficialUnlockFixture(page, masteryMode = "learning") {
+  return page.evaluate((requestedMasteryMode) => {
     const key = Object.keys(localStorage).find((candidate) =>
       candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
       !candidate.includes("backup") && !candidate.includes("-before-") && !candidate.includes("previous") &&
@@ -278,7 +278,21 @@ async function installOfficialUnlockFixture(page) {
     });
     const history = { ...(state.practicalDrill.history || {}) };
     bank.QUESTIONS.forEach((question) => {
-      history[question.id] = {
+      history[question.id] = requestedMasteryMode === "wrong" ? {
+        attempts: 1,
+        correct: 0,
+        wrong: 1,
+        uncertain: 0,
+        lastSelected: (question.answer + 1) % 4,
+        lastCorrect: false,
+        lastConfidence: "wrong",
+        lastAnsweredAt: now.toISOString(),
+        reviewLevel: 0,
+        masteryDueKey: "",
+        confidentDayKeys: [],
+        mistakeTags: {},
+        lastMistakeTags: []
+      } : {
         attempts: 1,
         correct: 1,
         wrong: 0,
@@ -316,7 +330,7 @@ async function installOfficialUnlockFixture(page) {
     state.runMode = "quest";
     localStorage.setItem(key, JSON.stringify(state));
     return { baseCount: baseIds.length, allTextbookCount: Object.keys(state.questionStats).length };
-  });
+  }, masteryMode);
 }
 
 async function installDailyDrillReadyFixture(page) {
@@ -520,6 +534,7 @@ async function installFullScoreProofFixture(page, mode) {
 
     assert.match(await page.locator("#businessMasteryPanel").textContent(), /2026年4月1日現在法/);
     assert.match(await page.locator("#businessMasteryMetrics").textContent(), /変形.*未接触134/);
+    assert.match(await page.locator("#businessMasteryMetrics").textContent(), /定着起点未確立134/);
     assert.equal(await page.locator("#businessTransferGate").textContent(), "0 / 134");
     assert.equal(await page.locator("#businessMasteryGrid article").count(), 11);
     const unitTotals = await page.locator("#businessMasteryGrid article small").allTextContents();
@@ -611,6 +626,12 @@ async function installFullScoreProofFixture(page, mode) {
     ));
     assert.ok(Object.keys(mistakeTags).every((tag) => allowedTags.has(tag)));
     assert.match(await page.locator("#businessMasteryWeakness").textContent(), /直近: (?!なし)/);
+    assert.match(
+      await page.locator("#businessMasteryMetrics").textContent(),
+      /定着起点未確立134/,
+      "a wrong first attempt must remain in the mastery-start pace count"
+    );
+    assert.doesNotMatch(await page.locator("#businessMasteryPace").textContent(), /定着起点は確立/);
     await page.evaluate((questionId) => {
       const key = Object.keys(localStorage).find((candidate) =>
         candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
@@ -631,6 +652,19 @@ async function installFullScoreProofFixture(page, mode) {
     await page.locator("#businessMasteryFull").click();
     saved = await readSavedState(page);
     assert.equal(saved.practicalDrill.queue[0], originalQuestion.id, "the highest diagnostic retry must lead the next full sweep");
+    await page.locator("#practicalDrillCancelButton").click();
+
+    await installOfficialUnlockFixture(page, "wrong");
+    await page.reload({ waitUntil: "networkidle" });
+    await waitForApp(page);
+    assert.match(
+      await page.locator("#businessMasteryPrimary").textContent(),
+      /今日の定着 15問（起点15・期限0）/,
+      "the primary batch must match the displayed daily mastery-start target"
+    );
+    await page.locator("#businessMasteryPrimary").click();
+    saved = await readSavedState(page);
+    assert.equal(saved.practicalDrill.sessionSize, 15);
     await page.locator("#practicalDrillCancelButton").click();
 
     const unitFixture = await installFullScoreUnitFixture(page);

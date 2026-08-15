@@ -113,11 +113,11 @@
     };
   }
 
-  function paceFailure(reason, todayKey, untouched, plannedDailyNew, existingLoad) {
+  function paceFailure(reason, todayKey, firstStepPending, plannedDailyNew, existingLoad) {
     const latestFirstExposureKey = addDays(LAST_SUCCESS_DAY_KEY, -REVIEW_LAG_DAYS);
     return {
       valid: false,
-      scope: "untouched-first-exposure",
+      scope: "mastery-first-step",
       reason,
       status: "impossible",
       onTrack: false,
@@ -129,7 +129,8 @@
       reviewLagDays: REVIEW_LAG_DAYS,
       latestFirstExposureKey,
       todayKey: todayKey || "",
-      untouched,
+      firstStepPending,
+      untouched: firstStepPending,
       plannedDailyNew,
       calendarDaysUntilLatest: null,
       remainingSafeDays: 0,
@@ -151,69 +152,74 @@
   }
 
   /**
-   * Returns the pace required for every untouched question to receive its first
-   * successful exposure early enough for the 1/3/7/14/30-day chain to finish on
+   * Returns the pace required for every question that has not yet earned its
+   * first confident correct step to begin the 1/3/7/14/30-day chain early enough
+   * to finish on
    * the day before the exam. `remainingSafeDays` is inclusive of both today and
    * `latestFirstExposureKey`; `calendarDaysUntilLatest` is the exclusive gap.
    */
   function calculateBusinessPace(options = {}) {
     const todayKey = dayKey(options.todayKey ?? options.today);
-    const untouched = nonNegativeInteger(options.untouched);
+    const firstStepPending = nonNegativeInteger(
+      options.firstStepPending ?? options.untouched
+    );
     const plannedDailyNew = options.plannedDailyNew == null
       ? DEFAULT_PLANNED_DAILY_NEW
       : nonNegativeInteger(options.plannedDailyNew);
     const existingLoad = normalizeExistingLoad(options.existingLoad);
-    if (!todayKey) return paceFailure("invalid-today", "", untouched, plannedDailyNew, existingLoad);
-    if (untouched === null) return paceFailure("invalid-untouched", todayKey, null, plannedDailyNew, existingLoad);
+    if (!todayKey) return paceFailure("invalid-today", "", firstStepPending, plannedDailyNew, existingLoad);
+    if (firstStepPending === null) {
+      return paceFailure("invalid-first-step-pending", todayKey, null, plannedDailyNew, existingLoad);
+    }
     if (plannedDailyNew === null) {
-      return paceFailure("invalid-planned-daily-new", todayKey, untouched, null, existingLoad);
+      return paceFailure("invalid-planned-daily-new", todayKey, firstStepPending, null, existingLoad);
     }
     if (todayKey > LAST_SUCCESS_DAY_KEY) {
-      return paceFailure("exam-window-closed", todayKey, untouched, plannedDailyNew, existingLoad);
+      return paceFailure("exam-window-closed", todayKey, firstStepPending, plannedDailyNew, existingLoad);
     }
 
     const latestFirstExposureKey = addDays(LAST_SUCCESS_DAY_KEY, -REVIEW_LAG_DAYS);
     const calendarDaysUntilLatest = daysBetween(todayKey, latestFirstExposureKey);
     const remainingSafeDays = Math.max(0, calendarDaysUntilLatest + 1);
-    const timelineFeasible = untouched === 0 || remainingSafeDays > 0;
+    const timelineFeasible = firstStepPending === 0 || remainingSafeDays > 0;
     if (!timelineFeasible) {
       return {
-        ...paceFailure("first-exposure-deadline-passed", todayKey, untouched, plannedDailyNew, existingLoad),
+        ...paceFailure("first-step-deadline-passed", todayKey, firstStepPending, plannedDailyNew, existingLoad),
         calendarDaysUntilLatest,
         remainingSafeDays
       };
     }
 
-    const requiredPerDay = untouched === 0 ? 0 : Math.ceil(untouched / remainingSafeDays);
-    const todayRequired = Math.min(untouched, requiredPerDay);
-    const plannedDaysNeeded = untouched === 0
+    const requiredPerDay = firstStepPending === 0 ? 0 : Math.ceil(firstStepPending / remainingSafeDays);
+    const todayRequired = Math.min(firstStepPending, requiredPerDay);
+    const plannedDaysNeeded = firstStepPending === 0
       ? 0
-      : plannedDailyNew > 0 ? Math.ceil(untouched / plannedDailyNew) : null;
+      : plannedDailyNew > 0 ? Math.ceil(firstStepPending / plannedDailyNew) : null;
     const projectedLastFirstExposureKey = plannedDaysNeeded === null
       ? ""
       : plannedDaysNeeded === 0 ? "" : addDays(todayKey, plannedDaysNeeded - 1);
     const projectedFinalRecallKey = projectedLastFirstExposureKey
       ? addDays(projectedLastFirstExposureKey, REVIEW_LAG_DAYS)
       : "";
-    const catchUpDaysNeeded = untouched === 0 ? 0 : Math.ceil(untouched / requiredPerDay);
+    const catchUpDaysNeeded = firstStepPending === 0 ? 0 : Math.ceil(firstStepPending / requiredPerDay);
     const catchUpLastFirstExposureKey = catchUpDaysNeeded === 0
       ? ""
       : addDays(todayKey, catchUpDaysNeeded - 1);
     const catchUpProjectedFinalRecallKey = catchUpLastFirstExposureKey
       ? addDays(catchUpLastFirstExposureKey, REVIEW_LAG_DAYS)
       : "";
-    const currentPlanOnTrack = untouched === 0 || Boolean(
+    const currentPlanOnTrack = firstStepPending === 0 || Boolean(
       projectedFinalRecallKey && projectedFinalRecallKey <= LAST_SUCCESS_DAY_KEY
     );
     const impossible = false;
-    const urgent = !currentPlanOnTrack || (untouched > 0 && remainingSafeDays === 1);
+    const urgent = !currentPlanOnTrack || (firstStepPending > 0 && remainingSafeDays === 1);
     const onTrack = !urgent;
     const todayLoadComplete = existingLoad.actionableComplete;
     const knownTotal = todayRequired + existingLoad.knownActionable;
 
     return {
       valid: true,
-      scope: "untouched-first-exposure",
+      scope: "mastery-first-step",
       reason: !currentPlanOnTrack
         ? "daily-plan-below-required"
         : urgent ? "last-safe-first-exposure-day" : "within-first-exposure-window",
@@ -227,7 +233,8 @@
       reviewLagDays: REVIEW_LAG_DAYS,
       latestFirstExposureKey,
       todayKey,
-      untouched,
+      firstStepPending,
+      untouched: firstStepPending,
       plannedDailyNew,
       calendarDaysUntilLatest,
       remainingSafeDays,

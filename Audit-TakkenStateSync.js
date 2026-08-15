@@ -165,18 +165,22 @@ assert.deepEqual(
 );
 
 const practicalLocal = sync.clone(base);
-practicalLocal.syncMeta.revision = 8;
 practicalLocal.practicalDrill.history.q1 = {
   ...practicalLocal.practicalDrill.history.q1,
   attempts: 3,
   correct: 2,
   lastConfidence: "confident",
   lastAnsweredAt: timestamp("2026-08-15", "09:10:00"),
-  mistakeTags: { wording: 1, subject: 1 },
+  mistakeTags: { wording: 2, subject: 1 },
   lastMistakeTags: ["subject"]
 };
 const practicalRemote = sync.clone(base);
-practicalRemote.syncMeta.revision = 9;
+practicalRemote.syncMeta = {
+  ...practicalRemote.syncMeta,
+  revision: 8,
+  writerId: "practical-remote",
+  clock: { base: 7, "practical-remote": 8 }
+};
 practicalRemote.practicalDrill.history.q1 = {
   ...practicalRemote.practicalDrill.history.q1,
   attempts: 4,
@@ -187,13 +191,16 @@ practicalRemote.practicalDrill.history.q1 = {
   mistakeTags: { wording: 2, exception: 1 },
   lastMistakeTags: ["exception"]
 };
-const practicalMerged = sync.mergeStates(base, practicalLocal, practicalRemote);
-assert.equal(practicalMerged.practicalDrill.history.q1.attempts, 4, "counters use max, not additive deltas");
-assert.equal(practicalMerged.practicalDrill.history.q1.correct, 2);
+const practicalMerged = sync.reconcileForSave(base, practicalLocal, practicalRemote, {
+  updatedAt: timestamp("2026-08-15", "09:21:00"),
+  writerId: "practical-local"
+}).state;
+assert.equal(practicalMerged.practicalDrill.history.q1.attempts, 5, "independent answer deltas must both survive");
+assert.equal(practicalMerged.practicalDrill.history.q1.correct, 3);
 assert.equal(practicalMerged.practicalDrill.history.q1.wrong, 2);
 assert.equal(practicalMerged.practicalDrill.history.q1.lastConfidence, "wrong", "latest answer wins");
 assert.deepEqual(practicalMerged.practicalDrill.history.q1.mistakeTags, {
-  wording: 2,
+  wording: 3,
   subject: 1,
   exception: 1
 });
@@ -202,7 +209,68 @@ assert.deepEqual(
   new Set(["subject", "exception"])
 );
 const repeatedMerge = sync.mergeStates(base, practicalMerged, practicalRemote);
-assert.equal(repeatedMerge.practicalDrill.history.q1.attempts, 4, "re-merging must not double count");
+assert.equal(repeatedMerge.practicalDrill.history.q1.attempts, 5, "re-merging must not double count");
+
+const independentBase = sync.clone(base);
+independentBase.attempts = 10;
+independentBase.correct = 8;
+independentBase.totalXp = 1000;
+independentBase.syncMeta.clock = { base: 7 };
+const independentLocal = sync.clone(independentBase);
+independentLocal.attempts = 11;
+independentLocal.correct = 9;
+independentLocal.totalXp = 1100;
+const independentRemote = sync.clone(independentBase);
+independentRemote.attempts = 11;
+independentRemote.correct = 9;
+independentRemote.totalXp = 1120;
+independentRemote.syncMeta = {
+  ...independentRemote.syncMeta,
+  revision: 8,
+  writerId: "independent-remote",
+  clock: { base: 7, "independent-remote": 8 }
+};
+const independentMerged = sync.reconcileForSave(independentBase, independentLocal, independentRemote, {
+  updatedAt: timestamp("2026-08-15", "09:22:00"),
+  writerId: "independent-local"
+}).state;
+assert.equal(independentMerged.attempts, 12);
+assert.equal(independentMerged.correct, 10);
+assert.equal(independentMerged.totalXp, 1220);
+const independentRepeated = sync.mergeStates(independentBase, independentMerged, independentRemote);
+assert.equal(independentRepeated.attempts, 12);
+assert.equal(independentRepeated.correct, 10);
+assert.equal(independentRepeated.totalXp, 1220);
+
+const manyWriterBase = sync.clone(base);
+manyWriterBase.attempts = 10;
+manyWriterBase.syncMeta.clock = { root: 7 };
+const manyWriterMerged = sync.clone(manyWriterBase);
+manyWriterMerged.attempts = 50;
+manyWriterMerged.syncMeta = {
+  ...manyWriterMerged.syncMeta,
+  revision: 47,
+  writerId: "writer-39",
+  clock: Object.fromEntries([
+    ["root", 7],
+    ...Array.from({ length: 40 }, (_, index) => [`writer-${index}`, index + 8])
+  ])
+};
+const oldestWriterBranch = sync.clone(manyWriterBase);
+oldestWriterBranch.attempts = 11;
+oldestWriterBranch.syncMeta = {
+  ...oldestWriterBranch.syncMeta,
+  revision: 8,
+  writerId: "writer-0",
+  clock: { root: 7, "writer-0": 8 }
+};
+const manyWriterRepeated = sync.mergeStates(manyWriterBase, manyWriterMerged, oldestWriterBranch);
+assert.equal(
+  manyWriterRepeated.attempts,
+  50,
+  "causal ancestors beyond 32 writers must remain known and must not be re-added"
+);
+assert.ok(Object.keys(manyWriterRepeated.syncMeta.clock).length >= 41);
 
 const confidenceBase = sync.clone(base);
 confidenceBase.questionStats.main1 = {
@@ -300,8 +368,8 @@ assert.deepEqual(sync.compareSync(
   { syncMeta: { revision: 2, updatedAt: timestamp("2026-08-15", "12:00:00") } },
   { syncMeta: { revision: 3, updatedAt: timestamp("2026-08-15", "11:00:00") } }
 ), {
-  left: { generation: 0, revision: 2, updatedAt: timestamp("2026-08-15", "12:00:00"), writerId: "" },
-  right: { generation: 0, revision: 3, updatedAt: timestamp("2026-08-15", "11:00:00"), writerId: "" },
+  left: { generation: 0, revision: 2, updatedAt: timestamp("2026-08-15", "12:00:00"), writerId: "", clock: {} },
+  right: { generation: 0, revision: 3, updatedAt: timestamp("2026-08-15", "11:00:00"), writerId: "", clock: {} },
   winner: "right",
   reason: "revision"
 });
@@ -364,6 +432,8 @@ console.log(JSON.stringify({
   staleTabExposurePreserved: true,
   officialHistoryUnion: true,
   practicalHistoryLatestWins: true,
+  independentCounterDeltasPreserved: true,
+  manyWriterCausalityPreserved: true,
   confidenceClearInvalidation: true,
   doubleCountPrevented: true,
   centralProgressMonotonic: true,

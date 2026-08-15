@@ -40,7 +40,7 @@ assert.equal(pace.daysBetween("2026-08-23", "2026-08-15"), -8);
 
 const august15 = pace.calculateBusinessPace({
   todayKey: "2026-08-15",
-  untouched: 134
+  firstStepPending: 134
 });
 assert.equal(august15.valid, true);
 assert.equal(august15.latestFirstExposureKey, "2026-08-23");
@@ -49,6 +49,8 @@ assert.equal(august15.remainingSafeDays, 9, "today and 8/23 are both usable, for
 assert.equal(august15.remainingSafeDaysIncludesTodayAndLatest, true);
 assert.equal(august15.requiredPerDay, 15);
 assert.equal(august15.todayRequired, 15);
+assert.equal(august15.firstStepPending, 134);
+assert.equal(august15.untouched, 134, "the legacy output alias remains compatible");
 assert.equal(august15.plannedDailyNew, 10);
 assert.equal(august15.currentPlanShortfallPerDay, 5);
 assert.equal(august15.projectedLastFirstExposureKey, "2026-08-28");
@@ -105,7 +107,7 @@ const oneDayLate = pace.calculateBusinessPace({
   plannedDailyNew: 100
 });
 assert.equal(oneDayLate.valid, false);
-assert.equal(oneDayLate.reason, "first-exposure-deadline-passed");
+assert.equal(oneDayLate.reason, "first-step-deadline-passed");
 assert.equal(oneDayLate.calendarDaysUntilLatest, -1);
 assert.equal(oneDayLate.remainingSafeDays, 0);
 assert.equal(oneDayLate.status, "impossible");
@@ -114,7 +116,7 @@ assert.equal(oneDayLate.todayRequired, null, "an impossible schedule must not em
 
 const noUntouched = pace.calculateBusinessPace({
   todayKey: "2026-09-01",
-  untouched: 0,
+  firstStepPending: 0,
   plannedDailyNew: 0
 });
 assert.equal(noUntouched.valid, true);
@@ -122,6 +124,20 @@ assert.equal(noUntouched.requiredPerDay, 0);
 assert.equal(noUntouched.todayRequired, 0);
 assert.equal(noUntouched.status, "on-track", "the first-exposure scope is complete when none remain");
 assert.equal(noUntouched.projectedFinalRecallKey, "");
+
+const allAttemptedButWrong = pace.calculateBusinessPace({
+  todayKey: "2026-08-24",
+  firstStepPending: 134,
+  untouched: 0,
+  plannedDailyNew: 134
+});
+assert.equal(allAttemptedButWrong.valid, false);
+assert.equal(allAttemptedButWrong.firstStepPending, 134);
+assert.equal(
+  allAttemptedButWrong.reason,
+  "first-step-deadline-passed",
+  "wrong or uncertain first attempts must not satisfy the mastery-start deadline"
+);
 
 const afterExam = pace.calculateBusinessPace({
   todayKey: "2026-10-18",

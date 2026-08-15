@@ -972,7 +972,8 @@
       revision: 0,
       updatedAt: "",
       writerId: "",
-      baseRevision: 0
+      baseRevision: 0,
+      clock: {}
     },
     sprint: {
       endsAt: null,
@@ -2066,7 +2067,8 @@
       revision: syncStamp.revision,
       updatedAt: syncStamp.updatedAt,
       writerId: syncStamp.writerId.slice(0, 180),
-      baseRevision: Math.max(0, Math.trunc(Number(input?.syncMeta?.baseRevision) || 0))
+      baseRevision: Math.max(0, Math.trunc(Number(input?.syncMeta?.baseRevision) || 0)),
+      clock: syncStamp.clock || {}
     };
     next.marked = next.marked || {};
     next.autoMarked = next.autoMarked || {};
@@ -6801,15 +6803,24 @@
       .sort()[0] || "";
   }
 
+  function businessFirstStepPending() {
+    return BUSINESS_FULLSCORE_QUESTION_IDS.reduce((count, id) => {
+      const mastery = BUSINESS_MASTERY.normalizeMasteryHistory(
+        state.practicalDrill?.history?.[id]
+      );
+      return count + (mastery.reviewLevel > 0 ? 0 : 1);
+    }, 0);
+  }
+
   function businessPaceForSummary(summary = businessFullScoreSummary()) {
     if (!BUSINESS_PACE?.calculateBusinessPace) return null;
     const questions = summary.transfer?.questions || {};
     return BUSINESS_PACE.calculateBusinessPace({
       todayKey: todayKey(),
-      untouched: Math.max(0, Number(questions.untouched) || 0),
+      firstStepPending: businessFirstStepPending(),
       plannedDailyNew: 10,
       existingLoad: {
-        retry: Math.max(0, Number(questions.retry) || 0),
+        retry: 0,
         due: Math.max(0, Number(questions.due) || 0),
         overdue: 0,
         learning: Math.max(0, Number(questions.learning) || 0),
@@ -6855,6 +6866,40 @@
     return { recent: top(recent), cumulative: top(totals) };
   }
 
+  function businessDailyRecoveryPlan(pace) {
+    const now = new Date();
+    const pending = BUSINESS_FULLSCORE_QUESTIONS.filter((question) =>
+      BUSINESS_MASTERY.normalizeMasteryHistory(
+        state.practicalDrill?.history?.[question.id]
+      ).reviewLevel === 0
+    );
+    const due = BUSINESS_FULLSCORE_QUESTIONS.filter((question) =>
+      BUSINESS_MASTERY.stateFor(state.practicalDrill?.history?.[question.id] || {}, now) === "due"
+    );
+    const pendingTarget = Math.min(
+      pending.length,
+      pace?.valid && Number.isInteger(pace.todayRequired) ? pace.todayRequired : 10
+    );
+    const drill = { ...state.practicalDrill, bankId: BUSINESS_FULLSCORE_BANK_ID };
+    const pendingIds = buildPracticalQueueFrom(
+      pending,
+      pendingTarget,
+      BUSINESS_FULLSCORE_UNITS,
+      drill
+    );
+    const dueIds = buildPracticalQueueFrom(
+      due,
+      due.length,
+      BUSINESS_FULLSCORE_UNITS,
+      drill
+    );
+    return {
+      questionIds: [...new Set([...dueIds, ...pendingIds])],
+      pending: pendingIds.length,
+      due: dueIds.length
+    };
+  }
+
   function businessPrimaryAction(summary = businessFullScoreSummary()) {
     const active = activeLearningSession();
     if (active) return { kind: "resume", label: `${active.label}を再開` };
@@ -6862,19 +6907,13 @@
     if (!summary.foundation.ready) return { kind: "foundation", label: "基礎44問の未定着を回収" };
     const questions = summary.transfer.questions;
     const pace = businessPaceForSummary(summary);
-    if (questions.retry + questions.due > 0) {
-      return { kind: "practice", states: new Set(["retry", "due"]), label: `再挑戦・期限 ${Math.min(10, questions.retry + questions.due)}問` };
-    }
-    if (questions.untouched > 0) {
-      const paceTarget = pace?.valid && Number.isInteger(pace.todayRequired)
-        ? pace.todayRequired
-        : Math.min(20, questions.untouched);
-      const size = Math.max(1, Math.min(questions.untouched, paceTarget || 10));
+    if ((pace?.firstStepPending || 0) > 0 || questions.due > 0) {
+      const daily = businessDailyRecoveryPlan(pace);
       return {
         kind: "practice",
-        states: new Set(["untouched"]),
-        size,
-        label: `${pace?.urgent || pace?.impossible ? "試験日ペース" : "未接触の変形"} ${size}問`
+        questionIds: daily.questionIds,
+        size: daily.questionIds.length,
+        label: `今日の定着 ${daily.questionIds.length}問（起点${daily.pending}・期限${daily.due}）`
       };
     }
     const needsOfficial = !summary.official.ready || summary.official.currentMiss;
@@ -6903,7 +6942,7 @@
     const statusLabels = {
       "bank-unavailable": `変形${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS}問の読込エラー`,
       foundation: "基礎再現を回収中",
-      transfer: summary.transfer?.questions?.untouched ? `変形${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS}問を初回走査中` : "長期定着を積上げ中",
+      transfer: businessFirstStepPending() ? "定着起点を回収中" : "長期定着を積上げ中",
       exam: "公式初見20/20を測定中",
       recovery: "公式記録を再調整中",
       ready: "満点圏（アプリ内判定）"
@@ -6918,7 +6957,7 @@
     const transfer = summary.transfer?.questions || {};
     elements.businessMasteryMetrics.textContent =
       `基礎 接触${summary.foundation.contacted}/44・定着${summary.foundation.retained}/44 / ` +
-      `変形 再挑戦・期限${(transfer.retry || 0) + (transfer.due || 0)}・未接触${transfer.untouched || 0}・長期定着${transfer.durable || 0}/${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS} / ` +
+      `変形 再挑戦・期限${(transfer.retry || 0) + (transfer.due || 0)}・未接触${transfer.untouched || 0}・定着起点未確立${businessFirstStepPending()}・長期定着${transfer.durable || 0}/${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS} / ` +
       `公式 初見満点${summary.official.perfect}/3`;
     if (elements.businessMasteryPace) {
       const pace = businessPaceForSummary(summary);
@@ -6926,16 +6965,16 @@
       elements.businessMasteryPace.dataset.paceStatus = pace?.status || "unknown";
       if (!pace?.valid) {
         elements.businessMasteryPace.textContent =
-          `日程警告: 初回走査期限${pace?.latestFirstExposureKey || "2026-08-23"}を超過しています。` +
-          `未接触${transfer.untouched || 0}問を優先し、復習期限と併せて再計画します。`;
-      } else if ((transfer.untouched || 0) > 0) {
+          `日程警告: 定着起点の期限${pace?.latestFirstExposureKey || "2026-08-23"}を超過しています。` +
+          `起点未確立${pace?.firstStepPending ?? businessFirstStepPending()}問を優先し、復習期限と併せて再計画します。`;
+      } else if ((pace.firstStepPending || 0) > 0) {
         elements.businessMasteryPace.textContent =
-          `試験日ペース: 今日の初回${pace.todayRequired}問＋再挑戦・期限${pace.existingLoad.knownActionable}問 / ` +
-          `初回締切${pace.latestFirstExposureKey} / 追いつく計画の最終確認${pace.catchUpProjectedFinalRecallKey} / ` +
+          `試験日ペース: 今日の定着起点${pace.todayRequired}問＋期限復習${pace.existingLoad.knownActionable}問 / ` +
+          `起点締切${pace.latestFirstExposureKey} / 追いつく計画の最終確認${pace.catchUpProjectedFinalRecallKey} / ` +
           `公式未接触${reserve?.unseenExams ?? "-"}回`;
       } else {
         elements.businessMasteryPace.textContent =
-          `変形${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS}問の初回走査は完了。${businessNextDueKey() ? `次回復習${businessNextDueKey()} / ` : ""}` +
+          `変形${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS}問の定着起点は確立。${businessNextDueKey() ? `次回復習${businessNextDueKey()} / ` : ""}` +
           `公式未接触${reserve?.unseenExams ?? "-"}回（最終証跡用3回を確保）。`;
       }
     }
@@ -6987,9 +7026,12 @@
     render();
   }
 
-  function startBusinessFullScoreSession({ size = 10, unitId = "", states = null, fullScan = false } = {}) {
+  function startBusinessFullScoreSession({ size = 10, unitId = "", states = null, questionIds = null, fullScan = false } = {}) {
     if (resumeActiveLearningSession() || !BUSINESS_FULLSCORE_BANK_READY) return;
-    const eligible = unitId ? fullScoreQuestionsForUnit(unitId) : BUSINESS_FULLSCORE_QUESTIONS;
+    const requestedIds = Array.isArray(questionIds) ? new Set(questionIds) : null;
+    const eligible = requestedIds
+      ? BUSINESS_FULLSCORE_QUESTIONS.filter((question) => requestedIds.has(question.id))
+      : unitId ? fullScoreQuestionsForUnit(unitId) : BUSINESS_FULLSCORE_QUESTIONS;
     const filtered = states instanceof Set
       ? eligible.filter((question) => states.has(BUSINESS_MASTERY.stateFor(state.practicalDrill?.history?.[question.id] || {}, new Date())))
       : eligible;
@@ -7044,7 +7086,11 @@
     } else if (action.kind === "foundation") {
       startBusinessFoundationUnit();
     } else if (action.kind === "practice") {
-      startBusinessFullScoreSession({ size: action.size || 10, states: action.states });
+      startBusinessFullScoreSession({
+        size: action.size || 10,
+        states: action.states,
+        questionIds: action.questionIds
+      });
     } else if (action.kind === "official") {
       if (elements.passPlanPanel) elements.passPlanPanel.open = true;
       if (elements.officialExamAttemptType) elements.officialExamAttemptType.value = "initial";

@@ -281,7 +281,7 @@ async function main() {
     assert.equal(realBusiness.summary.questions.durable, 0);
     assert.equal(realBusiness.summary.durableUnits, 0);
     assert.match(realBusiness.metrics, /基礎\s*接触40\/44・定着6\/44/);
-    assert.match(realBusiness.metrics, /変形\s*再挑戦・期限0・未接触134・長期定着0\/134/);
+    assert.match(realBusiness.metrics, /変形\s*再挑戦・期限0・未接触134・定着起点未確立134・長期定着0\/134/);
     assert.match(realBusiness.metrics, /公式\s*初見満点0\/3/);
     const realFullScore = await fullScoreSnapshot(page, storageId);
     assert.equal(realFullScore.ids.length, 134);
