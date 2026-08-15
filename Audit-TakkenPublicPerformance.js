@@ -24,11 +24,48 @@ const attributeValue = (tag, name) => {
 
 const hasBooleanAttribute = (tag, name) => new RegExp(`(?:^|\\s)${name}(?:\\s|=|/?>)`, "i").test(tag);
 
-const scriptTags = [...html.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script\s*>/gi)].map((match) => ({
-  tag: match[0].slice(0, match[0].indexOf(">") + 1),
-  body: match[1],
-  index: match.index
-}));
+function closingAngleIndex(source, start) {
+  let quote = "";
+  for (let index = start; index < source.length; index += 1) {
+    const character = source[index];
+    if (quote) {
+      if (character === quote) quote = "";
+    } else if (character === '"' || character === "'") {
+      quote = character;
+    } else if (character === ">") {
+      return index;
+    }
+  }
+  return -1;
+}
+
+function collectStaticScriptTags(source) {
+  const lower = source.toLowerCase();
+  const result = [];
+  let cursor = 0;
+  while (cursor < source.length) {
+    const index = lower.indexOf("<script", cursor);
+    if (index < 0) break;
+    const boundary = lower[index + "<script".length] || "";
+    if (boundary && !/[\s>]/.test(boundary)) {
+      cursor = index + "<script".length;
+      continue;
+    }
+    const openingEnd = closingAngleIndex(source, index);
+    assert.ok(openingEnd >= 0, `script tag at ${index} is not closed`);
+    const closingStart = lower.indexOf("</script>", openingEnd + 1);
+    assert.ok(closingStart >= 0, `script element at ${index} has no exact closing tag`);
+    result.push({
+      tag: source.slice(index, openingEnd + 1),
+      body: source.slice(openingEnd + 1, closingStart),
+      index
+    });
+    cursor = closingStart + "</script>".length;
+  }
+  return result;
+}
+
+const scriptTags = collectStaticScriptTags(html);
 const runtimeScripts = scriptTags.filter(({ tag }) => attributeValue(tag, "src") !== null);
 const inlineScripts = scriptTags.filter(({ tag }) => attributeValue(tag, "src") === null);
 
