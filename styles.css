@@ -6533,6 +6533,213 @@ button.mission-step:disabled {
   line-height: 1.55;
 }
 
+.pass-readiness-card,
+.subject-sprint-card,
+.current-year-checks {
+  min-width: 0;
+  border: 1px solid rgba(242, 185, 77, 0.28);
+  border-radius: 9px;
+  background: rgba(5, 17, 14, 0.62);
+}
+
+.pass-readiness-card {
+  display: grid;
+  gap: 11px;
+  padding: 13px;
+}
+
+.pass-readiness-card > header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 12px;
+}
+
+.pass-readiness-card > header > div {
+  display: grid;
+  gap: 2px;
+}
+
+.pass-readiness-card > header span,
+.subject-sprint-card > div > span {
+  color: var(--gold);
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+}
+
+.pass-readiness-card > header strong,
+.subject-sprint-card > div > strong {
+  color: #fff7df;
+  font-size: clamp(17px, 2.5vw, 23px);
+  line-height: 1.2;
+}
+
+#passReadinessPace {
+  color: #9fe7ff;
+  font-size: 14px;
+  text-align: right;
+}
+
+#passReadinessNote,
+.pass-readiness-status,
+.pass-time-allocation,
+.subject-sprint-card p {
+  margin: 0;
+  color: #c7d8d1;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.55;
+}
+
+.pass-readiness-status.is-urgent {
+  color: #ffd091;
+}
+
+.pass-subject-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.pass-subject-grid article {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  padding: 9px;
+  border: 1px solid var(--line-soft);
+  border-radius: 7px;
+  background: rgba(3, 14, 13, 0.72);
+}
+
+.pass-subject-grid article[data-state="gap"],
+.pass-subject-grid article[data-state="unmeasured"] {
+  border-color: rgba(242, 185, 77, 0.45);
+}
+
+.pass-subject-grid article[data-state="target"] {
+  border-color: rgba(111, 213, 110, 0.55);
+}
+
+.pass-subject-grid span,
+.pass-subject-grid small {
+  color: var(--muted);
+  font-size: 9px;
+  font-weight: 850;
+  line-height: 1.35;
+}
+
+.pass-subject-grid strong {
+  color: #f7fbf8;
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+
+.pass-readiness-actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.subject-sprint-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.subject-sprint-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.7fr);
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+}
+
+.subject-sprint-card > div:first-child {
+  display: grid;
+  gap: 4px;
+}
+
+.subject-sprint-actions button {
+  min-height: 44px;
+  padding: 8px;
+  border: 1px solid rgba(107, 196, 232, 0.48);
+  border-radius: 7px;
+  color: #d8f4ff;
+  background: rgba(58, 153, 194, 0.09);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.subject-sprint-actions button:hover,
+.subject-sprint-actions button:focus-visible {
+  background: rgba(58, 153, 194, 0.18);
+}
+
+.current-year-checks {
+  overflow: hidden;
+}
+
+.current-year-checks > summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 8px 11px;
+  cursor: pointer;
+}
+
+.current-year-checks > summary span {
+  margin-left: auto;
+  color: #9fe7ff;
+  font-size: 10px;
+  font-weight: 900;
+}
+
+.current-year-check-list {
+  display: grid;
+  gap: 7px;
+  padding: 0 11px 11px;
+}
+
+.current-year-exam-note {
+  margin: 0;
+  padding: 0 11px 9px;
+  color: #c7d8d1;
+  font-size: 10px;
+  font-weight: 750;
+  line-height: 1.5;
+}
+
+.current-year-check-list article {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 3px 10px;
+  padding: 8px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.current-year-check-list strong,
+.current-year-check-list p {
+  min-width: 0;
+}
+
+.current-year-check-list p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--muted);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
+.current-year-check-list a {
+  color: #9fe7ff;
+  font-size: 10px;
+  font-weight: 900;
+}
+
 .theme-drawer,
 .progress-drawer {
   overflow: hidden;
@@ -6718,6 +6925,33 @@ button.mission-step:disabled {
 
   .pass-plan-body {
     padding: 0 10px 10px;
+  }
+
+  .pass-readiness-card > header,
+  .subject-sprint-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  #passReadinessPace {
+    text-align: left;
+  }
+
+  .pass-subject-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pass-subject-grid article {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .pass-subject-grid article small {
+    grid-column: 1 / -1;
+  }
+
+  .pass-readiness-actions,
+  .subject-sprint-actions {
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .theme-drawer > summary > strong,

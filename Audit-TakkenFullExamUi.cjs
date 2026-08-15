@@ -92,6 +92,16 @@ async function main() {
     });
     page.on("pageerror", (error) => pageErrors.push(String(error)));
 
+    // This suite preserves the pre-v29 daily/full-exam workflow as a fallback
+    // regression. The new 40-point command route has its own dedicated
+    // Audit-TakkenPassReadinessUi.cjs coverage, so keep the responsibilities
+    // separate instead of asserting two incompatible primary commands here.
+    await page.route("**/pass-readiness.js*", (route) => route.fulfill({
+      status: 200,
+      contentType: "text/javascript; charset=utf-8",
+      body: "window.TAKKEN_PASS_READINESS = null;"
+    }));
+
     const reviewNamespace = `fullui${Date.now().toString(36)}`;
     const storageId = `takken-battle-study-clean-v2-hard-review-${reviewNamespace}`;
     const url = new URL(baseUrl);
@@ -119,8 +129,8 @@ async function main() {
       foundationEntry.title !== "01-01 宅建業法の基本" ||
       !foundationEntry.action.includes("読後2問") ||
       foundationEntry.gate !== "単元 0 / 45" ||
-      !foundationEntry.mockDisabled ||
-      !foundationEntry.mockTitle.includes("45単元")
+      foundationEntry.mockDisabled ||
+      !foundationEntry.mockTitle.includes("RETIO公式未見")
     ) {
       throw new Error(`Foundation entry mismatch: ${JSON.stringify(foundationEntry)}`);
     }
@@ -160,11 +170,11 @@ async function main() {
       !blueprintAudit.coachText.includes("全問接触済み") ||
       blueprintAudit.scopeValue !== "business" ||
       blueprintAudit.mockDisabled ||
-      blueprintAudit.mockTitle ||
+      !blueprintAudit.mockTitle.includes("RETIO公式未見") ||
       blueprintAudit.roundLabel !== "今日 1 / 10" ||
       blueprintAudit.commandTitle !== "固定10問を解く" ||
       blueprintAudit.commandStep !== "今やる・STEP 1 / 4" ||
-      blueprintAudit.passPlanOpen ||
+      !blueprintAudit.passPlanOpen ||
       blueprintAudit.themeOpen ||
       blueprintAudit.progressOpen
     ) {
@@ -740,14 +750,15 @@ async function main() {
       };
     }, storageId);
     const expectedSections = {
-      rights: { score: "11 / 14", target: "目標 8" },
-      restrictions: { score: "6 / 8", target: "目標 6" },
+      rights: { score: "11 / 14", target: "目標 9" },
+      restrictions: { score: "6 / 8", target: "目標 7" },
       business: { score: "16 / 20", target: "目標 18" },
-      "tax-other": { score: "7 / 8", target: "目標 5" }
+      tax: { score: "3 / 3", target: "目標 2" },
+      other: { score: "4 / 5", target: "目標 4" }
     };
     if (
       !mockResult.scoreText.includes("40 / 50") ||
-      !mockResult.targetText.includes("安全圏40点を達成") ||
+      !mockResult.targetText.includes("合格戦略目標40点を達成") ||
       mockResult.wrongItems !== 10 ||
       JSON.stringify(mockResult.sections) !== JSON.stringify(expectedSections) ||
       !mockResult.priorityText.includes("宅建業法 16/20 → 目標18") ||

@@ -132,12 +132,15 @@ const expectedMockWeights = {
 };
 
 const expectedStudyTargets = {
-  total: 37,
-  safe: 40,
-  rights: 8,
-  restrictions: 6,
+  total: 40,
+  safe: 42,
+  rights: 9,
+  restrictions: 7,
   business: 18,
-  taxOther: 5
+  tax: 2,
+  other: 4,
+  // Backwards-compatible aggregate for legacy save/report consumers.
+  taxOther: 6
 };
 Object.entries(expectedStudyTargets).forEach(([key, expected]) => {
   if (blueprint.studyTargets?.[key] !== expected) {
@@ -164,7 +167,8 @@ if (
   Number(blueprint.studyTargets?.rights || 0) +
   Number(blueprint.studyTargets?.restrictions || 0) +
   Number(blueprint.studyTargets?.business || 0) +
-  Number(blueprint.studyTargets?.taxOther || 0) !== blueprint.studyTargets?.total
+  Number(blueprint.studyTargets?.tax || 0) +
+  Number(blueprint.studyTargets?.other || 0) !== blueprint.studyTargets?.total
 ) {
   issues.push("study target sections do not sum to total");
 }

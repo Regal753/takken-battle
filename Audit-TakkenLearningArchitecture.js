@@ -59,10 +59,13 @@ requireText(app, "runFoundationRouteAction(chapterNextButton)", "chapter complet
 requireText(app, "if (isChapterMode())", "manual chapter navigation branch is missing");
 requireText(app, "function startPracticalDrillForUnit", "unit-specific practical session is missing");
 requireText(app, "function foundationCoverageComplete", "foundation coverage gate is missing");
-requireText(app, "if (!foundationCoverageComplete())", "official and mock foundation gates are missing");
 requireText(app, "planMode: \"unit\"", "unit plan persistence is missing");
-if ((app.match(/if \(!foundationCoverageComplete\(\)\)/g) || []).length < 4) {
-  issues.push("official drill, official exam, mock, and route must all enforce the foundation gate");
+requireText(app, "const FIRST_PASS_DEADLINE_LABEL = \"8/31\";", "first-pass deadline is missing");
+requireText(app, "function startMock(formId)", "internal 50-question diagnostic is missing");
+requireText(app, "内部50問は診断に使い、RETIO公式未見は保全する。", "internal-diagnostic / official-reserve policy is missing");
+requireText(app, "!foundationComplete && !businessUnlocked", "official full-exam protection gate is missing");
+if (/function startMock\(formId\)[\s\S]{0,900}foundationCoverageComplete\(\)/.test(app)) {
+  issues.push("internal 50-question diagnostic must remain available before full foundation coverage");
 }
 if (app.includes("JULY_GATE_DEADLINE") || html.includes("7/31学習ゲート")) {
   issues.push("expired July gate remains in the learning architecture");
@@ -78,8 +81,9 @@ if (app.includes("JULY_GATE_DEADLINE") || html.includes("7/31学習ゲート")) 
   "foundationGateStatus"
 ].forEach((id) => requireText(html, `id=\"${id}\"`, `${id} is missing from the page`));
 requireText(html, "本文＋読後問題", "foundation-first mission label is missing");
-requireText(html, "45単元の読後問題完了で公式演習を解放", "official foundation gate copy is missing");
-requireText(html, "20260816-premise-readability-v28-1", "business knock cache version is missing");
+requireText(html, "8/31まで高速一周", "8/31 fast-first-pass copy is missing");
+requireText(html, "内部50問は診断として今すぐ利用可", "internal diagnostic availability copy is missing");
+requireText(html, "20260816-pass-readiness-v29-1", "pass readiness cache version is missing");
 requireText(html, '<details class="quest-card"', "review-10 menu must be collapsed by default");
 requireText(html, 'id="nextButton"', "inline next-question button is missing");
 requireText(css, ".quest-card:not([open]) > .quest-card-body", "collapsed review menu rule is missing");
@@ -93,7 +97,7 @@ requireText(css, "#passPlanPanel { order: 8; }", "measurement panel must follow 
 
 const report = {
   status: issues.length ? "error" : "ok",
-  stateSchema: 8,
+  stateSchema: 10,
   textbookUnits: textbookUnits.length,
   textbookQuestions: textbookIds.length,
   practicalQuestions: practical.QUESTIONS.length,

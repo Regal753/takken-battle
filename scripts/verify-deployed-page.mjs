@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260816-premise-readability-v28-1";
+const expectedVersion = process.argv[3] || "20260816-pass-readiness-v29-1";
 const attempts = Math.max(1, Number(process.env.TAKKEN_DEPLOY_VERIFY_ATTEMPTS) || 12);
 const intervalMs = Math.max(0, Number(process.env.TAKKEN_DEPLOY_VERIFY_INTERVAL_MS) || 10000);
 
@@ -26,6 +26,8 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(html, /id="mockAButton"/, "mock A button missing");
     assert.match(html, /id="mockBButton"/, "mock B button missing");
     assert.match(html, /id="passPlanPanel"/, "pass plan panel missing");
+    assert.match(html, /id="passReadinessCard"/, "pass readiness card missing");
+    assert.match(html, /id="passReadinessStatus"/, "pass readiness status missing");
     assert.match(html, /id="todayCommandPanel"/, "today command panel missing");
     assert.match(html, /id="officialDrillOpenButton"/, "official drill launcher missing");
     assert.match(html, /id="officialDrillAnswerGrid"/, "official drill answer grid missing");
@@ -47,6 +49,9 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(html, /id="businessKnockPanel"/, "business knock panel missing");
     assert.match(html, /id="businessKnockStart"/, "business knock launcher missing");
     const appReference = html.match(/src="([^"]*app\.js\?v=[^"]+)"/)?.[1] || "";
+    const sprintReference = html.match(/src="([^"]*subject-sprint-bank\.js\?v=[^"]+)"/)?.[1] || "";
+    const readinessReference = html.match(/src="([^"]*pass-readiness\.js\?v=[^"]+)"/)?.[1] || "";
+    const currentYearReference = html.match(/src="([^"]*exam-current-year-2026\.js\?v=[^"]+)"/)?.[1] || "";
     const storeReference = html.match(/src="([^"]*save-store\.js\?v=[^"]+)"/)?.[1] || "";
     const officialDataReference =
       html.match(/src="([^"]*official-exam-data\.js\?v=[^"]+)"/)?.[1] || "";
@@ -66,6 +71,9 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
       html.match(/src="([^"]*state-sync\.js\?v=[^"]+)"/)?.[1] || "";
     const styleReference = html.match(/href="([^"]*styles\.css\?v=[^"]+)"/)?.[1] || "";
     assert.ok(appReference.includes(expectedVersion), `app version missing: ${expectedVersion}`);
+    assert.ok(sprintReference.includes(expectedVersion), `subject sprint version missing: ${expectedVersion}`);
+    assert.ok(readinessReference.includes(expectedVersion), `pass readiness version missing: ${expectedVersion}`);
+    assert.ok(currentYearReference.includes(expectedVersion), `current-year data version missing: ${expectedVersion}`);
     assert.ok(storeReference.includes(expectedVersion), `save store version missing: ${expectedVersion}`);
     assert.ok(
       officialDataReference.includes(expectedVersion),
@@ -89,6 +97,9 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     // Read sequentially so the post-deploy verifier also remains stable against
     // simple local/static servers with a low concurrent-connection limit.
     const appCode = await fetchAsset(appReference, "app");
+    const sprintCode = await fetchAsset(sprintReference, "subject sprint bank");
+    const readinessCode = await fetchAsset(readinessReference, "pass readiness");
+    const currentYearCode = await fetchAsset(currentYearReference, "current-year data");
     const storeCode = await fetchAsset(storeReference, "save store");
     const officialDataCode = await fetchAsset(officialDataReference, "official data");
     const masteryCode = await fetchAsset(masteryReference, "business mastery");
@@ -106,6 +117,8 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(appCode, /以前の100問（解答履歴を保持）/, "legacy question history label missing");
     assert.match(appCode, /問題・履歴を保持　解答済/, "legacy answered progress missing");
     assert.match(appCode, /function renderPassPlan/, "pass plan renderer missing");
+    assert.match(appCode, /function renderPassReadinessCard/, "pass readiness renderer missing");
+    assert.match(appCode, /TAKKEN_PASS_READINESS/, "pass readiness integration missing");
     assert.match(appCode, /function renderTodayCommand/, "today command renderer missing");
     assert.match(appCode, /function foundationLearningRoute/, "foundation route logic missing");
     assert.match(appCode, /function renderFoundationRoutePanel/, "foundation route renderer missing");
@@ -132,6 +145,9 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(bankCode, /TAKKEN_BUSINESS_FULLSCORE_BANK/, "business full-score bank API missing");
     assert.match(lawBaselineCode, /assessCurrentLawProof/, "official law baseline guard missing");
     assert.match(stateSyncCode, /reconcileForSave/, "state sync reconciler missing");
+    assert.match(sprintCode, /TAKKEN_SUBJECT_SPRINT_BANK/, "subject sprint bank API missing");
+    assert.match(readinessCode, /TAKKEN_PASS_READINESS/, "pass readiness API missing");
+    assert.match(currentYearCode, /TAKKEN_EXAM_CURRENT_YEAR_2026/, "current-year data API missing");
     assert.match(styleCode, /\.study-scope-select/, "study scope style missing");
     assert.match(styleCode, /\.pass-plan-panel/, "pass plan style missing");
     assert.match(styleCode, /\.foundation-route-card/, "foundation route style missing");

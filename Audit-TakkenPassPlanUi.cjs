@@ -66,9 +66,8 @@ async function main() {
     await page.goto(url.toString(), { waitUntil: "domcontentloaded", timeout: 15000 });
     try {
       await page.waitForFunction(() => {
-        const title = document.querySelector("#todayCommandTitle")?.textContent || "";
         const action = document.querySelector("#foundationRoutePrimaryButton")?.textContent || "";
-        return title.includes("01-01 宅建業法の基本") && action.includes("読後2問");
+        return action.includes("読後2問");
       });
     } catch (error) {
       const route = await page.locator("#foundationRoutePrimaryButton").textContent().catch(() => "missing");
@@ -85,26 +84,36 @@ async function main() {
       commandTitle: document.querySelector("#todayCommandTitle")?.textContent?.trim() || "",
       commandStep: document.querySelector("#todayCommandKicker")?.textContent?.trim() || "",
       passPlanOpen: Boolean(document.querySelector("#passPlanPanel")?.open),
+      targets: Array.from(document.querySelectorAll("#passSubjectGrid article")).map((item) =>
+        item.textContent.replace(/\s+/g, " ").trim()
+      ),
+      internalMockEnabled: !document.querySelector("#passMockAction")?.disabled,
       themeOpen: Boolean(document.querySelector("#themeDrawer")?.open),
       progressOpen: Boolean(document.querySelector("#progressDrawer")?.open)
     }));
     if (
-      initial.phase !== "基礎一周" ||
+      initial.phase !== "8/31まで高速一周" ||
       !/^D-\d+$/.test(initial.countdown) ||
       initial.gate !== "単元 0 / 45" ||
       initial.mission !== "0 / 45単元" ||
       initial.official !== "測定中・初見0/10・再0/3" ||
       initial.currentRoadmap !== 1 ||
-      initial.commandTitle !== "01-01 宅建業法の基本" ||
-      !initial.commandStep.includes("読む") ||
-      initial.passPlanOpen ||
+      !initial.commandTitle.includes("宅建業法") ||
+      !initial.commandStep.includes("8/31まで高速一周") ||
+      !initial.passPlanOpen ||
+      initial.targets.length !== 5 ||
+      !initial.targets.some((value) => value.includes("宅建業法 20問") && value.includes("18")) ||
+      !initial.targets.some((value) => value.includes("権利関係 14問") && value.includes("9")) ||
+      !initial.targets.some((value) => value.includes("法令上の制限 8問") && value.includes("7")) ||
+      !initial.targets.some((value) => value.includes("税 3問") && value.includes("2")) ||
+      !initial.targets.some((value) => value.includes("その他 5問") && value.includes("4")) ||
+      !initial.internalMockEnabled ||
       initial.themeOpen ||
       initial.progressOpen
     ) {
       throw new Error(`Initial pass plan mismatch: ${JSON.stringify(initial)}`);
     }
 
-    await page.locator(".pass-plan-summary").click();
     await page.locator(".official-ledger > summary").click();
     await page.locator(".official-manual-entry > summary").click();
     await page.evaluate(() => {
@@ -296,7 +305,6 @@ async function main() {
     await touchedPage.waitForFunction(() =>
       (document.querySelector("#foundationGateStatus")?.textContent || "").includes("45 / 45")
     );
-    await touchedPage.locator(".pass-plan-summary").click();
     await touchedPage.locator(".official-ledger > summary").click();
     const touchedProtection = await touchedPage.evaluate(() => {
       const touched = document.querySelector('#officialExamId option[value="2025"]');

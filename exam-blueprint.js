@@ -178,14 +178,16 @@
     .filter((id, index, ids) => !coreIds.includes(id) && ids.indexOf(id) === index);
 
   // 合格プロジェクトの分野別目標。年度で変動する合格基準点ではなく、
-  // 37点を再現するための学習上の目安として使う。
+  // 40点を科目別に再現するための学習上の目安として使う。
   const studyTargets = {
-    total: 37,
-    safe: 40,
-    rights: 8,
-    restrictions: 6,
+    total: 40,
+    safe: 42,
+    rights: 9,
+    restrictions: 7,
     business: 18,
-    taxOther: 5
+    tax: 2,
+    other: 4,
+    taxOther: 6
   };
 
   // 全100問接触後の日課も本試験比率を崩さない。

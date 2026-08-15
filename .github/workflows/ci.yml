@@ -40,6 +40,9 @@ jobs:
       - run: node Audit-TakkenBusinessPace.js
       - run: node Audit-TakkenOfficialLawBaseline.js
       - run: node Audit-TakkenStateSync.js
+      - run: node Audit-TakkenSubjectSprintBank.js
+      - run: node Audit-TakkenPassReadiness.js
+      - run: node Audit-TakkenExamCurrentYear2026.js
       - run: node Audit-TakkenPublicPerformance.js
       - run: node scripts/validate-public.mjs
 
@@ -75,3 +78,4 @@ jobs:
           node Audit-TakkenBusinessMasteryUi.cjs
           node Audit-TakkenBusinessKnockUi.cjs
           node Audit-TakkenFullExamUi.cjs
+          node Audit-TakkenPassReadinessUi.cjs
