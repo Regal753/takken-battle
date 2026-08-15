@@ -96,6 +96,7 @@ node .\Audit-TakkenSaveTransfer.js
 node .\Audit-TakkenCalculationDrill.js
 node .\Audit-TakkenLearningArchitecture.js
 node .\Audit-TakkenBusinessMastery.js
+node .\Audit-TakkenBusinessKnock.js
 node .\Audit-TakkenBusinessPace.js
 node .\Audit-TakkenOfficialLawBaseline.js
 node .\Audit-TakkenStateSync.js
@@ -112,6 +113,7 @@ node .\Audit-TakkenPracticalVariationsUi.cjs
 node .\Audit-TakkenCalculationDrillUi.cjs
 node .\Audit-TakkenLearningArchitectureUi.cjs
 node .\Audit-TakkenBusinessMasteryUi.cjs
+node .\Audit-TakkenBusinessKnockUi.cjs
 node .\Audit-TakkenChapterModeUi.cjs
 # 個人データを出力せず、実バックアップの意味的保持を確認
 $env:TAKKEN_REAL_SAVE_FIXTURE="C:\path\to\takken-battle-save.json"
@@ -127,7 +129,7 @@ Pages配信後は公開HTMLを最大12回再取得し、模試A/Bボタンと配
 
 `Audit-TakkenChapterModeUi.cjs`は、選択直後・1問解答後・テーマ完了後の再読込でもchapter modeと結果を維持すること、選択テーマの全問が固定10問へ切り替わらず完走すること、完了画面から次の未接触単元・再挑戦・固定10問の3出口が動作すること、日課scope／固定計画を変えずactive chapterの分野名を表示すること、PC／390px／320px幅、通常の進捗ラベル1行・最長クラス2行以内、コンソールエラー0件をChromeで確認します。
 
-`Audit-TakkenBusinessFullScoreSupplement.js`は18補強テーマ・72肢について、公式根拠、改正日、主体・期限・金額、押印廃止・電子書面化、真偽混在、重複0、旧刑罰語や誤ったクーリングオフ条件の再混入を検査します。`Audit-TakkenBusinessFullScoreBank.js`は変形134問が基礎176肢と補強72肢の248/248論点を回収し、4形式の配分、正答位置の均衡、事例語の破壊0、極端語ヒント0、既存実践180問・宅建業法44問不変であることを検査します。`Audit-TakkenBusinessMastery.js`は宅建業法11単元、1／3／7／14／30日の間隔反復、期日前の非昇格、時計異常のfail closed、誤答時の即時降格、公式20/20を別試験回・別日3回で再現する条件を検査します。`Audit-TakkenBusinessPace.js`は本試験までに必要な1日量と公式試験回を開始できる安全余白を、`Audit-TakkenOfficialLawBaseline.js`は過去問の当時法採点と2026年4月1日現在法の証拠を混同しないfail closed判定を、`Audit-TakkenStateSync.js`は複数タブ間の進捗統合・置換世代・競合停止を検査します。`Audit-TakkenBusinessMasteryUi.cjs`は3条件の専用パネル、変形134問の最優先出題／全問総点検、診断タグ、reload保持、公式PDF露出台帳、旧セーブ非昇格、390px／320pxの横あふれ、画面エラーをローカルChromeで確認します。
+`Audit-TakkenBusinessFullScoreSupplement.js`は18補強テーマ・72肢について、公式根拠、改正日、主体・期限・金額、押印廃止・電子書面化、真偽混在、重複0、旧刑罰語や誤ったクーリングオフ条件の再混入を検査します。`Audit-TakkenBusinessFullScoreBank.js`は変形134問が基礎176肢と補強72肢の248/248論点を回収し、4形式の配分、正答位置の均衡、事例語の破壊0、極端語ヒント0、既存実践180問・宅建業法44問不変であることを検査します。`Audit-TakkenBusinessMastery.js`は宅建業法11単元、1／3／7／14／30日の間隔反復、期日前の非昇格、時計異常のfail closed、誤答時の即時降格、公式20/20を別試験回・別日3回で再現する条件を検査します。`Audit-TakkenBusinessKnock.js`は変形134問の「弱点＋期限到来／未接触／単元指定／全問ランダム」ノックが重複なく所定数を選び、誤答・迷いを優先しつつ同日連打で長期定着を偽装しないことを検査します。`Audit-TakkenBusinessPace.js`は本試験までに必要な1日量と公式試験回を開始できる安全余白を、`Audit-TakkenOfficialLawBaseline.js`は過去問の当時法採点と2026年4月1日現在法の証拠を混同しないfail closed判定を、`Audit-TakkenStateSync.js`は複数タブ間の進捗統合・置換世代・競合停止を検査します。`Audit-TakkenBusinessMasteryUi.cjs`は3条件の専用パネル、変形134問の最優先出題／全問総点検、診断タグ、reload保持、公式PDF露出台帳、旧セーブ非昇格、390px／320pxの横あふれ、画面エラーをローカルChromeで確認します。`Audit-TakkenBusinessKnockUi.cjs`は専用ノック欄の4モード・10／20／50／100問、弱点＋期限到来優先、134問の重複なし、誤答・迷いの再出題、reload保持、同日連打での長期定着非昇格、390px／320pxの横あふれ、画面エラーをChromeで確認します。
 
 ## 問題と権利
 
