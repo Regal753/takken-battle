@@ -19,11 +19,106 @@
   );
   const CALCULATION_QUESTION_IDS = Object.freeze(CALCULATION_QUESTIONS.map((item) => item.id));
   const PRACTICAL_VARIATIONS = window.TAKKEN_PRACTICAL_VARIATIONS;
+  const BUSINESS_MASTERY = window.TAKKEN_BUSINESS_MASTERY;
+  const BUSINESS_FULLSCORE_BANK = window.TAKKEN_BUSINESS_FULLSCORE_BANK;
   const PRACTICAL_QUESTIONS = PRACTICAL_VARIATIONS?.QUESTIONS || [];
   const PRACTICAL_QUESTION_BY_ID = Object.fromEntries(
     PRACTICAL_QUESTIONS.map((item) => [item.id, item])
   );
   const PRACTICAL_QUESTION_IDS = Object.freeze(PRACTICAL_QUESTIONS.map((item) => item.id));
+  const BUSINESS_FULLSCORE_BANK_ID = "business-fullscore";
+  const LEGACY_PRACTICAL_BANK_ID = "legacy-practical";
+  const BUSINESS_FULLSCORE_EXPECTED_QUESTIONS = 132;
+  const BUSINESS_DIAGNOSTIC_LABELS = Object.freeze({
+    subject: "主体",
+    timing: "時点",
+    counterparty: "相手方",
+    number: "数値",
+    "principle-exception": "原則例外",
+    "article-35": "35条",
+    "article-37": "37条",
+    "eight-restrictions": "8種",
+    "transaction-type": "取引類型",
+    amendment: "改正"
+  });
+  const BUSINESS_DIAGNOSTIC_TAGS = new Set(
+    (Array.isArray(BUSINESS_FULLSCORE_BANK?.ALLOWED_DIAGNOSTIC_TAGS)
+      ? BUSINESS_FULLSCORE_BANK.ALLOWED_DIAGNOSTIC_TAGS
+      : Object.keys(BUSINESS_DIAGNOSTIC_LABELS))
+      .map(String)
+      .filter((tag) => Boolean(BUSINESS_DIAGNOSTIC_LABELS[tag]))
+  );
+  const normalizeFullScoreQuestion = (item) => {
+    const choices = Array.isArray(item?.choices) ? item.choices.map(String) : [];
+    const answer = Number(item?.answer);
+    const reasoning = Array.isArray(item?.reasoningSteps)
+      ? item.reasoningSteps.map((step) => typeof step === "string" ? step : String(step?.text || step?.body || "")).filter(Boolean)
+      : [];
+    const sourceUrls = Array.isArray(item?.sourceUrls)
+      ? item.sourceUrls.map(String).filter(Boolean)
+      : item?.sourceUrl ? [String(item.sourceUrl)] : [];
+    if (
+      !item || !String(item.id || "") || !String(item.unitId || "") ||
+      !String(item.text || "") || choices.length !== 4 ||
+      !Number.isInteger(answer) || answer < 0 || answer > 3
+    ) return null;
+    return Object.freeze({
+      ...item,
+      id: String(item.id),
+      scopeId: "business",
+      unitId: String(item.unitId),
+      unitLabel: String(item.unitLabel || item.unitId),
+      unitPage: Math.max(0, Number(item.unitPage || item.page) || 0),
+      text: String(item.text),
+      choices: Object.freeze(choices),
+      answer,
+      explain: String(item.explain || reasoning[0] || "正解肢と各肢の根拠を確認する。"),
+      statementExplanations: Object.freeze(
+        (Array.isArray(item.statementExplanations) ? item.statementExplanations :
+          Array.isArray(item.choiceExplanations) ? item.choiceExplanations : reasoning.slice(1))
+          .map(String)
+      ),
+      trap: String(item.trap || reasoning.at(-2) || "主体・時期・例外を取り違えない。"),
+      memoryRule: String(item.memoryRule || reasoning.at(-1) || "根拠から再現する。"),
+      sourceUrls: Object.freeze(sourceUrls),
+      sourceRef: String(item.sourceRef || item.sourceLocator || "公式根拠"),
+      legalBaseline: String(item.legalBaseline || item.lawBaseline || BUSINESS_FULLSCORE_BANK?.LEGAL_BASELINE || "")
+    });
+  };
+  const BUSINESS_FULLSCORE_QUESTIONS = Object.freeze(
+    (Array.isArray(BUSINESS_FULLSCORE_BANK?.QUESTIONS) ? BUSINESS_FULLSCORE_BANK.QUESTIONS : [])
+      .map(normalizeFullScoreQuestion)
+      .filter(Boolean)
+  );
+  const BUSINESS_FULLSCORE_QUESTION_BY_ID = Object.freeze(Object.fromEntries(
+    BUSINESS_FULLSCORE_QUESTIONS.map((item) => [item.id, item])
+  ));
+  const BUSINESS_FULLSCORE_QUESTION_IDS = Object.freeze(BUSINESS_FULLSCORE_QUESTIONS.map((item) => item.id));
+  const BUSINESS_FULLSCORE_UNITS = Object.freeze(
+    (Array.isArray(BUSINESS_FULLSCORE_BANK?.UNITS) ? BUSINESS_FULLSCORE_BANK.UNITS : [])
+      .filter((unit) => unit && String(unit.id || ""))
+      .map((unit) => Object.freeze({
+        ...unit,
+        id: String(unit.id),
+        label: String(unit.label || unit.id),
+        page: Math.max(0, Number(unit.page) || 0),
+        part: Math.max(1, Number(unit.part) || 1)
+      }))
+  );
+  const BUSINESS_FULLSCORE_BANK_READY = Boolean(
+    BUSINESS_MASTERY &&
+    BUSINESS_FULLSCORE_BANK?.LEGAL_BASELINE === "2026-04-01" &&
+    BUSINESS_FULLSCORE_QUESTIONS.length === BUSINESS_FULLSCORE_EXPECTED_QUESTIONS &&
+    new Set(BUSINESS_FULLSCORE_QUESTION_IDS).size === BUSINESS_FULLSCORE_EXPECTED_QUESTIONS &&
+    BUSINESS_FULLSCORE_UNITS.length === 11 &&
+    BUSINESS_FULLSCORE_QUESTIONS.every((question) =>
+      BUSINESS_FULLSCORE_UNITS.some((unit) => unit.id === question.unitId)
+    )
+  );
+  const ALL_PRACTICAL_QUESTION_BY_ID = Object.freeze({
+    ...PRACTICAL_QUESTION_BY_ID,
+    ...BUSINESS_FULLSCORE_QUESTION_BY_ID
+  });
   const PRACTICAL_SCOPES = Object.freeze(["all", "business", "rights", "lawOther", "restrictions", "taxOther"]);
   const PRACTICAL_SCOPE_LABELS = Object.freeze({
     all: "全分野",
@@ -34,7 +129,7 @@
     taxOther: "税・その他"
   });
   const PRACTICAL_SESSION_SIZES = Object.freeze([4, 10, 20, 45]);
-  const STATE_SCHEMA_VERSION = 8;
+  const STATE_SCHEMA_VERSION = 9;
   const DAILY_TARGET = 10;
   const FOUNDATION_UNIT_BATCH_MAX = 4;
   const SPRINT_MINUTES = 25;
@@ -50,6 +145,7 @@
   const FIRST_PASS_DEADLINE_LABEL = "10/18";
   const DAILY_STUDY_MINUTES = 90;
   const OFFICIAL_DRILL_EVIDENCE_VERSION = 3;
+  const OFFICIAL_EXAM_EVIDENCE_VERSION = 2;
   const OFFICIAL_INITIAL_TARGET = 10;
   const OFFICIAL_RETEST_TARGET = 3;
   const OFFICIAL_RETEST_WAIT_DAYS = 14;
@@ -656,6 +752,7 @@
     missionMinutesInput: $("#missionMinutesInput"),
     missionMinutesButton: $("#missionMinutesButton"),
     officialLedgerSummary: $("#officialLedgerSummary"),
+    officialLedgerPanel: $(".official-ledger"),
     officialExamAttemptType: $("#officialExamAttemptType"),
     officialExamId: $("#officialExamId"),
     officialExamQuestionLink: $("#officialExamQuestionLink"),
@@ -671,6 +768,7 @@
     officialExamProgress: $("#officialExamProgress"),
     officialExamLawChecked: $("#officialExamLawChecked"),
     officialExamSubmitButton: $("#officialExamSubmitButton"),
+    officialExamAbandonButton: $("#officialExamAbandonButton"),
     officialExamManualForm: $("#officialExamManualForm"),
     officialExamYear: $("#officialExamYear"),
     officialExamScore: $("#officialExamScore"),
@@ -726,7 +824,17 @@
     practicalDrillCompleteText: $("#practicalDrillCompleteText"),
     practicalDrillRestartButton: $("#practicalDrillRestartButton"),
     practicalDrillChangeButton: $("#practicalDrillChangeButton"),
-    practicalDrillExitButton: $("#practicalDrillExitButton")
+    practicalDrillExitButton: $("#practicalDrillExitButton"),
+    businessMasteryPanel: $("#businessMasteryPanel"),
+    businessMasteryStatus: $("#businessMasteryStatus"),
+    businessFoundationGate: $("#businessFoundationGate"),
+    businessTransferGate: $("#businessTransferGate"),
+    businessOfficialGate: $("#businessOfficialGate"),
+    businessMasteryMetrics: $("#businessMasteryMetrics"),
+    businessMasteryWeakness: $("#businessMasteryWeakness"),
+    businessMasteryGrid: $("#businessMasteryGrid"),
+    businessMasteryPrimary: $("#businessMasteryPrimary"),
+    businessMasteryFull: $("#businessMasteryFull")
   };
 
   let fallbackIdSequence = 0;
@@ -767,6 +875,9 @@
   function createPracticalDrillState() {
     return {
       version: PRACTICAL_VARIATIONS?.VERSION || 1,
+      bankId: LEGACY_PRACTICAL_BANK_ID,
+      bankVersion: PRACTICAL_VARIATIONS?.VERSION || 1,
+      presentationKey: "",
       stage: "idle",
       scope: "business",
       unitId: "",
@@ -829,6 +940,7 @@
     mockHistory: [],
     officialExamHistory: [],
     officialExamSession: null,
+    officialExamExposure: {},
     missionLog: {},
     calculationDrill: createCalculationDrillState(),
     practicalDrill: createPracticalDrillState(),
@@ -1062,11 +1174,91 @@
     return answers;
   }
 
+  function officialExamAnswerObjectValid(examId, input, requireComplete = false) {
+    const definition = officialExamDefinition(examId);
+    if (!definition || !input || typeof input !== "object" || Array.isArray(input)) return false;
+    const keys = Object.keys(input);
+    if (requireComplete && keys.length !== 50) return false;
+    return keys.every((key) => {
+      const number = Number(key);
+      return String(number) === key && Number.isInteger(number) && number >= 1 && number <= 50 &&
+        Number.isInteger(input[key]) && input[key] >= 1 && input[key] <= 4;
+    });
+  }
+
+  function normalizeOfficialExamExposure(input) {
+    return Object.fromEntries(
+      Object.entries(input && typeof input === "object" && !Array.isArray(input) ? input : {})
+        .filter(([examId]) => Boolean(officialExamDefinition(examId)))
+        .map(([examId, item]) => {
+          const firstOpenedAt = Number.isFinite(Date.parse(item?.firstOpenedAt))
+            ? String(item.firstOpenedAt).slice(0, 64)
+            : "";
+          const derivedDay = firstOpenedAt ? localDateKey(firstOpenedAt) : "";
+          const firstOpenedDayKey = derivedDay;
+          if (!firstOpenedAt || !firstOpenedDayKey) return null;
+          const source = ["full-exam", "daily-drill", "manual", "history"].includes(item?.source)
+            ? item.source
+            : "history";
+          return [examId, { firstOpenedAt, firstOpenedDayKey, source }];
+        })
+        .filter(Boolean)
+    );
+  }
+
+  function mergeOfficialExamExposure(exposure, examId, source, openedAt) {
+    const id = String(examId || "");
+    if (!officialExamDefinition(id) || !Number.isFinite(Date.parse(openedAt))) return exposure;
+    const current = normalizeOfficialExamExposure(exposure);
+    const candidateAt = String(openedAt).slice(0, 64);
+    const existingAt = Date.parse(current[id]?.firstOpenedAt || "");
+    if (!Number.isFinite(existingAt) || Date.parse(candidateAt) < existingAt) {
+      current[id] = {
+        firstOpenedAt: candidateAt,
+        firstOpenedDayKey: localDateKey(candidateAt),
+        source: ["full-exam", "daily-drill", "manual", "history"].includes(source) ? source : "history"
+      };
+    }
+    return current;
+  }
+
+  function mergeOfficialExamExposureLedgers(...ledgers) {
+    return ledgers.reduce((merged, ledger) => {
+      Object.entries(normalizeOfficialExamExposure(ledger)).forEach(([examId, item]) => {
+        merged = mergeOfficialExamExposure(
+          merged,
+          examId,
+          item.source,
+          item.firstOpenedAt
+        );
+      });
+      return merged;
+    }, {});
+  }
+
+  function recordOfficialExamExposure(examId, source, openedAt = new Date().toISOString()) {
+    const id = String(examId || "");
+    if (!officialExamDefinition(id) || !Number.isFinite(Date.parse(openedAt))) return false;
+    state.officialExamExposure = normalizeOfficialExamExposure(state.officialExamExposure);
+    if (state.officialExamExposure[id]) return false;
+    state.officialExamExposure = mergeOfficialExamExposure(
+      state.officialExamExposure,
+      id,
+      source,
+      openedAt
+    );
+    return true;
+  }
+
   function createOfficialExamSession() {
     return {
+      evidenceVersion: OFFICIAL_EXAM_EVIDENCE_VERSION,
       examId: "",
       attemptType: "initial",
       startedAt: "",
+      startedDayKey: "",
+      appUnseenAtStart: false,
+      lawBaseline: "",
       answers: {},
       position: 0,
       lawChecked: false
@@ -1082,10 +1274,28 @@
       ? String(input.startedAt).slice(0, 64)
       : "";
     if (!startedAt) return null;
+    const derivedStartedDayKey = localDateKey(startedAt);
+    const suppliedStartedDayKey = BUSINESS_MASTERY?.dayKey(input.startedDayKey);
+    const evidenceVersion = Number(input.evidenceVersion) >= OFFICIAL_EXAM_EVIDENCE_VERSION &&
+      suppliedStartedDayKey === derivedStartedDayKey &&
+      officialExamAnswerObjectValid(examId, input.answers || {}, false) &&
+      typeof input.appUnseenAtStart === "boolean" &&
+      typeof input.lawChecked === "boolean"
+      ? OFFICIAL_EXAM_EVIDENCE_VERSION
+      : 0;
+    const startedDayKey = evidenceVersion ? suppliedStartedDayKey : derivedStartedDayKey;
     return {
+      evidenceVersion,
       examId,
       attemptType,
       startedAt,
+      startedDayKey,
+      appUnseenAtStart: evidenceVersion >= OFFICIAL_EXAM_EVIDENCE_VERSION &&
+        Boolean(input.appUnseenAtStart),
+      lawBaseline: evidenceVersion >= OFFICIAL_EXAM_EVIDENCE_VERSION &&
+        input.lawBaseline === CURRENT_LAW_BASELINE
+        ? CURRENT_LAW_BASELINE
+        : "",
       answers: normalizeOfficialExamAnswers(examId, input.answers),
       position: Math.min(49, Math.max(0, Math.trunc(Number(input.position) || 0))),
       lawChecked: Boolean(input.lawChecked)
@@ -1129,6 +1339,26 @@
           ? String(item.completedAt).slice(0, 64)
           : "";
         if (!completedAt) return null;
+        const startedAt = Number.isFinite(Date.parse(item.startedAt))
+          ? String(item.startedAt).slice(0, 64)
+          : "";
+        const derivedStartedDayKey = startedAt ? localDateKey(startedAt) : "";
+        const suppliedStartedDayKey = BUSINESS_MASTERY?.dayKey(item.startedDayKey);
+        const rawElapsedMinutes = item.elapsedMinutes;
+        const rawEvidenceValid = sourceMode === "timed-answer-sheet" &&
+          officialExamAnswerObjectValid(examId, item.answers, true) &&
+          typeof item.appUnseenAtStart === "boolean" &&
+          item.lawBaseline === CURRENT_LAW_BASELINE &&
+          item.timed120 === true && item.lawChecked === true &&
+          Number.isInteger(rawElapsedMinutes) && rawElapsedMinutes >= 1 &&
+          rawElapsedMinutes <= MOCK_DURATION_MINUTES &&
+          Boolean(startedAt) && Date.parse(completedAt) >= Date.parse(startedAt);
+        const evidenceVersion = Number(item.evidenceVersion) >= OFFICIAL_EXAM_EVIDENCE_VERSION &&
+          suppliedStartedDayKey === derivedStartedDayKey && rawEvidenceValid
+          ? OFFICIAL_EXAM_EVIDENCE_VERSION
+          : 0;
+        const startedDayKey = evidenceVersion ? suppliedStartedDayKey : derivedStartedDayKey;
+        const normalizedElapsedMinutes = Number(item.elapsedMinutes);
         return {
           recordId: cleanMissionText(
             item.recordId ||
@@ -1140,6 +1370,15 @@
           legacySessionAmbiguous,
           attemptType: item.attemptType === "retest" ? "retest" : "initial",
           sourceMode,
+          evidenceVersion,
+          startedAt,
+          startedDayKey,
+          appUnseenAtStart: evidenceVersion >= OFFICIAL_EXAM_EVIDENCE_VERSION &&
+            Boolean(item.appUnseenAtStart),
+          lawBaseline: evidenceVersion >= OFFICIAL_EXAM_EVIDENCE_VERSION &&
+            item.lawBaseline === CURRENT_LAW_BASELINE
+            ? CURRENT_LAW_BASELINE
+            : "",
           timed120: sourceMode === "timed-answer-sheet" &&
             Boolean(item.timed120 ?? (Number(item.elapsedMinutes) <= MOCK_DURATION_MINUTES)),
           lawChecked: sourceMode === "timed-answer-sheet" && Boolean(item.lawChecked),
@@ -1149,7 +1388,10 @@
           restrictions,
           business,
           taxOther,
-          elapsedMinutes: Math.max(1, boundedInteger(item.elapsedMinutes, 180)),
+          elapsedMinutes: Number.isInteger(normalizedElapsedMinutes) &&
+            normalizedElapsedMinutes >= 1 && normalizedElapsedMinutes <= 180
+            ? normalizedElapsedMinutes
+            : 0,
           completedAt
         };
       })
@@ -1445,16 +1687,44 @@
     };
   }
 
-  function practicalIds(input) {
-    const valid = new Set(PRACTICAL_QUESTION_IDS);
+  function practicalQuestionSet(bankId = LEGACY_PRACTICAL_BANK_ID) {
+    return bankId === BUSINESS_FULLSCORE_BANK_ID
+      ? new Set(BUSINESS_FULLSCORE_QUESTION_IDS)
+      : new Set(PRACTICAL_QUESTION_IDS);
+  }
+
+  function practicalQuestionFor(id, bankId = state?.practicalDrill?.bankId) {
+    return bankId === BUSINESS_FULLSCORE_BANK_ID
+      ? BUSINESS_FULLSCORE_QUESTION_BY_ID[id] || null
+      : PRACTICAL_QUESTION_BY_ID[id] || null;
+  }
+
+  function practicalIds(input, bankId = LEGACY_PRACTICAL_BANK_ID) {
+    const valid = practicalQuestionSet(bankId);
     return [...new Set((Array.isArray(input) ? input : []).map(String))]
       .filter((id) => valid.has(id));
   }
 
-  function normalizePracticalHistory(input) {
+  function normalizeBusinessMistakeTags(input) {
     return Object.fromEntries(
       Object.entries(input && typeof input === "object" && !Array.isArray(input) ? input : {})
-        .filter(([id]) => Boolean(PRACTICAL_QUESTION_BY_ID[id]))
+        .filter(([tag]) => BUSINESS_DIAGNOSTIC_TAGS.has(tag))
+        .map(([tag, count]) => [tag, boundedInteger(count, 10000)])
+        .filter(([, count]) => count > 0)
+    );
+  }
+
+  function normalizeBusinessTagList(input) {
+    return [...new Set((Array.isArray(input) ? input : []).map(String))]
+      .filter((tag) => BUSINESS_DIAGNOSTIC_TAGS.has(tag))
+      .slice(0, BUSINESS_DIAGNOSTIC_TAGS.size);
+  }
+
+  function normalizePracticalHistory(input, preserveUnknownIds = []) {
+    const preserved = new Set((Array.isArray(preserveUnknownIds) ? preserveUnknownIds : []).map(String).slice(0, 200));
+    return Object.fromEntries(
+      Object.entries(input && typeof input === "object" && !Array.isArray(input) ? input : {})
+        .filter(([id]) => Boolean(ALL_PRACTICAL_QUESTION_BY_ID[id]) || preserved.has(id))
         .map(([id, item]) => [
           id,
           {
@@ -1471,7 +1741,12 @@
               : "",
             lastAnsweredAt: Number.isFinite(Date.parse(item?.lastAnsweredAt))
               ? String(item.lastAnsweredAt).slice(0, 64)
-              : ""
+              : "",
+            mistakeTags: normalizeBusinessMistakeTags(item?.mistakeTags),
+            lastMistakeTags: normalizeBusinessTagList(item?.lastMistakeTags),
+            ...((ALL_PRACTICAL_QUESTION_BY_ID[id]?.scopeId === "business" || preserved.has(id))
+              ? BUSINESS_MASTERY.normalizeMasteryHistory(item)
+              : {})
           }
         ])
     );
@@ -1480,8 +1755,20 @@
   function normalizePracticalDrillState(input) {
     const fresh = createPracticalDrillState();
     if (!PRACTICAL_QUESTION_IDS.length) return fresh;
-    const currentBankVersion = PRACTICAL_VARIATIONS?.VERSION || 1;
-    const bankChanged = Number(input?.version || 1) !== currentBankVersion;
+    const requestedFullScoreBank = input?.bankId === BUSINESS_FULLSCORE_BANK_ID;
+    const bankId = requestedFullScoreBank
+      ? BUSINESS_FULLSCORE_BANK_ID
+      : LEGACY_PRACTICAL_BANK_ID;
+    const currentBankVersion = bankId === BUSINESS_FULLSCORE_BANK_ID
+      ? Number(BUSINESS_FULLSCORE_BANK?.VERSION) || Number(input?.bankVersion) || 1
+      : PRACTICAL_VARIATIONS?.VERSION || 1;
+    const savedBankVersion = Number(input?.bankVersion || input?.version || 1);
+    const bankChanged = savedBankVersion !== currentBankVersion;
+    const preserveUnknownIds = !BUSINESS_FULLSCORE_BANK_READY
+      ? Object.keys(input?.history || {}).filter((id) =>
+          /^bf-business-book-(?:0[1-9]|1[01])-/.test(id)
+        )
+      : [];
     const legacyIdleDefaults = (input?.stage || "idle") === "idle" &&
       input?.scope === "all" && Number(input?.sessionSize) === 20 && !input?.unitId &&
       !(Number(input?.attempts) > 0) && !(Number(input?.sessionsCompleted) > 0) &&
@@ -1490,19 +1777,26 @@
     const scope = legacyIdleDefaults
       ? fresh.scope
       : PRACTICAL_SCOPES.includes(input?.scope) ? input.scope : fresh.scope;
-    const unitId = PRACTICAL_VARIATIONS?.UNITS?.some((unit) => unit.id === input?.unitId)
+    const validUnits = bankId === BUSINESS_FULLSCORE_BANK_ID
+      ? BUSINESS_FULLSCORE_UNITS
+      : (PRACTICAL_VARIATIONS?.UNITS || []);
+    const unitId = validUnits.some((unit) => unit.id === input?.unitId)
       ? String(input.unitId)
       : "";
     const requestedSize = Number(input?.sessionSize);
     const sessionSize = legacyIdleDefaults
       ? fresh.sessionSize
-      : PRACTICAL_SESSION_SIZES.includes(requestedSize) ? requestedSize : fresh.sessionSize;
-    const retryIds = practicalIds(input?.retryIds);
-    const sessionIds = practicalIds(input?.sessionIds);
+      : bankId === BUSINESS_FULLSCORE_BANK_ID
+        ? Number.isInteger(requestedSize) && requestedSize >= 1 && requestedSize <= BUSINESS_FULLSCORE_EXPECTED_QUESTIONS
+          ? requestedSize
+          : fresh.sessionSize
+        : PRACTICAL_SESSION_SIZES.includes(requestedSize) ? requestedSize : fresh.sessionSize;
+    const retryIds = practicalIds(input?.retryIds, bankId);
+    const sessionIds = practicalIds(input?.sessionIds, bankId);
     let stage = ["idle", "active", "retry", "complete"].includes(input?.stage)
       ? input.stage
       : "idle";
-    let queue = practicalIds(input?.queue);
+    let queue = practicalIds(input?.queue, bankId);
     if (["active", "retry"].includes(stage) && !queue.length) stage = "idle";
     if (stage === "retry" && !retryIds.some((id) => sessionIds.includes(id))) {
       stage = "complete";
@@ -1514,22 +1808,31 @@
     const currentId = queue[position];
     const rawAttempt = input?.currentAttempt;
     const selected = Number(rawAttempt?.selected);
-    const currentQuestion = PRACTICAL_QUESTION_BY_ID[currentId];
+    const currentQuestion = practicalQuestionFor(currentId, bankId);
+    const presentationKey = bankId === BUSINESS_FULLSCORE_BANK_ID
+      ? String(input?.presentationKey || "").replace(/[^0-9a-z:_-]/gi, "").slice(0, 80)
+      : "";
+    const presentedQuestion = presentPracticalQuestion(currentQuestion, bankId, presentationKey);
     // 問題IDと履歴は維持する。問題本文・正答が更新された場合だけ、
     // 途中で表示中だった一問の選択を外して旧正答の誤判定を防ぐ。
-    const currentAttempt = !bankChanged && currentQuestion && rawAttempt?.id === currentId &&
+    const currentAttempt = !bankChanged && presentedQuestion && rawAttempt?.id === currentId &&
       Number.isInteger(selected) && selected >= 0 && selected < 4
       ? {
           id: currentId,
           selected,
-          correct: selected === currentQuestion.answer,
-          confidence: selected === currentQuestion.answer
+          correct: selected === presentedQuestion.answer,
+          confidence: selected === presentedQuestion.answer
             ? (["confident", "uncertain"].includes(rawAttempt?.confidence) ? rawAttempt.confidence : "")
-            : "wrong"
+            : "wrong",
+          masteryRecorded: Boolean(rawAttempt?.masteryRecorded),
+          diagnosticRecorded: Boolean(rawAttempt?.diagnosticRecorded)
         }
       : null;
     return {
-      version: currentBankVersion,
+      version: bankId === LEGACY_PRACTICAL_BANK_ID ? currentBankVersion : fresh.version,
+      bankId,
+      bankVersion: currentBankVersion,
+      presentationKey,
       stage,
       scope,
       unitId,
@@ -1539,7 +1842,7 @@
       position,
       currentAttempt,
       retryIds,
-      history: normalizePracticalHistory(input?.history),
+      history: normalizePracticalHistory(input?.history, preserveUnknownIds),
       attempts: boundedInteger(input?.attempts, 100000),
       correctAttempts: boundedInteger(input?.correctAttempts, 100000),
       sessionsCompleted: boundedInteger(input?.sessionsCompleted, 10000),
@@ -1591,6 +1894,34 @@
     next.officialExamHistory = normalizeOfficialExamHistory(input?.officialExamHistory);
     next.officialExamSession = normalizeOfficialExamSession(input?.officialExamSession);
     next.missionLog = normalizeMissionLog(input?.missionLog);
+    next.officialExamExposure = normalizeOfficialExamExposure(input?.officialExamExposure);
+    next.officialExamHistory.forEach((item) => {
+      next.officialExamExposure = mergeOfficialExamExposure(
+        next.officialExamExposure,
+        item.examId,
+        item.sourceMode === "self-report" ? "manual" : "history",
+        item.startedAt || item.completedAt
+      );
+    });
+    if (next.officialExamSession) {
+      next.officialExamExposure = mergeOfficialExamExposure(
+        next.officialExamExposure,
+        next.officialExamSession.examId,
+        "full-exam",
+        next.officialExamSession.startedAt
+      );
+    }
+    Object.values(next.missionLog || {}).forEach((mission) => {
+      const drill = normalizeOfficialDrill(mission?.officialDrill);
+      const definition = officialDrillDefinitionById(drill?.setId);
+      if (!definition || !drill?.startedAt) return;
+      next.officialExamExposure = mergeOfficialExamExposure(
+        next.officialExamExposure,
+        String(definition.examId || definition.year || ""),
+        "daily-drill",
+        drill.startedAt
+      );
+    });
     next.calculationDrill = normalizeCalculationDrillState(input?.calculationDrill);
     next.practicalDrill = normalizePracticalDrillState(input?.practicalDrill);
     next.saveMeta = {
@@ -1816,7 +2147,12 @@
           examContentVersion: 0
         }
       : parsed.state;
+    const preservedExposure = normalizeOfficialExamExposure(state.officialExamExposure);
     state = normalizeState(imported);
+    state.officialExamExposure = mergeOfficialExamExposureLedgers(
+      preservedExposure,
+      state.officialExamExposure
+    );
     applyQuestionBalance();
     saveState();
     setSaveTransferStatus(`引継ぎ完了: ${summary}`);
@@ -2424,8 +2760,13 @@
         setSaveTransferStatus("直前セーブへの復元をキャンセルしました。");
         return;
       }
+      const preservedExposure = normalizeOfficialExamExposure(state.officialExamExposure);
       const restored = SAVE_STORE.restorePrevious(localStorage, STORAGE_ID);
       state = normalizeState(restored.value);
+      state.officialExamExposure = mergeOfficialExamExposureLedgers(
+        preservedExposure,
+        state.officialExamExposure
+      );
       applyQuestionBalance();
       saveStoreSession.skipPreviousRotation = true;
       saveState();
@@ -3015,6 +3356,45 @@
     return state.runMode === RUN_MODE_MOCK && Boolean(mockFormById(state.mock?.formId));
   }
 
+  function activeLearningSession() {
+    if (state.officialExamSession) return { kind: "official", label: "計測中の公式50問" };
+    if (isMockMode() && !state.mock?.finalized) return { kind: "mock", label: "進行中の50問模試" };
+    if (["active", "retry"].includes(state.practicalDrill?.stage)) {
+      return {
+        kind: "practical",
+        label: state.practicalDrill.bankId === BUSINESS_FULLSCORE_BANK_ID
+          ? "進行中の満点変形セット"
+          : "進行中の実践セット"
+      };
+    }
+    return null;
+  }
+
+  function resumeActiveLearningSession() {
+    const active = activeLearningSession();
+    if (!active) return false;
+    setTodayCommandStatus(`${active.label}を保存状態から再開します。終了後に次のセットへ進めます。`);
+    if (active.kind === "official") {
+      if (elements.passPlanPanel) elements.passPlanPanel.open = true;
+      renderPassPlan();
+      window.requestAnimationFrame(() =>
+        elements.officialExamSessionForm?.scrollIntoView({ block: "start", behavior: "smooth" })
+      );
+    } else if (active.kind === "mock") {
+      render();
+      window.requestAnimationFrame(() =>
+        elements.quizCard?.scrollIntoView({ block: "start", behavior: "smooth" })
+      );
+    } else {
+      if (elements.practicalDrillPanel) elements.practicalDrillPanel.open = true;
+      renderPracticalDrill();
+      window.requestAnimationFrame(() =>
+        elements.practicalDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
+      );
+    }
+    return true;
+  }
+
   function currentMockForm() {
     return isMockMode() ? mockFormById(state.mock.formId) : null;
   }
@@ -3333,17 +3713,13 @@
         option.value = exam.id;
         let reason = "";
         if (attemptType === "initial") {
-          const recorded = readiness.initial.some((item) => item.examId === exam.id) ||
-            (state.officialExamHistory || []).some((item) =>
-              item.examId === exam.id &&
-              item.attemptType === "initial" &&
-              item.sourceMode === "timed-answer-sheet"
-            );
-          reason = recorded
-            ? "初見記録済み"
+          const exposed = Boolean(state.officialExamExposure?.[exam.id]);
+          const needsFullScoreEvidence = !businessOfficialProof().ready;
+          reason = exposed
+            ? "公式問題へ接触済み"
             : touched.has(exam.id)
               ? "公式20問で接触済み"
-              : readiness.initial.length >= OFFICIAL_INITIAL_TARGET
+              : readiness.initial.length >= OFFICIAL_INITIAL_TARGET && !needsFullScoreEvidence
                 ? "初見目標達成済み"
                 : "";
         } else {
@@ -3386,8 +3762,20 @@
       state.officialExamSession?.examId || elements.officialExamId?.value
     );
     if (elements.officialExamQuestionLink) {
-      elements.officialExamQuestionLink.href =
-        selectedExam?.questionUrl || OFFICIAL_PAST_EXAMS_URL;
+      const canOpen = Boolean(state.officialExamSession && selectedExam?.questionUrl);
+      if (canOpen) {
+        elements.officialExamQuestionLink.href = selectedExam.questionUrl;
+        elements.officialExamQuestionLink.target = "_blank";
+        elements.officialExamQuestionLink.rel = "noopener noreferrer";
+      } else {
+        elements.officialExamQuestionLink.removeAttribute("href");
+        elements.officialExamQuestionLink.removeAttribute("target");
+      }
+      elements.officialExamQuestionLink.setAttribute("aria-disabled", String(!canOpen));
+      elements.officialExamQuestionLink.classList.toggle("is-disabled", !canOpen);
+      elements.officialExamQuestionLink.textContent = canOpen
+        ? "公式問題PDFを開く"
+        : "計測開始後にPDFを開く";
     }
     if (elements.officialExamStartButton) {
       const selectedOption = elements.officialExamId?.selectedOptions?.[0];
@@ -3488,6 +3876,10 @@
     const session = state.officialExamSession;
     if (!elements.officialExamSessionForm) return;
     elements.officialExamSessionForm.hidden = !session;
+    if (session) {
+      if (elements.passPlanPanel) elements.passPlanPanel.open = true;
+      if (elements.officialLedgerPanel) elements.officialLedgerPanel.open = true;
+    }
     renderOfficialExamTimer(session);
     if (!session) return;
     const definition = officialExamDefinition(session.examId);
@@ -3575,16 +3967,13 @@
   }
 
   function startOfficialExam() {
-    if (!foundationCoverageComplete()) {
+    if (resumeActiveLearningSession()) return;
+    if (!foundationCoverageComplete() && !businessFullScoreOfficialUnlocked()) {
       const progress = foundationProgress();
       setOfficialExamStatus(
-        `公式50問は基礎一周後に解放します。現在は単元${progress.completedUnits}/${TEXTBOOK_CHAPTERS.length}です。`,
+        `公式50問は全体基礎一周、または業法の基礎44問定着＋変形${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS}問初回走査後に解放します。現在は単元${progress.completedUnits}/${TEXTBOOK_CHAPTERS.length}です。`,
         true
       );
-      return;
-    }
-    if (state.officialExamSession) {
-      renderOfficialExamSession();
       return;
     }
     const examId = String(elements.officialExamId?.value || "");
@@ -3598,13 +3987,13 @@
     }
     const readiness = officialReadinessStats();
     if (attemptType === "initial") {
-      if (readiness.initial.length >= OFFICIAL_INITIAL_TARGET) {
+      if (readiness.initial.length >= OFFICIAL_INITIAL_TARGET && businessOfficialProof().ready) {
         setOfficialExamStatus("初見10回は達成済みです。再試験へ進んでください。", true);
         return;
       }
-      if (officialDrillExamIdsTouched().has(examId)) {
+      if (state.officialExamExposure?.[examId] || officialDrillExamIdsTouched().has(examId)) {
         setOfficialExamStatus(
-          `${definition.label}は公式20問で接触済みです。別の未接触試験回を選んでください。`,
+          `${definition.label}はアプリ内で接触済みです。別の未接触試験回を選んでください。`,
           true
         );
         return;
@@ -3632,11 +4021,18 @@
         return;
       }
     }
+    const startedAt = new Date().toISOString();
+    const appUnseenAtStart = attemptType === "initial" && !state.officialExamExposure?.[examId];
+    recordOfficialExamExposure(examId, "full-exam", startedAt);
     state.officialExamSession = normalizeOfficialExamSession({
       ...createOfficialExamSession(),
       examId,
       attemptType,
-      startedAt: new Date().toISOString()
+      evidenceVersion: OFFICIAL_EXAM_EVIDENCE_VERSION,
+      startedAt,
+      startedDayKey: localDateKey(startedAt),
+      appUnseenAtStart,
+      lawBaseline: CURRENT_LAW_BASELINE
     });
     saveState();
     logStudyEvent("official-past-exam", {
@@ -3697,9 +4093,14 @@
       year: definition.year,
       attemptType: session.attemptType,
       sourceMode: "timed-answer-sheet",
+      evidenceVersion: session.evidenceVersion,
+      startedAt: session.startedAt,
+      startedDayKey: session.startedDayKey,
+      appUnseenAtStart: session.appUnseenAtStart,
+      lawBaseline: session.lawBaseline,
       timed120: elapsedMinutes <= MOCK_DURATION_MINUTES,
       lawChecked: true,
-      answers: session.answers,
+      answers: { ...session.answers },
       score: scored.score,
       rights: scored.sectionScores.rights,
       restrictions: scored.sectionScores.restrictions,
@@ -4039,7 +4440,8 @@
     elements.officialDrillTitle.textContent =
       `${definition.label}・${attemptNumber === 1 ? "初回" : `再戦${attemptNumber}`}`;
     elements.officialDrillQuestionRange.textContent = definition.questionRange;
-    elements.officialDrillQuestionLink.href = definition.questionUrl;
+    elements.officialDrillQuestionLink.removeAttribute("href");
+    elements.officialDrillQuestionLink.dataset.questionUrl = definition.questionUrl;
     if (drill?.startedAt || drill?.completed) {
       elements.officialDrillPanel.open = true;
     }
@@ -4147,13 +4549,13 @@
         `公式20問は基礎一周後に解放します。現在は単元${progress.completedUnits}/${TEXTBOOK_CHAPTERS.length}です。`,
         true
       );
-      return;
+      return false;
     }
     const mission = missionForDate();
     const definition = officialDrillDefinitionFor(mission.officialDrill);
     if (!dailyQuestIsComplete()) {
       setOfficialDrillStatus("先に固定10問を完了してください。", true);
-      return;
+      return false;
     }
     const pendingReview = pendingOfficialReview();
     if (pendingReview) {
@@ -4161,17 +4563,20 @@
         `${pendingReview.date}の未復習を先に保存してください。`,
         true
       );
-      return;
+      return false;
     }
     if (mission.officialDrill?.completed || mission.officialDrill?.startedAt) {
       renderOfficialDrillTimer(mission.officialDrill);
-      return;
+      return true;
     }
+    const startedAt = new Date().toISOString();
+    const examId = String(definition.examId || definition.year || "");
+    recordOfficialExamExposure(examId, "daily-drill", startedAt);
     setMissionForDate(todayKey(), {
       officialDrill: {
         setId: definition.id,
         position: mission.officialDrill?.position || 0,
-        startedAt: new Date().toISOString(),
+        startedAt,
         answers: mission.officialDrill?.answers || {},
         confidence: mission.officialDrill?.confidence || {},
         uncertain: mission.officialDrill?.uncertain || [],
@@ -4186,6 +4591,26 @@
     });
     renderPassPlan();
     setOfficialDrillStatus("35分計測を開始しました。問題PDFを開き、検索せずに解いてください。");
+    return true;
+  }
+
+  function abandonOfficialExam() {
+    const session = state.officialExamSession;
+    if (!session) return;
+    const definition = officialExamDefinition(session.examId);
+    const label = definition?.label || session.examId;
+    if (!window.confirm(
+      `${label}の計測を中断します。\n` +
+      "この試験回の接触記録は残り、初見測定には再利用できません。"
+    )) return;
+    recordOfficialExamExposure(session.examId, "full-exam", session.startedAt);
+    state.officialExamSession = null;
+    saveState();
+    renderPassPlan();
+    renderBusinessMastery();
+    setOfficialExamStatus(
+      `${label}を中断しました。この回は接触済みのままです。別の未接触試験回を選べます。`
+    );
   }
 
   function saveOfficialDrillDraft(nextPosition = null) {
@@ -4745,10 +5170,15 @@
     renderOfficialExamSession();
     renderOfficialExamHistory();
     if (elements.officialExamStartButton) {
-      elements.officialExamStartButton.disabled = !foundationComplete || Boolean(state.officialExamSession);
-      elements.officialExamStartButton.title = foundationComplete
+      const businessUnlocked = businessFullScoreOfficialUnlocked();
+      const selectedDisabled = Boolean(elements.officialExamId?.selectedOptions?.[0]?.disabled);
+      elements.officialExamStartButton.disabled =
+        (!foundationComplete && !businessUnlocked) ||
+        Boolean(activeLearningSession()) ||
+        selectedDisabled;
+      elements.officialExamStartButton.title = foundationComplete || businessUnlocked
         ? ""
-        : `45単元の読後問題完了後に解放（現在${completedTextbookUnits}/${TEXTBOOK_CHAPTERS.length}）`;
+        : `全45単元の読後問題、または業法の基礎44問定着＋変形${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS}問初回走査後に解放（現在${completedTextbookUnits}/${TEXTBOOK_CHAPTERS.length}）`;
     }
     if (elements.officialDrillOpenButton) {
       elements.officialDrillOpenButton.disabled = !foundationComplete;
@@ -4874,7 +5304,7 @@
     return new Set(
       Object.values(state.missionLog || {})
         .map((mission) => normalizeOfficialDrill(mission?.officialDrill))
-        .filter((drill) => drill?.completed)
+        .filter((drill) => drill?.startedAt)
         .map((drill) => {
           const definition = officialDrillDefinitionById(drill.setId);
           return String(definition?.examId || definition?.year || "");
@@ -4942,6 +5372,7 @@
       answers: {},
       completedAt: new Date().toISOString()
     };
+    recordOfficialExamExposure(fields.examId, "manual", entry.completedAt);
     state.officialExamHistory = normalizeOfficialExamHistory([
       ...(state.officialExamHistory || []),
       entry
@@ -5518,6 +5949,39 @@
     return list.filter((item) => item !== id);
   }
 
+  function practicalRetryIdsForBank(bankId) {
+    const ids = bankId === BUSINESS_FULLSCORE_BANK_ID
+      ? BUSINESS_FULLSCORE_QUESTION_IDS
+      : PRACTICAL_QUESTION_IDS;
+    return ids.filter((id) =>
+      ["wrong", "uncertain"].includes(state.practicalDrill?.history?.[id]?.lastConfidence)
+    );
+  }
+
+  function diagnosticTagsForPracticalSelection(question, selected, uncertain = false) {
+    if (state.practicalDrill?.bankId !== BUSINESS_FULLSCORE_BANK_ID || !question) return [];
+    if (!uncertain && typeof BUSINESS_FULLSCORE_BANK?.diagnosticsForSelection === "function") {
+      try {
+        return normalizeBusinessTagList(
+          BUSINESS_FULLSCORE_BANK.diagnosticsForSelection(question, selected)
+        );
+      } catch {
+        // A malformed diagnostic payload must not enter the save.
+      }
+    }
+    return normalizeBusinessTagList(question.diagnosticTags);
+  }
+
+  function recordBusinessDiagnostic(history, tags) {
+    const valid = normalizeBusinessTagList(tags);
+    if (!history || !valid.length) return false;
+    const counts = normalizeBusinessMistakeTags(history.mistakeTags);
+    valid.forEach((tag) => { counts[tag] = Math.min(10000, (counts[tag] || 0) + 1); });
+    history.mistakeTags = counts;
+    history.lastMistakeTags = valid;
+    return true;
+  }
+
   function practicalScopeLabel(scope) {
     return PRACTICAL_SCOPE_LABELS[scope] || PRACTICAL_SCOPE_LABELS.business;
   }
@@ -5537,6 +6001,46 @@
     );
   }
 
+  function fullScoreQuestionsForUnit(unitId) {
+    return BUSINESS_FULLSCORE_QUESTIONS.filter((question) => question.unitId === unitId);
+  }
+
+  function activePracticalQuestions(drill = state.practicalDrill) {
+    return drill?.bankId === BUSINESS_FULLSCORE_BANK_ID
+      ? BUSINESS_FULLSCORE_QUESTIONS
+      : PRACTICAL_QUESTIONS;
+  }
+
+  function activePracticalUnits(drill = state.practicalDrill) {
+    return drill?.bankId === BUSINESS_FULLSCORE_BANK_ID
+      ? BUSINESS_FULLSCORE_UNITS
+      : (PRACTICAL_VARIATIONS?.UNITS || []);
+  }
+
+  function presentPracticalQuestion(question, bankId, presentationKey) {
+    if (!question || bankId !== BUSINESS_FULLSCORE_BANK_ID) return question || null;
+    if (typeof BUSINESS_FULLSCORE_BANK?.presentQuestion === "function") {
+      try {
+        const presented = normalizeFullScoreQuestion(
+          BUSINESS_FULLSCORE_BANK.presentQuestion(question, presentationKey)
+        );
+        if (presented?.id === question.id && presented.choices.length === 4) return presented;
+      } catch {
+        // Fall through to the local deterministic presentation. Bank content stays intact.
+      }
+    }
+    const order = BUSINESS_MASTERY.choiceOrder(question.id, presentationKey, question.choices.length);
+    const statementExplanations = Array.isArray(question.statementExplanations)
+      ? order.map((index) => question.statementExplanations[index]).filter(Boolean)
+      : [];
+    return {
+      ...question,
+      choices: order.map((index) => question.choices[index]),
+      answer: order.indexOf(question.answer),
+      statementExplanations
+    };
+  }
+
   function renderPracticalDrillLauncher() {
     if (!elements.practicalDrillStartButton) return;
     const requestedScope = String(elements.practicalDrillScope?.value || state.practicalDrill.scope);
@@ -5550,6 +6054,12 @@
 
   function practicalPriority(question, drill = state.practicalDrill) {
     const history = drill.history[question.id] || {};
+    if (question.scopeId === "business") {
+      return BUSINESS_MASTERY.priorityFor({
+        ...history,
+        lastConfidence: drill.retryIds.includes(question.id) ? "wrong" : history.lastConfidence
+      }, new Date());
+    }
     const needsRetry = drill.retryIds.includes(question.id) ||
       ["wrong", "uncertain"].includes(history.lastConfidence);
     if (needsRetry) return 0;
@@ -5557,9 +6067,13 @@
     return 2;
   }
 
-  function buildPracticalQueue(scope, requestedSize) {
-    const drill = state.practicalDrill;
-    const eligible = practicalScopeQuestions(scope);
+  function practicalDiagnosticWeight(question, drill = state.practicalDrill) {
+    if (drill?.bankId !== BUSINESS_FULLSCORE_BANK_ID) return 0;
+    return Object.values(normalizeBusinessMistakeTags(drill.history?.[question.id]?.mistakeTags))
+      .reduce((sum, count) => sum + count, 0);
+  }
+
+  function buildPracticalQueueFrom(eligible, requestedSize, units, drill = state.practicalDrill) {
     const target = Math.min(requestedSize, eligible.length);
     const groups = new Map();
     eligible.forEach((question) => {
@@ -5571,23 +6085,27 @@
     groups.forEach((items) => {
       items.sort((left, right) =>
         practicalPriority(left, drill) - practicalPriority(right, drill) ||
+        practicalDiagnosticWeight(right, drill) - practicalDiagnosticWeight(left, drill) ||
         (drill.history[left.id]?.attempts || 0) - (drill.history[right.id]?.attempts || 0) ||
-        ((left.queueRank - rotation) % 4 + 4) % 4 -
-          (((right.queueRank - rotation) % 4 + 4) % 4) ||
+        (((Number(left.queueRank) || 0) - rotation) % 4 + 4) % 4 -
+          ((((Number(right.queueRank) || 0) - rotation) % 4 + 4) % 4) ||
         left.id.localeCompare(right.id)
       );
     });
-    const unitOrder = (PRACTICAL_VARIATIONS?.UNITS || [])
+    const unitOrder = (units || [])
       .filter((unit) => groups.has(unit.id))
       .sort((left, right) => {
         const leftBest = Math.min(...groups.get(left.id).map((question) => practicalPriority(question, drill)));
         const rightBest = Math.min(...groups.get(right.id).map((question) => practicalPriority(question, drill)));
+        const leftWeight = Math.max(...groups.get(left.id).map((question) => practicalDiagnosticWeight(question, drill)));
+        const rightWeight = Math.max(...groups.get(right.id).map((question) => practicalDiagnosticWeight(question, drill)));
         return leftBest - rightBest ||
+          rightWeight - leftWeight ||
           (((left.part * 31 + left.page - rotation * 7) % 997) + 997) % 997 -
             ((((right.part * 31 + right.page - rotation * 7) % 997) + 997) % 997);
       });
     const result = [];
-    for (const priority of [0, 1, 2]) {
+    for (const priority of [0, 1, 2, 3, 4, 5]) {
       const priorityGroups = new Map(unitOrder.map((unit) => [
         unit.id,
         (groups.get(unit.id) || []).filter((question) => practicalPriority(question, drill) === priority)
@@ -5604,6 +6122,23 @@
     return result;
   }
 
+  function buildPracticalQueue(scope, requestedSize) {
+    return buildPracticalQueueFrom(
+      practicalScopeQuestions(scope),
+      requestedSize,
+      PRACTICAL_VARIATIONS?.UNITS || []
+    );
+  }
+
+  function buildBusinessFullScoreQueue(requestedSize) {
+    return buildPracticalQueueFrom(
+      BUSINESS_FULLSCORE_QUESTIONS,
+      requestedSize,
+      BUSINESS_FULLSCORE_UNITS,
+      { ...state.practicalDrill, bankId: BUSINESS_FULLSCORE_BANK_ID }
+    );
+  }
+
   function buildPracticalUnitQueue(unitId) {
     const drill = state.practicalDrill;
     const rotation = drill.sessionsCompleted || 0;
@@ -5618,9 +6153,31 @@
       .map((question) => question.id);
   }
 
+  function buildBusinessFullScoreUnitQueue(unitId) {
+    const questions = fullScoreQuestionsForUnit(unitId);
+    const unit = BUSINESS_FULLSCORE_UNITS.find((item) => item.id === unitId);
+    return unit
+      ? buildPracticalQueueFrom(
+          questions,
+          questions.length,
+          [unit],
+          { ...state.practicalDrill, bankId: BUSINESS_FULLSCORE_BANK_ID }
+        )
+      : [];
+  }
+
   function currentPracticalQuestion() {
     const drill = state.practicalDrill;
-    return PRACTICAL_QUESTION_BY_ID[drill?.queue?.[drill.position]] || null;
+    return practicalQuestionFor(drill?.queue?.[drill.position], drill?.bankId);
+  }
+
+  function currentPresentedPracticalQuestion() {
+    const drill = state.practicalDrill;
+    return presentPracticalQuestion(
+      currentPracticalQuestion(),
+      drill?.bankId,
+      drill?.presentationKey
+    );
   }
 
   function practicalReasoningStep(index, label, text) {
@@ -5640,10 +6197,14 @@
   function renderPracticalDrill() {
     if (!elements.practicalDrillPanel || !PRACTICAL_QUESTION_IDS.length) return;
     const drill = state.practicalDrill;
-    const contacted = PRACTICAL_QUESTION_IDS.filter((id) => (drill.history[id]?.attempts || 0) > 0).length;
-    const grounded = PRACTICAL_QUESTION_IDS.filter((id) => drill.history[id]?.lastConfidence === "confident").length;
+    const activeQuestions = activePracticalQuestions(drill);
+    const activeIds = activeQuestions.map((question) => question.id);
+    const contacted = activeIds.filter((id) => (drill.history[id]?.attempts || 0) > 0).length;
+    const grounded = activeIds.filter((id) => drill.history[id]?.lastConfidence === "confident").length;
+    const bankLabel = drill.bankId === BUSINESS_FULLSCORE_BANK_ID ? "満点変形" : "実践";
+    const summaryPrefix = drill.bankId === BUSINESS_FULLSCORE_BANK_ID ? `${bankLabel} ` : "";
     elements.practicalDrillSummary.textContent =
-      `接触 ${contacted} / ${PRACTICAL_QUESTION_IDS.length}・根拠クリア ${grounded}・再出題 ${drill.retryIds.length}`;
+      `${summaryPrefix}接触 ${contacted} / ${activeIds.length}・根拠クリア ${grounded}・再出題 ${drill.retryIds.length}`;
     elements.practicalDrillScope.value = drill.scope;
     elements.practicalDrillSize.value = String(drill.sessionSize);
     renderPracticalDrillLauncher();
@@ -5651,7 +6212,7 @@
     const idle = drill.stage === "idle";
     const complete = drill.stage === "complete";
     const unitSession = drill.unitId
-      ? PRACTICAL_VARIATIONS?.UNITS?.find((unit) => unit.id === drill.unitId)
+      ? activePracticalUnits(drill).find((unit) => unit.id === drill.unitId)
       : null;
     if (!idle && elements.practicalDrillPanel) elements.practicalDrillPanel.open = true;
     elements.practicalDrillOverview.hidden = !idle;
@@ -5670,17 +6231,19 @@
       return;
     }
 
-    const question = currentPracticalQuestion();
+    const question = currentPresentedPracticalQuestion();
     if (!question) return;
     const attempt = drill.currentAttempt;
     const sessionRetryCount = drill.retryIds.filter((id) => drill.sessionIds.includes(id)).length;
     elements.practicalDrillStage.textContent = drill.stage === "retry"
       ? "迷い・誤答を再出題"
       : unitSession
-        ? `${unitSession.label}・実践4問`
-        : `${drill.sessionIds.length}問 実践セット`;
+        ? `${unitSession.label}・${drill.sessionIds.length}問`
+        : `${drill.sessionIds.length}問 ${bankLabel}セット`;
     elements.practicalDrillProgress.textContent = `${drill.position + 1} / ${drill.queue.length}`;
-    elements.practicalDrillUnit.textContent = `${question.unitLabel}・p.${question.unitPage}`;
+    elements.practicalDrillUnit.textContent = question.unitPage
+      ? `${question.unitLabel}・p.${question.unitPage}`
+      : question.unitLabel;
     elements.practicalDrillRetryStatus.textContent = `今回の再出題 ${sessionRetryCount}`;
     elements.practicalDrillPrompt.textContent = question.text;
     elements.practicalDrillChoices.replaceChildren();
@@ -5706,13 +6269,13 @@
       : `誤答。正解は「${question.choices[question.answer]}」。今回の再出題へ追加した。`;
     elements.practicalDrillReasoning.replaceChildren(
       practicalReasoningStep(1, "判断軸", question.explain),
-      practicalReasoningStep(2, "各肢への当てはめ", question.statementExplanations.join("\n")),
+      practicalReasoningStep(2, "各肢への当てはめ", (question.statementExplanations || []).join("\n") || question.explain),
       practicalReasoningStep(3, "間違いやすい境界", question.trap),
       practicalReasoningStep(4, "次に再現する一文", question.memoryRule)
     );
     const sourceLabels = String(question.sourceRef || "").split("／").filter(Boolean);
     elements.practicalDrillSources.replaceChildren(
-      ...question.sourceUrls.map((url, index) => {
+      ...(question.sourceUrls || []).map((url, index) => {
         const link = document.createElement("a");
         link.className = "official-source-link";
         link.href = url;
@@ -5737,10 +6300,276 @@
       : (sessionRetryCount ? "再出題へ進む" : "今回のセットを完了する");
   }
 
+  function businessFoundationChapters() {
+    return TEXTBOOK_CHAPTERS.filter((chapter) =>
+      BUSINESS_MASTERY.BUSINESS_UNIT_IDS.includes(chapter.id)
+    );
+  }
+
+  function businessFoundationSummary() {
+    const ids = businessFoundationChapters().flatMap((chapter) => chapter.ids || []);
+    return {
+      ids,
+      total: ids.length,
+      contacted: ids.filter(isContacted).length,
+      retained: ids.filter(isRetained).length
+    };
+  }
+
+  function businessTransferSummary(now = new Date()) {
+    return BUSINESS_MASTERY.summarizeOverall(
+      BUSINESS_FULLSCORE_UNITS,
+      BUSINESS_FULLSCORE_QUESTIONS,
+      state.practicalDrill?.history || {},
+      now
+    );
+  }
+
+  function officialEvidenceMatchesAnswerKey(item) {
+    const definition = officialExamDefinition(item?.examId);
+    if (!definition || Object.keys(item?.answers || {}).length !== 50) return false;
+    const scored = OFFICIAL_EXAM_DATA?.scoreAnswers(item.examId, item.answers);
+    return Boolean(
+      scored &&
+      Number.isInteger(item.score) && item.score === scored.score &&
+      Number.isInteger(item.rights) && item.rights === scored.sectionScores.rights &&
+      Number.isInteger(item.restrictions) && item.restrictions === scored.sectionScores.restrictions &&
+      Number.isInteger(item.business) && item.business === scored.sectionScores.business &&
+      Number.isInteger(item.taxOther) && item.taxOther === scored.sectionScores.taxOther
+    );
+  }
+
+  function businessOfficialProof() {
+    const history = state.officialExamHistory || [];
+    return BUSINESS_MASTERY.summarizeOfficialProof(history, {
+      lawBaseline: CURRENT_LAW_BASELINE,
+      qualifies: (item) =>
+        officialAttemptQualifies(item, history) && officialEvidenceMatchesAnswerKey(item)
+    });
+  }
+
+  function businessFullScoreSummary(now = new Date()) {
+    return BUSINESS_MASTERY.summarizeFullScore({
+      foundation: businessFoundationSummary(),
+      transfer: businessTransferSummary(now),
+      official: businessOfficialProof(),
+      bankReady: BUSINESS_FULLSCORE_BANK_READY,
+      transferTarget: BUSINESS_FULLSCORE_EXPECTED_QUESTIONS
+    });
+  }
+
+  function businessFullScoreOfficialUnlocked() {
+    const summary = businessFullScoreSummary();
+    return summary.foundation.ready && summary.transfer?.questions?.untouched === 0;
+  }
+
+  function businessNextDueKey() {
+    const today = todayKey();
+    return BUSINESS_FULLSCORE_QUESTION_IDS
+      .map((id) => BUSINESS_MASTERY.normalizeMasteryHistory(state.practicalDrill?.history?.[id]))
+      .flatMap((item) => [item.masteryDueKey, ...item.confidentDayKeys])
+      .filter((key) => key && key > today)
+      .sort()[0] || "";
+  }
+
+  function businessTagLeaders() {
+    const totals = {};
+    const recent = {};
+    BUSINESS_FULLSCORE_QUESTION_IDS.forEach((id) => {
+      const item = state.practicalDrill?.history?.[id] || {};
+      Object.entries(normalizeBusinessMistakeTags(item.mistakeTags)).forEach(([tag, count]) => {
+        totals[tag] = (totals[tag] || 0) + count;
+      });
+    });
+    BUSINESS_FULLSCORE_QUESTION_IDS
+      .map((id) => state.practicalDrill?.history?.[id] || {})
+      .filter((item) => item.lastMistakeTags?.length && Number.isFinite(Date.parse(item.lastAnsweredAt)))
+      .sort((left, right) => Date.parse(right.lastAnsweredAt) - Date.parse(left.lastAnsweredAt))
+      .slice(0, 10)
+      .forEach((item) => normalizeBusinessTagList(item.lastMistakeTags).forEach((tag) => {
+        recent[tag] = (recent[tag] || 0) + 1;
+      }));
+    const top = (counts) => Object.entries(counts)
+      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
+      .slice(0, 3)
+      .map(([tag, count]) => `${BUSINESS_DIAGNOSTIC_LABELS[tag]} ${count}`);
+    return { recent: top(recent), cumulative: top(totals) };
+  }
+
+  function businessPrimaryAction(summary = businessFullScoreSummary()) {
+    const active = activeLearningSession();
+    if (active) return { kind: "resume", label: `${active.label}を再開` };
+    if (!BUSINESS_FULLSCORE_BANK_READY) return { kind: "unavailable", label: `変形${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS}問を読み込めません` };
+    if (!summary.foundation.ready) return { kind: "foundation", label: "基礎44問の未定着を回収" };
+    const questions = summary.transfer.questions;
+    if (questions.retry + questions.due > 0) {
+      return { kind: "practice", states: new Set(["retry", "due"]), label: `再挑戦・期限 ${Math.min(10, questions.retry + questions.due)}問` };
+    }
+    if (questions.untouched > 0) {
+      return { kind: "practice", states: new Set(["untouched"]), label: `未接触の変形 ${Math.min(10, questions.untouched)}問` };
+    }
+    if (!summary.official.ready || summary.official.currentMiss) {
+      return { kind: "official", label: summary.official.currentMiss ? "公式50問で再調整" : "未接触の公式50問へ" };
+    }
+    const dueKey = businessNextDueKey();
+    if (!summary.transferReady && dueKey) return { kind: "wait", label: `次回復習 ${dueKey}` };
+    if (!summary.transferReady && questions.learning > 0) {
+      return { kind: "practice", states: new Set(["learning"]), label: `根拠未確定 ${Math.min(10, questions.learning)}問` };
+    }
+    return { kind: "ready", label: "満点圏の証拠を確認" };
+  }
+
+  function renderBusinessMastery() {
+    if (!elements.businessMasteryPanel || !BUSINESS_MASTERY) return;
+    const summary = businessFullScoreSummary();
+    const actionState = businessPrimaryAction(summary);
+    elements.businessMasteryPanel.dataset.masteryStatus = summary.status;
+    elements.businessMasteryPanel.dataset.transferReady = String(summary.transferReady);
+    elements.businessMasteryPanel.dataset.durableUnits = String(summary.transfer?.durableUnits || 0);
+    const statusLabels = {
+      "bank-unavailable": `変形${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS}問の読込エラー`,
+      foundation: "基礎再現を回収中",
+      transfer: summary.transfer?.questions?.untouched ? `変形${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS}問を初回走査中` : "長期定着を積上げ中",
+      exam: "公式初見20/20を測定中",
+      recovery: "公式記録を再調整中",
+      ready: "満点圏（アプリ内判定）"
+    };
+    elements.businessMasteryStatus.textContent = statusLabels[summary.status] || "測定中";
+    elements.businessMasteryStatus.dataset.status = summary.status;
+    elements.businessFoundationGate.textContent = `${summary.foundation.retained} / 44`;
+    elements.businessTransferGate.textContent = `${summary.transfer?.questions?.durable || 0} / ${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS}`;
+    elements.businessOfficialGate.textContent = summary.official.currentMiss
+      ? `${summary.official.perfect} / 3・再調整`
+      : `${summary.official.perfect} / 3`;
+    const transfer = summary.transfer?.questions || {};
+    elements.businessMasteryMetrics.textContent =
+      `基礎 接触${summary.foundation.contacted}/44・定着${summary.foundation.retained}/44 / ` +
+      `変形 再挑戦・期限${(transfer.retry || 0) + (transfer.due || 0)}・未接触${transfer.untouched || 0}・長期定着${transfer.durable || 0}/${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS} / ` +
+      `公式 初見満点${summary.official.perfect}/3`;
+    if (elements.businessMasteryWeakness) {
+      const leaders = businessTagLeaders();
+      elements.businessMasteryWeakness.textContent = leaders.recent.length || leaders.cumulative.length
+        ? `弱点上位　直近: ${leaders.recent.join("・") || "なし"} / 累積: ${leaders.cumulative.join("・") || "なし"}`
+        : "弱点上位　まだ誤答・不安回答の記録はありません。";
+    }
+    elements.businessMasteryPrimary.textContent = actionState.label;
+    elements.businessMasteryPrimary.disabled = actionState.kind === "unavailable" || actionState.kind === "wait";
+    elements.businessMasteryPrimary.dataset.action = actionState.kind;
+    elements.businessMasteryFull.disabled = Boolean(activeLearningSession()) || !BUSINESS_FULLSCORE_BANK_READY;
+    elements.businessMasteryGrid.replaceChildren(...(summary.transfer?.units || []).map((item) => {
+      const base = businessFoundationChapters().find((chapter) => chapter.id === item.unit.id);
+      const baseIds = base?.ids || [];
+      const baseContacted = baseIds.filter(isContacted).length;
+      const baseRetained = baseIds.filter(isRetained).length;
+      const tile = document.createElement("article");
+      tile.className = "business-mastery-tile";
+      const topicState = item.retry ? "retry" : item.due ? "due" : item.untouched ? "untouched" :
+        item.durable === item.total ? "durable" : item.retained ? "retained" : "learning";
+      tile.dataset.masteryState = topicState;
+      const title = document.createElement("strong");
+      title.textContent = item.unit.label;
+      const metrics = document.createElement("small");
+      metrics.textContent = `基礎接触 ${baseContacted}/${baseIds.length}・定着 ${baseRetained}/${baseIds.length}・変形接触 ${item.total - item.untouched}/${item.total}・長期定着 ${item.durable}/${item.total}`;
+      const stateLabel = document.createElement("span");
+      stateLabel.textContent = ({ retry: "再挑戦", due: "期限到来", untouched: "未接触", durable: "長期定着", retained: "定着中", learning: "学習中" })[topicState];
+      const action = document.createElement("button");
+      action.type = "button";
+      action.dataset.businessMasteryUnit = item.unit.id;
+      action.disabled = Boolean(activeLearningSession()) || !BUSINESS_FULLSCORE_BANK_READY;
+      action.textContent = action.disabled ? "進行中セットを優先" : baseRetained < baseIds.length ? "基礎を回収" : `変形${item.total}問へ`;
+      tile.append(title, metrics, stateLabel, action);
+      return tile;
+    }));
+  }
+
+  function startBusinessFoundationUnit(unitId = "") {
+    const chapters = businessFoundationChapters();
+    const chapter = chapters.find((item) => item.id === unitId) ||
+      chapters.find((item) => item.ids.some((id) => !isRetained(id))) || chapters[0];
+    if (!chapter) return;
+    prepareFoundationUnitPlan(chapter);
+    const index = CHAPTERS.findIndex((item) => item.id === chapter.id);
+    if (index >= 0) selectChapter(index);
+    saveState();
+    render();
+  }
+
+  function startBusinessFullScoreSession({ size = 10, unitId = "", states = null, fullScan = false } = {}) {
+    if (resumeActiveLearningSession() || !BUSINESS_FULLSCORE_BANK_READY) return;
+    const eligible = unitId ? fullScoreQuestionsForUnit(unitId) : BUSINESS_FULLSCORE_QUESTIONS;
+    const filtered = states instanceof Set
+      ? eligible.filter((question) => states.has(BUSINESS_MASTERY.stateFor(state.practicalDrill?.history?.[question.id] || {}, new Date())))
+      : eligible;
+    const requestedSize = fullScan ? filtered.length : Math.min(Math.max(1, Number(size) || 10), filtered.length);
+    const units = unitId
+      ? BUSINESS_FULLSCORE_UNITS.filter((unit) => unit.id === unitId)
+      : BUSINESS_FULLSCORE_UNITS;
+    const queue = buildPracticalQueueFrom(
+      filtered,
+      requestedSize,
+      units,
+      { ...state.practicalDrill, bankId: BUSINESS_FULLSCORE_BANK_ID }
+    );
+    if (!queue.length) return;
+    const presentationKey = `${todayKey()}:bank-${BUSINESS_FULLSCORE_BANK.VERSION}`;
+    const retryIds = BUSINESS_FULLSCORE_QUESTION_IDS.filter((id) =>
+      ["wrong", "uncertain"].includes(state.practicalDrill?.history?.[id]?.lastConfidence)
+    );
+    state.practicalDrill = {
+      ...state.practicalDrill,
+      version: PRACTICAL_VARIATIONS?.VERSION || 1,
+      bankId: BUSINESS_FULLSCORE_BANK_ID,
+      bankVersion: BUSINESS_FULLSCORE_BANK.VERSION,
+      presentationKey,
+      stage: "active",
+      scope: "business",
+      unitId,
+      sessionSize: queue.length,
+      sessionIds: [...queue],
+      queue: [...queue],
+      position: 0,
+      currentAttempt: null,
+      retryIds,
+      sessionStartedAt: new Date().toISOString(),
+      completedAt: ""
+    };
+    if (elements.practicalDrillPanel) elements.practicalDrillPanel.open = true;
+    saveState();
+    renderPracticalDrill();
+    renderBusinessMastery();
+    renderPassPlan();
+    window.requestAnimationFrame(() =>
+      elements.practicalDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
+    );
+  }
+
+  function startBusinessMasterySession() {
+    const summary = businessFullScoreSummary();
+    const action = businessPrimaryAction(summary);
+    if (action.kind === "resume") {
+      resumeActiveLearningSession();
+    } else if (action.kind === "foundation") {
+      startBusinessFoundationUnit();
+    } else if (action.kind === "practice") {
+      startBusinessFullScoreSession({ size: 10, states: action.states });
+    } else if (action.kind === "official") {
+      if (elements.passPlanPanel) elements.passPlanPanel.open = true;
+      if (elements.officialExamAttemptType) elements.officialExamAttemptType.value = "initial";
+      renderOfficialExamYearOptions();
+      startOfficialExam();
+    } else {
+      elements.businessMasteryPanel?.scrollIntoView({ block: "start", behavior: "smooth" });
+    }
+  }
+
   function startPracticalDrillWith(scope, sessionSize) {
+    if (resumeActiveLearningSession()) return;
     const queue = buildPracticalQueue(scope, sessionSize);
     state.practicalDrill = {
       ...state.practicalDrill,
+      bankId: LEGACY_PRACTICAL_BANK_ID,
+      bankVersion: PRACTICAL_VARIATIONS?.VERSION || 1,
+      presentationKey: "",
       stage: "active",
       scope,
       unitId: "",
@@ -5749,12 +6578,14 @@
       queue: [...queue],
       position: 0,
       currentAttempt: null,
+      retryIds: practicalRetryIdsForBank(LEGACY_PRACTICAL_BANK_ID),
       sessionStartedAt: new Date().toISOString(),
       completedAt: ""
     };
     if (elements.practicalDrillPanel) elements.practicalDrillPanel.open = true;
     saveState();
     renderPracticalDrill();
+    renderBusinessMastery();
     renderPassPlan();
     window.requestAnimationFrame(() =>
       elements.practicalDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
@@ -5782,6 +6613,7 @@
   }
 
   function startPracticalDrillForUnit(unitId) {
+    if (resumeActiveLearningSession()) return;
     const chapter = TEXTBOOK_CHAPTERS.find((item) => item.id === unitId);
     const queue = buildPracticalUnitQueue(unitId);
     if (!chapter || queue.length !== 4) return;
@@ -5796,6 +6628,9 @@
     const scope = PRACTICAL_QUESTION_BY_ID[queue[0]]?.scopeId || "all";
     state.practicalDrill = {
       ...state.practicalDrill,
+      bankId: LEGACY_PRACTICAL_BANK_ID,
+      bankVersion: PRACTICAL_VARIATIONS?.VERSION || 1,
+      presentationKey: "",
       stage: "active",
       scope,
       unitId,
@@ -5804,12 +6639,14 @@
       queue: [...queue],
       position: 0,
       currentAttempt: null,
+      retryIds: practicalRetryIdsForBank(LEGACY_PRACTICAL_BANK_ID),
       sessionStartedAt: new Date().toISOString(),
       completedAt: ""
     };
     if (elements.practicalDrillPanel) elements.practicalDrillPanel.open = true;
     saveState();
     renderPracticalDrill();
+    renderBusinessMastery();
     renderPassPlan();
     window.requestAnimationFrame(() =>
       elements.practicalDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
@@ -5817,6 +6654,17 @@
   }
 
   function restartPracticalDrill() {
+    if (state.practicalDrill?.bankId === BUSINESS_FULLSCORE_BANK_ID) {
+      if (state.practicalDrill.unitId) {
+        startBusinessFullScoreSession({ unitId: state.practicalDrill.unitId, fullScan: true });
+      } else {
+        startBusinessFullScoreSession({
+          size: Math.min(BUSINESS_FULLSCORE_EXPECTED_QUESTIONS, Math.max(1, state.practicalDrill.sessionSize || 10)),
+          fullScan: state.practicalDrill.sessionSize >= BUSINESS_FULLSCORE_EXPECTED_QUESTIONS
+        });
+      }
+      return;
+    }
     if (state.practicalDrill?.unitId) {
       startPracticalDrillForUnit(state.practicalDrill.unitId);
       return;
@@ -5826,7 +6674,7 @@
 
   function answerPracticalDrill(selected) {
     const drill = state.practicalDrill;
-    const question = currentPracticalQuestion();
+    const question = currentPresentedPracticalQuestion();
     if (!question || drill.currentAttempt || !Number.isInteger(selected) || selected < 0 || selected > 3) return;
     const correct = selected === question.answer;
     const answeredAt = new Date().toISOString();
@@ -5852,11 +6700,16 @@
       id: question.id,
       selected,
       correct,
-      confidence: correct ? "" : "wrong"
+      confidence: correct ? "" : "wrong",
+      diagnosticRecorded: !correct && recordBusinessDiagnostic(
+        drill.history[question.id],
+        diagnosticTagsForPracticalSelection(question, selected)
+      )
     };
     if (!correct) drill.retryIds = addPracticalId(drill.retryIds, question.id);
     saveState();
     renderPracticalDrill();
+    renderBusinessMastery();
     renderPassPlan();
   }
 
@@ -5874,17 +6727,30 @@
       history.uncertain = (history.uncertain || 0) + (confidence === "uncertain" ? 1 : 0);
       history.lastConfidence = confidence;
     }
+    if (confidence === "uncertain" && !attempt.diagnosticRecorded) {
+      attempt.diagnosticRecorded = recordBusinessDiagnostic(
+        history,
+        diagnosticTagsForPracticalSelection(currentPresentedPracticalQuestion(), attempt.selected, true)
+      );
+    }
     drill.retryIds = confidence === "uncertain"
       ? addPracticalId(drill.retryIds, question.id)
       : removePracticalId(drill.retryIds, question.id);
     saveState();
     renderPracticalDrill();
+    renderBusinessMastery();
     renderPassPlan();
   }
 
   function advancePracticalDrill() {
     const drill = state.practicalDrill;
     if (!drill.currentAttempt || (drill.currentAttempt.correct && !drill.currentAttempt.confidence)) return;
+    const answeredQuestion = currentPracticalQuestion();
+    const history = answeredQuestion && drill.history[answeredQuestion.id];
+    if (answeredQuestion?.scopeId === "business" && history && !drill.currentAttempt.masteryRecorded) {
+      Object.assign(history, BUSINESS_MASTERY.recordOutcome(history, { correct: drill.currentAttempt.correct, confidence: drill.currentAttempt.confidence, answeredAt: history.lastAnsweredAt }));
+      drill.currentAttempt.masteryRecorded = true;
+    }
     if (drill.position + 1 < drill.queue.length) {
       drill.position += 1;
       drill.currentAttempt = null;
@@ -5906,6 +6772,7 @@
     }
     saveState();
     renderPracticalDrill();
+    renderBusinessMastery();
     renderPassPlan();
     window.requestAnimationFrame(() =>
       elements.practicalDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
@@ -5926,6 +6793,7 @@
     };
     saveState();
     renderPracticalDrill();
+    renderBusinessMastery();
     renderPassPlan();
   }
 
@@ -5951,6 +6819,7 @@
     resetQuizCardView();
     renderCalculationDrill();
     renderPracticalDrill();
+    renderBusinessMastery();
     const question = currentQuestion();
     const answered = state.answered;
     const isCorrect = answered?.correct === true;
@@ -7565,6 +8434,11 @@
   }
 
   function startMock(formId) {
+    const active = activeLearningSession();
+    if (active && active.kind !== "mock") {
+      resumeActiveLearningSession();
+      return;
+    }
     if (!foundationCoverageComplete()) {
       const progress = foundationProgress();
       setTodayCommandStatus(
@@ -8488,7 +9362,7 @@
         <section class="mock-calibration">
           <strong>初見実力は公式過去問で確認</strong>
           <p>フォームA・Bはコア100の再構成。得点は定着確認に使い、初見の合否判定には使わない。過年度問題は法改正で現在法と異なる場合がある。</p>
-          <a href="${OFFICIAL_PAST_EXAMS_URL}" target="_blank" rel="noopener noreferrer">RETIO公式過去問を開く</a>
+          <button id="mockOfficialExamButton" class="ghost-button" type="button">露出記録つき公式50問へ</button>
         </section>
         <section class="mock-wrong-review">
           <h3>誤答レビュー</h3>
@@ -8518,6 +9392,15 @@
     };
     $("#mockRetryButton")?.addEventListener("click", () => reloadIntoMock(form.id));
     $("#mockOtherButton")?.addEventListener("click", () => reloadIntoMock(otherFormId));
+    $("#mockOfficialExamButton")?.addEventListener("click", () => {
+      state.runMode = "quest";
+      state.chapterModeId = "";
+      state.finished = false;
+      state.answered = null;
+      setFirstPassUrl(false);
+      saveState();
+      window.location.reload();
+    });
     $("#mockDailyButton")?.addEventListener("click", () => {
       state.runMode = "quest";
       state.chapterModeId = "";
@@ -8731,8 +9614,13 @@
     });
     elements.officialDrillOpenButton?.addEventListener("click", openOfficialDrill);
     elements.officialDrillStartButton?.addEventListener("click", startOfficialDrill);
-    elements.officialDrillQuestionLink?.addEventListener("click", () => {
-      if (!missionForDate().officialDrill?.startedAt) startOfficialDrill();
+    elements.officialDrillQuestionLink?.addEventListener("click", (event) => {
+      event.preventDefault();
+      if (!startOfficialDrill()) return;
+      const definition = officialDrillDefinitionFor(missionForDate().officialDrill);
+      if (definition?.questionUrl) {
+        window.open(definition.questionUrl, "_blank", "noopener,noreferrer");
+      }
     });
     elements.officialDrillForm?.addEventListener("change", () => saveOfficialDrillDraft());
     elements.officialDrillForm?.addEventListener("submit", submitOfficialDrill);
@@ -8791,6 +9679,26 @@
       const button = event.target.closest("[data-practical-confidence]");
       if (button) setPracticalConfidence(button.dataset.practicalConfidence);
     });
+    elements.businessMasteryPrimary?.addEventListener("click", startBusinessMasterySession);
+    elements.businessMasteryFull?.addEventListener("click", () =>
+      startBusinessFullScoreSession({ size: BUSINESS_FULLSCORE_EXPECTED_QUESTIONS, fullScan: true })
+    );
+    elements.businessMasteryGrid?.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-business-mastery-unit]");
+      if (!button) return;
+      const unitId = button.dataset.businessMasteryUnit;
+      if (activeLearningSession()) {
+        resumeActiveLearningSession();
+        return;
+      }
+      const chapter = businessFoundationChapters().find((item) => item.id === unitId);
+      if (!chapter) return;
+      if (chapter.ids.some((id) => !isRetained(id))) {
+        startBusinessFoundationUnit(unitId);
+      } else {
+        startBusinessFullScoreSession({ unitId, fullScan: true });
+      }
+    });
     elements.missionMinutesButton?.addEventListener("click", saveMissionMinutes);
     elements.missionMinutesInput?.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
@@ -8806,11 +9714,20 @@
       renderOfficialExamYearOptions();
       renderOfficialExamSession();
     });
+    elements.officialExamQuestionLink?.addEventListener("click", (event) => {
+      if (state.officialExamSession) return;
+      event.preventDefault();
+      setOfficialExamStatus(
+        "初見証跡を守るため、先に120分計測を開始してください。開始時に露出記録を保存してからPDFを開けます。",
+        true
+      );
+    });
     elements.officialExamStartButton?.addEventListener("click", startOfficialExam);
     elements.officialExamSessionForm?.addEventListener("change", () => {
       saveOfficialExamDraft();
     });
     elements.officialExamSessionForm?.addEventListener("submit", submitOfficialExam);
+    elements.officialExamAbandonButton?.addEventListener("click", abandonOfficialExam);
     elements.officialExamPrevButton?.addEventListener("click", () => {
       moveOfficialExam((state.officialExamSession?.position || 0) - 1);
     });

@@ -10,6 +10,9 @@ const required = [
   "index.html",
   "styles.css",
   "app.js",
+  "business-mastery.js",
+  "business-fullscore-supplement.js",
+  "business-fullscore-bank.js",
   "practical-question-bank.js",
   "calculation-drill.js",
   "official-exam-data.js",
@@ -43,6 +46,10 @@ const required = [
   "Audit-TakkenChapterModeUi.cjs",
   "Audit-TakkenPassPlanUi.cjs",
   "Audit-TakkenPassLoopV12Ui.cjs",
+  "Audit-TakkenBusinessMastery.js",
+  "Audit-TakkenBusinessMasteryUi.cjs",
+  "Audit-TakkenBusinessFullScoreSupplement.js",
+  "Audit-TakkenBusinessFullScoreBank.js",
   "scripts/verify-deployed-page.mjs",
   "README.md",
 ];
@@ -81,7 +88,9 @@ assert.match(app, /function foundationLearningRoute/);
 assert.match(app, /function renderFoundationRoutePanel/);
 assert.match(app, /function startPracticalDrillForUnit/);
 assert.match(app, /const PRACTICAL_SESSION_SIZES = Object\.freeze\(\[4, 10, 20, 45\]\)/);
-assert.match(app, /const STATE_SCHEMA_VERSION = 8/);
+assert.match(app, /const STATE_SCHEMA_VERSION = 9/);
+assert.match(app, /const BUSINESS_FULLSCORE_EXPECTED_QUESTIONS = 132/);
+assert.match(app, /const OFFICIAL_EXAM_EVIDENCE_VERSION = 2/);
 assert.match(app, /const OFFICIAL_DAILY_DRILL_DEFINITIONS/);
 assert.match(app, /2025-balanced-c-v1/);
 assert.match(app, /const OFFICIAL_DRILL_EVIDENCE_VERSION = 3/);
@@ -121,7 +130,7 @@ assert.match(index, /id="officialExamSessionForm"/);
 assert.match(index, /id="officialExamManualForm"/);
 assert.match(index, /id="officialExamLawChecked"/);
 assert.match(index, /id="officialExamHistory"/);
-assert.match(index, /RETIO公式過去問を開く/);
+assert.doesNotMatch(index, /href="https:\/\/www\.retio\.or\.jp\/exam\/past_ques_ans\/other\//);
 assert.match(index, /id="officialDrillOpenButton"/);
 assert.match(index, /id="officialDrillQuestionLink"/);
 assert.match(index, /id="officialDrillAnswerGrid"/);
@@ -142,17 +151,24 @@ assert.match(index, /分野別の振り返り/);
 assert.match(index, /id="todayCommandPracticalButton"/);
 assert.match(index, /id="practicalDrillChangeButton"/);
 assert.match(index, /id="practicalDrillExitButton"/);
+assert.match(index, /id="businessMasteryPanel"/);
+assert.match(index, /id="businessMasteryPrimary"/);
+assert.match(index, /id="businessMasteryFull"/);
+assert.match(index, /満点圏（アプリ内判定）/);
 assert.match(index, /公式20問シートを開く/);
 assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 第2分冊・権利関係を固める/);
 assert.match(index, /③ 法令・税その他へ進む/);
 assert.match(index, /④ 全分野を混ぜる/);
-assert.match(index, /styles\.css\?v=20260811-study-route-audit-v22-2/);
-assert.match(index, /practical-question-bank\.js\?v=20260811-study-route-audit-v22-2/);
-assert.match(index, /calculation-drill\.js\?v=20260811-study-route-audit-v22-2/);
-assert.match(index, /app\.js\?v=20260811-study-route-audit-v22-2/);
-assert.match(index, /save-store\.js\?v=20260811-study-route-audit-v22-2/);
-assert.match(index, /official-exam-data\.js\?v=20260811-study-route-audit-v22-2/);
+assert.match(index, /styles\.css\?v=20260814-business-fullscore-v25-2/);
+assert.match(index, /business-mastery\.js\?v=20260814-business-fullscore-v25-2/);
+assert.match(index, /business-fullscore-supplement\.js\?v=20260814-business-fullscore-v25-2/);
+assert.match(index, /business-fullscore-bank\.js\?v=20260814-business-fullscore-v25-2/);
+assert.match(index, /practical-question-bank\.js\?v=20260814-business-fullscore-v25-2/);
+assert.match(index, /calculation-drill\.js\?v=20260814-business-fullscore-v25-2/);
+assert.match(index, /app\.js\?v=20260814-business-fullscore-v25-2/);
+assert.match(index, /save-store\.js\?v=20260814-business-fullscore-v25-2/);
+assert.match(index, /official-exam-data\.js\?v=20260814-business-fullscore-v25-2/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
 assert.doesNotMatch(index, /understanding-system\.js/);
@@ -196,16 +212,24 @@ assert.match(pagesWorkflow, /node Audit-TakkenUnderstandingDepth\.js/);
 assert.match(pagesWorkflow, /node Audit-Takken2026Coverage\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenPracticalVariations\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenLearningArchitecture\.js/);
+assert.match(pagesWorkflow, /node Audit-TakkenBusinessFullScoreSupplement\.js/);
+assert.match(pagesWorkflow, /node Audit-TakkenBusinessFullScoreBank\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
-assert.match(pagesWorkflow, /20260811-study-route-audit-v22-2/);
+assert.match(pagesWorkflow, /20260814-business-fullscore-v25-2/);
 assert.doesNotMatch(pagesWorkflow, /cp [^\n]*understanding-system\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*calculation-drill\.js[^\n]*_site\//);
+assert.match(pagesWorkflow, /cp [^\n]*business-mastery\.js[^\n]*_site\//);
+assert.match(pagesWorkflow, /cp [^\n]*business-fullscore-supplement\.js[^\n]*_site\//);
+assert.match(pagesWorkflow, /cp [^\n]*business-fullscore-bank\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*practical-question-bank\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*official-exam-data\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*save-store\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*save-transfer\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*exam-blueprint\.js[^\n]*_site\//);
 assert.match(ciWorkflow, /node Audit-TakkenUnderstandingDepth\.js/);
+assert.match(ciWorkflow, /node Audit-TakkenBusinessMastery\.js/);
+assert.match(ciWorkflow, /node Audit-TakkenBusinessFullScoreSupplement\.js/);
+assert.match(ciWorkflow, /node Audit-TakkenBusinessFullScoreBank\.js/);
 assert.match(ciWorkflow, /node Audit-Takken2026Coverage\.js/);
 assert.doesNotMatch(ciWorkflow, /node Audit-TakkenRuleChoiceAmbiguity\.js/);
 

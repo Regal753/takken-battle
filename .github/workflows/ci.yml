@@ -33,4 +33,7 @@ jobs:
       - run: node Audit-TakkenSaveTransfer.js
       - run: node Audit-TakkenCalculationDrill.js
       - run: node Audit-TakkenLearningArchitecture.js
+      - run: node Audit-TakkenBusinessFullScoreSupplement.js
+      - run: node Audit-TakkenBusinessFullScoreBank.js
+      - run: node Audit-TakkenBusinessMastery.js
       - run: node scripts/validate-public.mjs

@@ -5614,6 +5614,16 @@ button.mission-step:disabled {
   display: none;
 }
 
+.official-exam-session-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+}
+
+.official-exam-session-actions > button {
+  min-height: 44px;
+}
+
 .official-exam-question-card {
   max-width: 640px;
   width: 100%;
@@ -6765,6 +6775,10 @@ button.mission-step:disabled {
   .official-exam-form > button {
     grid-column: 1 / -1;
   }
+
+  .official-exam-session-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .practical-drill-panel {
@@ -7680,3 +7694,39 @@ button.mission-step:disabled {
     font-size: 14px;
   }
 }
+/* 宅建業法・44問の間隔反復。狭幅でもカードを一列に保つ。 */
+.business-mastery-panel { margin: 16px 0; padding: 18px; border: 1px solid #53786e; border-radius: 16px; background: linear-gradient(135deg, #effaf4, #fff); }
+.business-mastery-heading { display: grid; gap: 5px; }
+.business-mastery-heading span, .business-mastery-heading p, .business-mastery-law, .business-mastery-tile small { color: #365c53; }
+.business-mastery-heading strong { color: #143d34; font-size: clamp(1.15rem, 4vw, 1.6rem); }
+.business-mastery-heading p { margin: 0; }
+.business-mastery-status { display: inline-flex; width: fit-content; max-width: 100%; margin: 13px 0 10px; padding: 7px 10px; border: 1px solid #5d8b7e; border-radius: 999px; color: #173d35; background: #e8f6ef; overflow-wrap: anywhere; }
+.business-mastery-status[data-status="ready"] { border-color: #ad7b0a; color: #594000; background: #fff4ca; }
+.business-mastery-status[data-status="recovery"], .business-mastery-status[data-status="bank-unavailable"] { border-color: #b75b48; color: #7e2e20; background: #fff0ec; }
+.business-fullscore-gates { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; }
+.business-fullscore-gates article { display: grid; min-width: 0; gap: 4px; padding: 11px; border: 1px solid #c1d8cf; border-radius: 11px; background: rgba(255, 255, 255, .82); }
+.business-fullscore-gates span, .business-fullscore-gates small { color: #365c53; overflow-wrap: anywhere; }
+.business-fullscore-gates strong { color: #143d34; font-size: 1.12rem; overflow-wrap: anywhere; }
+.business-mastery-metrics { margin: 14px 0; padding: 10px 12px; border-radius: 10px; color: #173d35; background: #dcefe7; font-weight: 800; line-height: 1.55; }
+.business-mastery-weakness { margin: -5px 0 10px; color: #274f46; font-size: .9rem; line-height: 1.55; overflow-wrap: anywhere; }
+.business-mastery-disclaimer { margin: 0 0 13px; color: #594000; font-size: .88rem; line-height: 1.55; }
+.business-mastery-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.business-mastery-actions button, .business-mastery-tile button { min-height: 44px; }
+.business-mastery-actions .today-command-secondary { border-color: #c9911c; color: #5f4200; background: #fff8e3; }
+.business-mastery-actions .today-command-secondary:disabled { border-color: #b8c6c1; color: #5d6b67; background: #e8eeeb; opacity: 1; }
+.business-mastery-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); gap: 10px; }
+.business-mastery-tile { display: grid; gap: 7px; min-width: 0; padding: 12px; border: 1px solid #c1d8cf; border-radius: 12px; background: #fff; }
+.business-mastery-tile > strong { color: #173d35; line-height: 1.45; }
+.business-mastery-tile span { font-size: .9rem; font-weight: 800; color: #286354; }
+.business-mastery-tile[data-mastery-state="retry"] span { color: #a13f2c; }
+.business-mastery-tile[data-mastery-state="due"] span { color: #8a5a00; }
+.business-mastery-tile[data-mastery-state="durable"] span { color: #176141; }
+.business-mastery-tile button { width: 100%; border: 1px solid #5b8c7d; color: #173d35; background: #edf8f3; font-weight: 800; }
+.business-mastery-tile button:hover, .business-mastery-tile button:focus-visible { border-color: #2d6a5a; background: #dcefe7; }
+.business-mastery-tile button:disabled { border-color: #b8c6c1; color: #586964; background: #e8eeeb; opacity: 1; }
+.business-mastery-law { margin: 13px 0 0; font-size: .9rem; }
+.business-mastery-law a { color: #2f54a3; font-weight: 800; }
+.official-exam-access-note { display: block; color: var(--muted); font-size: .9rem; line-height: 1.55; }
+#officialExamQuestionLink.is-disabled { border-color: #9aa9a4; color: #5d6b67; background: #e8eeeb; cursor: not-allowed; }
+@media (max-width: 520px) { .business-fullscore-gates { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 360px) { .business-mastery-panel { padding: 12px; } .business-mastery-grid { grid-template-columns: minmax(0, 1fr); } .business-mastery-actions { display: grid; grid-template-columns: minmax(0, 1fr); } }
