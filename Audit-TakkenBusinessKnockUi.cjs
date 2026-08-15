@@ -240,6 +240,19 @@ async function horizontalOverflow(page) {
     const random100 = await startKnock(page, { mode: "all-random", size: 100 });
     assert.equal(random100.practicalDrill.queue.length, 100);
     assert.equal(new Set(random100.practicalDrill.queue).size, 100);
+    const plannedRandom100 = await page.evaluate(({ presentationKey }) => {
+      const match = String(presentationKey || "").match(/:knock:(.+):[a-d]$/);
+      if (!match) return [];
+      return [...window.TAKKEN_BUSINESS_KNOCK.plan({
+        questions: window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS,
+        history: {},
+        mode: "all-random",
+        size: 100,
+        now: new Date(),
+        seed: match[1]
+      }).ids];
+    }, { presentationKey: random100.practicalDrill.presentationKey });
+    assert.deepEqual(random100.practicalDrill.queue, plannedRandom100, "the runner must preserve the planner's seeded random order");
     const stableSession = {
       queue: [...random100.practicalDrill.queue],
       key: random100.practicalDrill.presentationKey,
@@ -332,7 +345,7 @@ async function horizontalOverflow(page) {
     await fallbackPage.close();
 
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: "ok", plannerSizes: [10, 20, 50, 100], unitFiltered: true, weakDuePrioritized: true, random100Unique: true, reloadPreserved: true, retryLoop: true, sameDayLevelCapped: true, coreFallbackWithoutKnock: true, overflow390: 0, overflow320: 0, errors: 0 }));
+    console.log(JSON.stringify({ status: "ok", plannerSizes: [10, 20, 50, 100], unitFiltered: true, weakDuePrioritized: true, random100Unique: true, randomOrderPreserved: true, reloadPreserved: true, retryLoop: true, sameDayLevelCapped: true, coreFallbackWithoutKnock: true, overflow390: 0, overflow320: 0, errors: 0 }));
   } finally {
     await browser.close();
     await local.close();

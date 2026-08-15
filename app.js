@@ -7217,9 +7217,16 @@
     presentationKey = ""
   } = {}) {
     if (resumeActiveLearningSession() || !BUSINESS_FULLSCORE_BANK_READY) return;
-    const requestedIds = Array.isArray(questionIds) ? new Set(questionIds) : null;
-    const eligible = requestedIds
-      ? BUSINESS_FULLSCORE_QUESTIONS.filter((question) => requestedIds.has(question.id))
+    const sessionPlanMode = planMode === "knock" ? "knock" : "mastery";
+    const requestedOrder = Array.isArray(questionIds)
+      ? [...new Set(questionIds.map((id) => String(id || "").trim()).filter(Boolean))]
+      : null;
+    const requestedIds = requestedOrder ? new Set(requestedOrder) : null;
+    const questionsById = new Map(BUSINESS_FULLSCORE_QUESTIONS.map((question) => [question.id, question]));
+    const eligible = sessionPlanMode === "knock" && requestedOrder
+      ? requestedOrder.map((id) => questionsById.get(id)).filter(Boolean)
+      : requestedIds
+        ? BUSINESS_FULLSCORE_QUESTIONS.filter((question) => requestedIds.has(question.id))
       : unitId ? fullScoreQuestionsForUnit(unitId) : BUSINESS_FULLSCORE_QUESTIONS;
     const filtered = states instanceof Set
       ? eligible.filter((question) => states.has(BUSINESS_MASTERY.stateFor(state.practicalDrill?.history?.[question.id] || {}, new Date())))
@@ -7228,14 +7235,15 @@
     const units = unitId
       ? BUSINESS_FULLSCORE_UNITS.filter((unit) => unit.id === unitId)
       : BUSINESS_FULLSCORE_UNITS;
-    const queue = buildPracticalQueueFrom(
-      filtered,
-      requestedSize,
-      units,
-      { ...state.practicalDrill, bankId: BUSINESS_FULLSCORE_BANK_ID }
-    );
+    const queue = sessionPlanMode === "knock" && requestedOrder
+      ? filtered.slice(0, requestedSize).map((question) => question.id)
+      : buildPracticalQueueFrom(
+        filtered,
+        requestedSize,
+        units,
+        { ...state.practicalDrill, bankId: BUSINESS_FULLSCORE_BANK_ID }
+      );
     if (!queue.length) return;
-    const sessionPlanMode = planMode === "knock" ? "knock" : "mastery";
     const sessionPresentationKey = sessionPlanMode === "knock"
       ? String(presentationKey || `${todayKey()}:knock:${createOpaqueId("cycle")}`)
         .replace(/[^0-9a-z:_-]/gi, "").slice(0, 80)
