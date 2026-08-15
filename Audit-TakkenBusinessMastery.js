@@ -253,7 +253,22 @@ const officialEvidence = (examId, day, business = 20, overrides = {}) => ({
   business,
   ...overrides
 });
+assert.equal(mastery.FULL_SCORE_EVIDENCE_VERSION, 3);
 assert.equal(mastery.officialEvidenceQualifies(officialEvidence("2025", "2026-08-01")), true);
+const portableV3Evidence = officialEvidence("2024", "2026-08-15", 20, {
+  evidenceVersion: 3,
+  scoringBasis: "historical-official-key",
+  startedAt: "2026-08-15T00:30:00+09:00",
+  completedAt: "2026-08-15T02:29:00+09:00",
+  startedUtcOffsetMinutes: -540,
+  lawBaseline: "",
+  lawChecked: false
+});
+assert.equal(mastery.officialEvidenceQualifies(portableV3Evidence), true, "saved offset keeps v3 proof timezone-portable");
+assert.equal(mastery.officialEvidenceQualifies({
+  ...portableV3Evidence,
+  startedUtcOffsetMinutes: 0
+}), false, "an offset that changes the stored start day must fail closed");
 assert.equal(mastery.officialEvidenceQualifies(officialEvidence("2025", "2026-08-01", "20")), false, "string scores fail closed");
 assert.equal(mastery.officialEvidenceQualifies(officialEvidence("2025", "2026-08-01", 20, {
   answers: { ...answers50, fake: 1 }
@@ -300,9 +315,14 @@ officialProof = mastery.summarizeOfficialProof([
 ]);
 assert.equal(officialProof.currentMiss, false, "a later valid perfect result must clear recovery");
 assert.equal(officialProof.ready, true);
+assert.deepEqual(
+  officialProof.proofInitial.map((item) => item.examId),
+  ["2024", "2023", "2021-12"],
+  "current-law assessment must use the three perfect proof attempts, not a superseded miss"
+);
 
 const transferGate = {
-  questions: { total: 132, durable: 132 },
+  questions: { total: 134, durable: 134 },
   durableUnits: 11
 };
 assert.equal(mastery.summarizeFullScore({

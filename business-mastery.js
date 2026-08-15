@@ -6,7 +6,9 @@
   const REVIEW_INTERVAL_DAYS = [1, 3, 7, 14, 30];
   const DURABLE_LEVEL = REVIEW_INTERVAL_DAYS.length + 1;
   const FULL_SCORE_REQUIRED_EXAMS = 3;
-  const FULL_SCORE_EVIDENCE_VERSION = 2;
+  const FULL_SCORE_EVIDENCE_VERSION = 3;
+  const LEGACY_FULL_SCORE_EVIDENCE_VERSION = 2;
+  const HISTORICAL_SCORING_BASIS = "historical-official-key";
   const FULL_SCORE_TARGET = 20;
   const BUSINESS_UNIT_IDS = [
     "business-book-01", "business-book-02", "business-book-03", "business-book-04",
@@ -28,6 +30,12 @@
     if (typeof value === "string" && DATE_KEY_PATTERN.test(value)) return validDateKey(value);
     const date = new Date(value);
     return Number.isFinite(date.getTime()) ? [date.getFullYear(), String(date.getMonth() + 1).padStart(2, "0"), String(date.getDate()).padStart(2, "0")].join("-") : "";
+  };
+  const dayKeyAtUtcOffset = (value, offsetMinutes) => {
+    const timestamp = Date.parse(value);
+    const offset = Number(offsetMinutes);
+    if (!Number.isFinite(timestamp) || !Number.isInteger(offset) || offset < -840 || offset > 840) return "";
+    return new Date(timestamp - offset * 60000).toISOString().slice(0, 10);
   };
   const addDays = (key, days) => {
     const match = String(key || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -151,21 +159,28 @@
     const elapsedMinutes = item?.elapsedMinutes;
     const expectedKeys = Array.from({ length: 50 }, (_, index) => String(index + 1));
     const answerKeys = Object.keys(answers).sort((left, right) => Number(left) - Number(right));
+    const evidenceVersion = Number(item?.evidenceVersion) || 0;
+    const currentEvidence = evidenceVersion >= FULL_SCORE_EVIDENCE_VERSION &&
+      item?.scoringBasis === HISTORICAL_SCORING_BASIS;
+    const legacyEvidence = !currentEvidence &&
+      evidenceVersion >= LEGACY_FULL_SCORE_EVIDENCE_VERSION &&
+      item?.lawChecked === true && item?.lawBaseline === baseline;
+    const offsetDayKey = dayKeyAtUtcOffset(item?.startedAt, item?.startedUtcOffsetMinutes);
+    const storedDayMatches = validDateKey(item?.startedDayKey) &&
+      (offsetDayKey ? offsetDayKey === item.startedDayKey : dayKey(item.startedAt) === item.startedDayKey);
     return Boolean(
       item &&
       (!callback || callback(item)) &&
       String(item.examId || "") &&
       item.sourceMode === "timed-answer-sheet" &&
-      Number(item.evidenceVersion) >= FULL_SCORE_EVIDENCE_VERSION &&
-      item.lawChecked === true &&
-      item.lawBaseline === baseline &&
+      (currentEvidence || legacyEvidence) &&
       item.timed120 === true &&
       Number.isInteger(elapsedMinutes) && elapsedMinutes >= 1 && elapsedMinutes <= 120 &&
       answerKeys.length === 50 &&
       answerKeys.every((key, index) => key === expectedKeys[index] &&
         Number.isInteger(answers[key]) && answers[key] >= 1 && answers[key] <= 4) &&
       Number.isFinite(startedAt) && Number.isFinite(completedAt) && completedAt >= startedAt &&
-      validDateKey(item.startedDayKey) && dayKey(item.startedAt) === item.startedDayKey &&
+      storedDayMatches &&
       Number.isInteger(item.business) && item.business >= 0 && item.business <= FULL_SCORE_TARGET
     );
   }
@@ -205,6 +220,7 @@
       qualifying: evidence.length,
       qualifyingInitial: distinctInitial.length,
       latestInitial: distinctInitial.slice(-FULL_SCORE_REQUIRED_EXAMS),
+      proofInitial: perfectInitial.slice(-FULL_SCORE_REQUIRED_EXAMS),
       perfect: Math.min(FULL_SCORE_REQUIRED_EXAMS, perfectInitial.length),
       initialReady,
       latestScore: latestEvidence ? Number(latestEvidence.business) : null,
@@ -213,7 +229,7 @@
       ready: initialReady && !currentMiss
     };
   }
-  function summarizeFullScore({ foundation, transfer, official, bankReady = true, transferTarget = 132 } = {}) {
+  function summarizeFullScore({ foundation, transfer, official, bankReady = true, transferTarget = 134 } = {}) {
     const base = {
       total: Math.max(0, Number(foundation?.total) || 0),
       contacted: Math.max(0, Number(foundation?.contacted) || 0),
@@ -259,6 +275,8 @@
     DURABLE_LEVEL,
     FULL_SCORE_REQUIRED_EXAMS,
     FULL_SCORE_EVIDENCE_VERSION,
+    LEGACY_FULL_SCORE_EVIDENCE_VERSION,
+    HISTORICAL_SCORING_BASIS,
     FULL_SCORE_TARGET,
     BUSINESS_UNIT_IDS,
     dayKey,

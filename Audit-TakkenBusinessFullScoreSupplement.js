@@ -50,7 +50,7 @@ const expectedUnitAllocation = Object.freeze({
   "business-book-04": 1,
   "business-book-05": 1,
   "business-book-06": 1,
-  "business-book-07": 4,
+  "business-book-07": 5,
   "business-book-08": 2,
   "business-book-09": 1,
   "business-book-10": 2,
@@ -85,7 +85,8 @@ const requiredNumericTerms = Object.freeze({
   bs014: ["1.1か月分", "0.55か月分", "2倍"],
   bs015: ["1年", "2年", "200万円", "3年", "300万円"],
   bs016: ["7年間"],
-  bs017: ["1年", "10年間", "3月31日", "3週間", "50日"]
+  bs017: ["1年", "10年間", "3月31日", "3週間", "50日"],
+  bs018: ["2022年5月18日"]
 });
 
 function cleanText(value) {
@@ -108,7 +109,7 @@ function anchorBlob(anchor) {
   ].join(" ");
 }
 
-assert.equal(supplement.VERSION, 1, "supplement version");
+assert.equal(supplement.VERSION, 2, "supplement version");
 assert.equal(supplement.LEGAL_BASELINE, "2026-04-01", "legal baseline");
 assert.strictEqual(
   window.TAKKEN_BUSINESS_FULLSCORE_SUPPLEMENT,
@@ -116,13 +117,13 @@ assert.strictEqual(
   "browser and CommonJS APIs must be identical"
 );
 assert.ok(Object.isFrozen(supplement), "API must be frozen");
-assert.equal(supplement.ANCHORS.length, 17, "17 supplement anchors");
-assert.equal(supplement.FACTS.length, 68, "68 supplement facts");
-assert.equal(Object.keys(supplement.ANCHORS_BY_ID).length, 17, "17 anchor lookups");
-assert.equal(Object.keys(supplement.FACTS_BY_KEY).length, 68, "68 fact lookups");
+assert.equal(supplement.ANCHORS.length, 18, "18 supplement anchors");
+assert.equal(supplement.FACTS.length, 72, "72 supplement facts");
+assert.equal(Object.keys(supplement.ANCHORS_BY_ID).length, 18, "18 anchor lookups");
+assert.equal(Object.keys(supplement.FACTS_BY_KEY).length, 72, "72 fact lookups");
 
 const expectedAnchorIds = Array.from(
-  { length: 17 },
+  { length: 18 },
   (_, index) => `bs${String(index + 1).padStart(3, "0")}`
 );
 assert.deepEqual(
@@ -167,12 +168,19 @@ for (const anchor of supplement.ANCHORS) {
     );
   });
   assert.match(anchor.verifiedAt, /^\d{4}-\d{2}-\d{2}$/, `${anchor.id}: verification date format`);
-  assert.equal(anchor.verifiedAt, "2026-08-14", `${anchor.id}: current verification date`);
+  assert.equal(anchor.verifiedAt, "2026-08-15", `${anchor.id}: current verification date`);
   assert.ok(cleanText(anchor.sourceLocator).length >= 12, `${anchor.id}: source locator`);
   assert.match(anchor.sourceLocator, /法|条|令|告示|省令/, `${anchor.id}: legal locator`);
   const source = new URL(anchor.sourceUrl);
   assert.equal(source.protocol, "https:", `${anchor.id}: HTTPS source`);
   assert.ok(officialHosts.has(source.hostname), `${anchor.id}: official primary-source host`);
+  if (source.hostname === "laws.e-gov.go.jp") {
+    assert.equal(
+      source.searchParams.get("occasion_date"),
+      supplement.LEGAL_BASELINE.replaceAll("-", ""),
+      `${anchor.id}: e-Gov source pinned to legal baseline`
+    );
+  }
   assert.ok(anchor.diagnosticTags.length >= 1, `${anchor.id}: diagnostics`);
   anchor.diagnosticTags.forEach((tag) => {
     assert.ok(allowedDiagnosticTags.has(tag), `${anchor.id}: allowed diagnostic ${tag}`);
@@ -189,7 +197,7 @@ assert.deepEqual(
   expectedFactKeys,
   "stable fact keys"
 );
-assert.equal(new Set(expectedFactKeys).size, 68, "68 unique expected keys");
+assert.equal(new Set(expectedFactKeys).size, 72, "72 unique expected keys");
 
 for (const fact of supplement.FACTS) {
   assert.deepEqual(Object.keys(fact).sort(), expectedFactFields, `${fact.key}: exact fact schema`);
@@ -213,10 +221,10 @@ for (const fact of supplement.FACTS) {
 }
 
 const normalizedFacts = supplement.FACTS.map((fact) => normalizedStatement(fact.statement));
-assert.equal(new Set(normalizedFacts).size, 68, "duplicate0: all 68 propositions must be unique");
+assert.equal(new Set(normalizedFacts).size, 72, "duplicate0: all 72 propositions must be unique");
 assert.equal(
   new Set(supplement.ANCHORS.map((anchor) => normalizedStatement(anchor.prompt))).size,
-  17,
+  18,
   "all anchor prompts must be unique"
 );
 
@@ -267,6 +275,12 @@ assert.match(housingDefects.reasons[1], /構造耐力上主要な部分.*雨水�
 assert.match(housingDefects.reasons[2], /3月31日.*3週間以内.*10年間/, "security baseline and filing window");
 assert.match(housingDefects.reasons[3], /50日を経過した日以後/, "new-contract restriction timing");
 
+const electronicDocuments = supplement.ANCHORS_BY_ID.bs018;
+assert.deepEqual(electronicDocuments.truths, [true, false, true, false], "electronic-document amendment truth pattern");
+assert.match(electronicDocuments.statements[0], /35条書面や37条書面を電磁的方法で提供/, "electronic delivery is directly tested");
+assert.match(electronicDocuments.statements[1], /記名押印が必要/, "historical seal requirement is directly rejected");
+assert.match(electronicDocuments.reasons[2], /記名.*押印は不要/, "current signature and seal rule");
+
 const moduleText = fs.readFileSync(
   path.join(__dirname, "business-fullscore-supplement.js"),
   "utf8"
@@ -281,13 +295,13 @@ assert.ok(!moduleText.includes(vaguePeriod), "numeric periods must not be replac
 assert.ok(!moduleText.includes(wrongResumeLabel), "the career-history form must not be mislabeled as the resume");
 
 assert.equal(baseBank.BASE_FACT_KEYS.length, 176, "176 base facts remain available");
-assert.equal(baseBank.SUPPLEMENT_FACT_KEYS.length, 68, "68 supplement facts are connected");
-assert.equal(baseBank.FACT_KEYS.length, 244, "176 + 68 = 244 unique source facts");
+assert.equal(baseBank.SUPPLEMENT_FACT_KEYS.length, 72, "72 supplement facts are connected");
+assert.equal(baseBank.FACT_KEYS.length, 248, "176 + 72 = 248 unique source facts");
 assert.deepEqual(
   [...baseBank.SUPPLEMENT_FACT_KEYS].sort(),
   [...expectedFactKeys].sort(),
   "full-score bank consumes every supplement fact key"
 );
-assert.equal(new Set(baseBank.FACT_KEYS).size, 244, "combined source fact keys are unique");
+assert.equal(new Set(baseBank.FACT_KEYS).size, 248, "combined source fact keys are unique");
 
-console.log("Takken Business Full Score Supplement audit passed: 17 anchors / 68 unique facts / 244 combined facts / duplicate0.");
+console.log("Takken Business Full Score Supplement audit passed: 18 anchors / 72 unique facts / 248 combined facts / duplicate0.");

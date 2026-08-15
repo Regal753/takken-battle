@@ -86,7 +86,7 @@ requiredHosts.forEach((host) => {
 
 const app = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
-if (!app.includes("const STATE_SCHEMA_VERSION = 9;")) issues.push("State schema version must include objective understanding, calculation, practical drill, unit-route, and full-score evidence data.");
+if (!app.includes("const STATE_SCHEMA_VERSION = 10;")) issues.push("State schema version must include objective understanding, calculation, practical drill, unit-route, full-score evidence, and multi-tab sync data.");
 if (!app.includes("normalizeCalculationDrillState")) issues.push("Calculation save normalization is missing.");
 if (!app.includes("drill.retryIds = addCalculationId")) issues.push("Wrong/uncertain retry queue is missing.");
 if (!app.includes("function startCalculationDrill()")) issues.push("Calculation session restart must preserve history.");
@@ -94,7 +94,7 @@ if (!app.includes("function exitCalculationDrill()")) issues.push("Calculation c
 if (!html.includes("id=\"calculationDrillPanel\"")) issues.push("Calculation drill panel is missing.");
 if (!html.includes("id=\"todayCommandCalculationButton\"")) issues.push("Calculation drill quick entry is missing.");
 if (!html.includes("id=\"calculationDrillExitButton\"")) issues.push("Calculation drill completion exit button is missing.");
-if (!html.includes("calculation-drill.js?v=20260814-business-fullscore-v25-2")) issues.push("Calculation data script is not loaded.");
+if (!html.includes("calculation-drill.js?v=20260815-business-hardening-v26-1")) issues.push("Calculation data script is not loaded.");
 
 const report = {
   status: issues.length ? "error" : "ok",

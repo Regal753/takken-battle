@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22"
       - run: node Audit-TakkenFullExam.js
@@ -36,4 +36,40 @@ jobs:
       - run: node Audit-TakkenBusinessFullScoreSupplement.js
       - run: node Audit-TakkenBusinessFullScoreBank.js
       - run: node Audit-TakkenBusinessMastery.js
+      - run: node Audit-TakkenBusinessPace.js
+      - run: node Audit-TakkenOfficialLawBaseline.js
+      - run: node Audit-TakkenStateSync.js
+      - run: node Audit-TakkenPublicPerformance.js
       - run: node scripts/validate-public.mjs
+
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: "22"
+      - name: Install pinned Playwright runtime
+        env:
+          PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
+        run: npm install --no-save --no-package-lock playwright@1.62.1
+      - name: Run critical browser audits
+        shell: bash
+        env:
+          TAKKEN_BASE_URL: http://127.0.0.1:8783/
+        run: |
+          set -euo pipefail
+          google-chrome --version
+          python3 -m http.server 8783 --bind 127.0.0.1 >/tmp/takken-http.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true; wait "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..20}; do
+            if curl --fail --silent --show-error "$TAKKEN_BASE_URL" >/dev/null; then
+              break
+            fi
+            sleep 0.25
+          done
+          curl --fail --silent --show-error "$TAKKEN_BASE_URL" >/dev/null
+          node Audit-TakkenBusinessMasteryUi.cjs
+          node Audit-TakkenFullExamUi.cjs

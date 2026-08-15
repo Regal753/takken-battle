@@ -40,7 +40,7 @@ if (practical.QUESTIONS.filter((question) => question.format === "単一選択")
   issues.push("practical bank must mix single-choice, combination, and count formats");
 }
 
-requireText(app, "const STATE_SCHEMA_VERSION = 9;", "save schema must be v9");
+requireText(app, "const STATE_SCHEMA_VERSION = 10;", "save schema must be v10");
 requireText(app, "const PRACTICAL_SESSION_SIZES = Object.freeze([4, 10, 20, 45]);", "four-question unit session size is missing");
 requireText(app, "const FOUNDATION_UNIT_BATCH_MAX = 4;", "read-after batch cap is missing");
 requireText(app, "function foundationUnitBatchIds", "bounded read-after batching is missing");
@@ -79,7 +79,7 @@ if (app.includes("JULY_GATE_DEADLINE") || html.includes("7/31学習ゲート")) 
 ].forEach((id) => requireText(html, `id=\"${id}\"`, `${id} is missing from the page`));
 requireText(html, "本文＋読後問題", "foundation-first mission label is missing");
 requireText(html, "45単元の読後問題完了で公式演習を解放", "official foundation gate copy is missing");
-requireText(html, "20260814-business-fullscore-v25-2", "business full-score cache version is missing");
+requireText(html, "20260815-business-hardening-v26-1", "business hardening cache version is missing");
 requireText(html, '<details class="quest-card"', "review-10 menu must be collapsed by default");
 requireText(html, 'id="nextButton"', "inline next-question button is missing");
 requireText(css, ".quest-card:not([open]) > .quest-card-body", "collapsed review menu rule is missing");

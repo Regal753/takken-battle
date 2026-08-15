@@ -14,7 +14,7 @@
     throw new Error("business full-score bank requires exam blueprint, base questions and full-score supplement");
   }
 
-  const VERSION = 2;
+  const VERSION = 3;
   const kana = Object.freeze(["ア", "イ", "ウ", "エ"]);
   const countLabels = Object.freeze(["一つ", "二つ", "三つ", "四つ"]);
   const formatLabels = Object.freeze({
@@ -77,7 +77,7 @@
     "b038:0": "他県業者に対して処分できるのは免許権者だけで、業務地の知事には処分権限がない。",
     "b038:2": "軽微な違反にも指示や業務停止を経ず、免許取消処分を選択することになる。",
     "b038:3": "業務停止処分は期間の上限を設けずに定めることができる。",
-    "b039:2": "宅建業法違反は行政上の措置に限られ、懲役又は罰金の対象にならない。",
+    "b039:2": "宅建業法違反は行政上の措置に限られ、拘禁刑又は罰金の対象にならない。",
     "b103:0": "中古住宅の媒介だけを行う宅建業者にも、新築住宅を自ら販売する場合と同額の保証金供託義務が生じる。",
     "b103:1": "AとBが資力確保措置を不要と合意すれば、法律上の措置義務は免除される。",
     "b103:3": "買主Bが個人である取引では、Aに供託又は保険契約による資力確保義務は生じない。",
@@ -289,19 +289,19 @@
   }
 
   function validateSupplement() {
-    if (supplement.VERSION !== 1 || cleanText(supplement.LEGAL_BASELINE) !== cleanText(blueprint.legalBaseline)) {
+    if (supplement.VERSION !== 2 || cleanText(supplement.LEGAL_BASELINE) !== cleanText(blueprint.legalBaseline)) {
       throw new Error("business full-score supplement version or legal baseline is incompatible");
     }
-    if (!Array.isArray(supplement.ANCHORS) || supplement.ANCHORS.length !== 17 ||
-        !Array.isArray(supplement.FACTS) || supplement.FACTS.length !== 68 ||
+    if (!Array.isArray(supplement.ANCHORS) || supplement.ANCHORS.length !== 18 ||
+        !Array.isArray(supplement.FACTS) || supplement.FACTS.length !== 72 ||
         !supplement.ANCHORS_BY_ID || typeof supplement.ANCHORS_BY_ID !== "object" ||
         !supplement.FACTS_BY_KEY || typeof supplement.FACTS_BY_KEY !== "object") {
-      throw new Error("business full-score supplement must contain 17 anchors and 68 facts");
+      throw new Error("business full-score supplement must contain 18 anchors and 72 facts");
     }
     const anchorIds = supplement.ANCHORS.map((anchor) => cleanText(anchor?.id));
     const factKeys = supplement.FACTS.map((fact) => cleanText(fact?.key));
-    if (anchorIds.some((id) => !/^bs\d{3}$/.test(id)) || new Set(anchorIds).size !== 17 ||
-        factKeys.some((key) => !/^bs\d{3}:[0-3]$/.test(key)) || new Set(factKeys).size !== 68 ||
+    if (anchorIds.some((id) => !/^bs\d{3}$/.test(id)) || new Set(anchorIds).size !== 18 ||
+        factKeys.some((key) => !/^bs\d{3}:[0-3]$/.test(key)) || new Set(factKeys).size !== 72 ||
         factKeys.some((key) => allBaseFactKeys.includes(key))) {
       throw new Error("business full-score supplement IDs must be unique and collision-free");
     }
@@ -376,8 +376,8 @@
   }));
   const allSupplementFactKeys = supplementFacts.map((fact) => fact.key);
   const allFactKeys = Object.freeze([...allBaseFactKeys, ...allSupplementFactKeys]);
-  if (allFactKeys.length !== 244 || new Set(allFactKeys).size !== 244) {
-    throw new Error(`business full-score bank requires 244 unique facts, got ${allFactKeys.length}`);
+  if (allFactKeys.length !== 248 || new Set(allFactKeys).size !== 248) {
+    throw new Error(`business full-score bank requires 248 unique facts, got ${allFactKeys.length}`);
   }
 
   function orderedFacts(facts, usage, seed, truth) {
@@ -932,7 +932,7 @@
       crossAnchor: false
     }));
   });
-  if (standardBins.length !== 30) throw new Error(`supplement requires 30 mixed bins, got ${standardBins.length}`);
+  if (standardBins.length !== 32) throw new Error(`supplement requires 32 mixed bins, got ${standardBins.length}`);
   const sharedFacts = sharedAnchors.map(factsForSupplementAnchor);
   const sharedBins = [0, 1].map((variantIndex) => Object.freeze({
     unitId: sharedAnchors[0].unitId,
@@ -945,15 +945,13 @@
   }));
 
   const formatCycle = ["single", "combination", "count", "case"];
-  const standardFormats = standardBins.map((_, index) =>
-    index < 28 ? formatCycle[index % 4] : (index === 28 ? "single" : "count")
-  );
+  const standardFormats = standardBins.map((_, index) => formatCycle[index % 4]);
   const supplementalPlan = [
     ...standardBins.map((bin, index) => ({ ...bin, formatKey: standardFormats[index] })),
     { ...sharedBins[0], formatKey: "combination" },
     { ...sharedBins[1], formatKey: "case" }
   ];
-  if (supplementalPlan.length !== 32) throw new Error("supplement question plan must contain 32 questions");
+  if (supplementalPlan.length !== 34) throw new Error("supplement question plan must contain 34 questions");
 
   supplementalPlan.forEach((plan, questionIndex) => {
     const unit = unitById[plan.unitId];
@@ -987,7 +985,8 @@
   if (uncoveredFacts.length || overusedFacts.length || supplementReuse.length) {
     throw new Error(`full-score fact allocation invalid; uncovered=${uncoveredFacts.join(",")}; overused=${overusedFacts.join(",")}; supplement=${supplementReuse.join(",")}`);
   }
-  if (Object.values(formatQuestionIndex).some((count) => count !== 33)) {
+  const expectedFormatCounts = { single: 33, combination: 34, count: 33, case: 34 };
+  if (Object.entries(expectedFormatCounts).some(([key, count]) => formatQuestionIndex[key] !== count)) {
     throw new Error(`full-score format answer plan is invalid: ${JSON.stringify(formatQuestionIndex)}`);
   }
 
@@ -1013,8 +1012,8 @@
   const questionsById = Object.freeze(Object.fromEntries(
     questions.map((question) => [question.id, question])
   ));
-  if (questions.length !== 132 || Object.keys(questionsById).length !== 132) {
-    throw new Error(`business full-score bank must contain 132 unique questions, got ${questions.length}`);
+  if (questions.length !== 134 || Object.keys(questionsById).length !== 134) {
+    throw new Error(`business full-score bank must contain 134 unique questions, got ${questions.length}`);
   }
 
   function validDateKey(value) {

@@ -79,6 +79,26 @@ async function readSavedState(page) {
   });
 }
 
+async function injectPrimarySaveFailure(page) {
+  await page.evaluate(() => {
+    const primaryKey = Object.keys(localStorage).find((candidate) =>
+      candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+      !candidate.includes("backup") && !candidate.includes("-before-") && !candidate.includes("previous") &&
+      !candidate.includes("corrupt") && !candidate.endsWith("event-outbox")
+    );
+    const original = Storage.prototype.setItem;
+    window.__restoreAuditStorageSetItem = () => { Storage.prototype.setItem = original; };
+    Storage.prototype.setItem = function setItemWithInjectedFailure(key, value) {
+      if (String(key) === primaryKey) throw new DOMException("audit quota failure", "QuotaExceededError");
+      return original.call(this, key, value);
+    };
+  });
+}
+
+async function restorePrimarySave(page) {
+  await page.evaluate(() => window.__restoreAuditStorageSetItem?.());
+}
+
 async function currentPracticalQuestion(page) {
   return page.evaluate(() => {
     const key = Object.keys(localStorage).find((candidate) =>
@@ -499,12 +519,12 @@ async function installFullScoreProofFixture(page, mode) {
     await waitForApp(page);
 
     assert.match(await page.locator("#businessMasteryPanel").textContent(), /2026年4月1日現在法/);
-    assert.match(await page.locator("#businessMasteryMetrics").textContent(), /変形.*未接触132/);
-    assert.equal(await page.locator("#businessTransferGate").textContent(), "0 / 132");
+    assert.match(await page.locator("#businessMasteryMetrics").textContent(), /変形.*未接触134/);
+    assert.equal(await page.locator("#businessTransferGate").textContent(), "0 / 134");
     assert.equal(await page.locator("#businessMasteryGrid article").count(), 11);
     const unitTotals = await page.locator("#businessMasteryGrid article small").allTextContents();
     const renderedTotals = unitTotals.map((text) => Number(text.match(/変形接触 \d+\/(\d+)/)?.[1] || 0));
-    assert.equal(renderedTotals.reduce((sum, total) => sum + total, 0), 132);
+    assert.equal(renderedTotals.reduce((sum, total) => sum + total, 0), 134);
     const minimumTargets = await page.locator("#businessMasteryPanel button").evaluateAll((buttons) =>
       buttons.map((button) => Math.round(button.getBoundingClientRect().height))
     );
@@ -530,6 +550,16 @@ async function installFullScoreProofFixture(page, mode) {
     await waitForApp(page);
     await page.locator("#officialDrillOpenButton").click();
     assert.equal(await page.locator("#officialDrillPanel").isVisible(), true);
+    const dailyFailurePageCount = context.pages().length;
+    await injectPrimarySaveFailure(page);
+    await page.locator("#officialDrillQuestionLink").click();
+    await page.waitForTimeout(100);
+    assert.equal(context.pages().length, dailyFailurePageCount, "a failed daily exposure save must not open the PDF");
+    const failedDailyState = await readSavedState(page);
+    assert.equal(failedDailyState.officialExamExposure["2025"], undefined);
+    assert.ok(!failedDailyState.missionLog[Object.keys(failedDailyState.missionLog)[0]]?.officialDrill?.startedAt);
+    assert.match(await page.locator("#officialDrillStatus").textContent(), /保存できない/);
+    await restorePrimarySave(page);
     // noopener deliberately severs the opener relationship, so Chromium may
     // surface the PDF as a new context page rather than page.popup.
     const dailyPopupPromise = context.waitForEvent("page");
@@ -549,11 +579,11 @@ async function installFullScoreProofFixture(page, mode) {
 
     await page.locator("#businessMasteryFull").click();
     let saved = await readSavedState(page);
-    assert.equal(saved.stateSchemaVersion, 9);
+    assert.equal(saved.stateSchemaVersion, 10);
     assert.equal(saved.practicalDrill.bankId, "business-fullscore");
-    assert.equal(saved.practicalDrill.sessionSize, 132);
-    assert.equal(saved.practicalDrill.queue.length, 132);
-    assert.equal(new Set(saved.practicalDrill.queue).size, 132);
+    assert.equal(saved.practicalDrill.sessionSize, 134);
+    assert.equal(saved.practicalDrill.queue.length, 134);
+    assert.equal(new Set(saved.practicalDrill.queue).size, 134);
     assert.match(saved.practicalDrill.presentationKey, /^\d{4}-\d{2}-\d{2}:bank-\d+$/);
     const originalQueue = [...saved.practicalDrill.queue];
     const originalPresentationKey = saved.practicalDrill.presentationKey;
@@ -566,7 +596,7 @@ async function installFullScoreProofFixture(page, mode) {
     await page.reload({ waitUntil: "networkidle" });
     await waitForApp(page);
     saved = await readSavedState(page);
-    assert.equal(saved.practicalDrill.sessionSize, 132, "reload must not shrink the full sweep to the legacy dropdown sizes");
+    assert.equal(saved.practicalDrill.sessionSize, 134, "reload must not shrink the full sweep to the legacy dropdown sizes");
     assert.equal(saved.practicalDrill.presentationKey, originalPresentationKey);
     assert.deepEqual(saved.practicalDrill.queue, originalQueue);
     assert.deepEqual(await page.locator(".practical-drill-choice").allTextContents(), originalChoiceTexts);
@@ -619,17 +649,57 @@ async function installFullScoreProofFixture(page, mode) {
     await waitForApp(page);
     assert.equal(await page.locator("#businessFoundationGate").textContent(), "44 / 44");
     assert.match(await page.locator("#businessMasteryMetrics").textContent(), /未接触0/);
-    assert.equal(await page.locator("#businessMasteryPrimary").textContent(), "未接触の公式50問へ");
+    assert.match(await page.locator("#businessMasteryPrimary").textContent(), /公式50問で測定（未見\d+回）/);
     assert.doesNotMatch(await page.locator("#foundationGateStatus").textContent(), /45 \/ 45/);
+
+    const failureExamId = await page.locator("#officialExamId").inputValue();
+    const exposureBeforeFailure = Object.keys((await readSavedState(page)).officialExamExposure || {}).sort();
+    await injectPrimarySaveFailure(page);
+    await page.locator("#businessMasteryPrimary").click();
+    let failedStartState = await readSavedState(page);
+    assert.equal(failedStartState.officialExamSession, null, "a failed write must not leave an in-memory official session");
+    assert.equal(failedStartState.officialExamExposure[failureExamId], undefined, "a failed write must not fabricate exposure");
+    assert.deepEqual(Object.keys(failedStartState.officialExamExposure || {}).sort(), exposureBeforeFailure);
+    assert.match(await page.locator("#saveTransferStatus").textContent(), /自動保存に失敗/);
+    assert.equal(await page.locator('#officialExamQuestionLink[href]').count(), 0);
+    await restorePrimarySave(page);
+
+    const stalePagePromise = context.waitForEvent("page");
+    await page.evaluate(() => window.open("about:blank", "_blank"));
+    const stalePage = await stalePagePromise;
+    stalePage.on("pageerror", (error) => errors.push(`stale-page: ${error.message}`));
+    stalePage.on("console", (message) => {
+      if (message.type() === "error") errors.push(`stale-console: ${message.text()}`);
+    });
+    await stalePage.addInitScript(() => {
+      const original = window.addEventListener.bind(window);
+      window.addEventListener = (type, listener, options) => {
+        if (type === "storage") return;
+        return original(type, listener, options);
+      };
+    });
+    await stalePage.goto(page.url(), { waitUntil: "networkidle" });
+    await waitForApp(stalePage);
+    assert.equal(await stalePage.locator("#officialExamId").inputValue(), failureExamId);
     await page.locator("#businessMasteryPrimary").click();
     saved = await readSavedState(page);
     assert.ok(saved.officialExamSession, "the business route must reach an official 50-question initial session");
-    assert.equal(saved.officialExamSession.evidenceVersion, 2);
+    assert.equal(saved.officialExamSession.evidenceVersion, 3);
     assert.equal(saved.officialExamSession.appUnseenAtStart, true);
-    assert.equal(saved.officialExamSession.lawBaseline, "2026-04-01");
+    assert.equal(saved.officialExamSession.scoringBasis, "historical-official-key");
+    assert.equal(saved.officialExamSession.currentLawBaseline, "2026-04-01");
+    assert.ok(Number.isInteger(saved.officialExamSession.startedUtcOffsetMinutes));
     assert.match(saved.officialExamSession.startedDayKey, /^\d{4}-\d{2}-\d{2}$/);
+    assert.equal(await page.locator("#officialExamLawChecked").count(), 0);
+    assert.match(await page.locator("#officialLawNotice").textContent(), /当時法.*現行法/);
     assert.ok(saved.officialExamExposure[saved.officialExamSession.examId], "exposure must be saved at start, before submission");
     const activeOfficialId = saved.officialExamSession.examId;
+    await stalePage.locator("#businessMasteryPrimary").click();
+    assert.match(await stalePage.locator("#saveTransferStatus").textContent(), /別タブ|接触済み/);
+    const afterStaleStart = await readSavedState(page);
+    assert.equal(afterStaleStart.officialExamSession.examId, activeOfficialId);
+    assert.equal(afterStaleStart.officialExamSession.appUnseenAtStart, true);
+    await stalePage.close();
     await page.evaluate(() => document.querySelector("#practicalDrillStartButton").click());
     saved = await readSavedState(page);
     assert.equal(saved.officialExamSession.examId, activeOfficialId, "a practical launch must not overwrite the active official session");
@@ -681,7 +751,7 @@ async function installFullScoreProofFixture(page, mode) {
     saved = await readSavedState(page);
     assert.ok(saved.officialExamExposure[activeOfficialId], "a valid exposure ledger must survive import of an older package");
 
-    assert.deepEqual(await installFullScoreProofFixture(page, "ready"), { count: 3, questionCount: 132 });
+    assert.deepEqual(await installFullScoreProofFixture(page, "ready"), { count: 3, questionCount: 134 });
     await page.reload({ waitUntil: "networkidle" });
     await waitForApp(page);
     const proofDebug = await page.evaluate(() => {
@@ -728,7 +798,7 @@ async function installFullScoreProofFixture(page, mode) {
       };
     });
     assert.equal(await page.locator("#businessMasteryStatus").textContent(), "満点圏（アプリ内判定）", JSON.stringify(proofDebug));
-    assert.equal(await page.locator("#businessTransferGate").textContent(), "132 / 132");
+    assert.equal(await page.locator("#businessTransferGate").textContent(), "134 / 134");
     assert.equal(await page.locator("#businessOfficialGate").textContent(), "3 / 3");
     await installFullScoreProofFixture(page, "recovery");
     await page.reload({ waitUntil: "networkidle" });
@@ -739,6 +809,73 @@ async function installFullScoreProofFixture(page, mode) {
     await page.reload({ waitUntil: "networkidle" });
     await waitForApp(page);
     assert.equal(await page.locator("#businessMasteryStatus").textContent(), "満点圏（アプリ内判定）");
+
+    const dailyRaceContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const dailyRaceOwner = await dailyRaceContext.newPage();
+    const dailyRaceUrl = reviewUrl(local.baseUrl);
+    await dailyRaceOwner.goto(dailyRaceUrl, { waitUntil: "networkidle" });
+    await waitForApp(dailyRaceOwner);
+    await installDailyDrillReadyFixture(dailyRaceOwner);
+    await dailyRaceOwner.reload({ waitUntil: "networkidle" });
+    await waitForApp(dailyRaceOwner);
+    const dailyRaceStale = await dailyRaceContext.newPage();
+    await dailyRaceStale.addInitScript(() => {
+      const original = window.addEventListener.bind(window);
+      window.addEventListener = (type, listener, options) => {
+        if (type === "storage") return;
+        return original(type, listener, options);
+      };
+    });
+    await dailyRaceStale.goto(dailyRaceUrl, { waitUntil: "networkidle" });
+    await waitForApp(dailyRaceStale);
+    await dailyRaceOwner.evaluate(() => {
+      const key = Object.keys(localStorage).find((candidate) =>
+        candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+        !candidate.includes("backup") && !candidate.includes("-before-") && !candidate.includes("previous") &&
+        !candidate.includes("corrupt") && !candidate.endsWith("event-outbox")
+      );
+      const saved = JSON.parse(localStorage.getItem(key));
+      const startedAt = new Date().toISOString();
+      const offset = new Date(startedAt).getTimezoneOffset();
+      const shifted = new Date(Date.parse(startedAt) - offset * 60000);
+      const startedDayKey = shifted.toISOString().slice(0, 10);
+      saved.officialExamSession = {
+        evidenceVersion: 3,
+        scoringBasis: "historical-official-key",
+        examId: "2025",
+        attemptType: "initial",
+        startedAt,
+        startedDayKey,
+        startedUtcOffsetMinutes: offset,
+        appUnseenAtStart: true,
+        currentLawBaseline: "2026-04-01",
+        answers: {},
+        position: 0
+      };
+      saved.officialExamExposure["2025"] = {
+        firstOpenedAt: startedAt,
+        firstOpenedDayKey: startedDayKey,
+        firstOpenedUtcOffsetMinutes: offset,
+        source: "full-exam"
+      };
+      saved.syncMeta = {
+        ...(saved.syncMeta || {}),
+        revision: Math.max(0, Number(saved.syncMeta?.revision) || 0) + 1,
+        updatedAt: startedAt,
+        writerId: "daily-race-owner"
+      };
+      localStorage.setItem(key, JSON.stringify(saved));
+    });
+    await dailyRaceStale.locator("#officialDrillOpenButton").click();
+    const dailyRacePageCount = dailyRaceContext.pages().length;
+    await dailyRaceStale.locator("#officialDrillQuestionLink").click();
+    await dailyRaceStale.waitForTimeout(100);
+    assert.equal(dailyRaceContext.pages().length, dailyRacePageCount, "daily PDF must stay closed while the same exam is active in another tab");
+    assert.match(await dailyRaceStale.locator("#officialDrillStatus").textContent(), /保存できない/);
+    const dailyRaceSaved = await readSavedState(dailyRaceOwner);
+    assert.equal(dailyRaceSaved.officialExamSession.examId, "2025");
+    assert.ok(!dailyRaceSaved.missionLog[Object.keys(dailyRaceSaved.missionLog)[0]]?.officialDrill?.startedAt);
+    await dailyRaceContext.close();
 
     if (screenshotDir) {
       fs.mkdirSync(screenshotDir, { recursive: true });
@@ -760,10 +897,13 @@ async function installFullScoreProofFixture(page, mode) {
     console.log(JSON.stringify({
       status: "ok",
       topics: 11,
-      fullSweep: 132,
+      fullSweep: 134,
       variableUnitSession: unitFixture.size,
       foundationRetained: 44,
       officialUnlockedBeforeAll45: true,
+      saveFailureRolledBack: true,
+      staleTabInitialRejected: true,
+      staleTabDailyPdfRejected: true,
       exposureSavedAtStart: true,
       exposureSurvivedImport: true,
       recoveryAfterValidMiss: true,
