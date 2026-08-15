@@ -168,6 +168,71 @@ async function horizontalOverflow(page) {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 }
 
+async function forcePracticalQuestion(page, { bankId, id, presentationKey = "premise-readability-v28-a" }) {
+  await page.evaluate(({ nextBankId, nextId, nextPresentationKey }) => {
+    const key = Object.keys(localStorage).find((candidate) =>
+      candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+      !candidate.includes("backup") && !candidate.includes("-before-") &&
+      !candidate.includes("previous") && !candidate.includes("corrupt") &&
+      !candidate.endsWith("event-outbox")
+    );
+    const saved = JSON.parse(localStorage.getItem(key));
+    const fullScore = nextBankId === "business-fullscore";
+    saved.practicalDrill = {
+      ...saved.practicalDrill,
+      bankId: nextBankId,
+      bankVersion: fullScore
+        ? window.TAKKEN_BUSINESS_FULLSCORE_BANK.VERSION
+        : window.TAKKEN_PRACTICAL_VARIATIONS.VERSION,
+      presentationKey: fullScore ? nextPresentationKey : "",
+      planMode: fullScore ? "knock" : "legacy",
+      stage: "active",
+      scope: fullScore ? "business" : "all",
+      unitId: "",
+      sessionSize: fullScore ? 10 : 4,
+      sessionIds: [nextId],
+      queue: [nextId],
+      position: 0,
+      currentAttempt: null,
+      retryIds: [],
+      completedAt: "",
+      attempts: 0,
+      correctAttempts: 0,
+      history: {}
+    };
+    localStorage.setItem(key, JSON.stringify(saved));
+  }, { nextBankId: bankId, nextId: id, nextPresentationKey: presentationKey });
+  await page.reload({ waitUntil: "networkidle" });
+  await waitForApp(page);
+  await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
+}
+
+async function presentedFixture(page) {
+  return page.evaluate(() => {
+    const key = Object.keys(localStorage).find((candidate) =>
+      candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+      !candidate.includes("backup") && !candidate.includes("-before-") &&
+      !candidate.includes("previous") && !candidate.includes("corrupt") &&
+      !candidate.endsWith("event-outbox")
+    );
+    const saved = JSON.parse(localStorage.getItem(key));
+    const fullScore = saved.practicalDrill.bankId === "business-fullscore";
+    const question = fullScore
+      ? window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS_BY_ID[saved.practicalDrill.queue[0]]
+      : window.TAKKEN_PRACTICAL_VARIATIONS.QUESTIONS.find((item) => item.id === saved.practicalDrill.queue[0]);
+    const presented = fullScore
+      ? window.TAKKEN_BUSINESS_FULLSCORE_BANK.presentQuestion(question, saved.practicalDrill.presentationKey)
+      : question;
+    return {
+      id: presented.id,
+      formatKey: presented.formatKey || "legacy",
+      text: presented.text,
+      choices: [...presented.choices],
+      displayModel: presented.displayModel || null
+    };
+  });
+}
+
 (async () => {
   const local = await startStaticServer(process.cwd());
   const browser = await chromium.launch({ channel: "chrome", headless: true });
@@ -325,8 +390,130 @@ async function horizontalOverflow(page) {
     saved = await readSavedState(page);
     assert.deepEqual(saved.practicalDrill.knockPreset, persistedPreset);
 
-    assert.equal(await horizontalOverflow(page), 0);
+    // Long source-backed questions must expose the premise and judgment as
+    // separate, scannable blocks.  Exercise each non-single format directly
+    // instead of waiting for the planner's random order.
+    const structuredFixtures = await page.evaluate(() => ["combination", "count", "case"].map((formatKey) => {
+      const question = window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS.find((item) => item.formatKey === formatKey);
+      if (!question) throw new Error(`missing ${formatKey} structured fixture`);
+      return { formatKey, id: question.id };
+    }));
+    for (const fixture of structuredFixtures) {
+      await forcePracticalQuestion(page, { bankId: "business-fullscore", id: fixture.id });
+      const expected = await presentedFixture(page);
+      const prompt = page.locator("#practicalDrillPrompt");
+      assert.equal(await prompt.getAttribute("data-structured"), "true", `${fixture.formatKey} prompt must be structured`);
+      assert.equal(await prompt.locator(".practical-prompt-intro").textContent(), expected.displayModel.intro);
+      assert.equal(await prompt.locator(".practical-prompt-item").count(), expected.displayModel.items.length);
+      assert.equal(await prompt.locator(".practical-prompt-premise").count(), expected.displayModel.items.length);
+      assert.equal(await prompt.locator(".practical-prompt-judgment").count(), expected.displayModel.items.length);
+      assert.doesNotMatch(await prompt.textContent(), /【(?:前提|判断)】/, `${fixture.formatKey} must not leave raw premise markers in the learner UI`);
+      const actualBlocks = await prompt.locator(".practical-prompt-item").evaluateAll((items) => items.map((item) => ({
+        label: item.querySelector(".practical-prompt-marker")?.textContent,
+        premises: [...item.querySelectorAll(".practical-prompt-premise li")].map((node) => node.textContent),
+        judgment: item.querySelector(".practical-prompt-judgment p")?.textContent
+      })));
+      assert.deepEqual(actualBlocks, expected.displayModel.items.map((item) => ({
+        label: item.label,
+        premises: item.premises,
+        judgment: item.judgment
+      })), `${fixture.formatKey} source judgments and premises must survive rendering`);
+    }
+
+    // A single-statement question keeps its short intro. Repeated premises are
+    // lifted above the alternatives once, while the judgments keep rotating
+    // with the corresponding source-backed choices.
+    const singleFixture = await page.evaluate(() => {
+      const question = window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS.find((item) => item.formatKey === "single");
+      if (!question) throw new Error("missing single structured fixture");
+      return { id: question.id };
+    });
+    await forcePracticalQuestion(page, { bankId: "business-fullscore", id: singleFixture.id });
+    const singleExpected = await presentedFixture(page);
+    const singlePrompt = page.locator("#practicalDrillPrompt");
+    const premiseUses = new Map();
+    singleExpected.displayModel.choiceBlocks.forEach((block, choiceIndex) => {
+      new Set(block.premises).forEach((text) => {
+        if (!premiseUses.has(text)) premiseUses.set(text, []);
+        premiseUses.get(text).push(choiceIndex);
+      });
+    });
+    const expectedShared = [...premiseUses.entries()]
+      .filter(([, choiceIndexes]) => choiceIndexes.length > 1)
+      .map(([text, choiceIndexes], index) => ({
+        id: `practicalSharedPremise${index + 1}`,
+        text,
+        choiceIndexes
+      }));
+    const sharedTexts = new Set(expectedShared.map((group) => group.text));
+    assert.ok(expectedShared.length > 0, "single fixture must exercise repeated-premise compaction");
+    assert.equal(await singlePrompt.getAttribute("data-structured"), "true", "single prompt with repeated premises must be structured");
+    assert.equal(await singlePrompt.locator(".practical-prompt-intro").textContent(), singleExpected.displayModel.intro, "single question intro must remain visible verbatim");
+    assert.deepEqual(await singlePrompt.locator(".practical-prompt-shared-row").evaluateAll((rows) => rows.map((row) => ({
+      id: row.id,
+      targets: row.querySelector(".practical-prompt-shared-targets")?.textContent,
+      text: row.querySelector(".practical-prompt-shared-text")?.textContent
+    }))), expectedShared.map((group) => ({
+      id: group.id,
+      targets: `選択肢 ${group.choiceIndexes.map((index) => index + 1).join("・")}`,
+      text: group.text
+    })), "repeated premises must render once with the correct choice numbers");
+    const singleChoices = page.locator(".practical-drill-choice");
+    assert.equal(await singleChoices.count(), 4);
+    assert.deepEqual(await singleChoices.evaluateAll((buttons) => buttons.map((button) => ({
+      structured: button.getAttribute("data-structured"),
+      aria: button.getAttribute("aria-label"),
+      describedBy: button.getAttribute("aria-describedby"),
+      premise: button.querySelector(".practical-choice-premise")?.textContent.replace(/^前提/, "") || null,
+      judgment: button.querySelector(".practical-choice-judgment")?.textContent.replace(/^判断/, "")
+    }))), singleExpected.choices.map((_choice, index) => ({
+      structured: "true",
+      aria: null,
+      describedBy: expectedShared.filter((group) => group.choiceIndexes.includes(index)).map((group) => group.id).join(" ") || null,
+      premise: singleExpected.displayModel.choiceBlocks[index].premises.filter((text) => !sharedTexts.has(text)).join("／") || null,
+      judgment: singleExpected.displayModel.choiceBlocks[index].judgment
+    })), "single choices must preserve their presented order and matching structured source block");
+
+    assert.equal(await horizontalOverflow(page), 0, "390px structured question must not horizontally overflow");
+    const structuredMetrics390 = await singleChoices.evaluateAll((buttons) => buttons.map((button) => ({
+      height: Math.round(button.getBoundingClientRect().height),
+      premiseFont: button.querySelector(".practical-choice-premise")
+        ? Number.parseFloat(getComputedStyle(button.querySelector(".practical-choice-premise")).fontSize)
+        : null,
+      judgmentFont: Number.parseFloat(getComputedStyle(button.querySelector(".practical-choice-judgment")).fontSize)
+    })));
+    assert.ok(structuredMetrics390.every((item) => item.height >= 44 && (item.premiseFont === null || item.premiseFont >= 13) && item.judgmentFont >= 15), `390px structured choice metrics too small: ${JSON.stringify(structuredMetrics390)}`);
+
     await page.setViewportSize({ width: 320, height: 700 });
+    await page.locator("#practicalDrillSession").scrollIntoViewIfNeeded();
+    assert.equal(await horizontalOverflow(page), 0, "320px structured question must not horizontally overflow");
+    const structuredMetrics320 = await singleChoices.evaluateAll((buttons) => buttons.map((button) => ({
+      height: Math.round(button.getBoundingClientRect().height),
+      premiseFont: button.querySelector(".practical-choice-premise")
+        ? Number.parseFloat(getComputedStyle(button.querySelector(".practical-choice-premise")).fontSize)
+        : null,
+      judgmentFont: Number.parseFloat(getComputedStyle(button.querySelector(".practical-choice-judgment")).fontSize)
+    })));
+    assert.ok(structuredMetrics320.every((item) => item.height >= 44 && (item.premiseFont === null || item.premiseFont >= 13) && item.judgmentFont >= 15), `320px structured choice metrics too small: ${JSON.stringify(structuredMetrics320)}`);
+
+    // Existing non-fullscore questions do not have a display model.  They must
+    // stay legible through the raw-text fallback rather than disappear.
+    const legacyFixture = await page.evaluate(() => {
+      const question = window.TAKKEN_PRACTICAL_VARIATIONS.QUESTIONS.find((item) => !item.displayModel);
+      if (!question) throw new Error("missing legacy fallback fixture");
+      return { id: question.id };
+    });
+    await forcePracticalQuestion(page, { bankId: "legacy-practical", id: legacyFixture.id });
+    const legacyExpected = await presentedFixture(page);
+    const legacyPrompt = page.locator("#practicalDrillPrompt");
+    assert.equal(await legacyPrompt.getAttribute("data-structured"), null, "legacy prompt must take the raw fallback path");
+    assert.equal(await legacyPrompt.textContent(), legacyExpected.text, "legacy prompt text must remain complete");
+    assert.deepEqual(await page.locator(".practical-drill-choice").allTextContents(), legacyExpected.choices.map((choice, index) => `${index + 1}. ${choice}`));
+    assert.ok((await page.locator(".practical-drill-choice").evaluateAll((buttons) => buttons.every((button) => !button.hasAttribute("data-structured")))), "legacy choices must not pretend to be structured blocks");
+    assert.equal(await horizontalOverflow(page), 0, "320px legacy fallback must not horizontally overflow");
+
+    // Restore the launcher state before checking its compact controls.
+    await resetKnockState(page);
     await page.locator("#businessKnockPanel").scrollIntoViewIfNeeded();
     assert.equal(await horizontalOverflow(page), 0);
     const compactHeights = await page.locator("#businessKnockPanel button, #businessKnockPanel select").evaluateAll((nodes) => nodes
@@ -345,7 +532,7 @@ async function horizontalOverflow(page) {
     await fallbackPage.close();
 
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: "ok", plannerSizes: [10, 20, 50, 100], unitFiltered: true, weakDuePrioritized: true, random100Unique: true, randomOrderPreserved: true, reloadPreserved: true, retryLoop: true, sameDayLevelCapped: true, coreFallbackWithoutKnock: true, overflow390: 0, overflow320: 0, errors: 0 }));
+    console.log(JSON.stringify({ status: "ok", plannerSizes: [10, 20, 50, 100], unitFiltered: true, weakDuePrioritized: true, random100Unique: true, randomOrderPreserved: true, reloadPreserved: true, retryLoop: true, sameDayLevelCapped: true, structuredPromptFormats: ["combination", "count", "case"], singleChoiceBlocks: 4, legacyRawFallback: true, coreFallbackWithoutKnock: true, overflow390: 0, overflow320: 0, errors: 0 }));
   } finally {
     await browser.close();
     await local.close();

@@ -6619,6 +6619,167 @@
     return item;
   }
 
+  function validPracticalDisplayBlock(block) {
+    return Boolean(
+      block &&
+      Array.isArray(block.premises) &&
+      block.premises.length &&
+      block.premises.every((premise) => typeof premise === "string" && premise.trim()) &&
+      typeof block.judgment === "string" &&
+      block.judgment.trim()
+    );
+  }
+
+  function practicalPromptItem(block) {
+    const item = document.createElement("article");
+    item.className = "practical-prompt-item";
+    item.setAttribute("role", "listitem");
+
+    const marker = document.createElement("strong");
+    marker.className = "practical-prompt-marker";
+    marker.textContent = block.label || "記述";
+
+    const premise = document.createElement("div");
+    premise.className = "practical-prompt-premise";
+    const premiseLabel = document.createElement("span");
+    premiseLabel.className = "practical-prompt-label";
+    premiseLabel.textContent = "前提";
+    const premiseList = document.createElement("ul");
+    premiseList.replaceChildren(...block.premises.map((text) => {
+      const row = document.createElement("li");
+      row.textContent = text;
+      return row;
+    }));
+    premise.append(premiseLabel, premiseList);
+
+    const judgment = document.createElement("div");
+    judgment.className = "practical-prompt-judgment";
+    const judgmentLabel = document.createElement("span");
+    judgmentLabel.className = "practical-prompt-label";
+    judgmentLabel.textContent = "判断";
+    const judgmentText = document.createElement("p");
+    judgmentText.textContent = block.judgment;
+    judgment.append(judgmentLabel, judgmentText);
+
+    item.append(marker, premise, judgment);
+    return item;
+  }
+
+  function practicalSharedPremiseGroups(choiceBlocks) {
+    if (!Array.isArray(choiceBlocks) || choiceBlocks.length !== 4 ||
+        !choiceBlocks.every(validPracticalDisplayBlock)) return [];
+    const uses = new Map();
+    choiceBlocks.forEach((block, choiceIndex) => {
+      new Set(block.premises).forEach((text) => {
+        if (!uses.has(text)) uses.set(text, []);
+        uses.get(text).push(choiceIndex);
+      });
+    });
+    return [...uses.entries()]
+      .filter(([, choiceIndexes]) => choiceIndexes.length > 1)
+      .map(([text, choiceIndexes], index) => ({
+        id: `practicalSharedPremise${index + 1}`,
+        text,
+        choiceIndexes
+      }));
+  }
+
+  function practicalSharedPremises(groups) {
+    const shared = document.createElement("aside");
+    shared.className = "practical-prompt-shared";
+    shared.setAttribute("aria-label", "複数の選択肢に共通する前提");
+    const heading = document.createElement("strong");
+    heading.textContent = "共通する前提";
+    const rows = document.createElement("div");
+    rows.className = "practical-prompt-shared-list";
+    rows.replaceChildren(...groups.map((group) => {
+      const row = document.createElement("article");
+      row.id = group.id;
+      row.className = "practical-prompt-shared-row";
+      const targets = document.createElement("span");
+      targets.className = "practical-prompt-shared-targets";
+      targets.textContent = `選択肢 ${group.choiceIndexes.map((index) => index + 1).join("・")}`;
+      const text = document.createElement("p");
+      text.className = "practical-prompt-shared-text";
+      text.textContent = group.text;
+      row.append(targets, text);
+      return row;
+    }));
+    shared.append(heading, rows);
+    return shared;
+  }
+
+  function renderPracticalPrompt(question, sharedPremiseGroups = []) {
+    const model = question?.displayModel;
+    const items = Array.isArray(model?.items) ? model.items : [];
+    const hasItems = items.length && items.every(validPracticalDisplayBlock);
+    const structured = typeof model?.intro === "string" && model.intro.trim() &&
+      (hasItems || sharedPremiseGroups.length);
+    if (!structured) {
+      elements.practicalDrillPrompt.removeAttribute("data-structured");
+      elements.practicalDrillPrompt.textContent = question.text;
+      return;
+    }
+    const intro = document.createElement("p");
+    intro.className = "practical-prompt-intro";
+    intro.textContent = model.intro;
+    const parts = [intro];
+    if (sharedPremiseGroups.length) parts.push(practicalSharedPremises(sharedPremiseGroups));
+    if (hasItems) {
+      const list = document.createElement("div");
+      list.className = "practical-prompt-items";
+      list.setAttribute("role", "list");
+      list.replaceChildren(...items.map(practicalPromptItem));
+      parts.push(list);
+    }
+    elements.practicalDrillPrompt.dataset.structured = "true";
+    elements.practicalDrillPrompt.replaceChildren(...parts);
+  }
+
+  function renderPracticalChoice(button, choice, index, block, sharedPremiseGroups = []) {
+    if (!validPracticalDisplayBlock(block)) {
+      button.removeAttribute("data-structured");
+      button.removeAttribute("aria-describedby");
+      button.textContent = `${index + 1}. ${choice}`;
+      return;
+    }
+    const relevantGroups = sharedPremiseGroups.filter((group) => group.choiceIndexes.includes(index));
+    const sharedTexts = new Set(relevantGroups.map((group) => group.text));
+    const ownPremises = block.premises.filter((text) => !sharedTexts.has(text));
+    if (relevantGroups.length) {
+      button.setAttribute("aria-describedby", relevantGroups.map((group) => group.id).join(" "));
+    } else {
+      button.removeAttribute("aria-describedby");
+    }
+    const marker = document.createElement("span");
+    marker.className = "practical-choice-marker";
+    marker.textContent = String(index + 1);
+    const copy = document.createElement("span");
+    copy.className = "practical-choice-copy";
+    const judgment = document.createElement("span");
+    judgment.className = "practical-choice-judgment";
+    const judgmentLabel = document.createElement("span");
+    judgmentLabel.className = "practical-choice-label";
+    judgmentLabel.textContent = "判断";
+    const judgmentText = document.createElement("span");
+    judgmentText.textContent = block.judgment;
+    judgment.append(judgmentLabel, judgmentText);
+    if (ownPremises.length) {
+      const premise = document.createElement("span");
+      premise.className = "practical-choice-premise";
+      const premiseLabel = document.createElement("span");
+      premiseLabel.className = "practical-choice-label";
+      premiseLabel.textContent = "前提";
+      const premiseText = document.createElement("span");
+      premiseText.textContent = ownPremises.join("／");
+      premise.append(premiseLabel, premiseText);
+      copy.append(premise);
+    }
+    copy.append(judgment);
+    button.dataset.structured = "true";
+    button.replaceChildren(marker, copy);
+  }
+
   function renderPracticalDrill() {
     if (!elements.practicalDrillPanel || !PRACTICAL_QUESTION_IDS.length) return;
     const drill = state.practicalDrill;
@@ -6681,13 +6842,17 @@
       ? `${question.unitLabel}・p.${question.unitPage}`
       : question.unitLabel;
     elements.practicalDrillRetryStatus.textContent = `今回の再出題 ${sessionRetryCount}`;
-    elements.practicalDrillPrompt.textContent = question.text;
+    const choiceBlocks = Array.isArray(question.displayModel?.choiceBlocks)
+      ? question.displayModel.choiceBlocks
+      : [];
+    const sharedPremiseGroups = practicalSharedPremiseGroups(choiceBlocks);
+    renderPracticalPrompt(question, sharedPremiseGroups);
     elements.practicalDrillChoices.replaceChildren();
     question.choices.forEach((choice, index) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "practical-drill-choice";
-      button.textContent = `${index + 1}. ${choice}`;
+      renderPracticalChoice(button, choice, index, choiceBlocks[index], sharedPremiseGroups);
       button.disabled = Boolean(attempt);
       if (attempt) {
         button.classList.toggle("is-selected", attempt.selected === index);

@@ -573,6 +573,39 @@
     ]);
   }
 
+  // Keep the source question text intact for compatibility, but expose the
+  // learner-facing premise and judgment separately.  The UI can then avoid
+  // repeating a long premise inside every choice without changing the source
+  // facts, answer, or raw choices used by the existing runner.
+  function displayBlock(label, facts, judgment, premises) {
+    const safeFacts = Array.isArray(facts) ? facts : [];
+    const safePremises = uniqueStrings(premises === undefined
+      ? safeFacts.map((fact) => fact.context)
+      : premises);
+    const sourceFactKeys = uniqueStrings(safeFacts.map((fact) => fact.key));
+    if (!sourceFactKeys.length || !cleanText(judgment)) {
+      throw new Error("display block requires source facts and a judgment");
+    }
+    return Object.freeze({
+      label: cleanText(label),
+      premises: Object.freeze(safePremises),
+      judgment: cleanText(judgment),
+      sourceFactKeys: Object.freeze(sourceFactKeys)
+    });
+  }
+
+  function displayModel(intro, items, choiceBlocks) {
+    const model = Object.freeze({
+      intro: cleanText(intro),
+      items: Object.freeze([...(items || [])]),
+      choiceBlocks: Object.freeze([...(choiceBlocks || [])])
+    });
+    if (!model.intro || !model.items.every(Object.isFrozen) || !model.choiceBlocks.every(Object.isFrozen)) {
+      throw new Error("display model is invalid");
+    }
+    return model;
+  }
+
   function resolvedAnswerSlot(globalIndex, answerSlotOverride) {
     const answerSlot = answerSlotOverride === undefined ? globalIndex % 4 : answerSlotOverride;
     if (!Number.isInteger(answerSlot) || answerSlot < 0 || answerSlot > 3) {
@@ -602,11 +635,15 @@
     const choiceExplanations = Object.freeze(displayedFacts.map((fact, index) =>
       `${index + 1} ${fact.truth ? "○" : "×"} ${fact.reason}`
     ));
+    const intro = `同一単元の異なる場面を比較する。次の記述のうち、${askLabel}ものはどれか。`;
     return Object.freeze({
       ...fields,
       variationKind: "fullscore-source-comparison-single",
-      text: `同一単元の異なる場面を比較する。次の記述のうち、${askLabel}ものはどれか。`,
+      text: intro,
       choices,
+      displayModel: displayModel(intro, [], displayedFacts.map((fact) =>
+        displayBlock("", [fact], fact.presentedStatement)
+      )),
       choiceExplanations,
       choiceDiagnosticTags: Object.freeze(displayedFacts.map((fact) => fact.diagnosticTags)),
       explain: judgment,
@@ -656,11 +693,16 @@
         : `${index + 1} × 実際は${actual}なので一致しない。`
     ));
     const judgment = `${actual}。アは${left.reason}。イは${right.reason}。`;
+    const intro = "次のア・イを判定し、正しい組合せを選べ。";
     return Object.freeze({
       ...fields,
       variationKind: "fullscore-four-fact-combination",
-      text: `次のア・イを判定し、正しい組合せを選べ。\nア 【前提】${facts[0].context}／${facts[1].context} 【判断】${left.text}\nイ 【前提】${facts[2].context}／${facts[3].context} 【判断】${right.text}`,
+      text: `${intro}\nア 【前提】${facts[0].context}／${facts[1].context} 【判断】${left.text}\nイ 【前提】${facts[2].context}／${facts[3].context} 【判断】${right.text}`,
       choices: Object.freeze(displayedPatterns.map((pattern) => pattern.label)),
+      displayModel: displayModel(intro, [
+        displayBlock("ア", [facts[0], facts[1]], left.text),
+        displayBlock("イ", [facts[2], facts[3]], right.text)
+      ], []),
       choiceExplanations,
       choiceDiagnosticTags: Object.freeze(displayedPatterns.map(() => fields.diagnosticTags)),
       explain: judgment,
@@ -694,11 +736,15 @@
     ));
     const correctKana = facts.map((fact, index) => fact.truth ? kana[index] : "").filter(Boolean);
     const judgment = `正しいのは${correctKana.join("・")}の${correctCount}つ。`;
+    const intro = "次の4場面について、正しい記述はいくつあるか。";
     return Object.freeze({
       ...fields,
       variationKind: "fullscore-source-fact-count",
-      text: `次の4場面について、正しい記述はいくつあるか。\n${facts.map((fact, index) => `${kana[index]} 【前提】${fact.context} 【判断】${fact.presentedStatement}`).join("\n")}`,
+      text: `${intro}\n${facts.map((fact, index) => `${kana[index]} 【前提】${fact.context} 【判断】${fact.presentedStatement}`).join("\n")}`,
       choices: Object.freeze(displayedLabels),
+      displayModel: displayModel(intro, facts.map((fact, index) =>
+        displayBlock(kana[index], [fact], fact.presentedStatement)
+      ), []),
       choiceExplanations,
       choiceDiagnosticTags: Object.freeze(displayedLabels.map(() => fields.diagnosticTags)),
       explain: judgment,
@@ -764,12 +810,16 @@
     const judgment = facts.map((fact, index) =>
       `${kana[index]}${fact.truth ? "○" : "×"} ${fact.reason}`
     ).join("／");
+    const intro = "主体を甲・乙に置き換えた独立4事例である。各判断を個別に切り、正しいものの組合せを選べ。";
     return Object.freeze({
       ...fields,
       variationKind: "fullscore-source-traceable-subject-reframed-case",
       frameRule: "subject-alias-only",
-      text: `主体を甲・乙に置き換えた独立4事例である。各判断を個別に切り、正しいものの組合せを選べ。\n${presentedStatements.map((statement, index) => `${kana[index]} 【前提】${presentedContexts[index]} 【判断】${statement}`).join("\n")}`,
+      text: `${intro}\n${presentedStatements.map((statement, index) => `${kana[index]} 【前提】${presentedContexts[index]} 【判断】${statement}`).join("\n")}`,
       choices: Object.freeze(displayedMasks.map(truthMaskLabel)),
+      displayModel: displayModel(intro, facts.map((fact, index) =>
+        displayBlock(kana[index], [fact], presentedStatements[index], [presentedContexts[index]])
+      ), []),
       choiceExplanations,
       choiceDiagnosticTags: Object.freeze(displayedMasks.map(() => fields.diagnosticTags)),
       explain: judgment,
@@ -1009,6 +1059,34 @@
     });
   });
 
+  function validateDisplayModel(question) {
+    const model = question.displayModel;
+    const expectedItemCount = question.formatKey === "combination" ? 2 :
+      (question.formatKey === "count" || question.formatKey === "case" ? 4 : 0);
+    const expectedChoiceBlockCount = question.formatKey === "single" ? 4 : 0;
+    if (!model || !Object.isFrozen(model) || !Object.isFrozen(model.items) ||
+        !Object.isFrozen(model.choiceBlocks) || !cleanText(model.intro) ||
+        model.items.length !== expectedItemCount || model.choiceBlocks.length !== expectedChoiceBlockCount) {
+      throw new Error(`${question.id}: display model shape is invalid`);
+    }
+    const factKeys = new Set(question.sourceFacts.map((fact) => fact.key));
+    [...model.items, ...model.choiceBlocks].forEach((block) => {
+      if (!block || !Object.isFrozen(block) || !Object.isFrozen(block.premises) ||
+          !Object.isFrozen(block.sourceFactKeys) || !cleanText(block.judgment) ||
+          !block.sourceFactKeys.length || new Set(block.premises).size !== block.premises.length ||
+          block.sourceFactKeys.some((key) => !factKeys.has(key))) {
+        throw new Error(`${question.id}: display model block is invalid`);
+      }
+    });
+    if (question.formatKey === "single" &&
+        model.choiceBlocks.some((block, index) => block.judgment !== question.sourceFacts[index].presentedStatement ||
+          block.sourceFactKeys[0] !== question.sourceFacts[index].key)) {
+      throw new Error(`${question.id}: single display choices are not source-aligned`);
+    }
+  }
+
+  questions.forEach(validateDisplayModel);
+
   const questionsById = Object.freeze(Object.fromEntries(
     questions.map((question) => [question.id, question])
   ));
@@ -1091,6 +1169,13 @@
       answer,
       choiceExplanations: Object.freeze(order.map((index) => question.choiceExplanations[index])),
       choiceDiagnosticTags: Object.freeze(order.map((index) => question.choiceDiagnosticTags[index])),
+      displayModel: displayModel(
+        question.displayModel.intro,
+        question.displayModel.items,
+        question.displayModel.choiceBlocks.length
+          ? order.map((index) => question.displayModel.choiceBlocks[index])
+          : question.displayModel.choiceBlocks
+      ),
       presentationKey: key,
       presentationOffset: offset,
       presentationOrder: order

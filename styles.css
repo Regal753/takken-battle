@@ -6956,11 +6956,154 @@ button.mission-step:disabled {
 .practical-drill-prompt {
   margin: 12px 0;
   color: #f4f5fb;
-  font-size: 17px;
-  font-weight: 820;
-  line-height: 1.72;
+  font-size: 16px;
+  font-weight: 680;
+  line-height: 1.65;
   white-space: pre-line;
   overflow-wrap: anywhere;
+}
+
+.practical-drill-prompt[data-structured="true"] {
+  display: grid;
+  gap: 12px;
+  white-space: normal;
+}
+
+.practical-prompt-intro {
+  margin: 0;
+  color: #f2f5ff;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.55;
+}
+
+.practical-prompt-items {
+  display: grid;
+  gap: 12px;
+}
+
+.practical-prompt-shared {
+  display: grid;
+  gap: 7px;
+  padding: 10px 11px;
+  border: 1px solid rgba(121, 202, 181, 0.55);
+  border-radius: 9px;
+  color: #163a32;
+  background: #e8f7f2;
+}
+
+.practical-prompt-shared > strong {
+  color: #27695a;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+}
+
+.practical-prompt-shared-list {
+  display: grid;
+  gap: 7px;
+}
+
+.practical-prompt-shared-row {
+  display: grid;
+  gap: 4px;
+  padding-top: 7px;
+  border-top: 1px solid rgba(63, 133, 116, 0.25);
+}
+
+.practical-prompt-shared-row:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.practical-prompt-shared-targets {
+  width: fit-content;
+  padding: 2px 7px;
+  border-radius: 999px;
+  color: #f1fffa;
+  background: #397d6d;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.practical-prompt-shared-text {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 680;
+  line-height: 1.6;
+}
+
+.practical-prompt-item {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr);
+  gap: 9px 10px;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid rgba(195, 216, 209, 0.38);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.practical-prompt-marker {
+  display: grid;
+  grid-row: 1 / span 2;
+  place-items: center;
+  align-self: start;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #8de2c1;
+  border-radius: 50%;
+  color: #102e28;
+  background: #a9ead2;
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.practical-prompt-premise,
+.practical-prompt-judgment {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+  padding: 9px 10px;
+  border-left: 4px solid;
+  border-radius: 7px;
+}
+
+.practical-prompt-premise {
+  border-color: #5a9b8a;
+  color: #173c34;
+  background: #eaf6f2;
+}
+
+.practical-prompt-judgment {
+  border-color: #d5a23a;
+  color: #402f08;
+  background: #fff5d7;
+}
+
+.practical-prompt-label,
+.practical-choice-label {
+  width: fit-content;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+}
+
+.practical-prompt-premise ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 1.6;
+}
+
+.practical-prompt-judgment p {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 820;
+  line-height: 1.58;
 }
 
 .practical-confidence-hint {
@@ -6986,7 +7129,67 @@ button.mission-step:disabled {
   font: inherit;
   font-size: 13px;
   font-weight: 900;
+  text-align: left;
+  overflow-wrap: anywhere;
   cursor: pointer;
+}
+
+.practical-drill-choice[data-structured="true"] {
+  display: grid;
+  grid-column: 1 / -1;
+  grid-template-columns: 34px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 11px;
+}
+
+.practical-choice-marker {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(240, 201, 113, 0.62);
+  border-radius: 50%;
+  color: #fff0bd;
+  background: rgba(240, 201, 113, 0.12);
+  font-size: 14px;
+  font-weight: 950;
+}
+
+.practical-choice-copy,
+.practical-choice-premise,
+.practical-choice-judgment {
+  display: grid;
+  min-width: 0;
+}
+
+.practical-choice-copy {
+  gap: 8px;
+}
+
+.practical-choice-premise,
+.practical-choice-judgment {
+  gap: 4px;
+  padding: 8px 9px;
+  border-left: 3px solid;
+  border-radius: 6px;
+  line-height: 1.55;
+}
+
+.practical-choice-premise {
+  border-color: #65b09b;
+  color: #d9eee8;
+  background: rgba(101, 176, 155, 0.1);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.practical-choice-judgment {
+  border-color: #d5a23a;
+  color: #fff5d7;
+  background: rgba(213, 162, 58, 0.11);
+  font-size: 15px;
+  font-weight: 820;
 }
 
 .practical-drill-choice:hover,
@@ -7484,6 +7687,27 @@ button.mission-step:disabled {
 
   .practical-drill-prompt {
     font-size: 15px;
+  }
+
+  .practical-prompt-item {
+    grid-template-columns: 34px minmax(0, 1fr);
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .practical-prompt-marker {
+    width: 30px;
+    height: 30px;
+    font-size: 15px;
+  }
+
+  .practical-prompt-premise,
+  .practical-prompt-judgment {
+    padding: 8px;
+  }
+
+  .practical-prompt-judgment p {
+    font-size: 16px;
   }
 
   .practical-drill-confidence {

@@ -5,8 +5,11 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const ROOT = __dirname;
-const EXPECTED_CACHE_VERSION = "20260815-business-knock-v27-1";
-const MAX_PUBLIC_JS_BYTES = 1_100_000;
+const EXPECTED_CACHE_VERSION = "20260816-premise-readability-v28-1";
+// The structured premise model adds source-aligned display metadata while the
+// raw legal wording remains intact. Keep a tight uncompressed ceiling with a
+// small allowance for that learner-facing accessibility data.
+const MAX_PUBLIC_JS_BYTES = 1_120_000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
   "scripts/validate-public.mjs",
