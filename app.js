@@ -3620,7 +3620,13 @@
         const row = document.createElement("div");
         row.className = "loot-item";
         row.classList.toggle("is-owned", count > 0);
-        row.innerHTML = `<i style="--loot-color:${item.color}"></i><span>${count > 0 ? item.name : "未発見"}</span><strong>${count > 0 ? `x${count}` : "---"}</strong>`;
+        const marker = document.createElement("i");
+        marker.style.setProperty("--loot-color", item.color);
+        const name = document.createElement("span");
+        name.textContent = count > 0 ? item.name : "未発見";
+        const quantity = document.createElement("strong");
+        quantity.textContent = count > 0 ? `x${count}` : "---";
+        row.append(marker, name, quantity);
         elements.lootCollection.append(row);
       });
   }
@@ -11297,7 +11303,7 @@
     });
   }
 
-  function showQuizResult(markup) {
+  function showQuizResult(buildView) {
     resetQuizCardView();
     [
       elements.roundLabel?.closest(".quiz-meta"),
@@ -11310,8 +11316,42 @@
     const view = document.createElement("div");
     view.className = "quiz-result-view";
     view.dataset.quizResultView = "";
-    view.innerHTML = markup;
+    buildView(view);
     elements.quizCard.append(view);
+  }
+
+  function resultElement(tagName, { className = "", id = "", text = "" } = {}) {
+    const element = document.createElement(tagName);
+    if (className) element.className = className;
+    if (id) element.id = id;
+    if (text !== "") element.textContent = text;
+    return element;
+  }
+
+  function resultDefinition(label, value) {
+    const row = document.createElement("div");
+    row.append(resultElement("dt", { text: label }), resultElement("dd", { text: value }));
+    return row;
+  }
+
+  function appendQuizMeta(view, primary, secondary) {
+    const meta = resultElement("div", { className: "quiz-meta" });
+    meta.append(resultElement("strong", { text: primary }), resultElement("span", { text: secondary }));
+    view.append(meta);
+  }
+
+  function appendSafeSourceLink(parent, question) {
+    const link = resultElement("a", { className: "mock-source-link" });
+    try {
+      const url = new URL(question.sourceUrl, window.location.href);
+      if (url.protocol === "https:" || url.protocol === "http:") link.href = url.href;
+    } catch {
+      // The source record is invalid. Leave the link inert rather than creating an executable URL.
+    }
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = `公式根拠: ${question.sourceLocator || question.sourceRef}（基準日 ${question.legalBaseline}）`;
+    parent.append(link);
   }
 
   function showMockFinished() {
@@ -11339,99 +11379,90 @@
     const otherFormId = nextMockFormId();
     const strategyRows = mockStrategyRows(sectionScores);
     const priority = mockPriorityRow(sectionScores);
-    const sectionCards = strategyRows.map((row) => {
-      return `
-        <div class="mock-section-card ${row.deficit > 0 ? "is-below-target" : "is-on-target"}" data-section="${escapeHtml(row.id)}">
-          <span>${escapeHtml(row.label)}</span>
-          <strong>${row.correct} / ${row.total}<small>目標 ${row.target}</small></strong>
-        </div>`;
-    }).join("");
     const scoreMessage = targetReached
       ? `演習安全圏${safeTarget}点を達成`
       : (strategyTargetReached
           ? `内部目標${passTarget}点を達成。演習安全圏${safeTarget}点まであと${safeTarget - score}点`
           : `内部目標${passTarget}点まであと${passTarget - score}点`);
-    const priorityPanel = priority
-      ? `
-        <section class="mock-priority is-below-target">
-          <span>次の最優先</span>
-          <strong>${escapeHtml(priority.label)} ${priority.correct}/${priority.total} → 目標${priority.target}</strong>
-          <p>今日は誤答の解説と根拠を確認して終了。翌日の日課で本試験比率を保ちながら、弱点を優先して再テストする。</p>
-        </section>`
-      : `
-        <section class="mock-priority is-on-target">
-          <span>次の目標</span>
-          <strong>4分野すべて目標達成</strong>
-          <p>定着ロードで弱点と最終接触が古い問題を回し、演習安全圏${safeTarget}点を別フォームでも再現する。</p>
-        </section>`;
     const historyItems = [...(state.mockHistory || [])]
       .sort((left, right) => (Date.parse(right.completedAt) || 0) - (Date.parse(left.completedAt) || 0))
-      .slice(0, 3)
-      .map((item) => `
-        <div class="mock-history-item">
-          <span>${escapeHtml(shortDateLabel(item.completedAt))} ${escapeHtml(mockFormShortLabel(mockFormById(item.formId)))}</span>
-          <strong>${Math.max(0, Number(item.score) || 0)} / ${Number(item.questionCount) || 50}</strong>
-          <small>${escapeHtml(formatElapsed(Math.max(0, Number(item.elapsedMs) || 0)))}</small>
-        </div>`)
-      .join("");
-    const wrongReview = wrongResults.length
-      ? wrongResults.map((result) => {
+      .slice(0, 3);
+
+    showQuizResult((view) => {
+      appendQuizMeta(view, mockFormShortLabel(form), "模試完了");
+      const resultsView = resultElement("section", { className: "mock-results" });
+      resultsView.dataset.mockResult = form.id;
+      const hero = resultElement("div", { className: `mock-score-hero ${targetReached ? "is-target" : "is-below"}` });
+      const scoreValue = resultElement("strong", { text: String(score) });
+      scoreValue.append(resultElement("small", { text: ` / ${questionCount}` }));
+      hero.append(resultElement("span", { text: "得点" }), scoreValue, resultElement("p", { text: scoreMessage }));
+      const meta = resultElement("div", { className: "mock-result-meta" });
+      [["所要時間", formatElapsed(state.mock.elapsedMs)], ["誤答", `${wrongResults.length}問`], ["弱点へ登録", `${wrongResults.length}問`]].forEach(([label, value]) => {
+        const item = resultElement("span", { text: `${label} ` });
+        item.append(resultElement("strong", { text: value }));
+        meta.append(item);
+      });
+      const sectionGrid = resultElement("div", { className: "mock-section-grid" });
+      strategyRows.forEach((row) => {
+        const card = resultElement("div", { className: `mock-section-card ${row.deficit > 0 ? "is-below-target" : "is-on-target"}` });
+        card.dataset.section = row.id;
+        const line = resultElement("strong", { text: `${row.correct} / ${row.total}` });
+        line.append(resultElement("small", { text: `目標 ${row.target}` }));
+        card.append(resultElement("span", { text: row.label }), line);
+        sectionGrid.append(card);
+      });
+      const priorityPanel = resultElement("section", { className: `mock-priority ${priority ? "is-below-target" : "is-on-target"}` });
+      priorityPanel.append(
+        resultElement("span", { text: priority ? "次の最優先" : "次の目標" }),
+        resultElement("strong", { text: priority ? `${priority.label} ${priority.correct}/${priority.total} → 目標${priority.target}` : "4分野すべて目標達成" }),
+        resultElement("p", { text: priority ? "今日は誤答の解説と根拠を確認して終了。翌日の日課で本試験比率を保ちながら、弱点を優先して再テストする。" : `定着ロードで弱点と最終接触が古い問題を回し、演習安全圏${safeTarget}点を別フォームでも再現する。` })
+      );
+      const history = resultElement("section", { className: "mock-history" });
+      const historyGrid = resultElement("div", { className: "mock-history-grid" });
+      historyItems.forEach((item) => {
+        const historyItem = resultElement("div", { className: "mock-history-item" });
+        historyItem.append(
+          resultElement("span", { text: `${shortDateLabel(item.completedAt)} ${mockFormShortLabel(mockFormById(item.formId))}` }),
+          resultElement("strong", { text: `${Math.max(0, Number(item.score) || 0)} / ${Number(item.questionCount) || 50}` }),
+          resultElement("small", { text: formatElapsed(Math.max(0, Number(item.elapsedMs) || 0)) })
+        );
+        historyGrid.append(historyItem);
+      });
+      history.append(resultElement("h3", { text: "直近の模試" }), historyGrid);
+      const calibration = resultElement("section", { className: "mock-calibration" });
+      const officialButton = resultElement("button", { className: "ghost-button", id: "mockOfficialExamButton", text: `露出記録つき公式${examProfileQuestionCount(state.examProfile)}問へ` });
+      officialButton.type = "button";
+      calibration.append(resultElement("strong", { text: "初見実力は公式過去問で確認" }), resultElement("p", { text: "フォームA・B・Cは確認済み内部問題の再構成。3フォーム・別日・改正確認・学習時間を満たすまで安定扱いにせず、初見の合否判定には使わない。" }), officialButton);
+      const wrongReview = resultElement("section", { className: "mock-wrong-review" });
+      wrongReview.append(resultElement("h3", { text: "誤答レビュー" }), resultElement("p", { text: "誤答は弱点リストへ登録済み。各問を開くと正解と解説を確認できます。" }));
+      if (!wrongResults.length) {
+        wrongReview.append(resultElement("p", { className: "mock-perfect", text: `全${questionCount}問正解。誤答レビューはありません。` }));
+      } else {
+        wrongResults.forEach((result) => {
           const question = QUESTIONS[result.id];
           const position = mockIdsForForm(form, state.mock.examProfile).indexOf(result.id) + 1;
-          return `
-            <details class="mock-wrong-item">
-              <summary>問${position} ${escapeHtml(question.tag)}：選択${result.selected + 1} → 正解${question.answer + 1}</summary>
-              <p>${escapeHtml(question.text)}</p>
-              <dl>
-                <div><dt>あなたの解答</dt><dd>${result.selected + 1}. ${escapeHtml(question.choices[result.selected])}</dd></div>
-                <div><dt>正解</dt><dd>${question.answer + 1}. ${escapeHtml(question.choices[question.answer])}</dd></div>
-              </dl>
-              <p>${escapeHtml(question.explain)}</p>
-              <a class="mock-source-link" href="${escapeHtml(question.sourceUrl)}" target="_blank" rel="noopener noreferrer">公式根拠: ${escapeHtml(question.sourceLocator || question.sourceRef)}（基準日 ${escapeHtml(question.legalBaseline)}）</a>
-            </details>`;
-        }).join("")
-      : `<p class="mock-perfect">全${questionCount}問正解。誤答レビューはありません。</p>`;
-
-    showQuizResult(`
-      <div class="quiz-meta">
-        <strong>${escapeHtml(mockFormShortLabel(form))}</strong>
-        <span>模試完了</span>
-      </div>
-      <section class="mock-results" data-mock-result="${escapeHtml(form.id)}">
-        <div class="mock-score-hero ${targetReached ? "is-target" : "is-below"}">
-          <span>得点</span>
-          <strong>${score}<small> / ${questionCount}</small></strong>
-          <p>${scoreMessage}</p>
-        </div>
-        <div class="mock-result-meta">
-          <span>所要時間 <strong>${formatElapsed(state.mock.elapsedMs)}</strong></span>
-          <span>誤答 <strong>${wrongResults.length}問</strong></span>
-          <span>弱点へ登録 <strong>${wrongResults.length}問</strong></span>
-        </div>
-        <h3>分野別得点と目標</h3>
-        <div class="mock-section-grid">${sectionCards}</div>
-        ${priorityPanel}
-        <section class="mock-history">
-          <h3>直近の模試</h3>
-          <div class="mock-history-grid">${historyItems}</div>
-        </section>
-        <section class="mock-calibration">
-          <strong>初見実力は公式過去問で確認</strong>
-          <p>フォームA・B・Cは確認済み内部問題の再構成。3フォーム・別日・改正確認・学習時間を満たすまで安定扱いにせず、初見の合否判定には使わない。</p>
-          <button id="mockOfficialExamButton" class="ghost-button" type="button">露出記録つき公式${examProfileQuestionCount(state.examProfile)}問へ</button>
-        </section>
-        <section class="mock-wrong-review">
-          <h3>誤答レビュー</h3>
-          <p>誤答は弱点リストへ登録済み。各問を開くと正解と解説を確認できます。</p>
-          ${wrongReview}
-        </section>
-        <div class="finish-actions mock-finish-actions">
-          <button id="mockDailyButton" class="next-button" type="button">日課へ戻る</button>
-          <button id="mockOtherButton" class="ghost-button" type="button">${escapeHtml(mockFormShortLabel(mockFormById(otherFormId)))}へ</button>
-          <button id="mockRetryButton" class="ghost-button" type="button">同じフォームを再挑戦</button>
-        </div>
-      </section>
-    `);
+          const details = resultElement("details", { className: "mock-wrong-item" });
+          const answers = document.createElement("dl");
+          details.append(
+            resultElement("summary", { text: `問${position} ${question.tag}：選択${result.selected + 1} → 正解${question.answer + 1}` }),
+            resultElement("p", { text: question.text }),
+            answers,
+            resultElement("p", { text: question.explain })
+          );
+          answers.append(resultDefinition("あなたの解答", `${result.selected + 1}. ${question.choices[result.selected]}`), resultDefinition("正解", `${question.answer + 1}. ${question.choices[question.answer]}`));
+          appendSafeSourceLink(details, question);
+          wrongReview.append(details);
+        });
+      }
+      const actions = resultElement("div", { className: "finish-actions mock-finish-actions" });
+      [["mockDailyButton", "next-button", "日課へ戻る"], ["mockOtherButton", "ghost-button", `${mockFormShortLabel(mockFormById(otherFormId))}へ`], ["mockRetryButton", "ghost-button", "同じフォームを再挑戦"]].forEach(([id, className, text]) => {
+        const button = resultElement("button", { id, className, text });
+        button.type = "button";
+        actions.append(button);
+      });
+      resultsView.append(hero, meta, resultElement("h3", { text: "分野別得点と目標" }), sectionGrid, priorityPanel, history, calibration, wrongReview, actions);
+      view.append(resultsView);
+    });
     const reloadIntoMock = (targetFormId) => {
       const targetForm = mockFormById(targetFormId);
       state.runMode = RUN_MODE_MOCK;
@@ -11495,30 +11526,37 @@
     const answeredCount = chapter.ids.filter(answeredToday).length;
     const correctCount = chapter.ids.filter(correctToday).length;
     const retainedCount = chapter.ids.filter(isRetained).length;
-    showQuizResult(`
-      <div class="quiz-meta">
-        <strong>${chapter.ids.length} / ${chapter.ids.length}</strong>
-        <span>テーマ完了</span>
-      </div>
-      <section class="feedback" data-chapter-result="${escapeHtml(chapter.id)}">
-        <h3>${escapeHtml(chapter.label)}</h3>
-        <p class="question-text">選択テーマの問題だけを完了。固定10問は変更していません。</p>
-        <dl class="answer-grid">
-          <div><dt>テーマ問題</dt><dd>${chapter.ids.length}問</dd></div>
-          <div><dt>本日解答</dt><dd>${answeredCount}問</dd></div>
-          <div><dt>本日正解</dt><dd>${correctCount}問</dd></div>
-          <div><dt>定着</dt><dd>${retainedCount}問</dd></div>
-        </dl>
-        ${nextDescriptor ? `
-          <p class="explain-text"><strong>${escapeHtml(nextDescriptor.stage)}：</strong>${escapeHtml(nextDescriptor.title)}。${escapeHtml(nextDescriptor.text)}</p>
-        ` : ""}
-        <div class="finish-actions chapter-finish-actions">
-          ${nextDescriptor ? `<button id="chapterNextButton" class="next-button chapter-next-button" type="button">${escapeHtml(nextActionLabel)}</button>` : ""}
-          <button id="chapterRetryButton" class="${nextDescriptor ? "ghost-button" : "next-button"}" type="button">このテーマをもう一度</button>
-          <button id="chapterDailyButton" class="ghost-button" type="button">固定10問へ戻る</button>
-        </div>
-      </section>
-    `);
+    showQuizResult((view) => {
+      appendQuizMeta(view, `${chapter.ids.length} / ${chapter.ids.length}`, "テーマ完了");
+      const feedback = resultElement("section", { className: "feedback" });
+      feedback.dataset.chapterResult = chapter.id;
+      const grid = resultElement("dl", { className: "answer-grid" });
+      grid.append(
+        resultDefinition("テーマ問題", `${chapter.ids.length}問`),
+        resultDefinition("本日解答", `${answeredCount}問`),
+        resultDefinition("本日正解", `${correctCount}問`),
+        resultDefinition("定着", `${retainedCount}問`)
+      );
+      feedback.append(resultElement("h3", { text: chapter.label }), resultElement("p", { className: "question-text", text: "選択テーマの問題だけを完了。固定10問は変更していません。" }), grid);
+      if (nextDescriptor) {
+        const nextText = resultElement("p", { className: "explain-text" });
+        nextText.append(resultElement("strong", { text: `${nextDescriptor.stage}：` }), document.createTextNode(`${nextDescriptor.title}。${nextDescriptor.text}`));
+        feedback.append(nextText);
+      }
+      const actions = resultElement("div", { className: "finish-actions chapter-finish-actions" });
+      if (nextDescriptor) {
+        const nextButton = resultElement("button", { id: "chapterNextButton", className: "next-button chapter-next-button", text: nextActionLabel });
+        nextButton.type = "button";
+        actions.append(nextButton);
+      }
+      [["chapterRetryButton", nextDescriptor ? "ghost-button" : "next-button", "このテーマをもう一度"], ["chapterDailyButton", "ghost-button", "固定10問へ戻る"]].forEach(([id, className, text]) => {
+        const button = resultElement("button", { id, className, text });
+        button.type = "button";
+        actions.append(button);
+      });
+      feedback.append(actions);
+      view.append(feedback);
+    });
     const chapterNextButton = $("#chapterNextButton");
     if (chapterNextButton && nextDescriptor) {
       setRouteAction(chapterNextButton, nextDescriptor, nextActionLabel);
@@ -11556,31 +11594,28 @@
       ? `${scopeState.scope.shortLabel}${scopeState.total}問に一通り接触。`
       : `${scopeState.scope.shortLabel}の今回ルートを完走。`;
     const nextText = allContacted
-      ? "翌日以降の固定10問で定着を確認し、全100問接触後は模試A・Bで50問演習へ進む。"
+      ? "翌日以降の固定10問で定着を確認し、全100問接触後は模試A・B・Cで本試験形式の演習へ進む。"
       : `次は翌日以降の固定10問で定着を確認する。1回の正解だけでは定着扱いにしない。`;
-    const finishActions = `<div class="finish-actions">
-        <button id="finishDailyButton" class="next-button" type="button">固定10問へ戻る</button>
-        <button id="finishResetButton" class="ghost-button finish-reset" type="button">全記録リセット</button>
-      </div>`;
-    showQuizResult(`
-      <div class="quiz-meta">
-        <strong>${scopeState.contacted} / ${scopeState.total}</strong>
-        <span>完了</span>
-      </div>
-      <p class="question-text">${finishText}</p>
-      <section class="feedback">
-        <h3>結果</h3>
-        <dl class="answer-grid">
-          <div><dt>解答</dt><dd>${state.attempts}問</dd></div>
-          <div><dt>範囲接触</dt><dd>${scopeState.contacted}問</dd></div>
-          <div><dt>範囲定着</dt><dd>${scopeState.retained}問</dd></div>
-          <div><dt>正解</dt><dd>${state.correct}問</dd></div>
-          <div><dt>正答率</dt><dd>${accuracy}</dd></div>
-        </dl>
-        <p class="explain-text">${nextText}</p>
-        ${finishActions}
-      </section>
-    `);
+    showQuizResult((view) => {
+      appendQuizMeta(view, `${scopeState.contacted} / ${scopeState.total}`, "完了");
+      const feedback = resultElement("section", { className: "feedback" });
+      const grid = resultElement("dl", { className: "answer-grid" });
+      grid.append(
+        resultDefinition("解答", `${state.attempts}問`),
+        resultDefinition("範囲接触", `${scopeState.contacted}問`),
+        resultDefinition("範囲定着", `${scopeState.retained}問`),
+        resultDefinition("正解", `${state.correct}問`),
+        resultDefinition("正答率", accuracy)
+      );
+      const actions = resultElement("div", { className: "finish-actions" });
+      [["finishDailyButton", "next-button", "固定10問へ戻る"], ["finishResetButton", "ghost-button finish-reset", "全記録リセット"]].forEach(([id, className, text]) => {
+        const button = resultElement("button", { id, className, text });
+        button.type = "button";
+        actions.append(button);
+      });
+      feedback.append(resultElement("h3", { text: "結果" }), grid, resultElement("p", { className: "explain-text", text: nextText }), actions);
+      view.append(resultElement("p", { className: "question-text", text: finishText }), feedback);
+    });
     $("#finishDailyButton")?.addEventListener("click", () => {
       state.runMode = "quest";
       state.chapterModeId = "";
