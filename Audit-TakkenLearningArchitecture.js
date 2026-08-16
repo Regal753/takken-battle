@@ -54,7 +54,7 @@ requireText(app, "state.runMode = RUN_MODE_CHAPTER;", "manual chapter selection 
 requireText(app, "function showChapterFinished", "manual chapter completion view is missing");
 requireText(app, "function showQuizResult", "completion views must preserve the live question DOM");
 requireText(app, "resetQuizCardView();", "question rendering does not restore the live question DOM");
-requireText(app, "id=\"chapterNextButton\"", "chapter completion has no next-route action");
+requireText(app, "id: \"chapterNextButton\"", "chapter completion has no next-route action");
 requireText(app, "runFoundationRouteAction(chapterNextButton)", "chapter completion bypasses the shared foundation route");
 requireText(app, "if (isChapterMode())", "manual chapter navigation branch is missing");
 requireText(app, "function startPracticalDrillForUnit", "unit-specific practical session is missing");
