@@ -1,116 +1,67 @@
 "use strict";
-
 process.env.TZ = "Asia/Tokyo";
-
-const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const vm = require("node:vm");
+const assert = require("node:assert/strict"), fs = require("node:fs"), path = require("node:path"), vm = require("node:vm");
 const readiness = require("./pass-readiness.js");
-
 const browserContext = {};
-vm.runInNewContext(
-  fs.readFileSync(path.join(__dirname, "pass-readiness.js"), "utf8"),
-  browserContext,
-  { filename: "pass-readiness.js" }
-);
+vm.runInNewContext(fs.readFileSync(path.join(__dirname, "pass-readiness.js"), "utf8"), browserContext);
 assert.equal(typeof browserContext.TAKKEN_PASS_READINESS?.calculatePassReadiness, "function");
 assert.equal(readiness.EXAM_DAY_KEY, "2026-10-18");
-assert.equal(readiness.LAW_BASELINE_DAY_KEY, "2026-04-01");
-assert.equal(readiness.FIRST_PASS_DEADLINE_KEY, "2026-08-31");
-assert.equal(readiness.TARGET_TOTAL, 40);
-assert.equal(readiness.QUESTION_TOTAL, 50);
-assert.deepEqual(readiness.SUBJECTS.map(({ key, target, questions }) => [key, target, questions]), [
-  ["business", 18, 20], ["rights", 9, 14], ["restrictions", 7, 8], ["tax", 2, 3], ["other", 4, 5]
-]);
-assert.equal(readiness.validDayKey("2026-02-29"), "");
-assert.equal(readiness.validDayKey("2028-02-29"), "2028-02-29");
-assert.equal(readiness.daysBetween("2026-08-16", "2026-08-31"), 15);
+assert.equal(readiness.TARGET_TOTAL, 40); assert.equal(readiness.QUESTION_TOTAL, 50);
+assert.equal(readiness.MIN_TIMED_MOCK_MINUTES, 30);
+assert.equal(readiness.validDayKey("2026-02-29"), ""); assert.equal(readiness.validDayKey("2028-02-29"), "2028-02-29");
+assert.equal(readiness.dayKey(new Date("2026-08-29T15:30:00Z")), "2026-08-30", "Date inputs use JST regardless of host timezone");
+
+const subjects = { business: { total: 20, contacted: 20, retained: 18 }, rights: { total: 14, contacted: 14, retained: 10 }, restrictions: { total: 8, contacted: 8, retained: 7 }, tax: { total: 3, contacted: 3, retained: 2 }, other: { total: 5, contacted: 5, retained: 4 } };
+const score = { business: 18, rights: 9, restrictions: 7, tax: 2, other: 4 };
+const attempts = [1, 2, 3].map((n) => ({ formId: `internal-${n}`, currentLaw: true, dayKey: `2026-09-0${n}`, completedAt: `2026-09-0${n}T10:00:00+09:00`, total: 40, timed: true, elapsedMinutes: 60, questionCount: 50, sections: score }));
+const gate = { attempts: [
+  { dayKey: "2026-09-02", completedAt: "2026-09-02T10:00:00+09:00", correct: true, clusters: ["management-disclosure", "signage"] },
+  { dayKey: "2026-09-03", completedAt: "2026-09-03T10:00:00+09:00", correct: true, clusters: ["important-matters", "land-regulation"] }
+] };
+const capacity = ["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04"].map((dayKey) => ({ dayKey, minutes: 75 }));
+const freshness = { current: true, failClosed: false };
 
 const blank = readiness.calculatePassReadiness({ todayKey: "2026-08-16" });
-assert.equal(blank.valid, true);
-assert.equal(blank.status, "unmeasured");
-assert.equal(blank.firstPass.daysRemainingInclusive, 16);
-assert.deepEqual(blank.unmeasuredSubjectKeys, ["business", "rights", "restrictions", "tax", "other"]);
-assert.equal(blank.dailyPlan.theme.mode, "mock", "2026-08-16 is Sunday");
-assert.equal(blank.dailyPlan.theme.fitsAvailableMinutes, false);
-assert.equal(blank.dailyPlan.businessKnock.count, 20);
+assert.equal(blank.status, "unmeasured"); assert.equal(blank.dailyPlan.mode, "choice"); assert.equal(blank.dailyPlan.businessKnock, null); assert.equal(blank.capacity.status, "unverified");
+const stable = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: freshness });
+assert.equal(stable.status, "on-track"); assert.equal(stable.timed50.stable, true); assert.equal(stable.currentLawGate.passed, true); assert.equal(stable.capacity.verified, true);
+assert.equal(stable.currentYearFreshness.passed, true);
+const staleCurrentYear = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: { current: false, failClosed: true, status: "stale" } });
+assert.equal(staleCurrentYear.onTrack, false); assert.equal(staleCurrentYear.reason, "current-year-freshness-unverified");
 
-const subjects = {
-  business: { total: 20, contacted: 20, retained: 18 },
-  rights: { total: 14, contacted: 14, retained: 10 },
-  restrictions: { total: 8, contacted: 8, retained: 7 },
-  tax: { total: 3, contacted: 3, retained: 2 },
-  other: { total: 5, contacted: 5, retained: 4 }
-};
-const score = { business: 18, rights: 9, restrictions: 7, tax: 2, other: 4 };
-const stableAttempts = [1, 2, 3].map((index) => ({
-  dayKey: `2026-09-0${index}`, total: 40, timed: true, questionCount: 50, sections: score
-}));
-const onTrack = readiness.calculatePassReadiness({
-  todayKey: "2026-08-17", dailyAvailableMinutes: 90, subjects, mockHistory: stableAttempts
-});
-assert.equal(onTrack.valid, true);
-assert.equal(onTrack.status, "on-track");
-assert.equal(onTrack.timed50.mock.stable, true);
-assert.equal(onTrack.timed50.stable, true);
-assert.equal(onTrack.dailyPlan.theme.key, "rights");
-assert.equal(onTrack.firstPass.knownRemainingContact, 0);
+const sameForm = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts.map((a) => ({ ...a, formId: "same" })), currentLawGate: gate, studyMinutesHistory: capacity });
+assert.equal(sameForm.timed50.stable, false); assert.equal(sameForm.timed50.mock.distinctFormCount, 1);
+const sameDay = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts.map((a) => ({ ...a, dayKey: "2026-09-01" })), currentLawGate: gate, studyMinutesHistory: capacity });
+assert.equal(sameDay.timed50.stable, false);
+assert.equal(sameDay.timed50.mock.validTimed50Count, 1, "a supplied JST day must agree with the ISO completion timestamp");
+const tooFast = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts.map((a) => ({ ...a, elapsedMinutes: 1 })), currentLawGate: gate, studyMinutesHistory: capacity });
+assert.equal(tooFast.timed50.mock.validTimed50Count, 0, "an implausibly fast form is practice history, not stability evidence");
+const noTimestamp = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts.map(({ completedAt, ...a }) => a), currentLawGate: gate, studyMinutesHistory: capacity });
+assert.equal(noTimestamp.timed50.mock.validTimed50Count, 0, "legacy imports fail closed");
+const historicForm = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts.map(({ currentLaw, ...a }) => a), currentLawGate: gate, studyMinutesHistory: capacity });
+assert.equal(historicForm.timed50.mock.validTimed50Count, 0, "a form without current-law evidence fails closed");
+const badSectionSum = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: [{ ...attempts[0], sections: { ...score, business: 17 } }], currentLawGate: gate, studyMinutesHistory: capacity });
+assert.equal(badSectionSum.timed50.mock.validTimed50Count, 0);
+const unordered = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: [attempts[2], attempts[0], attempts[1]], currentLawGate: gate, studyMinutesHistory: capacity });
+assert.equal(unordered.timed50.stable, true, "valid attempts are sorted before evaluation");
 
-const weak = readiness.calculatePassReadiness({
-  todayKey: "2026-08-17",
-  subjects: { ...subjects, rights: { total: 14, contacted: 14, retained: 8 } }
-});
-assert.equal(weak.status, "urgent");
-assert.deepEqual(weak.weakSubjectKeys, ["rights"]);
-assert.equal(weak.subjects.find((subject) => subject.key === "rights").state, "weak");
+const missingGate = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, studyMinutesHistory: capacity });
+assert.equal(missingGate.timed50.baseStable, true); assert.equal(missingGate.timed50.stable, false); assert.equal(missingGate.reason, "current-law-gate-unverified");
+const staleGate = readiness.calculatePassReadiness({ todayKey: "2026-09-25", subjects, mockHistory: attempts, currentLawGate: gate, studyMinutesHistory: capacity });
+assert.equal(staleGate.currentLawGate.passed, false);
+const oneDayGate = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, currentLawGate: { attempts: gate.attempts.map((entry) => ({ ...entry, dayKey: "2026-09-03" })) }, studyMinutesHistory: capacity });
+assert.equal(oneDayGate.currentLawGate.passed, false);
+const unverifiedCapacity = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, currentLawGate: gate });
+assert.equal(unverifiedCapacity.onTrack, false); assert.equal(unverifiedCapacity.reason, "observed-capacity-unverified");
+const lowCapacity = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, currentLawGate: gate, studyMinutesHistory: capacity.map((entry) => ({ ...entry, minutes: 60 })) });
+assert.equal(lowCapacity.status, "behind"); assert.equal(lowCapacity.reason, "observed-capacity-below-minimum");
 
-const malformed = readiness.calculatePassReadiness({
-  todayKey: "2026-08-17", subjects: { business: { total: 20, contacted: 21, retained: 18 } }
-});
-assert.equal(malformed.valid, false);
-assert.equal(malformed.status, "invalid");
-assert.equal(malformed.reason, "invalid-subject-metric");
-
-const shortDay = readiness.calculatePassReadiness({ todayKey: "2026-08-17", dailyAvailableMinutes: 60, subjects });
-assert.equal(shortDay.status, "behind");
-assert.equal(shortDay.reason, "daily-time-below-minimum");
-
-const late = readiness.calculatePassReadiness({
-  todayKey: "2026-09-01",
-  subjects: { business: { total: 20, contacted: 10, retained: 9 } }
-});
-assert.equal(late.status, "unmeasured", "unknown subjects remain explicitly unmeasured");
-assert.equal(late.firstPass.deadlinePassedWithWork, true);
-assert.equal(late.reason, "first-pass-deadline-passed");
-
-const unstable = readiness.calculatePassReadiness({
-  todayKey: "2026-09-05", subjects,
-  officialHistory: [
-    { total: 41, timed: true, questionCount: 50, sections: score },
-    { total: 42, timed: false, questionCount: 50, sections: score },
-    { total: 40, timed: true, questionCount: 45, sections: score }
-  ]
-});
-assert.equal(unstable.timed50.official.validTimed50Count, 1);
-assert.equal(unstable.timed50.status, "unmeasured");
-
-const historicalPerfectOnly = readiness.calculatePassReadiness({
-  todayKey: "2026-09-05", subjects, officialHistory: stableAttempts
-});
-assert.equal(historicalPerfectOnly.timed50.official.stable, true);
-assert.equal(historicalPerfectOnly.timed50.stable, false,
-  "historical official answer keys must not establish current-law stability");
-assert.equal(historicalPerfectOnly.timed50.status, "unmeasured");
-
-for (const invalid of [
-  readiness.calculatePassReadiness({ todayKey: "2026-02-30" }),
-  readiness.calculatePassReadiness({ todayKey: "2026-08-16", dailyAvailableMinutes: 0 }),
-  readiness.calculatePassReadiness({ todayKey: "2026-10-18" })
-]) {
-  assert.equal(invalid.valid, false);
-  assert.equal(invalid.status, "invalid");
-  assert.equal(invalid.onTrack, false);
-}
-
+const fiveScore = { business: 18, rights: 9, restrictions: 7, tax: 2 };
+const fiveAttempts = [1, 2, 3].map((n) => ({ formId: `five-${n}`, currentLaw: true, dayKey: `2026-09-0${n}`, completedAt: `2026-09-0${n}T10:00:00+09:00`, total: 36, timed: true, elapsedMinutes: 55, questionCount: 45, sections: fiveScore }));
+const five = readiness.calculatePassReadiness({ todayKey: "2026-09-04", examProfile: "fiveExempt", subjects, mockHistory: fiveAttempts, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: freshness });
+assert.equal(five.targets.questions, 45); assert.equal(five.targets.total, 36); assert.equal(five.examProfile.minutes, 110); assert.equal(five.timed50.stable, true); assert.equal(five.subjects.some((s) => s.key === "other"), false);
+assert.equal(five.status, "on-track");
+const malformed = readiness.calculatePassReadiness({ todayKey: "2026-08-17", subjects: { business: { total: 20, contacted: 21, retained: 18 } } });
+assert.equal(malformed.valid, false); assert.equal(malformed.status, "invalid");
+for (const invalid of [readiness.calculatePassReadiness({ todayKey: "2026-02-30" }), readiness.calculatePassReadiness({ todayKey: "2026-08-16", dailyAvailableMinutes: 0 }), readiness.calculatePassReadiness({ todayKey: "2026-10-18" })]) { assert.equal(invalid.valid, false); assert.equal(invalid.status, "invalid"); }
 console.log("Audit-TakkenPassReadiness: OK");

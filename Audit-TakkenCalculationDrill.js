@@ -37,12 +37,32 @@ const expectedAnswers = {
   "calc-protection-complete-6000": 6000000,
   "calc-stamp-4500": 10000,
   "calc-stamp-8000": 30000,
-  "calc-stamp-30000": 60000
+  "calc-stamp-30000": 60000,
+  "calc-coverage-600": 360,
+  "calc-far-200": 1000,
+  "calc-frontage-2": 2,
+  "calc-national-land-2000": 2000,
+  "calc-fixed-asset-1800": 252000,
+  "calc-city-planning-1800": 54000,
+  "calc-acquisition-tax-3000": 1200000,
+  "calc-registration-preservation-1200": 48000,
+  "calc-registration-transfer-1200": 240000,
+  "calc-walk-1201": 16,
+  "calc-walk-80": 1
+};
+
+const expectedUnits = {
+  "calc-coverage-600": "㎡",
+  "calc-far-200": "㎡",
+  "calc-frontage-2": "m",
+  "calc-national-land-2000": "㎡",
+  "calc-walk-1201": "分",
+  "calc-walk-80": "分"
 };
 
 if (!drill || drill.VERSION !== 1) issues.push("Calculation drill version must be 1.");
 if (drill?.LEGAL_BASELINE !== "2026-04-01") issues.push("Legal baseline must be 2026-04-01.");
-if (questions.length !== 24) issues.push(`Expected 24 questions, got ${questions.length}.`);
+if (questions.length !== 35) issues.push(`Expected 35 questions, got ${questions.length}.`);
 if (new Set(questions.map((item) => item.id)).size !== questions.length) issues.push("Question IDs must be unique.");
 if (new Set(questions.map((item) => item.prompt)).size !== questions.length) issues.push("Question prompts must be unique.");
 
@@ -53,7 +73,7 @@ questions.forEach((item) => {
     return;
   }
   if (new Set(item.choices).size !== 4 || item.choices.some((value) => !Number.isInteger(value) || value <= 0)) {
-    issues.push(`${item.id}: choices must be unique positive integer yen amounts.`);
+    issues.push(`${item.id}: choices must be unique positive integer amounts.`);
   }
   if (!Number.isInteger(item.answer) || item.answer < 0 || item.answer > 3) {
     issues.push(`${item.id}: answer index is invalid.`);
@@ -63,6 +83,15 @@ questions.forEach((item) => {
   }
   if (!Array.isArray(item.formula) || item.formula.length < 2 || item.formula.some((line) => !String(line).trim())) {
     issues.push(`${item.id}: visible formula steps are required.`);
+  }
+  if (!["円", "㎡", "m", "分"].includes(item.unit)) {
+    issues.push(`${item.id}: supported unit is required.`);
+  }
+  if (expectedUnits[item.id] && item.unit !== expectedUnits[item.id]) {
+    issues.push(`${item.id}: expected unit ${expectedUnits[item.id]}, got ${item.unit}.`);
+  }
+  if (!String(item.rounding || "").trim()) {
+    issues.push(`${item.id}: rounding or boundary rule is required.`);
   }
   if (!String(item.trap || "").trim()) issues.push(`${item.id}: trap explanation is required.`);
   if (!Array.isArray(item.sources) || !item.sources.length) {
@@ -84,6 +113,27 @@ requiredHosts.forEach((host) => {
   if (!sourceHosts.has(host)) issues.push(`Required official source host missing: ${host}`);
 });
 
+const requiredCategories = [
+  "建築基準法・建蔽率",
+  "建築基準法・容積率",
+  "建築基準法・接道",
+  "国土利用計画法・届出面積",
+  "固定資産税",
+  "都市計画税",
+  "不動産取得税",
+  "登録免許税・保存登記",
+  "登録免許税・移転登記",
+  "不動産表示・徒歩時間"
+];
+const categories = new Set(questions.map((item) => item.category));
+requiredCategories.forEach((category) => {
+  if (!categories.has(category)) issues.push(`Required cross-subject category missing: ${category}`);
+});
+const requiredSourceKeys = ["building", "localTax", "registrationTax", "nationalLand", "display"];
+requiredSourceKeys.forEach((key) => {
+  if (!questions.some((item) => item.sources.includes(key))) issues.push(`Required cross-subject source coverage missing: ${key}`);
+});
+
 const app = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
 if (!app.includes("const STATE_SCHEMA_VERSION = 10;")) issues.push("State schema version must include objective understanding, calculation, practical drill, unit-route, full-score evidence, and multi-tab sync data.");
@@ -94,7 +144,7 @@ if (!app.includes("function exitCalculationDrill()")) issues.push("Calculation c
 if (!html.includes("id=\"calculationDrillPanel\"")) issues.push("Calculation drill panel is missing.");
 if (!html.includes("id=\"todayCommandCalculationButton\"")) issues.push("Calculation drill quick entry is missing.");
 if (!html.includes("id=\"calculationDrillExitButton\"")) issues.push("Calculation drill completion exit button is missing.");
-if (!html.includes("calculation-drill.js?v=20260816-pass-readiness-v29-1")) issues.push("Calculation data script is not loaded.");
+if (!html.includes("calculation-drill.js?v=20260816-pass-hardening-v30-1")) issues.push("Calculation data script is not loaded.");
 
 const report = {
   status: issues.length ? "error" : "ok",
@@ -109,6 +159,14 @@ const report = {
   ),
   officialSourceHosts: [...sourceHosts].sort(),
   visibleFormulaSteps: questions.reduce((sum, item) => sum + item.formula.length, 0),
+  units: Object.fromEntries(
+    [...new Set(questions.map((item) => item.unit))].sort().map((unit) => [
+      unit,
+      questions.filter((item) => item.unit === unit).length
+    ])
+  ),
+  roundingRules: questions.filter((item) => String(item.rounding || "").trim()).length,
+  crossSubjectQuestions: questions.filter((item) => requiredCategories.includes(item.category)).length,
   issues
 };
 

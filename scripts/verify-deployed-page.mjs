@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260816-pass-readiness-v29-1";
+const expectedVersion = process.argv[3] || "20260816-pass-hardening-v30-1";
 const attempts = Math.max(1, Number(process.env.TAKKEN_DEPLOY_VERIFY_ATTEMPTS) || 12);
 const intervalMs = Math.max(0, Number(process.env.TAKKEN_DEPLOY_VERIFY_INTERVAL_MS) || 10000);
 
@@ -25,6 +25,7 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.equal(response.status, 200, `HTTP ${response.status}`);
     assert.match(html, /id="mockAButton"/, "mock A button missing");
     assert.match(html, /id="mockBButton"/, "mock B button missing");
+    assert.match(html, /id="mockCButton"/, "mock C button missing");
     assert.match(html, /id="passPlanPanel"/, "pass plan panel missing");
     assert.match(html, /id="passReadinessCard"/, "pass readiness card missing");
     assert.match(html, /id="passReadinessStatus"/, "pass readiness status missing");
@@ -52,6 +53,7 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const sprintReference = html.match(/src="([^"]*subject-sprint-bank\.js\?v=[^"]+)"/)?.[1] || "";
     const readinessReference = html.match(/src="([^"]*pass-readiness\.js\?v=[^"]+)"/)?.[1] || "";
     const currentYearReference = html.match(/src="([^"]*exam-current-year-2026\.js\?v=[^"]+)"/)?.[1] || "";
+    const topicMapReference = html.match(/src="([^"]*official-topic-map\.js\?v=[^"]+)"/)?.[1] || "";
     const storeReference = html.match(/src="([^"]*save-store\.js\?v=[^"]+)"/)?.[1] || "";
     const officialDataReference =
       html.match(/src="([^"]*official-exam-data\.js\?v=[^"]+)"/)?.[1] || "";
@@ -74,6 +76,7 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.ok(sprintReference.includes(expectedVersion), `subject sprint version missing: ${expectedVersion}`);
     assert.ok(readinessReference.includes(expectedVersion), `pass readiness version missing: ${expectedVersion}`);
     assert.ok(currentYearReference.includes(expectedVersion), `current-year data version missing: ${expectedVersion}`);
+    assert.ok(topicMapReference.includes(expectedVersion), `official topic map version missing: ${expectedVersion}`);
     assert.ok(storeReference.includes(expectedVersion), `save store version missing: ${expectedVersion}`);
     assert.ok(
       officialDataReference.includes(expectedVersion),
@@ -100,6 +103,7 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const sprintCode = await fetchAsset(sprintReference, "subject sprint bank");
     const readinessCode = await fetchAsset(readinessReference, "pass readiness");
     const currentYearCode = await fetchAsset(currentYearReference, "current-year data");
+    const topicMapCode = await fetchAsset(topicMapReference, "official topic map");
     const storeCode = await fetchAsset(storeReference, "save store");
     const officialDataCode = await fetchAsset(officialDataReference, "official data");
     const masteryCode = await fetchAsset(masteryReference, "business mastery");
@@ -148,6 +152,7 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.match(sprintCode, /TAKKEN_SUBJECT_SPRINT_BANK/, "subject sprint bank API missing");
     assert.match(readinessCode, /TAKKEN_PASS_READINESS/, "pass readiness API missing");
     assert.match(currentYearCode, /TAKKEN_EXAM_CURRENT_YEAR_2026/, "current-year data API missing");
+    assert.match(topicMapCode, /TAKKEN_OFFICIAL_TOPIC_MAP/, "official topic map API missing");
     assert.match(styleCode, /\.study-scope-select/, "study scope style missing");
     assert.match(styleCode, /\.pass-plan-panel/, "pass plan style missing");
     assert.match(styleCode, /\.foundation-route-card/, "foundation route style missing");

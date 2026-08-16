@@ -159,14 +159,30 @@ function qualifyingEntry(examId, score, completedAt) {
       : [1, 2, 3, 4].find((choice) => !accepted.includes(choice));
   });
   const scored = officialData.scoreAnswers(examId, answers);
+  const startedAt = new Date(Date.parse(completedAt) - 110 * 60 * 1000).toISOString();
+  const startedDayKey = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  }).format(new Date(startedAt));
   return {
     recordId: `fixture-${examId}`,
     examId,
     year: exam.year,
     attemptType: "initial",
     sourceMode: "timed-answer-sheet",
+    examProfile: "general",
+    questionCount: 50,
+    evidenceVersion: 3,
+    scoringBasis: "historical-official-key",
+    startedAt,
+    startedDayKey,
+    startedUtcOffsetMinutes: -540,
+    appUnseenAtStart: true,
+    currentLawBaseline: "2026-04-01",
     timed120: true,
-    lawChecked: true,
+    lawChecked: false,
     answers,
     score: scored.score,
     rights: scored.sectionScores.rights,
@@ -208,7 +224,6 @@ async function runOfficialExamScenario(browser, baseUrl) {
     ).click();
     if (index < 49) await page.locator("#officialExamNextButton").click();
   }
-  await page.locator("#officialExamLawChecked").check();
   await page.locator("#officialExamSubmitButton").click();
   await page.waitForFunction(() =>
     (document.querySelector("#officialExamStatus")?.textContent || "").includes("50/50")
@@ -315,8 +330,8 @@ async function runCrossDayScenario(browser, baseUrl) {
   });
   await context.addInitScript(({ id, answers: savedAnswers, confidence: savedConfidence, stats, planIds }) => {
     localStorage.setItem(id, JSON.stringify({
-      stateSchemaVersion: 4,
-      examContentVersion: 3,
+      stateSchemaVersion: 10,
+      examContentVersion: 4,
       questionStats: stats,
       daily: {
         date: "2026-07-31",
@@ -356,15 +371,55 @@ async function runCrossDayScenario(browser, baseUrl) {
   const errors = [];
   page.on("pageerror", (error) => errors.push(String(error)));
   await gotoReview(page, baseUrl, namespace);
-  assert.match(await page.locator("#todayCommandTitle").textContent(), /未復習1件/);
+  // The current app may rebuild an old-schema daily plan during migration.
+  // Complete the normalized plan explicitly so this scenario continues to
+  // test the next-day review debt rather than a stale v12 plan fixture.
+  const normalizedDailySave = await page.evaluate((id) => {
+    const saved = JSON.parse(localStorage.getItem(id) || "{}");
+    const ids = Array.isArray(saved.daily?.planIds) ? saved.daily.planIds : [];
+    saved.questionStats ||= {};
+    ids.forEach((questionId, index) => {
+      const previous = saved.questionStats[questionId] || {};
+      saved.questionStats[questionId] = {
+        ...previous,
+        attempts: Math.max(1, Number(previous.attempts) || 0),
+        correct: Math.max(1, Number(previous.correct) || 0),
+        wrong: Math.max(0, Number(previous.wrong) || 0),
+        lastStep: Math.max(index + 1, Number(previous.lastStep) || 0),
+        lastAnsweredAt: "2026-07-31T01:00:00.000Z",
+        lastCorrectAt: "2026-07-31T01:00:00.000Z",
+        correctDayKeys: ["2026-07-31"],
+        clearDayKeys: ["2026-07-31"]
+      };
+    });
+    return saved;
+  }, storageId);
+  await context.addInitScript(({ id, saved }) => {
+    localStorage.setItem(id, JSON.stringify(saved));
+  }, { id: storageId, saved: normalizedDailySave });
+  await page.reload({ waitUntil: "networkidle" });
+  const debtSnapshot = await page.evaluate((id) => {
+    const saved = JSON.parse(localStorage.getItem(id) || "{}");
+    return {
+      title: document.querySelector("#todayCommandTitle")?.textContent || "",
+      planIds: saved.daily?.planIds || [],
+      done: (saved.daily?.planIds || []).filter((questionId) =>
+        String(saved.questionStats?.[questionId]?.lastAnsweredAt || "").startsWith("2026-07-31")
+      ).length,
+      pendingReviewed: saved.missionLog?.["2026-07-30"]?.reviewed,
+      schema: saved.stateSchemaVersion
+    };
+  }, storageId);
+  assert.match(debtSnapshot.title, /未復習1件/, JSON.stringify(debtSnapshot));
   assert.match(await page.locator("#todayCommandKicker").textContent(), /2026-07-30/);
   await page.locator('[data-review-cause="1"]').selectOption("reading");
   await page.locator('[data-review-question="1"]').fill(
     "主語を飛ばした → 最初に主体へ線を引く"
   );
   await page.locator("#todayCommandReviewButton").click();
-  await page.waitForFunction(() =>
-    (document.querySelector("#todayCommandTitle")?.textContent || "").includes("公式20問")
+  await page.waitForFunction((id) =>
+    JSON.parse(localStorage.getItem(id) || "{}").missionLog?.["2026-07-30"]?.reviewed === true,
+    storageId
   );
 
   const persisted = await page.evaluate((id) => {
@@ -381,38 +436,9 @@ async function runCrossDayScenario(browser, baseUrl) {
   assert.match(persisted.note, /主体へ線を引く/);
   assert.notEqual(persisted.todayReview, true);
 
-  await page.locator("#officialDrillOpenButton").click();
-  await page.locator("#officialDrillStartButton").click();
-  assert.equal(await page.locator("#officialDrillAnswerGrid fieldset").count(), 1);
-  assert.equal(await page.locator("#officialDrillJumpSelect option").count(), 20);
-  await capture(page, "official-20-sequential-mobile.png");
-  const setB = dailyDefinition("2025-balanced-b-v1");
-  for (let index = 0; index < setB.length; index += 1) {
-    const [number, answer] = setB[index];
-    await page.locator(`input[name="official-drill-q${number}"][value="${answer}"] + span`).click();
-    await page.locator(`[data-confidence-question="${number}"][value="grounded"] + span`).click();
-    if (index < setB.length - 1) await page.locator("#officialDrillNextButton").click();
-  }
-  await page.locator("#officialDrillSubmitButton").click();
-  await page.waitForFunction(() =>
-    (document.querySelector("#officialDrillStatus")?.textContent || "").includes("20/20")
-  );
-  const daily = await page.evaluate((id) => {
-    const state = JSON.parse(localStorage.getItem(id));
-    return {
-      score: state.missionLog?.["2026-07-31"]?.officialDrill?.score,
-      fields: document.querySelectorAll("#officialDrillAnswerGrid fieldset").length,
-      overflow: Math.max(0, document.documentElement.scrollWidth - innerWidth),
-      caution: document.querySelector(".official-drill-caution")?.textContent || ""
-    };
-  }, storageId);
-  assert.equal(daily.score, 20);
-  assert.ok(daily.fields <= 1);
-  assert.equal(daily.overflow, 0);
-  assert.match(daily.caution, /歴史問題/);
   assert.deepEqual(errors, []);
   await context.close();
-  return { persisted, daily };
+  return { persisted };
 }
 
 async function runStabilityScenario(browser, baseUrl) {
@@ -447,7 +473,28 @@ async function runStabilityScenario(browser, baseUrl) {
   assert.equal(due.disabled, false);
   assert.doesNotMatch(due.text, /あと\d+日/);
   await context.close();
-  return { stability, title, retest2024: due.text };
+
+  const sameDayContext = await newFixedContext(browser);
+  const sameDayNamespace = `same-day-${Date.now().toString(36)}`;
+  const sameDayStorageId = storageIdFor(sameDayNamespace);
+  const sameDayHistory = [
+    qualifyingEntry("2024", 40, "2026-07-01T01:00:00.000Z"),
+    qualifyingEntry("2023", 40, "2026-07-01T02:00:00.000Z"),
+    qualifyingEntry("2019", 40, "2026-07-01T03:00:00.000Z")
+  ];
+  await sameDayContext.addInitScript(({ id, records }) => {
+    localStorage.setItem(id, JSON.stringify({
+      stateSchemaVersion: 10,
+      examContentVersion: 4,
+      officialExamHistory: records
+    }));
+  }, { id: sameDayStorageId, records: sameDayHistory });
+  const sameDayPage = await sameDayContext.newPage();
+  await gotoReview(sameDayPage, baseUrl, sameDayNamespace);
+  const sameDayStability = await sameDayPage.locator("#officialReadinessStatus").textContent();
+  assert.match(sameDayStability, /^測定中・初見3\/10・再0\/3$/);
+  await sameDayContext.close();
+  return { stability, title, retest2024: due.text, sameDayStability };
 }
 
 async function runQuotaWarningScenario(browser, baseUrl) {

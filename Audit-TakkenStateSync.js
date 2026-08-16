@@ -279,7 +279,8 @@ confidenceBase.questionStats.main1 = {
   lastConfidenceAt: timestamp("2026-08-15", "09:00:00"),
   lastConfidenceDayKey: "2026-08-15",
   lastClearAt: timestamp("2026-08-15", "09:00:00"),
-  clearDayKeys: ["2026-08-15"]
+  clearDayKeys: ["2026-08-15"],
+  currentLawGateDayKeys: ["2026-08-15"]
 };
 const confidenceLocal = sync.clone(confidenceBase);
 confidenceLocal.syncMeta.revision = 8;
@@ -289,7 +290,8 @@ confidenceLocal.questionStats.main1 = {
   lastConfidenceAt: timestamp("2026-08-15", "09:05:00"),
   lastConfidenceDayKey: "2026-08-15",
   lastClearAt: "",
-  clearDayKeys: []
+  clearDayKeys: [],
+  currentLawGateDayKeys: []
 };
 const confidenceRemote = sync.clone(confidenceBase);
 confidenceRemote.syncMeta.revision = 9;
@@ -301,6 +303,11 @@ assert.deepEqual(
   "a later unsure answer must invalidate the same-day clear instead of union-merging it back"
 );
 assert.equal(confidenceMerged.questionStats.main1.lastClearAt, "");
+assert.deepEqual(
+  confidenceMerged.questionStats.main1.currentLawGateDayKeys,
+  [],
+  "a later unsure answer must also invalidate same-day current-law gate evidence"
+);
 
 const centralLocal = sync.clone(base);
 centralLocal.centralProgress = {

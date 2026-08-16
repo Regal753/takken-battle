@@ -85,7 +85,21 @@ async function startSprint(page, scope) {
   return stored(page);
 }
 
+async function openPassPanel(page) {
+  const panel = page.locator("#passPlanPanel");
+  if (!(await panel.evaluate((node) => node.open))) await panel.locator(":scope > summary").click();
+}
+
 async function main() {
+  const runtimeSource = fs.readFileSync(path.join(process.cwd(), "app.js"), "utf8");
+  const markupSource = fs.readFileSync(path.join(process.cwd(), "index.html"), "utf8");
+  // Static guards complement the browser journey: they make regressions in
+  // the Sunday and evidence policies fail even if the suite is run on a
+  // weekday fixture.
+  assert.match(runtimeSource, /sundayMode === "full-mock" \? mockDone : sundayMode === "short-review" \? shortDone : false/);
+  assert.match(runtimeSource, /異なる3フォーム・3日、改正確認2日、当年資料、直近7日の学習時間/);
+  assert.match(markupSource, /<details id="passPlanPanel"/);
+  assert.doesNotMatch(markupSource, /<details id="passPlanPanel"[^>]*\bopen\b/);
   const server = process.env.TAKKEN_BASE_URL ? { baseUrl: process.env.TAKKEN_BASE_URL, close: async () => {} } : await staticServer(process.cwd());
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   const errors = [];
@@ -102,7 +116,7 @@ async function main() {
     const review = `passreadiness${Date.now().toString(36)}`;
     const url = new URL(server.baseUrl); url.searchParams.set("review", review); url.searchParams.set("today", "1");
     await page.goto(url.toString(), { waitUntil: "networkidle", timeout: 20000 });
-    await page.waitForFunction(() => document.querySelector("#passReadinessTitle")?.textContent?.includes("50問") && window.TAKKEN_SUBJECT_SPRINT_BANK?.QUESTIONS?.length === 36);
+    await page.waitForFunction(() => document.querySelector("#passReadinessTitle")?.textContent?.includes("50問") && window.TAKKEN_SUBJECT_SPRINT_BANK?.QUESTIONS?.length === 80);
 
     const initial = await page.evaluate(() => ({
       targets: [...document.querySelectorAll("#passSubjectGrid strong")].map((node) => node.textContent.trim()),
@@ -112,6 +126,10 @@ async function main() {
       mockDisabled: document.querySelector("#passMockAction")?.disabled,
       aDisabled: document.querySelector("#mockAButton")?.disabled,
       bDisabled: document.querySelector("#mockBButton")?.disabled,
+      cDisabled: document.querySelector("#mockCButton")?.disabled,
+      profile: document.querySelector("#examProfileSelect")?.value,
+      passPlanOpen: document.querySelector("#passPlanPanel")?.open,
+      lawGateLabel: document.querySelector("#passLawGateAction")?.textContent?.trim(),
       exposure: (() => {
         const review = new URL(location.href).searchParams.get("review") || "";
         const key = `takken-battle-study-clean-v2-hard-review-${review}`;
@@ -124,8 +142,13 @@ async function main() {
     assert.equal(initial.mockDisabled, false);
     assert.equal(initial.aDisabled, false);
     assert.equal(initial.bDisabled, false);
+    assert.equal(initial.cDisabled, false);
+    assert.equal(initial.profile, "general");
+    assert.equal(initial.passPlanOpen, false, "the long-term plan must not push today\'s command below the fold");
+    assert.match(initial.lawGateLabel, /2026改正2問/);
     assert.deepEqual(initial.exposure || {}, {});
 
+    await openPassPanel(page);
     await page.locator("#passMockAction").click();
     await page.waitForFunction(() => document.querySelector(".quest-card")?.classList.contains("is-mock"));
     const afterMock = await stored(page);
@@ -137,16 +160,45 @@ async function main() {
     await page.evaluate(() => document.querySelector("#dailyQuestButton")?.click());
     await page.waitForFunction(() => !document.querySelector(".quest-card")?.classList.contains("is-mock"));
 
+    // The profile is a scoring contract, not a cosmetic label.  A registered
+    // course completer gets exactly questions 1-45 and 110 minutes; switching
+    // back restores the general 50/120 lane without touching official exposure.
+    await page.locator("#examProfileSelect").selectOption("fiveExempt");
+    await openPassPanel(page);
+    await page.locator("#passMockAction").click();
+    await page.waitForFunction(() => document.querySelector(".quest-card")?.classList.contains("is-mock"));
+    const fiveExemptMock = await stored(page);
+    assert.equal(fiveExemptMock.state.mock.examProfile, "fiveExempt");
+    assert.match(await page.locator("#chapterProgressText").textContent(), /1 \/ 45問/);
+    assert.match(await page.locator("#dailyWeakText").textContent(), /^110:/);
+    page.once("dialog", (dialog) => dialog.accept());
+    await page.evaluate(() => document.querySelector("#dailyQuestButton")?.click());
+    await page.waitForFunction(() => !document.querySelector(".quest-card")?.classList.contains("is-mock"));
+    await page.locator("#examProfileSelect").selectOption("general");
+    assert.equal((await stored(page)).state.examProfile, "general");
+
+    // Current-law proof is deliberately an explicit two-question set.  It
+    // must start as a normal saved daily session so a second calendar day can
+    // be evidenced instead of inferred from a single answer burst.
+    await page.locator("#passLawGateAction").click();
+    const lawGate = await stored(page);
+    assert.deepEqual(lawGate.state.daily.planIds, ["b020", "b040"]);
+    assert.equal(lawGate.state.daily.target, 2);
+    assert.equal(lawGate.state.daily.planMode, "mastery");
+    page.once("dialog", (dialog) => dialog.accept());
+    await page.evaluate(() => document.querySelector("#dailyQuestButton")?.click());
+    await page.waitForFunction(() => !document.querySelector(".quest-card")?.classList.contains("is-mock"));
+
     const rights = await startSprint(page, "rights");
     assert.equal(rights.state.practicalDrill.bankId, "subject-sprint");
     assert.equal(rights.state.practicalDrill.scope, "rights");
-    assert.equal(rights.state.practicalDrill.sessionIds.length, 8);
-    assert.equal(new Set(rights.state.practicalDrill.sessionIds).size, 8);
+    assert.equal(rights.state.practicalDrill.sessionIds.length, 44);
+    assert.equal(new Set(rights.state.practicalDrill.sessionIds).size, 44);
     assert.ok(rights.state.practicalDrill.sessionIds.every((id) => id.startsWith("sprint-rights-")));
     assert.deepEqual(rights.state.officialExamExposure || {}, {});
 
     const wrong = await answerSprint(page, { wrong: true });
-    for (let index = 1; index < 8; index += 1) await answerSprint(page);
+    for (let index = 1; index < 44; index += 1) await answerSprint(page);
     const retry = await stored(page);
     assert.equal(retry.state.practicalDrill.stage, "retry");
     assert.deepEqual(retry.state.practicalDrill.queue, [wrong.id]);
@@ -156,9 +208,9 @@ async function main() {
     assert.deepEqual(finished.state.officialExamExposure || {}, {});
 
     for (const [scope, count, prefix] of [
-      ["restrictions", 8, "sprint-law-"],
-      ["taxOther", 12, "sprint-tax-"],
-      ["other", 8, "sprint-other-"]
+      ["restrictions", 18, "sprint-law-"],
+      ["taxOther", 6, "sprint-tax-"],
+      ["other", 12, "sprint-other-"]
     ]) {
       const started = await startSprint(page, scope);
       assert.equal(started.state.practicalDrill.sessionIds.length, count);
@@ -170,6 +222,7 @@ async function main() {
       assert.deepEqual(reloaded.state.practicalDrill.queue, started.state.practicalDrill.queue);
       assert.equal(await page.locator("#practicalDrillPanel").evaluate((node) => node.open), true);
       // Starting another set while active must resume this exact queue, not overwrite it.
+      await openPassPanel(page);
       await page.locator('[data-subject-sprint="rights"]').click();
       const resumed = await stored(page);
       assert.deepEqual(resumed.state.practicalDrill.queue, started.state.practicalDrill.queue);
@@ -190,7 +243,7 @@ async function main() {
     legacyPage.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
     await legacyPage.addInitScript(({ key }) => localStorage.setItem(key, JSON.stringify({
       stateSchemaVersion: 8, step: 4, attempts: 4, correct: 3,
-      practicalDrill: { stage: "active", bankId: "subject-sprint", bankVersion: 1, scope: "rights", unitId: "subject-sprint-rights", sessionSize: 8, sessionIds: ["sprint-rights-01"], queue: ["sprint-rights-01"], position: 0, retryIds: [], history: {} }
+      practicalDrill: { stage: "active", bankId: "subject-sprint", bankVersion: 1, scope: "rights", unitId: "subject-sprint-rights", sessionSize: 44, sessionIds: ["sprint-rights-01"], queue: ["sprint-rights-01"], position: 0, retryIds: [], history: {} }
     })), { key: legacyKey });
     await legacyPage.goto(legacyUrl.toString(), { waitUntil: "networkidle" });
     const migratedOnLoad = await legacyPage.evaluate((key) =>
@@ -198,6 +251,7 @@ async function main() {
     );
     assert.equal(migratedOnLoad, 10, "schema migration must persist during initial load");
     // Normalization is persisted on the first ordinary state-changing action.
+    await openPassPanel(legacyPage);
     await legacyPage.locator("#passMockAction").click();
     await legacyPage.waitForFunction(() => document.querySelector(".quest-card")?.classList.contains("is-mock"));
     const legacy = await legacyPage.evaluate((key) => ({

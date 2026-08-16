@@ -289,6 +289,34 @@ assert.equal(mastery.officialEvidenceQualifies(officialEvidence("2025", "2026-08
   appUnseenAtStart: false
 })), true, "exposure is evaluated when selecting first-exposure proof, not general validity");
 
+const answers45 = Object.fromEntries(
+  Array.from({ length: 45 }, (_, index) => [String(index + 1), 1])
+);
+const fiveExemptEvidence = officialEvidence("2023", "2026-08-06", 20, {
+  examProfile: "fiveExempt",
+  questionCount: 45,
+  elapsedMinutes: 110,
+  answers: answers45,
+  completedAt: "2026-08-06T10:50:00+09:00"
+});
+assert.equal(
+  mastery.officialEvidenceQualifies(fiveExemptEvidence),
+  true,
+  "five-exempt evidence accepts an exact Q1-45 sheet within 110 minutes"
+);
+assert.equal(mastery.officialEvidenceQualifies({
+  ...fiveExemptEvidence,
+  elapsedMinutes: 111
+}), false, "five-exempt evidence rejects a 110-minute overrun");
+assert.equal(mastery.officialEvidenceQualifies({
+  ...fiveExemptEvidence,
+  answers: { ...answers45, 46: 1 }
+}), false, "five-exempt evidence rejects exempt-question answers");
+assert.equal(mastery.officialEvidenceQualifies({
+  ...fiveExemptEvidence,
+  questionCount: 50
+}), false, "five-exempt evidence rejects a mismatched stored question count");
+
 const firstThreePerfect = [
   officialEvidence("2025", "2026-08-01"),
   officialEvidence("2024", "2026-08-02"),

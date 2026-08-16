@@ -54,13 +54,16 @@ requireText(app, "state.runMode = RUN_MODE_CHAPTER;", "manual chapter selection 
 requireText(app, "function showChapterFinished", "manual chapter completion view is missing");
 requireText(app, "function showQuizResult", "completion views must preserve the live question DOM");
 requireText(app, "resetQuizCardView();", "question rendering does not restore the live question DOM");
-requireText(app, "id=\"chapterNextButton\"", "chapter completion has no next-route action");
+requireText(app, "id: \"chapterNextButton\"", "chapter completion has no next-route action");
 requireText(app, "runFoundationRouteAction(chapterNextButton)", "chapter completion bypasses the shared foundation route");
 requireText(app, "if (isChapterMode())", "manual chapter navigation branch is missing");
 requireText(app, "function startPracticalDrillForUnit", "unit-specific practical session is missing");
 requireText(app, "function foundationCoverageComplete", "foundation coverage gate is missing");
 requireText(app, "planMode: \"unit\"", "unit plan persistence is missing");
 requireText(app, "const FIRST_PASS_DEADLINE_LABEL = \"8/31\";", "first-pass deadline is missing");
+requireText(app, "const MIN_INTERNAL_MOCK_ELAPSED_MINUTES = 30;", "implausibly fast mock results are not excluded from stability evidence");
+requireText(app, "localDateKey(completedAt) === dayKey", "mock evidence does not bind the saved JST day to its completion timestamp");
+requireText(app, "examProfileQuestionCount(state.examProfile)", "mock-day progress does not honor the selected 45/50-question profile");
 requireText(app, "function startMock(formId)", "internal 50-question diagnostic is missing");
 requireText(app, "内部50問は診断に使い、RETIO公式未見は保全する。", "internal-diagnostic / official-reserve policy is missing");
 requireText(app, "!foundationComplete && !businessUnlocked", "official full-exam protection gate is missing");
@@ -83,7 +86,7 @@ if (app.includes("JULY_GATE_DEADLINE") || html.includes("7/31学習ゲート")) 
 requireText(html, "本文＋読後問題", "foundation-first mission label is missing");
 requireText(html, "8/31まで高速一周", "8/31 fast-first-pass copy is missing");
 requireText(html, "内部50問は診断として今すぐ利用可", "internal diagnostic availability copy is missing");
-requireText(html, "20260816-pass-readiness-v29-1", "pass readiness cache version is missing");
+requireText(html, "20260816-pass-hardening-v30-1", "pass readiness cache version is missing");
 requireText(html, '<details class="quest-card"', "review-10 menu must be collapsed by default");
 requireText(html, 'id="nextButton"', "inline next-question button is missing");
 requireText(css, ".quest-card:not([open]) > .quest-card-body", "collapsed review menu rule is missing");
@@ -91,9 +94,9 @@ requireText(css, "minmax(168px, 55%)", "mobile next-question control is not wide
 if (/\#nextButton\s*\{[^}]*display:\s*none/s.test(css)) {
   issues.push("inline next-question button is still hidden");
 }
-requireText(css, "#themeDrawer { order: 3; }", "foundation route must precede the question workspace");
-requireText(css, ".quest-card { order: 4; }", "question workspace order is missing");
-requireText(css, "#passPlanPanel { order: 8; }", "measurement panel must follow foundation and practice lanes");
+requireText(css, "#passPlanPanel { order: 3; }", "the compact pass plan must follow today's command on mobile");
+requireText(css, "#themeDrawer { order: 5; }", "foundation route order is missing");
+requireText(css, ".quest-card { order: 6; }", "question workspace order is missing");
 
 const report = {
   status: issues.length ? "error" : "ok",

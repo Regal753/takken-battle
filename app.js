@@ -14,6 +14,7 @@
   const STATE_SYNC = window.TAKKEN_STATE_SYNC;
   const OFFICIAL_EXAM_DATA = window.TAKKEN_OFFICIAL_EXAMS;
   const OFFICIAL_LAW_BASELINE = window.TAKKEN_OFFICIAL_LAW_BASELINE;
+  const OFFICIAL_TOPIC_MAP = window.TAKKEN_OFFICIAL_TOPIC_MAP;
   const CALCULATION_DRILL = window.TAKKEN_CALCULATION_DRILL;
   const CALCULATION_QUESTIONS = CALCULATION_DRILL?.QUESTIONS || [];
   const CALCULATION_QUESTION_BY_ID = Object.fromEntries(
@@ -37,7 +38,24 @@
   const SUBJECT_SPRINT_BANK_ID = "subject-sprint";
   const LEGACY_PRACTICAL_BANK_ID = "legacy-practical";
   const BUSINESS_FULLSCORE_EXPECTED_QUESTIONS = 134;
-  const SUBJECT_SPRINT_EXPECTED_QUESTIONS = 36;
+  const SUBJECT_SPRINT_EXPECTED_QUESTIONS = 80;
+  const EXAM_PROFILE_GENERAL = "general";
+  const EXAM_PROFILE_FIVE_EXEMPT = "fiveExempt";
+  const EXAM_PROFILE_IDS = new Set([EXAM_PROFILE_GENERAL, EXAM_PROFILE_FIVE_EXEMPT]);
+  const INTERNAL_MOCK_EVIDENCE_VERSION = 2;
+  const CURRENT_LAW_GATE_IDS = Object.freeze(["b020", "b040"]);
+  const CURRENT_LAW_GATE_CLUSTERS = Object.freeze([
+    "management-disclosure",
+    "signage",
+    "important-matters",
+    "land-regulation"
+  ]);
+  const JST_DATE_FORMATTER = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit"
+  });
   const BUSINESS_KNOCK_MODES = Object.freeze(["weak-due", "untouched", "unit", "all-random"]);
   const BUSINESS_KNOCK_SIZES = Object.freeze([10, 20, 50, 100]);
   const CURRENT_LAW_DELTA_QUESTION_MAP = Object.freeze({
@@ -174,6 +192,11 @@
     SUBJECT_SPRINT_QUESTIONS.map((item) => [item.id, item])
   ));
   const SUBJECT_SPRINT_QUESTION_IDS = Object.freeze(SUBJECT_SPRINT_QUESTIONS.map((item) => item.id));
+  const SUBJECT_DIAGNOSTIC_TAGS = new Set(
+    SUBJECT_SPRINT_QUESTIONS.flatMap((item) =>
+      Array.isArray(item.diagnosticTags) ? item.diagnosticTags.map(String) : []
+    )
+  );
   const SUBJECT_SPRINT_READY = Boolean(
     SUBJECT_SPRINT_BANK?.LEGAL_BASELINE === "2026-04-01" &&
     SUBJECT_SPRINT_QUESTIONS.length === SUBJECT_SPRINT_EXPECTED_QUESTIONS &&
@@ -207,6 +230,7 @@
   const RUN_MODE_CHAPTER = "chapter";
   const MOCK_DURATION_MINUTES = 120;
   const MOCK_DURATION_MS = MOCK_DURATION_MINUTES * 60 * 1000;
+  const MIN_INTERNAL_MOCK_ELAPSED_MINUTES = 30;
   const OFFICIAL_PAST_EXAMS_URL = "https://www.retio.or.jp/exam/past_ques_ans/other/";
   const FIRST_PASS_DEADLINE = "2026-08-31";
   const FIRST_PASS_DEADLINE_LABEL = "8/31";
@@ -747,6 +771,7 @@
     dailyQuestButton: $("#dailyQuestButton"),
     mockAButton: $("#mockAButton"),
     mockBButton: $("#mockBButton"),
+    mockCButton: $("#mockCButton"),
     passQuestButton: $("#passQuestButton"),
     weakQuestButton: $("#weakQuestButton"),
     sprintButton: $("#sprintButton"),
@@ -820,8 +845,11 @@
     passReadinessPace: $("#passReadinessPace"),
     passReadinessNote: $("#passReadinessNote"),
     passReadinessStatus: $("#passReadinessStatus"),
+    examProfileSelect: $("#examProfileSelect"),
+    currentYearExamProfileNote: $("#currentYearExamProfileNote"),
     passBusinessAction: $("#passBusinessAction"),
     passThemeAction: $("#passThemeAction"),
+    passLawGateAction: $("#passLawGateAction"),
     passMockAction: $("#passMockAction"),
     passSubjectBusiness: $("#passSubjectBusiness"),
     passSubjectRights: $("#passSubjectRights"),
@@ -1010,6 +1038,7 @@
 
   const createState = () => ({
     stateSchemaVersion: STATE_SCHEMA_VERSION,
+    examProfile: EXAM_PROFILE_GENERAL,
     index: 0,
     answered: null,
     attempts: 0,
@@ -1107,9 +1136,14 @@
   function localDateKey(value) {
     const now = value instanceof Date ? value : new Date(value);
     if (Number.isNaN(now.getTime())) return "";
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
+    const parts = Object.fromEntries(
+      JST_DATE_FORMATTER.formatToParts(now)
+        .filter((part) => part.type !== "literal")
+        .map((part) => [part.type, part.value])
+    );
+    const year = parts.year;
+    const month = parts.month;
+    const day = parts.day;
     return `${year}-${month}-${day}`;
   }
 
@@ -1207,9 +1241,31 @@
     return (EXAM_BLUEPRINT?.mockForms || []).find((form) => form.id === formId) || null;
   }
 
-  function createMockState(formId = "") {
+  function normalizeExamProfile(value) {
+    return EXAM_PROFILE_IDS.has(String(value || ""))
+      ? String(value)
+      : EXAM_PROFILE_GENERAL;
+  }
+
+  function examProfileQuestionCount(profile = state?.examProfile) {
+    return normalizeExamProfile(profile) === EXAM_PROFILE_FIVE_EXEMPT ? 45 : 50;
+  }
+
+  function examProfileDurationMinutes(profile = state?.examProfile) {
+    return normalizeExamProfile(profile) === EXAM_PROFILE_FIVE_EXEMPT ? 110 : 120;
+  }
+
+  function mockIdsForForm(form, profile = state?.examProfile) {
+    if (!form) return [];
+    return normalizeExamProfile(profile) === EXAM_PROFILE_FIVE_EXEMPT
+      ? form.ids.filter((id) => QUESTIONS[id]?.sectionId !== "other").slice(0, 45)
+      : form.ids.slice(0, 50);
+  }
+
+  function createMockState(formId = "", examProfile = EXAM_PROFILE_GENERAL) {
     return {
       formId,
+      examProfile: normalizeExamProfile(examProfile),
       position: 0,
       startedAt: "",
       finishedAt: "",
@@ -1221,10 +1277,12 @@
 
   function normalizeMockState(input) {
     const form = mockFormById(String(input?.formId || ""));
-    if (!form) return createMockState();
+    if (!form) return createMockState("", input?.examProfile);
+    const examProfile = normalizeExamProfile(input?.examProfile);
+    const formIds = mockIdsForForm(form, examProfile);
     const sourceResults = Array.isArray(input?.results) ? input.results : [];
     const results = [];
-    for (const id of form.ids) {
+    for (const id of formIds) {
       const source = sourceResults[results.length];
       if (!source || source.id !== id) break;
       const selected = Number(source.selected);
@@ -1238,11 +1296,12 @@
         tag: question.tag || ""
       });
     }
-    const finalized = Boolean(input?.finalized) && results.length === form.ids.length;
+    const finalized = Boolean(input?.finalized) && results.length === formIds.length;
     return {
       formId: form.id,
+      examProfile,
       position: Math.min(
-        form.ids.length - 1,
+        formIds.length - 1,
         Math.max(0, Number(input?.position) || 0)
       ),
       startedAt: String(input?.startedAt || ""),
@@ -1256,15 +1315,36 @@
   function normalizeMockHistory(input) {
     return (Array.isArray(input) ? input : [])
       .filter((item) => mockFormById(String(item?.formId || "")))
-      .map((item) => ({
-        formId: String(item.formId),
-        completedAt: String(item.completedAt || ""),
-        score: Math.min(50, Math.max(0, Number(item.score) || 0)),
-        elapsedMs: Math.max(0, Number(item.elapsedMs) || 0),
-        sectionScores: item.sectionScores && typeof item.sectionScores === "object"
-          ? { ...item.sectionScores }
-          : {}
-      }))
+      .map((item) => {
+        const examProfile = normalizeExamProfile(item?.examProfile);
+        const questionCount = examProfileQuestionCount(examProfile);
+        const completedAt = Number.isFinite(Date.parse(item?.completedAt))
+          ? new Date(item.completedAt).toISOString()
+          : "";
+        const dayKey = /^\d{4}-\d{2}-\d{2}$/.test(String(item?.dayKey || ""))
+          ? String(item.dayKey)
+          : "";
+        const evidenceVersion = Number(item?.evidenceVersion) === INTERNAL_MOCK_EVIDENCE_VERSION &&
+          item?.lawBaseline === "2026-04-01" && completedAt && dayKey &&
+          localDateKey(completedAt) === dayKey
+          ? INTERNAL_MOCK_EVIDENCE_VERSION
+          : 0;
+        return {
+          formId: String(item.formId),
+          examProfile,
+          evidenceVersion,
+          lawBaseline: evidenceVersion ? "2026-04-01" : "",
+          questionCount,
+          completedAt,
+          dayKey: evidenceVersion ? dayKey : "",
+          score: Math.min(questionCount, Math.max(0, Number(item.score) || 0)),
+          elapsedMs: Math.max(0, Number(item.elapsedMs) || 0),
+          sectionScores: item.sectionScores && typeof item.sectionScores === "object"
+            ? { ...item.sectionScores }
+            : {}
+        };
+      })
+      .sort((left, right) => Date.parse(left.completedAt || "") - Date.parse(right.completedAt || ""))
       .slice(-10);
   }
 
@@ -1283,11 +1363,11 @@
     return officialExamDefinition(examId) ? examId : "";
   }
 
-  function normalizeOfficialExamAnswers(examId, input) {
+  function normalizeOfficialExamAnswers(examId, input, questionCount = 50) {
     const definition = officialExamDefinition(examId);
     if (!definition) return {};
     const answers = {};
-    definition.answers.forEach((unused, index) => {
+    definition.answers.slice(0, questionCount).forEach((unused, index) => {
       const number = index + 1;
       const selected = Number(input?.[number]);
       if (Number.isInteger(selected) && selected >= 1 && selected <= 4) {
@@ -1323,14 +1403,14 @@
     return null;
   }
 
-  function officialExamAnswerObjectValid(examId, input, requireComplete = false) {
+  function officialExamAnswerObjectValid(examId, input, requireComplete = false, questionCount = 50) {
     const definition = officialExamDefinition(examId);
     if (!definition || !input || typeof input !== "object" || Array.isArray(input)) return false;
     const keys = Object.keys(input);
-    if (requireComplete && keys.length !== 50) return false;
+    if (requireComplete && keys.length !== questionCount) return false;
     return keys.every((key) => {
       const number = Number(key);
-      return String(number) === key && Number.isInteger(number) && number >= 1 && number <= 50 &&
+      return String(number) === key && Number.isInteger(number) && number >= 1 && number <= questionCount &&
         Number.isInteger(input[key]) && input[key] >= 1 && input[key] <= 4;
     });
   }
@@ -1420,6 +1500,7 @@
       evidenceVersion: OFFICIAL_EXAM_EVIDENCE_VERSION,
       scoringBasis: OFFICIAL_HISTORICAL_SCORING_BASIS,
       examId: "",
+      examProfile: EXAM_PROFILE_GENERAL,
       attemptType: "initial",
       startedAt: "",
       startedDayKey: "",
@@ -1436,6 +1517,8 @@
     const examId = String(input.examId || "");
     if (!officialExamDefinition(examId)) return null;
     const attemptType = input.attemptType === "retest" ? "retest" : "initial";
+    const examProfile = normalizeExamProfile(input.examProfile);
+    const questionCount = examProfileQuestionCount(examProfile);
     const startedAt = Number.isFinite(Date.parse(input.startedAt))
       ? String(input.startedAt).slice(0, 64)
       : "";
@@ -1445,7 +1528,7 @@
     const suppliedOffset = normalizedUtcOffsetMinutes(input.startedUtcOffsetMinutes);
     const legacyOffset = inferUtcOffsetMinutes(startedAt, suppliedStartedDayKey);
     const answerEvidenceValid =
-      officialExamAnswerObjectValid(examId, input.answers || {}, false) &&
+      officialExamAnswerObjectValid(examId, input.answers || {}, false, questionCount) &&
       typeof input.appUnseenAtStart === "boolean";
     const version3Valid = requestedVersion >= OFFICIAL_EXAM_EVIDENCE_VERSION &&
       input.scoringBasis === OFFICIAL_HISTORICAL_SCORING_BASIS &&
@@ -1469,6 +1552,7 @@
       evidenceVersion,
       scoringBasis: version3Valid ? OFFICIAL_HISTORICAL_SCORING_BASIS : "",
       examId,
+      examProfile,
       attemptType,
       startedAt,
       startedDayKey,
@@ -1478,8 +1562,8 @@
       lawBaseline: version2Valid && input.lawBaseline === CURRENT_LAW_BASELINE
         ? CURRENT_LAW_BASELINE
         : "",
-      answers: normalizeOfficialExamAnswers(examId, input.answers),
-      position: Math.min(49, Math.max(0, Math.trunc(Number(input.position) || 0))),
+      answers: normalizeOfficialExamAnswers(examId, input.answers, questionCount),
+      position: Math.min(questionCount - 1, Math.max(0, Math.trunc(Number(input.position) || 0))),
       lawChecked: version2Valid && Boolean(input.lawChecked)
     };
   }
@@ -1498,11 +1582,14 @@
         const sourceMode = item?.sourceMode === "timed-answer-sheet"
           ? "timed-answer-sheet"
           : "self-report";
+        const examProfile = normalizeExamProfile(item?.examProfile);
+        const questionCount = examProfileQuestionCount(examProfile);
+        const durationMinutes = examProfileDurationMinutes(examProfile);
         const answers = sourceMode === "timed-answer-sheet"
-          ? normalizeOfficialExamAnswers(examId, item.answers)
+          ? normalizeOfficialExamAnswers(examId, item.answers, questionCount)
           : {};
-        const scored = definition && Object.keys(answers).length === 50
-          ? OFFICIAL_EXAM_DATA?.scoreAnswers(examId, answers)
+        const scored = definition && Object.keys(answers).length === questionCount
+          ? scoreOfficialExamAnswers(examId, answers, examProfile)
           : null;
         const rights = scored
           ? scored.sectionScores.rights
@@ -1515,8 +1602,8 @@
           : boundedInteger(item.business, 20);
         const taxOther = scored
           ? scored.sectionScores.taxOther
-          : boundedInteger(item.taxOther, 8);
-        const score = scored ? scored.score : boundedInteger(item.score, 50);
+          : boundedInteger(item.taxOther, examProfile === EXAM_PROFILE_FIVE_EXEMPT ? 3 : 8);
+        const score = scored ? scored.score : boundedInteger(item.score, questionCount);
         const completedAt = Number.isFinite(Date.parse(item.completedAt))
           ? String(item.completedAt).slice(0, 64)
           : "";
@@ -1529,11 +1616,11 @@
         const legacyOffset = inferUtcOffsetMinutes(startedAt, suppliedStartedDayKey);
         const rawElapsedMinutes = item.elapsedMinutes;
         const commonEvidenceValid = sourceMode === "timed-answer-sheet" &&
-          officialExamAnswerObjectValid(examId, item.answers, true) &&
+          officialExamAnswerObjectValid(examId, item.answers, true, questionCount) &&
           typeof item.appUnseenAtStart === "boolean" &&
           item.timed120 === true &&
           Number.isInteger(rawElapsedMinutes) && rawElapsedMinutes >= 1 &&
-          rawElapsedMinutes <= MOCK_DURATION_MINUTES &&
+          rawElapsedMinutes <= durationMinutes &&
           Boolean(startedAt) && Date.parse(completedAt) >= Date.parse(startedAt);
         const version3Valid = Number(item.evidenceVersion) >= OFFICIAL_EXAM_EVIDENCE_VERSION &&
           item.scoringBasis === OFFICIAL_HISTORICAL_SCORING_BASIS &&
@@ -1565,6 +1652,8 @@
           legacySessionAmbiguous,
           attemptType: item.attemptType === "retest" ? "retest" : "initial",
           sourceMode,
+          examProfile,
+          questionCount,
           evidenceVersion,
           scoringBasis: version3Valid ? OFFICIAL_HISTORICAL_SCORING_BASIS : "",
           startedAt,
@@ -1576,7 +1665,7 @@
             ? CURRENT_LAW_BASELINE
             : "",
           timed120: sourceMode === "timed-answer-sheet" &&
-            Boolean(item.timed120 ?? (Number(item.elapsedMinutes) <= MOCK_DURATION_MINUTES)),
+            Boolean(item.timed120 ?? (Number(item.elapsedMinutes) <= durationMinutes)),
           lawChecked: version2Valid && Boolean(item.lawChecked),
           answers,
           score,
@@ -1777,6 +1866,9 @@
         : drillReviewComplete,
       reviewNote,
       minutes: boundedInteger(mission?.minutes, 600),
+      sundayMode: ["full-mock", "short-review"].includes(mission?.sundayMode)
+        ? mission.sundayMode
+        : "",
       officialDrill
     };
   }
@@ -1916,6 +2008,68 @@
       .slice(0, BUSINESS_DIAGNOSTIC_TAGS.size);
   }
 
+  function officialExamProfileFor(item) {
+    return normalizeExamProfile(item?.examProfile);
+  }
+
+  function officialExamQuestionCountFor(item) {
+    const requested = Number(item?.questionCount);
+    const expected = examProfileQuestionCount(officialExamProfileFor(item));
+    return requested === expected ? expected : expected;
+  }
+
+  function officialExamDurationFor(item) {
+    return examProfileDurationMinutes(officialExamProfileFor(item));
+  }
+
+  // Five-exempt answer sheets are Q1-45.  Their score layout is deliberately
+  // self-contained: 14 rights + 8 restrictions + 3 tax + 20 business.
+  function scoreOfficialExamAnswers(examId, answers, examProfile = EXAM_PROFILE_GENERAL) {
+    const definition = officialExamDefinition(examId);
+    if (!definition) return null;
+    const profile = normalizeExamProfile(examProfile);
+    const questionCount = examProfileQuestionCount(profile);
+    const sectionScores = { rights: 0, restrictions: 0, business: 0, taxOther: 0 };
+    let score = 0;
+    definition.answers.slice(0, questionCount).forEach((expected, index) => {
+      const number = index + 1;
+      if (!OFFICIAL_EXAM_DATA?.acceptedAnswer(expected, answers?.[number])) return;
+      score += 1;
+      if (profile === EXAM_PROFILE_FIVE_EXEMPT) {
+        if (number <= 14) sectionScores.rights += 1;
+        else if (number <= 22) sectionScores.restrictions += 1;
+        else if (number <= 25) sectionScores.taxOther += 1;
+        else sectionScores.business += 1;
+      } else {
+        sectionScores[OFFICIAL_EXAM_DATA.SECTION_BY_NUMBER(number)] += 1;
+      }
+    });
+    return { score, sectionScores };
+  }
+
+  function diagnosticTagSetForQuestion(id) {
+    return SUBJECT_SPRINT_QUESTION_BY_ID[id]
+      ? SUBJECT_DIAGNOSTIC_TAGS
+      : BUSINESS_DIAGNOSTIC_TAGS;
+  }
+
+  function normalizePracticalMistakeTags(input, id) {
+    const allowed = diagnosticTagSetForQuestion(id);
+    return Object.fromEntries(
+      Object.entries(input && typeof input === "object" && !Array.isArray(input) ? input : {})
+        .filter(([tag]) => allowed.has(tag))
+        .map(([tag, count]) => [tag, boundedInteger(count, 10000)])
+        .filter(([, count]) => count > 0)
+    );
+  }
+
+  function normalizePracticalTagList(input, id) {
+    const allowed = diagnosticTagSetForQuestion(id);
+    return [...new Set((Array.isArray(input) ? input : []).map(String))]
+      .filter((tag) => allowed.has(tag))
+      .slice(0, allowed.size);
+  }
+
   function normalizePracticalHistory(input, preserveUnknownIds = []) {
     const preserved = new Set((Array.isArray(preserveUnknownIds) ? preserveUnknownIds : []).map(String).slice(0, 200));
     return Object.fromEntries(
@@ -1938,8 +2092,8 @@
             lastAnsweredAt: Number.isFinite(Date.parse(item?.lastAnsweredAt))
               ? String(item.lastAnsweredAt).slice(0, 64)
               : "",
-            mistakeTags: normalizeBusinessMistakeTags(item?.mistakeTags),
-            lastMistakeTags: normalizeBusinessTagList(item?.lastMistakeTags),
+            mistakeTags: normalizePracticalMistakeTags(item?.mistakeTags, id),
+            lastMistakeTags: normalizePracticalTagList(item?.lastMistakeTags, id),
             ...((ALL_PRACTICAL_QUESTION_BY_ID[id]?.scopeId === "business" || preserved.has(id))
               ? BUSINESS_MASTERY.normalizeMasteryHistory(item)
               : {})
@@ -2123,6 +2277,7 @@
     const previousExamContentVersion = Number(input?.examContentVersion) || 0;
     const hasProgressionV1 = previousProgressionVersion >= 1;
     const next = { ...createState(), ...input };
+    next.examProfile = normalizeExamProfile(input?.examProfile);
     next.index = Math.min(Math.max(Number(next.index) || 0, 0), ORDER.length - 1);
     next.step = Number(next.step) || next.attempts || 0;
     next.sessionId = next.sessionId || createOpaqueId("session");
@@ -2278,6 +2433,10 @@
         normalized.correctDayKeys = normalizedCorrectDayKeys(normalized);
         normalized.clearDayKeys = normalizedComprehensionDayKeys(normalized);
         normalized.understandingDayKeys = normalizedUnderstandingDayKeys(normalized);
+        normalized.currentLawGateDayKeys = [...new Set(
+          (Array.isArray(normalized.currentLawGateDayKeys) ? normalized.currentLawGateDayKeys : [])
+            .filter((day) => /^\d{4}-\d{2}-\d{2}$/.test(day))
+        )].sort().slice(-8);
         return [id, normalized];
       })
     );
@@ -2299,7 +2458,7 @@
       next.adaptive = false;
       next.dailyFinishedDate = "";
       next.daily = createDailyState();
-      next.mock = createMockState();
+      next.mock = createMockState("", next.examProfile);
     }
     next.activeCutCheck = next.activeCutCheck && next.activeCutCheck.id === ORDER[next.index] && !next.answered
       ? { id: next.activeCutCheck.id, answers: next.activeCutCheck.answers || {} }
@@ -2309,7 +2468,7 @@
     next.sprint = normalizeSprintState(next.sprint);
     if (next.runMode === RUN_MODE_MOCK) {
       const form = mockFormById(next.mock.formId);
-      const mockId = form?.ids[next.mock.position];
+      const mockId = mockIdsForForm(form, next.mock.examProfile)[next.mock.position];
       const mockIndex = ORDER.indexOf(mockId);
       if (mockIndex >= 0) next.index = mockIndex;
       next.finished = Boolean(next.mock.finalized);
@@ -3461,7 +3620,13 @@
         const row = document.createElement("div");
         row.className = "loot-item";
         row.classList.toggle("is-owned", count > 0);
-        row.innerHTML = `<i style="--loot-color:${item.color}"></i><span>${count > 0 ? item.name : "未発見"}</span><strong>${count > 0 ? `x${count}` : "---"}</strong>`;
+        const marker = document.createElement("i");
+        marker.style.setProperty("--loot-color", item.color);
+        const name = document.createElement("span");
+        name.textContent = count > 0 ? item.name : "未発見";
+        const quantity = document.createElement("strong");
+        quantity.textContent = count > 0 ? `x${count}` : "---";
+        row.append(marker, name, quantity);
         elements.lootCollection.append(row);
       });
   }
@@ -3825,11 +3990,11 @@
 
   function mockFormShortLabel(form = currentMockForm()) {
     if (!form) return "模試";
-    return form.id === "form-a" ? "フォームA" : "フォームB";
+    return `フォーム${String(form.id || "").split("-").at(-1)?.toUpperCase() || ""}`;
   }
 
   function mockQuestionIds() {
-    return currentMockForm()?.ids || [];
+    return mockIdsForForm(currentMockForm(), state.mock?.examProfile || state.examProfile);
   }
 
   function mockAnsweredCount() {
@@ -3853,7 +4018,8 @@
   }
 
   function mockTimeText() {
-    const delta = MOCK_DURATION_MS - mockElapsedMs();
+    const durationMs = examProfileDurationMinutes(state.mock?.examProfile || state.examProfile) * 60 * 1000;
+    const delta = durationMs - mockElapsedMs();
     return delta >= 0
       ? formatTimer(delta)
       : `超過 +${formatElapsed(Math.abs(delta))}`;
@@ -3911,7 +4077,10 @@
         total: 5,
         target: STUDY_TARGETS.other
       }
-    ].map((row) => ({
+    ].filter((row) =>
+      normalizeExamProfile(state.mock?.examProfile || state.examProfile) !== EXAM_PROFILE_FIVE_EXEMPT ||
+      row.id !== "other"
+    ).map((row) => ({
       ...row,
       deficit: Math.max(0, row.target - row.correct)
     }));
@@ -3929,7 +4098,7 @@
 
   function latestMockAttempt() {
     return [...(state.mockHistory || [])]
-      .filter((item) => mockFormById(item.formId))
+      .filter((item) => mockFormById(item.formId) && item.examProfile === state.examProfile)
       .sort((left, right) =>
         (Date.parse(right.completedAt) || 0) - (Date.parse(left.completedAt) || 0)
       )[0] || null;
@@ -3947,6 +4116,8 @@
   }
 
   function officialAttemptQualifies(item, history = state.officialExamHistory || []) {
+    const questionCount = officialExamQuestionCountFor(item);
+    const durationMinutes = officialExamDurationFor(item);
     const evidenceVersion = Number(item?.evidenceVersion) || 0;
     const evidenceBasisValid = evidenceVersion >= OFFICIAL_EXAM_EVIDENCE_VERSION
       ? item?.scoringBasis === OFFICIAL_HISTORICAL_SCORING_BASIS
@@ -3958,8 +4129,8 @@
       item?.sourceMode !== "timed-answer-sheet" ||
       !item?.timed120 ||
       !evidenceBasisValid ||
-      Number(item?.elapsedMinutes) > MOCK_DURATION_MINUTES ||
-      Object.keys(item?.answers || {}).length !== 50
+      Number(item?.elapsedMinutes) > durationMinutes ||
+      !officialExamAnswerObjectValid(item?.examId, item?.answers, true, questionCount)
     ) {
       return false;
     }
@@ -3971,7 +4142,12 @@
         candidate.sourceMode === "timed-answer-sheet" &&
         Number(candidate.evidenceVersion) >= OFFICIAL_EXAM_LEGACY_EVIDENCE_VERSION &&
         candidate.timed120 &&
-        Object.keys(candidate.answers || {}).length === 50 &&
+        officialExamAnswerObjectValid(
+          candidate.examId,
+          candidate.answers,
+          true,
+          officialExamQuestionCountFor(candidate)
+        ) &&
         Date.parse(candidate.completedAt) < Date.parse(item.completedAt)
       )
       .sort((left, right) =>
@@ -3994,13 +4170,21 @@
     const initial = qualifying.filter((item) => item.attemptType === "initial");
     const retests = qualifying.filter((item) => item.attemptType === "retest");
     const latestThree = qualifying.slice(-3);
-    const mean = latestThree.length
-      ? latestThree.reduce((sum, item) => sum + item.score, 0) / latestThree.length
+    const distinctExamCount = new Set(latestThree.map((item) => item.examId)).size;
+    const distinctDayCount = new Set(latestThree.map((item) =>
+      String(item.startedDayKey || localDateKey(item.completedAt) || "")
+    )).size;
+    const transferableSet = latestThree.length === 3 && distinctExamCount === 3 && distinctDayCount === 3;
+    const equivalentScores = latestThree.map((item) =>
+      (Number(item.score) * 50) / officialExamQuestionCountFor(item)
+    );
+    const mean = equivalentScores.length
+      ? equivalentScores.reduce((sum, score) => sum + score, 0) / equivalentScores.length
       : 0;
-    const minimum = latestThree.length
-      ? Math.min(...latestThree.map((item) => item.score))
+    const minimum = equivalentScores.length
+      ? Math.min(...equivalentScores)
       : 0;
-    const stability = latestThree.length < 3
+    const stability = latestThree.length < 3 || !transferableSet
       ? "測定中"
       : mean >= 40 && minimum >= 37
         ? "安定40"
@@ -4013,6 +4197,9 @@
       initial,
       retests,
       latestThree,
+      distinctExamCount,
+      distinctDayCount,
+      transferableSet,
       mean,
       minimum,
       stability
@@ -4080,11 +4267,15 @@
   }
 
   function daysUntil(dateKey) {
-    const [year, month, day] = dateKey.split("-").map(Number);
-    const target = new Date(year, month - 1, day);
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    return Math.ceil((target - today) / 86400000);
+    const ordinal = (key) => {
+      const [year, month, day] = String(key || "").split("-").map(Number);
+      return [year, month, day].every(Number.isFinite)
+        ? Math.trunc(Date.UTC(year, month - 1, day) / 86400000)
+        : NaN;
+    };
+    const target = ordinal(dateKey);
+    const current = ordinal(todayKey());
+    return Number.isFinite(target) && Number.isFinite(current) ? target - current : 0;
   }
 
   function passPhaseFor(date = todayKey()) {
@@ -4099,14 +4290,14 @@
       return {
         id: "august",
         title: "一周後の得点補強",
-        text: "36問の科目補強と既存実践で、科目別18・9・7・2・4の不足点を回収する。"
+        text: "非業法80素材の章別補強と既存実践で、科目別18・9・7・2・4の不足点を回収する。"
       };
     }
     if (date <= "2026-09-30") {
       return {
         id: "september",
         title: "本試験演習",
-        text: "週1回以上の50問・120分測定で、合計40点と科目別目標を直近3回へそろえる。"
+        text: "週1回以上、本試験と同じ問題数・制限時間で測定し、合計と科目別目標を異なる3フォーム・3日へそろえる。"
       };
     }
     if (date <= "2026-10-11") {
@@ -4223,6 +4414,9 @@
         : "計測開始後にPDFを開く";
     }
     if (elements.officialExamStartButton) {
+      const profile = normalizeExamProfile(state.officialExamSession?.examProfile || state.examProfile);
+      const questionCount = examProfileQuestionCount(profile);
+      const durationMinutes = examProfileDurationMinutes(profile);
       const selectedOption = elements.officialExamId?.selectedOptions?.[0];
       elements.officialExamStartButton.disabled =
         Boolean(state.officialExamSession) ||
@@ -4231,8 +4425,8 @@
       elements.officialExamStartButton.textContent = state.officialExamSession
         ? "計測中"
         : attemptType === "retest"
-          ? "120分の再試験を開始"
-          : "120分の初見測定を開始";
+          ? `${questionCount}問・${durationMinutes}分の再試験を開始`
+          : `${questionCount}問・${durationMinutes}分の初見測定を開始`;
     }
   }
 
@@ -4246,7 +4440,7 @@
     if (!history.length) {
       const empty = document.createElement("p");
       empty.className = "official-history-empty";
-      empty.textContent = "まだ記録なし。未接触の試験回を120分で開始します。";
+      empty.textContent = "まだ記録なし。受験プロフィールに応じた未接触試験回を開始します。";
       elements.officialExamHistory.append(empty);
       return;
     }
@@ -4264,25 +4458,69 @@
       label.textContent = definition?.label ||
         `${item.year}年度（試験回不明の旧記録）`;
       const score = document.createElement("strong");
-      score.textContent = `${item.score} / 50`;
+      const questionCount = officialExamQuestionCountFor(item);
+      const durationMinutes = officialExamDurationFor(item);
+      score.textContent = `${item.score} / ${questionCount}`;
       const time = document.createElement("small");
       time.textContent =
-        `${item.attemptType === "retest" ? "再試験" : "初見"}・${item.elapsedMinutes}分`;
+        `${item.attemptType === "retest" ? "再試験" : "初見"}・${item.elapsedMinutes}/${durationMinutes}分`;
       heading.append(label, score, time);
 
       const sections = document.createElement("p");
       sections.textContent =
-        `権利 ${item.rights}/14・法令 ${item.restrictions}/8・業法 ${item.business}/20・税他 ${item.taxOther}/8`;
+        `権利 ${item.rights}/14・法令 ${item.restrictions}/8・業法 ${item.business}/20・税他 ${item.taxOther}/${item.examProfile === EXAM_PROFILE_FIVE_EXEMPT ? 3 : 8}`;
       const evidence = document.createElement("p");
       evidence.className = "official-history-evidence";
       evidence.textContent = officialAttemptQualifies(item)
-        ? `当時法の安定度へ算入・120分以内・現行法${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS}問は別ゲート`
+        ? `当時法の安定度へ算入・${durationMinutes}分以内・現行法${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS}問は別ゲート`
         : item.legacySessionAmbiguous
           ? "参考記録・10月／12月の試験回が不明"
           : item.sourceMode === "self-report"
             ? "参考記録・自己申告"
             : "参考記録・測定条件未達";
       row.append(heading, sections, evidence);
+      const wrongNumbers = definition && item.answers
+        ? definition.answers.slice(0, questionCount)
+          .map((unused, index) => index + 1)
+          .filter((number) => !OFFICIAL_EXAM_DATA.acceptedAnswer(
+            definition.answers[number - 1],
+            Number(item.answers?.[number])
+          ))
+        : [];
+      const mappedPlans = wrongNumbers
+        .map((number) => OFFICIAL_TOPIC_MAP?.repairPlan?.(item.examId, number))
+        .filter(Boolean);
+      if (mappedPlans.length) {
+        const repairs = document.createElement("details");
+        repairs.className = "official-repair-plans";
+        const summary = document.createElement("summary");
+        summary.textContent = `誤答${wrongNumbers.length}問の補修ルート`;
+        const caution = document.createElement("p");
+        caution.textContent = mappedPlans[0].caution;
+        const list = document.createElement("ul");
+        mappedPlans.forEach((plan) => {
+          const li = document.createElement("li");
+          const label = document.createElement("span");
+          label.textContent = `問${plan.record.questionNo}・${plan.primary.label}`;
+          const button = document.createElement("button");
+          button.type = "button";
+          button.className = "official-repair-button";
+          button.textContent = "現行法の補強へ";
+          button.addEventListener("click", () => {
+            if (resumeActiveLearningSession()) return;
+            if (plan.primary.route === "business-knock") {
+              if (elements.businessKnockMode) elements.businessKnockMode.value = "weak-due";
+              startBusinessKnockSession();
+            } else {
+              startSubjectSprint(plan.primary.taxonomyId);
+            }
+          });
+          li.append(label, button);
+          list.append(li);
+        });
+        repairs.append(summary, caution, list);
+        row.append(repairs);
+      }
       elements.officialExamHistory.append(row);
     });
   }
@@ -4296,14 +4534,14 @@
     if (!elements.officialExamTimer) return;
     elements.officialExamTimer.classList.remove("is-over");
     if (!session?.startedAt) {
-      elements.officialExamTimer.textContent = "120:00";
+      elements.officialExamTimer.textContent = `${examProfileDurationMinutes(normalizeExamProfile(state.examProfile))}:00`;
       return;
     }
     const elapsedSeconds = Math.max(
       0,
       Math.floor((Date.now() - Date.parse(session.startedAt)) / 1000)
     );
-    const remaining = MOCK_DURATION_MINUTES * 60 - elapsedSeconds;
+    const remaining = officialExamDurationFor(session) * 60 - elapsedSeconds;
     if (remaining < 0) {
       const over = Math.abs(remaining);
       elements.officialExamTimer.textContent =
@@ -4319,6 +4557,15 @@
 
   function renderOfficialExamSession() {
     const session = state.officialExamSession;
+    const selectedProfile = normalizeExamProfile(session?.examProfile || state.examProfile);
+    const selectedQuestionCount = examProfileQuestionCount(selectedProfile);
+    const selectedDuration = examProfileDurationMinutes(selectedProfile);
+    if (elements.officialExamStartButton) {
+      elements.officialExamStartButton.textContent = `公式${selectedQuestionCount}問・${selectedDuration}分を開始`;
+    }
+    if (elements.officialExamSubmitButton) {
+      elements.officialExamSubmitButton.textContent = `採点・${selectedQuestionCount}問を記録`;
+    }
     if (!elements.officialExamSessionForm) return;
     elements.officialExamSessionForm.hidden = !session;
     if (session) {
@@ -4329,7 +4576,9 @@
     if (!session) return;
     const definition = officialExamDefinition(session.examId);
     if (!definition) return;
-    const position = Math.min(49, Math.max(0, Number(session.position) || 0));
+    const questionCount = officialExamQuestionCountFor(session);
+    const durationMinutes = officialExamDurationFor(session);
+    const position = Math.min(questionCount - 1, Math.max(0, Number(session.position) || 0));
     const number = position + 1;
     if (elements.officialExamQuestionNumber) {
       elements.officialExamQuestionNumber.textContent = `問${number}`;
@@ -4345,29 +4594,29 @@
       });
     if (
       elements.officialExamJumpSelect &&
-      elements.officialExamJumpSelect.dataset.examId !== definition.id
+      elements.officialExamJumpSelect.dataset.examId !== `${definition.id}:${questionCount}`
     ) {
       elements.officialExamJumpSelect.replaceChildren();
-      definition.answers.forEach((unused, index) => {
+      definition.answers.slice(0, questionCount).forEach((unused, index) => {
         const option = document.createElement("option");
         option.value = String(index);
         option.textContent = `問${index + 1}`;
         elements.officialExamJumpSelect.append(option);
       });
-      elements.officialExamJumpSelect.dataset.examId = definition.id;
+      elements.officialExamJumpSelect.dataset.examId = `${definition.id}:${questionCount}`;
     }
     if (elements.officialExamJumpSelect) {
       elements.officialExamJumpSelect.value = String(position);
     }
     if (elements.officialExamProgress) {
       elements.officialExamProgress.textContent =
-        `${position + 1} / 50・解答${Object.keys(session.answers || {}).length}`;
+        `${position + 1} / ${questionCount}・解答${Object.keys(session.answers || {}).length}・${durationMinutes}分`;
     }
     if (elements.officialExamPrevButton) {
       elements.officialExamPrevButton.disabled = position === 0;
     }
     if (elements.officialExamNextButton) {
-      elements.officialExamNextButton.disabled = position === 49;
+      elements.officialExamNextButton.disabled = position === questionCount - 1;
     }
   }
 
@@ -4400,16 +4649,19 @@
       return false;
     }
     if (elements.officialExamProgress) {
+      const questionCount = officialExamQuestionCountFor(next);
+      const durationMinutes = officialExamDurationFor(next);
       elements.officialExamProgress.textContent =
-        `${next.position + 1} / 50・解答${Object.keys(next.answers).length}`;
+        `${next.position + 1} / ${questionCount}・解答${Object.keys(next.answers).length}・${durationMinutes}分`;
     }
     return true;
   }
 
   function moveOfficialExam(position) {
     if (!state.officialExamSession) return;
+    const questionCount = officialExamQuestionCountFor(state.officialExamSession);
     const nextPosition = Math.min(
-      49,
+      questionCount - 1,
       Math.max(0, Math.trunc(Number(position) || 0))
     );
     if (saveOfficialExamDraft(nextPosition)) renderOfficialExamSession();
@@ -4420,7 +4672,7 @@
     if (!foundationCoverageComplete() && !businessFullScoreOfficialUnlocked()) {
       const progress = foundationProgress();
       setOfficialExamStatus(
-        `公式50問は全体基礎一周、または業法の基礎44問定着＋変形${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS}問初回走査後に解放します。現在は単元${progress.completedUnits}/${TEXTBOOK_CHAPTERS.length}です。`,
+        `公式${examProfileQuestionCount(normalizeExamProfile(state.examProfile))}問は全体基礎一周、または業法の基礎44問定着＋変形${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS}問初回走査後に解放します。現在は単元${progress.completedUnits}/${TEXTBOOK_CHAPTERS.length}です。`,
         true
       );
       return;
@@ -4430,6 +4682,9 @@
     const attemptType = elements.officialExamAttemptType?.value === "retest"
       ? "retest"
       : "initial";
+    const examProfile = normalizeExamProfile(state.examProfile);
+    const questionCount = examProfileQuestionCount(examProfile);
+    const durationMinutes = examProfileDurationMinutes(examProfile);
     if (!definition) {
       setOfficialExamStatus("開始できる試験回がありません。", true);
       return;
@@ -4491,6 +4746,7 @@
     state.officialExamSession = normalizeOfficialExamSession({
       ...createOfficialExamSession(),
       examId,
+      examProfile,
       attemptType,
       evidenceVersion: OFFICIAL_EXAM_EVIDENCE_VERSION,
       scoringBasis: OFFICIAL_HISTORICAL_SCORING_BASIS,
@@ -4514,11 +4770,13 @@
     logStudyEvent("official-past-exam", {
       action: "start",
       examId,
-      attemptType
+      attemptType,
+      examProfile,
+      questionCount
     });
     renderPassPlan();
     setOfficialExamStatus(
-      `${definition.label}の${attemptType === "retest" ? "再試験" : "初見測定"}を開始しました。120分・検索なしで50問を入力してください。`
+      `${definition.label}の${attemptType === "retest" ? "再試験" : "初見測定"}を開始しました。${durationMinutes}分・検索なしで${questionCount}問を入力してください。`
     );
   }
 
@@ -4527,11 +4785,13 @@
     if (!saveOfficialExamDraft()) return;
     const session = state.officialExamSession;
     if (!session) {
-      setOfficialExamStatus("先に120分計測を開始してください。", true);
+      setOfficialExamStatus("先に受験プロフィールの計測を開始してください。", true);
       return;
     }
     const definition = officialExamDefinition(session.examId);
-    const missing = definition.answers
+    const questionCount = officialExamQuestionCountFor(session);
+    const durationMinutes = officialExamDurationFor(session);
+    const missing = definition.answers.slice(0, questionCount)
       .map((unused, index) => index + 1)
       .filter((number) => !session.answers[number]);
     if (missing.length) {
@@ -4554,7 +4814,7 @@
       1,
       Math.ceil((Date.parse(completedAt) - Date.parse(session.startedAt)) / 60000)
     );
-    const scored = OFFICIAL_EXAM_DATA.scoreAnswers(session.examId, session.answers);
+    const scored = scoreOfficialExamAnswers(session.examId, session.answers, session.examProfile);
     const entry = {
       recordId: createOpaqueId("official"),
       examId: session.examId,
@@ -4568,7 +4828,9 @@
       startedUtcOffsetMinutes: session.startedUtcOffsetMinutes,
       appUnseenAtStart: session.appUnseenAtStart,
       currentLawBaseline: CURRENT_LAW_BASELINE,
-      timed120: elapsedMinutes <= MOCK_DURATION_MINUTES,
+      examProfile: session.examProfile,
+      questionCount,
+      timed120: elapsedMinutes <= durationMinutes,
       lawChecked: false,
       answers: { ...session.answers },
       score: scored.score,
@@ -4602,14 +4864,15 @@
       action: "submit",
       examId: entry.examId,
       attemptType: entry.attemptType,
+      examProfile: entry.examProfile,
       score: entry.score,
       elapsedMinutes: entry.elapsedMinutes,
       scoringBasis: OFFICIAL_HISTORICAL_SCORING_BASIS
     });
     renderPassPlan();
     setOfficialExamStatus(
-      `${definition.label} ${entry.score}/50を自動採点しました。` +
-      `${entry.timed120 ? "安定度へ算入します。" : "120分超過のため参考記録です。"}`
+      `${definition.label} ${entry.score}/${questionCount}を自動採点しました。` +
+      `${entry.timed120 ? "安定度へ算入します。" : `${durationMinutes}分超過のため参考記録です。`}`
     );
   }
 
@@ -5403,7 +5666,7 @@
     const calculationStage = state.calculationDrill?.stage || "idle";
     elements.todayCommandCalculationButton.hidden = false;
     elements.todayCommandCalculationButton.textContent = calculationStage === "idle"
-      ? "計算・金額を24問で特訓する"
+      ? `計算・数値を${CALCULATION_QUESTION_IDS.length}問で特訓する`
       : calculationStage === "complete"
         ? "計算特訓の結果を確認する"
         : "計算特訓を再開する";
@@ -5487,10 +5750,17 @@
 
   function passMockHistory() {
     return (state.mockHistory || []).map((item) => ({
+      formId: String(item.formId || ""),
+      currentLaw: Number(item.evidenceVersion) === INTERNAL_MOCK_EVIDENCE_VERSION &&
+        item.lawBaseline === "2026-04-01" &&
+        item.examProfile === state.examProfile,
+      completedAt: String(item.completedAt || ""),
       total: Number(item.score),
-      questionCount: 50,
-      timed: Number(item.elapsedMs) > 0 && Number(item.elapsedMs) <= MOCK_DURATION_MS,
-      dayKey: localDateKey(item.completedAt),
+      questionCount: Number(item.questionCount) || examProfileQuestionCount(item.examProfile),
+      timed: Number(item.elapsedMs) >= MIN_INTERNAL_MOCK_ELAPSED_MINUTES * 60 * 1000 &&
+        Number(item.elapsedMs) <= examProfileDurationMinutes(item.examProfile) * 60 * 1000,
+      elapsedMinutes: Number(item.elapsedMs) / 60000,
+      dayKey: String(item.dayKey || ""),
       sections: {
         business: Number(item.sectionScores?.business?.correct),
         rights: Number(item.sectionScores?.rights?.correct),
@@ -5501,13 +5771,49 @@
     }));
   }
 
+  function currentLawGateAttempts() {
+    const daySets = CURRENT_LAW_GATE_IDS.map((id) => new Set(
+      (Array.isArray(state.questionStats?.[id]?.currentLawGateDayKeys)
+        ? state.questionStats[id].currentLawGateDayKeys
+        : [])
+        .filter((day) => /^\d{4}-\d{2}-\d{2}$/.test(day))
+    ));
+    if (!daySets.length) return [];
+    return [...daySets[0]]
+      .filter((day) => daySets.every((set) => set.has(day)))
+      .sort()
+      .slice(-8)
+      .map((day) => ({
+        completedAt: `${day}T21:00:00+09:00`,
+        dayKey: day,
+        correct: true,
+        clusters: [...CURRENT_LAW_GATE_CLUSTERS]
+      }));
+  }
+
+  function passStudyMinutesHistory() {
+    return Object.entries(state.missionLog || {})
+      .filter(([day]) => /^\d{4}-\d{2}-\d{2}$/.test(day))
+      .map(([day, entry]) => ({
+        dayKey: day,
+        minutes: boundedInteger(entry?.minutes, 600)
+      }));
+  }
+
   function passReadinessSnapshot() {
     if (!PASS_READINESS?.calculatePassReadiness) return null;
+    const currentYearFreshness = EXAM_CURRENT_YEAR?.assessAllFreshness
+      ? EXAM_CURRENT_YEAR.assessAllFreshness(todayKey())
+      : { current: false, failClosed: true, status: "unavailable" };
     return PASS_READINESS.calculatePassReadiness({
       todayKey: todayKey(),
+      examProfile: state.examProfile,
       dailyAvailableMinutes: DAILY_STUDY_MINUTES,
       subjects: passSubjectMetrics(),
       mockHistory: passMockHistory(),
+      currentLawGate: { attempts: currentLawGateAttempts() },
+      studyMinutesHistory: passStudyMinutesHistory(),
+      currentYearFreshness,
       // RETIO過去問は当時法の採点。現行法40点の安定判定には内部模試だけを使う。
       officialHistory: []
     });
@@ -5542,7 +5848,18 @@
 
   function themeAnswersToday(themeKey) {
     if (themeKey === "mock") {
-      return (state.mockHistory || []).some((item) => localDateKey(item.completedAt) === todayKey()) ? 50 : 0;
+      const completed = [...(state.mockHistory || [])]
+        .filter((item) =>
+          localDateKey(item.completedAt) === todayKey() &&
+          normalizeExamProfile(item.examProfile) === state.examProfile
+        )
+        .sort((left, right) => (Date.parse(right.completedAt) || 0) - (Date.parse(left.completedAt) || 0))[0];
+      return completed
+        ? Math.min(
+            examProfileQuestionCount(state.examProfile),
+            Number(completed.questionCount) || examProfileQuestionCount(completed.examProfile)
+          )
+        : 0;
     }
     const sectionIds = themeKey === "tax-other" ? ["tax", "other"] : [themeKey];
     const baseCount = TEXTBOOK_CHAPTERS
@@ -5558,20 +5875,55 @@
     return baseCount + sprintCount;
   }
 
+  function shortSundayAnswersToday() {
+    const baseIds = TEXTBOOK_CHAPTERS
+      .filter((chapter) => chapter.sectionId !== "business")
+      .flatMap((chapter) => chapter.ids);
+    const baseCount = [...new Set(baseIds)].filter(answeredToday).length;
+    const sprintCount = SUBJECT_SPRINT_QUESTIONS.filter((question) =>
+      localDateKey(state.practicalDrill?.history?.[question.id]?.lastAnsweredAt) === todayKey()
+    ).length;
+    return baseCount + sprintCount;
+  }
+
+  function shortSundayScope(snapshot) {
+    const priority = ["rights", "restrictions", "tax", "other"];
+    const key = priority.find((candidate) =>
+      snapshot?.unmeasuredSubjectKeys?.includes(candidate) || snapshot?.weakSubjectKeys?.includes(candidate)
+    ) || "rights";
+    return key === "tax" ? "taxOther" : key;
+  }
+
+  function sprintAnswersToday(scope) {
+    return SUBJECT_SPRINT_QUESTIONS.filter((question) =>
+      question.scopeId === scope &&
+      localDateKey(state.practicalDrill?.history?.[question.id]?.lastAnsweredAt) === todayKey()
+    ).length;
+  }
+
+  function nextThemeSprintScope(themeKey) {
+    if (themeKey !== "tax-other") return passThemeScope(themeKey);
+    if (state.examProfile === EXAM_PROFILE_FIVE_EXEMPT) return "taxOther";
+    return sprintAnswersToday("taxOther") < 6 ? "taxOther" : "other";
+  }
+
   function nextMockFormId() {
     const counts = new Map((EXAM_BLUEPRINT?.mockForms || []).map((form) => [form.id, 0]));
     (state.mockHistory || []).forEach((item) => {
-      if (counts.has(item.formId)) counts.set(item.formId, counts.get(item.formId) + 1);
+      if (item.examProfile === state.examProfile && counts.has(item.formId)) {
+        counts.set(item.formId, counts.get(item.formId) + 1);
+      }
     });
     return [...counts.entries()].sort((left, right) => left[1] - right[1] || left[0].localeCompare(right[0]))[0]?.[0] || "form-a";
   }
 
-  function setPassCommandAction(button, action, label, { scope = "", unitId = "" } = {}) {
+  function setPassCommandAction(button, action, label, { scope = "", unitId = "", size = 0 } = {}) {
     if (!button) return;
     button.dataset.routeAction = "";
     button.dataset.commandAction = action;
     button.dataset.scopeId = scope;
     button.dataset.unitId = unitId;
+    button.dataset.sessionSize = String(Math.max(0, Math.trunc(Number(size) || 0)));
     button.textContent = label;
   }
 
@@ -5582,6 +5934,31 @@
     prepareFoundationUnitPlan(chapter);
     const index = CURRICULUM_CHAPTERS.findIndex((item) => item.id === chapter.id);
     if (index >= 0) selectChapter(index);
+    elements.quizCard?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }
+
+  function startCurrentLawGate() {
+    if (resumeActiveLearningSession()) return;
+    const ids = CURRENT_LAW_GATE_IDS.filter((id) => QUESTIONS[id] && ORDER.includes(id));
+    if (ids.length !== CURRENT_LAW_GATE_IDS.length) {
+      setTodayCommandStatus("2026改正チェックを読み込めませんでした。", true);
+      return;
+    }
+    state.runMode = "quest";
+    state.chapterModeId = "";
+    state.daily = {
+      ...createDailyState(),
+      target: ids.length,
+      planIds: ids,
+      planMode: "mastery",
+      planScope: "business"
+    };
+    state.index = ORDER.indexOf(ids[0]);
+    state.answered = null;
+    state.activeCutCheck = null;
+    state.finished = false;
+    saveState();
+    render();
     elements.quizCard?.scrollIntoView({ block: "start", behavior: "smooth" });
   }
 
@@ -5600,13 +5977,52 @@
       }
       startBusinessKnockSession();
     } else if (action === "subject-sprint") {
-      startSubjectSprint(button.dataset.scopeId);
+      startSubjectSprint(button.dataset.scopeId, Number(button.dataset.sessionSize) || 0);
     } else if (action === "foundation-theme") {
       startPassFoundationChapter(button.dataset.unitId);
+    } else if (action === "law-gate") {
+      startCurrentLawGate();
     } else if (action === "mock") {
+      const snapshot = passReadinessSnapshot();
+      if (snapshot?.dailyPlan?.mode === "choice") {
+        setMissionForDate(todayKey(), { sundayMode: "full-mock" });
+        saveState();
+      }
       startMock(nextMockFormId());
+    } else if (action === "sunday-short") {
+      setMissionForDate(todayKey(), { sundayMode: "short-review" });
+      saveState();
+      const count = businessAnswersToday();
+      if (count < 20) {
+        if (elements.businessKnockSize) elements.businessKnockSize.value = "20";
+        startBusinessKnockSession();
+      } else {
+        startSubjectSprint(
+          button.dataset.scopeId || shortSundayScope(passReadinessSnapshot()),
+          Number(button.dataset.sessionSize) || Math.max(1, 8 - shortSundayAnswersToday())
+        );
+      }
     }
     return true;
+  }
+
+  function changeExamProfile() {
+    const requested = normalizeExamProfile(elements.examProfileSelect?.value);
+    if (activeLearningSession()) {
+      if (elements.examProfileSelect) elements.examProfileSelect.value = state.examProfile;
+      setTodayCommandStatus("進行中のセットを終えてから受験区分を変更してください。", true);
+      return;
+    }
+    if (requested === state.examProfile) return;
+    state.examProfile = requested;
+    state.mock = createMockState("", requested);
+    saveState();
+    renderPassPlan();
+    setTodayCommandStatus(
+      requested === EXAM_PROFILE_FIVE_EXEMPT
+        ? "登録講習修了者の45問・110分へ切り替えました。問46〜50は合格判定から除外します。"
+        : "一般受験の50問・120分へ切り替えました。"
+    );
   }
 
   function renderPassReadinessTodayCommand(mission) {
@@ -5620,38 +6036,83 @@
     const businessDoneCount = businessAnswersToday();
     const businessDone = businessDoneCount >= 20;
     const themeCount = themeAnswersToday(theme.key);
-    const themeTarget = theme.key === "mock" ? 50 : theme.key === "tax-other" ? 12 : 8;
+    const themeTarget = theme.key === "mock"
+      ? snapshot.examProfile.questions
+      : theme.key === "tax-other"
+        ? state.examProfile === EXAM_PROFILE_FIVE_EXEMPT ? 6 : 12
+        : 8;
     const themeDone = themeCount >= themeTarget;
     const minutesDone = mission.minutes >= PASS_MIN_DAILY_MINUTES;
     const nextChapter = nextPassThemeChapter(theme.key);
-    const completed = businessDone && themeDone && minutesDone;
-    const primary = active
-      ? { action: "resume", label: `${active.label}を再開` }
-      : !businessDone
+    const choiceDay = snapshot.dailyPlan.mode === "choice";
+    const sundayMode = choiceDay ? mission.sundayMode : "";
+    const shortCount = choiceDay ? shortSundayAnswersToday() : 0;
+    const shortDone = businessDone && shortCount >= 8 && minutesDone;
+    const mockDone = choiceDay && themeDone;
+    const completed = choiceDay
+      ? sundayMode === "full-mock" ? mockDone : sundayMode === "short-review" ? shortDone : false
+      : businessDone && themeDone && minutesDone;
+    let primary;
+    let secondary = null;
+    if (active) {
+      primary = { action: "resume", label: `${active.label}を再開` };
+    } else if (choiceDay && !sundayMode) {
+      primary = {
+        action: "mock",
+        label: `本試験${snapshot.examProfile.questions}問・${snapshot.examProfile.minutes}分（今日はこれだけ）`
+      };
+      secondary = {
+        action: "sunday-short",
+        label: "短縮75–90分（業法20＋弱点8）",
+        scope: shortSundayScope(snapshot)
+      };
+    } else if (choiceDay && sundayMode === "full-mock") {
+      primary = { action: "mock", label: `本試験${snapshot.examProfile.questions}問を開始` };
+    } else if (choiceDay && sundayMode === "short-review") {
+      primary = !businessDone
+        ? { action: "sunday-short", label: `宅建業法 残り${20 - businessDoneCount}問`, scope: shortSundayScope(snapshot) }
+        : { action: "sunday-short", label: `弱点補強 残り${Math.max(0, 8 - shortCount)}問`, scope: shortSundayScope(snapshot) };
+    } else {
+      primary = !businessDone
         ? { action: "business-knock", label: `宅建業法 残り${20 - businessDoneCount}問` }
-        : theme.key === "mock"
-          ? { action: "mock", label: "50問・120分の診断を開始" }
-          : nextChapter
-            ? { action: "foundation-theme", label: `${theme.label}の未接触単元へ`, unitId: nextChapter.id }
-            : { action: "subject-sprint", label: `${theme.label}を${themeTarget}問補強`, scope: passThemeScope(theme.key) };
-    const secondary = !businessDone
-      ? theme.key === "mock"
-        ? { action: "mock", label: "日曜50問は120分を別枠で開始" }
         : nextChapter
+          ? { action: "foundation-theme", label: `${theme.label}の未接触単元へ`, unitId: nextChapter.id }
+          : {
+              action: "subject-sprint",
+              label: `${theme.label}を${themeTarget}問補強`,
+              scope: nextThemeSprintScope(theme.key),
+              size: Math.max(1, themeTarget - themeCount)
+            };
+      secondary = !businessDone
+        ? nextChapter
           ? { action: "foundation-theme", label: `次に${theme.label}の未接触へ`, unitId: nextChapter.id }
-          : { action: "subject-sprint", label: `${theme.label}を補強`, scope: passThemeScope(theme.key) }
-      : null;
+          : {
+              action: "subject-sprint",
+              label: `${theme.label}を補強`,
+              scope: nextThemeSprintScope(theme.key),
+              size: Math.max(1, themeTarget - themeCount)
+            }
+        : null;
+    }
 
     elements.todayCommandKicker.textContent = `D-${snapshot.daysToExam}・8/31まで高速一周`;
     elements.todayCommandTitle.textContent = active
       ? active.label
-      : completed ? "今日の75分ライン完了" : primary.label;
+      : completed
+        ? choiceDay && sundayMode === "full-mock" ? "本試験形式を完了" : "最低75分ライン完了"
+        : primary.label;
     elements.todayCommandText.textContent = active
       ? "途中セットを上書きせず、保存位置から終わらせて次へ進みます。"
-      : `${snapshot.dailyPlan.businessKnock.label}を固定。今日は${theme.label}、最後に誤答・迷いを同じセットで回収します。`;
+      : choiceDay
+        ? sundayMode === "full-mock"
+          ? `${snapshot.examProfile.questions}問・${snapshot.examProfile.minutes}分だけに集中します。業法ノックは今日は必須にしません。途中保存できます。`
+          : sundayMode === "short-review"
+            ? "今日は短縮ルートだけ。宅建業法20問と非業法の弱点8問を、最低75分・標準90分で終えます。"
+            : "今日は二者択一です。本試験形式か短縮復習のどちらか一方だけを選びます。"
+        : `${snapshot.dailyPlan.businessKnock.label}を固定。今日は${theme.label}、最後に誤答・迷いを同じセットで回収します。`;
     elements.todayCommandPanel.classList.toggle("is-complete", completed);
     setPassCommandAction(elements.todayCommandStartButton, primary.action, primary.label, primary);
-    elements.todayCommandStartButton.hidden = completed;
+    elements.todayCommandStartButton.hidden = completed || (choiceDay && sundayMode === "short-review" && businessDone && shortCount >= 8);
     elements.todayCommandPracticalButton.hidden = !secondary || Boolean(active);
     if (secondary) setPassCommandAction(elements.todayCommandPracticalButton, secondary.action, secondary.label, secondary);
     elements.todayCommandCalculationButton.hidden = true;
@@ -5661,28 +6122,47 @@
     // the pass-readiness command replaces the older daily command.
     elements.todayCommandOfficialActions.hidden = !foundationCoverageComplete() || Boolean(active);
     elements.todayCommandReviewActions.hidden = true;
-    elements.todayCommandMinutesActions.hidden = completed || !businessDone || !themeDone || minutesDone;
+    const taskWorkDone = choiceDay
+      ? sundayMode === "full-mock"
+        ? mockDone
+        : sundayMode === "short-review" && businessDone && shortCount >= 8
+      : businessDone && themeDone;
+    elements.todayCommandMinutesActions.hidden = completed || !taskWorkDone || minutesDone || sundayMode === "full-mock";
     if (elements.missionMinutesButton) elements.missionMinutesButton.textContent = "75分以上を記録";
     if (elements.missionMinutesInput && document.activeElement !== elements.missionMinutesInput) {
       elements.missionMinutesInput.value = String(mission.minutes);
     }
-    elements.missionBattleLabel.textContent = "業法ノック";
-    elements.missionBattleStatus.textContent = `${Math.min(20, businessDoneCount)} / 20`;
-    elements.missionOfficialLabel.textContent = theme.label;
-    elements.missionOfficialStatus.textContent = `${Math.min(themeTarget, themeCount)} / ${themeTarget}`;
+    elements.missionBattleLabel.textContent = choiceDay ? "日曜モード" : "業法ノック";
+    elements.missionBattleStatus.textContent = choiceDay
+      ? sundayMode === "full-mock" ? "本試験形式" : sundayMode === "short-review" ? "短縮復習" : "未選択"
+      : `${Math.min(20, businessDoneCount)} / 20`;
+    elements.missionOfficialLabel.textContent = choiceDay
+      ? sundayMode === "full-mock" ? `${snapshot.examProfile.questions}問模試` : "業法20＋弱点8"
+      : theme.label;
+    elements.missionOfficialStatus.textContent = choiceDay
+      ? sundayMode === "full-mock"
+        ? `${Math.min(themeTarget, themeCount)} / ${themeTarget}`
+        : `${Math.min(20, businessDoneCount)} / 20・${Math.min(8, shortCount)} / 8`
+      : `${Math.min(themeTarget, themeCount)} / ${themeTarget}`;
     elements.missionReviewLabel.textContent = "セット内誤答";
-    elements.missionReviewStatus.textContent = businessDone && themeDone ? "回収済み" : "各セットで再出題";
-    elements.missionMinutesLabel.textContent = "合計75–90分";
-    elements.missionMinutesStatus.textContent = `${Math.min(90, mission.minutes)} / ${PASS_MIN_DAILY_MINUTES}分`;
-    elements.missionMinutesStep.disabled = !(businessDone && themeDone) || minutesDone;
-    elements.missionMinutesStep.dataset.action = businessDone && themeDone && !minutesDone ? "minutes" : "";
+    elements.missionReviewStatus.textContent = choiceDay && sundayMode === "full-mock"
+      ? mockDone ? "採点済み" : "採点後に確認"
+      : taskWorkDone ? "回収済み" : "各セットで再出題";
+    elements.missionMinutesLabel.textContent = "最低75分 / 標準90分";
+    elements.missionMinutesStatus.textContent = sundayMode === "full-mock"
+      ? `${mission.minutes}分・模試完了で日課完了`
+      : `${Math.min(90, mission.minutes)}分 / 最低${PASS_MIN_DAILY_MINUTES}分`;
+    elements.missionMinutesStep.disabled = !taskWorkDone || minutesDone || sundayMode === "full-mock";
+    elements.missionMinutesStep.dataset.action = taskWorkDone && !minutesDone && sundayMode !== "full-mock" ? "minutes" : "";
     elements.missionMinutesStep.setAttribute("aria-label", "今日の合計学習時間を入力する");
-    const currentIndex = !businessDone ? 0 : !themeDone ? 1 : !minutesDone ? 3 : -1;
+    const currentIndex = choiceDay
+      ? !sundayMode ? 0 : !taskWorkDone ? 1 : sundayMode !== "full-mock" && !minutesDone ? 3 : -1
+      : !businessDone ? 0 : !themeDone ? 1 : !minutesDone ? 3 : -1;
     [
-      [elements.missionBattleStep, businessDone, 0],
-      [elements.missionOfficialStep, themeDone, 1],
-      [elements.missionReviewStep, businessDone && themeDone, 2],
-      [elements.missionMinutesStep, minutesDone, 3]
+      [elements.missionBattleStep, choiceDay ? Boolean(sundayMode) : businessDone, 0],
+      [elements.missionOfficialStep, choiceDay ? taskWorkDone : themeDone, 1],
+      [elements.missionReviewStep, taskWorkDone, 2],
+      [elements.missionMinutesStep, sundayMode === "full-mock" ? mockDone : minutesDone, 3]
     ].forEach(([item, done, index]) => {
       item?.classList.toggle("is-done", done);
       item?.classList.toggle("is-current", currentIndex === index);
@@ -5725,7 +6205,7 @@
             : 5;
     const target = dailyQuestIds().length || DAILY_TARGET;
     const done = Math.min(dailyQuestDoneCount(), target);
-    const remainingMinutes = Math.max(0, DAILY_STUDY_MINUTES - mission.minutes);
+    const remainingMinutes = Math.max(0, PASS_MIN_DAILY_MINUTES - mission.minutes);
     const reviewTargets = commandMission.officialDrill?.reviewTargets || [];
     const drillDefinition = officialDrillDefinitionFor(commandMission.officialDrill);
     const command = step === 1
@@ -5757,13 +6237,13 @@
           : step === 4
             ? {
                 kicker: "今やる・STEP 4 / 4",
-                title: `合計90分まであと${remainingMinutes}分`,
-                text: `今日は${mission.minutes}分。実際の合計学習時間を入力し、90分以上で完了にする。`
+                title: `最低75分まであと${remainingMinutes}分`,
+                text: `今日は${mission.minutes}分。実際の合計学習時間を入力し、75分で日課完了、90分で標準達成にする。`
               }
             : {
                 kicker: "今日の作戦・4 / 4",
-                title: "90分クエスト完了",
-                text: `固定10問・公式20問・誤答1行・合計${mission.minutes}分を記録済み。今日はここで切れる。`
+                title: "最低75分ライン完了",
+                text: `固定10問・公式20問・誤答1行・合計${mission.minutes}分を記録済み。${mission.minutes < DAILY_STUDY_MINUTES ? "余力があれば標準90分まで伸ばせます。" : "標準90分も達成しました。"}`
               };
 
     elements.todayCommandKicker.textContent = command.kicker;
@@ -5774,7 +6254,7 @@
     elements.missionBattleLabel.textContent = "固定10問";
     elements.missionOfficialLabel.textContent = "公式問題20問";
     elements.missionReviewLabel.textContent = "誤答を1行化";
-    elements.missionMinutesLabel.textContent = "合計90分";
+    elements.missionMinutesLabel.textContent = "最低75分 / 標準90分";
     elements.missionMinutesStep.disabled = step !== 4;
     elements.missionMinutesStep.dataset.action = step === 4 ? "minutes" : "";
     elements.missionMinutesStep.setAttribute("aria-label", step === 4
@@ -5820,6 +6300,14 @@
 
   function renderPassReadinessCard(snapshot = passReadinessSnapshot()) {
     if (!elements.passReadinessCard || !snapshot?.valid) return;
+    if (elements.examProfileSelect && document.activeElement !== elements.examProfileSelect) {
+      elements.examProfileSelect.value = state.examProfile;
+    }
+    if (elements.currentYearExamProfileNote) {
+      elements.currentYearExamProfileNote.textContent = state.examProfile === EXAM_PROFILE_FIVE_EXEMPT
+        ? "登録講習修了者モード：問1〜45・110分。問46〜50（その他5問）は合格安定判定に含めません。"
+        : "一般受験モード：全50問・120分。問46〜50も含めて判定します。";
+    }
     const metrics = passSubjectMetrics();
     const latestMock = latestMockAttempt();
     const targetByKey = Object.fromEntries(snapshot.targets.subjects.map((subject) => [subject.key, subject]));
@@ -5834,11 +6322,13 @@
       if (!element) return;
       const score = Number(latestMock?.sectionScores?.[key]?.correct);
       const target = targetByKey[key];
+      const article = element.closest("article");
+      article.hidden = !target;
+      if (!target) return;
       const measured = Number.isInteger(score) && score >= 0;
       element.textContent = measured
         ? `${score} / ${target.questions} → 目標${target.target}`
         : `未測定 → 目標${target.target}`;
-      const article = element.closest("article");
       article.dataset.state = !measured ? "unmeasured" : score >= target.target ? "target" : "gap";
       const small = article.querySelector("small");
       if (small) {
@@ -5856,16 +6346,16 @@
       ? `残り${remainingUnits}単元・今日${Math.max(1, unitPace)}単元`
       : "一周接触済み";
     elements.passReadinessTitle.textContent = snapshot.timed50.stable
-      ? "40点・科目別目標を3回連続で再現"
+      ? `${snapshot.targets.total}点・科目別目標を3フォームで再現`
       : latestMock
-        ? `直近の内部50問 ${latestMock.score}/50・3回安定は未達`
-        : "50問は未測定。内部模試で現在地を出す";
+        ? `直近の内部${snapshot.targets.questions}問 ${latestMock.score}/${snapshot.targets.questions}・厳格安定は未達`
+        : `${snapshot.targets.questions}問は未測定。内部模試で現在地を出す`;
     elements.passReadinessNote.textContent = staleDays > 1
       ? `最終学習から${staleDays}日空いています。今日は未接触を減らしつつ、業法20問で再起動します。`
-      : `合格目標は40/50。未測定は弱点と決めつけず、接触→50問測定→不足点補強の順で処理します。`;
-    elements.passReadinessStatus.textContent = snapshot.timed50.stable
-      ? "直近3回が合計40点以上かつ全5科目の目標以上です。"
-      : `安定判定 ${snapshot.timed50.mock.passedRecentCount}/3回・法令基準 ${snapshot.lawBaselineDayKey}`;
+      : `内部目標は${snapshot.targets.total}/${snapshot.targets.questions}。未測定は弱点と決めつけず、接触→時間測定→不足点補強の順で処理します。`;
+    elements.passReadinessStatus.textContent = snapshot.timed50.stable && snapshot.currentYearFreshness.passed && snapshot.capacity.verified
+      ? `異なる3フォーム・3日、改正確認2日、当年資料、直近7日の学習時間をすべて通過しました。`
+      : `フォーム ${snapshot.timed50.mock.passedRecentCount}/3・改正確認 ${snapshot.currentLawGate.passed ? "通過" : `${snapshot.currentLawGate.validAttemptCount}/2`}・当年資料 ${snapshot.currentYearFreshness.passed ? "確認済" : "要再確認"}・学習時間 ${snapshot.capacity.verified ? "確認済" : `${snapshot.capacity.observedDays}/4日`}`;
     elements.passReadinessStatus.classList.toggle("is-urgent", snapshot.urgent || remainingUnits > 0);
 
     const active = activeLearningSession();
@@ -5879,13 +6369,27 @@
     if (elements.passThemeAction) {
       const themeAction = theme.key === "mock" ? "mock" : nextChapter ? "foundation-theme" : "subject-sprint";
       setPassCommandAction(elements.passThemeAction, themeAction,
-        theme.key === "mock" ? "今日の50問・120分へ"
+        theme.key === "mock" ? `今日の${snapshot.examProfile.questions}問・${snapshot.examProfile.minutes}分へ`
           : nextChapter ? `${theme.label}の未接触単元へ` : `${theme.label}を高速補強`,
-        { scope: passThemeScope(theme.key), unitId: nextChapter?.id || "" });
+        {
+          scope: nextThemeSprintScope(theme.key),
+          unitId: nextChapter?.id || "",
+          size: theme.key === "mock" ? 0 : Math.max(1, theme.key === "tax-other" ? 12 - themeAnswersToday(theme.key) : 8 - themeAnswersToday(theme.key))
+        });
       elements.passThemeAction.disabled = Boolean(active);
     }
-    setPassCommandAction(elements.passMockAction, "mock", "内部50問で現在地を測る");
+    setPassCommandAction(elements.passMockAction, "mock", `内部${snapshot.examProfile.questions}問で現在地を測る`);
     if (elements.passMockAction) elements.passMockAction.disabled = Boolean(active);
+    setPassCommandAction(
+      elements.passLawGateAction,
+      "law-gate",
+      snapshot.currentLawGate.passed
+        ? "2026改正確認 2日通過"
+        : `2026改正2問 ${snapshot.currentLawGate.validAttemptCount}/2日`
+    );
+    if (elements.passLawGateAction) {
+      elements.passLawGateAction.disabled = Boolean(active) || snapshot.currentLawGate.passed;
+    }
   }
 
   function renderCurrentYearChecks() {
@@ -5893,20 +6397,22 @@
     const assessment = EXAM_CURRENT_YEAR.assessAllFreshness(todayKey());
     elements.currentYearFreshnessStatus.textContent = assessment.current
       ? `${assessment.cards.length}/${assessment.cards.length}・10/18 13:00–15:00`
-      : "期限・出典の再確認が必要";
+      : assessment.cards?.some((entry) => entry.status === "stale")
+        ? "確認票の期限切れ・公式資料を再確認"
+        : "期限・出典の再確認が必要";
     elements.currentYearFreshnessList.replaceChildren(...EXAM_CURRENT_YEAR.FRESHNESS_CARDS.map((card) => {
       const result = EXAM_CURRENT_YEAR.assessFreshness(card, todayKey());
       const source = EXAM_CURRENT_YEAR.SOURCE_BY_ID[card.sourceIds[0]];
       const row = document.createElement("article");
       const title = document.createElement("strong");
-      title.textContent = `${result.current ? "確認済" : "要確認"}・${card.title}`;
+      title.textContent = `${result.current ? "確認済" : result.status === "stale" ? "再確認期限超過" : "要確認"}・${card.title}`;
       const link = document.createElement("a");
       link.href = source.url;
       link.target = "_blank";
       link.rel = "noopener";
       link.textContent = "公式資料";
       const copy = document.createElement("p");
-      copy.textContent = card.checkpoint;
+      copy.textContent = `${card.checkpoint}（確認票 ${card.checkedAt}・有効${card.maxAgeDays}日）`;
       row.append(title, link, copy);
       return row;
     }));
@@ -5926,7 +6432,7 @@
     const battleDone = dailyQuestIsComplete();
     const officialDone = mission.officialQuestions;
     const reviewDone = mission.reviewed;
-    const minutesDone = mission.minutes >= DAILY_STUDY_MINUTES;
+    const minutesDone = mission.minutes >= PASS_MIN_DAILY_MINUTES;
     const missionCount = [battleDone, officialDone, reviewDone, minutesDone].filter(Boolean).length;
 
     elements.passPhaseTitle.textContent = phase.title;
@@ -5953,8 +6459,8 @@
       `${readiness.stability}・初見${readiness.initial.length}/${OFFICIAL_INITIAL_TARGET}` +
       `・再${readiness.retests.length}/${OFFICIAL_RETEST_TARGET}`;
     elements.officialReadinessStatus.title = readiness.latestThree.length
-      ? `直近${readiness.latestThree.length}回 平均${readiness.mean.toFixed(1)}・最低${readiness.minimum}`
-      : "120分・自動採点・当時法公式キーの記録だけを算入";
+      ? `直近${readiness.latestThree.length}回 50問換算平均${readiness.mean.toFixed(1)}・最低${readiness.minimum.toFixed(1)}`
+      : "受験プロフィール時間内・自動採点・当時法公式キーの記録だけを算入";
     elements.officialPracticeCoverageStatus.textContent =
       foundationComplete
         ? `接触 ${officialPractice.coveredQuestions} / 50`
@@ -5974,7 +6480,7 @@
       : pendingReview?.date < todayKey() && battleDone
         ? `${pendingReview.date}の未復習を先に解除`
       : battleDone
-        ? `次は${officialDone ? (reviewDone ? "90分まで記録" : "誤答・根拠なしを復習") : "令和7年公式20問"}`
+        ? `次は${officialDone ? (reviewDone ? "最低75分まで記録" : "誤答・根拠なしを復習") : "令和7年公式20問"}`
         : `固定10問 ${dailyQuestDoneCount()} / ${dailyQuestIds().length || DAILY_TARGET}`;
 
     elements.missionBattleStep.classList.toggle("is-done", battleDone);
@@ -5997,7 +6503,7 @@
           : "完了記録済み"
       : "未完了";
     elements.missionMinutesStatus.textContent =
-      `${Math.min(mission.minutes, DAILY_STUDY_MINUTES)} / ${DAILY_STUDY_MINUTES}分`;
+      `${Math.min(mission.minutes, DAILY_STUDY_MINUTES)}分 / 最低${PASS_MIN_DAILY_MINUTES}分・標準${DAILY_STUDY_MINUTES}分`;
     renderTodayCommand({
       mission,
       battleDone,
@@ -6461,8 +6967,8 @@
       const targetQuestion = targetId ? QUESTIONS[targetId] : null;
       elements.dockResultText.textContent = "解答を記録";
       elements.dockTargetText.textContent = targetQuestion
-        ? `次 ${state.mock.position + 2}/50 ・ ${targetQuestion.tag}`
-        : "50問終了・採点へ";
+        ? `次 ${state.mock.position + 2}/${mockQuestionIds().length} ・ ${targetQuestion.tag}`
+        : `${mockQuestionIds().length}問終了・採点へ`;
       elements.dockNextLabel.textContent = nextActionLabel();
       elements.dockExplainButton.hidden = true;
       elements.dockUnsureButton.hidden = true;
@@ -6566,8 +7072,8 @@
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  function formatCalculationYen(value) {
-    return `${Number(value).toLocaleString("ja-JP")}円`;
+  function formatCalculationValue(value, unit = "円") {
+    return `${Number(value).toLocaleString("ja-JP")}${unit || ""}`;
   }
 
   function currentCalculationQuestion() {
@@ -6597,7 +7103,9 @@
     elements.calculationDrillQuestion.hidden = idle || complete;
     elements.calculationDrillComplete.hidden = !complete;
     elements.calculationDrillResetButton.hidden = complete;
-    elements.calculationDrillResetButton.textContent = idle ? "24問を始める" : "24問を最初から";
+    elements.calculationDrillResetButton.textContent = idle
+      ? `${CALCULATION_QUESTION_IDS.length}問を始める`
+      : `${CALCULATION_QUESTION_IDS.length}問を最初から`;
     if (idle) {
       elements.calculationDrillStage.textContent = "計算ルールを確認";
       elements.calculationDrillProgress.textContent = "未開始";
@@ -6607,14 +7115,16 @@
       elements.calculationDrillStage.textContent = "全件クリア";
       elements.calculationDrillProgress.textContent = `${CALCULATION_QUESTION_IDS.length} / ${CALCULATION_QUESTION_IDS.length}`;
       elements.calculationDrillCompleteText.textContent =
-        `初回24問と再出題を完了。累計${drill.attempts}解答・正解${drill.correctAttempts}回です。`;
+        `初回${CALCULATION_QUESTION_IDS.length}問と再出題を完了。累計${drill.attempts}解答・正解${drill.correctAttempts}回です。`;
       return;
     }
 
     const item = currentCalculationQuestion();
     if (!item) return;
     const attempt = drill.currentAttempt;
-    elements.calculationDrillStage.textContent = drill.stage === "retry" ? "迷い・誤答を再出題" : "初回24問";
+    elements.calculationDrillStage.textContent = drill.stage === "retry"
+      ? "迷い・誤答を再出題"
+      : `初回${CALCULATION_QUESTION_IDS.length}問`;
     elements.calculationDrillProgress.textContent = `${drill.position + 1} / ${drill.queue.length}`;
     elements.calculationDrillCategory.textContent = item.category;
     elements.calculationDrillPrompt.textContent = item.prompt;
@@ -6623,7 +7133,7 @@
       const button = document.createElement("button");
       button.type = "button";
       button.className = "calculation-drill-choice";
-      button.textContent = `${index + 1}. ${formatCalculationYen(value)}`;
+      button.textContent = `${index + 1}. ${formatCalculationValue(value, item.unit)}`;
       button.disabled = Boolean(attempt);
       if (attempt) {
         button.classList.toggle("is-selected", attempt.selected === index);
@@ -6637,8 +7147,8 @@
     elements.calculationDrillFeedback.hidden = !attempt;
     if (!attempt) return;
     elements.calculationDrillVerdict.textContent = attempt.correct
-      ? `正解 ${formatCalculationYen(item.choices[item.answer])}`
-      : `誤答。正解は ${formatCalculationYen(item.choices[item.answer])}。再出題へ追加した。`;
+      ? `正解 ${formatCalculationValue(item.choices[item.answer], item.unit)}`
+      : `誤答。正解は ${formatCalculationValue(item.choices[item.answer], item.unit)}。再出題へ追加した。`;
     elements.calculationDrillFormula.replaceChildren(
       ...item.formula.map((step) => {
         const row = document.createElement("li");
@@ -6820,7 +7330,11 @@
   }
 
   function diagnosticTagsForPracticalSelection(question, selected, uncertain = false) {
-    if (state.practicalDrill?.bankId !== BUSINESS_FULLSCORE_BANK_ID || !question) return [];
+    if (!question) return [];
+    if (state.practicalDrill?.bankId === SUBJECT_SPRINT_BANK_ID) {
+      return normalizePracticalTagList(question.diagnosticTags, question.id);
+    }
+    if (state.practicalDrill?.bankId !== BUSINESS_FULLSCORE_BANK_ID) return [];
     if (!uncertain && typeof BUSINESS_FULLSCORE_BANK?.diagnosticsForSelection === "function") {
       try {
         return normalizeBusinessTagList(
@@ -6837,6 +7351,20 @@
     const valid = normalizeBusinessTagList(tags);
     if (!history || !valid.length) return false;
     const counts = normalizeBusinessMistakeTags(history.mistakeTags);
+    valid.forEach((tag) => { counts[tag] = Math.min(10000, (counts[tag] || 0) + 1); });
+    history.mistakeTags = counts;
+    history.lastMistakeTags = valid;
+    return true;
+  }
+
+  function recordPracticalDiagnostic(history, question, tags) {
+    if (!question || !history) return false;
+    if (state.practicalDrill?.bankId === BUSINESS_FULLSCORE_BANK_ID) {
+      return recordBusinessDiagnostic(history, tags);
+    }
+    const valid = normalizePracticalTagList(tags, question.id);
+    if (!valid.length) return false;
+    const counts = normalizePracticalMistakeTags(history.mistakeTags, question.id);
     valid.forEach((tag) => { counts[tag] = Math.min(10000, (counts[tag] || 0) + 1); });
     history.mistakeTags = counts;
     history.lastMistakeTags = valid;
@@ -6950,8 +7478,11 @@
   }
 
   function practicalDiagnosticWeight(question, drill = state.practicalDrill) {
-    if (drill?.bankId !== BUSINESS_FULLSCORE_BANK_ID) return 0;
-    return Object.values(normalizeBusinessMistakeTags(drill.history?.[question.id]?.mistakeTags))
+    if (![BUSINESS_FULLSCORE_BANK_ID, SUBJECT_SPRINT_BANK_ID].includes(drill?.bankId)) return 0;
+    const tags = drill?.bankId === BUSINESS_FULLSCORE_BANK_ID
+      ? normalizeBusinessMistakeTags(drill.history?.[question.id]?.mistakeTags)
+      : normalizePracticalMistakeTags(drill.history?.[question.id]?.mistakeTags, question.id);
+    return Object.values(tags)
       .reduce((sum, count) => sum + count, 0);
   }
 
@@ -7442,8 +7973,9 @@
 
   function officialEvidenceMatchesAnswerKey(item) {
     const definition = officialExamDefinition(item?.examId);
-    if (!definition || Object.keys(item?.answers || {}).length !== 50) return false;
-    const scored = OFFICIAL_EXAM_DATA?.scoreAnswers(item.examId, item.answers);
+    const questionCount = officialExamQuestionCountFor(item);
+    if (!definition || !officialExamAnswerObjectValid(item?.examId, item?.answers, true, questionCount)) return false;
+    const scored = scoreOfficialExamAnswers(item.examId, item.answers, item.examProfile);
     return Boolean(
       scored &&
       Number.isInteger(item.score) && item.score === scored.score &&
@@ -7980,7 +8512,7 @@
     }
   }
 
-  function startSubjectSprint(scope = "rights") {
+  function startSubjectSprint(scope = "rights", requestedSize = 0) {
     if (resumeActiveLearningSession() || !SUBJECT_SPRINT_READY) return;
     const previousState = cloneStateForSync(state);
     const normalizedScope = ["rights", "restrictions", "taxOther", "other"].includes(scope)
@@ -7989,7 +8521,10 @@
     const eligibleCount = SUBJECT_SPRINT_QUESTIONS.filter((question) =>
       question.scopeId === normalizedScope
     ).length;
-    const queue = buildSubjectSprintQueue(normalizedScope, eligibleCount);
+    const sessionSize = Number.isInteger(Number(requestedSize)) && Number(requestedSize) > 0
+      ? Math.min(eligibleCount, Number(requestedSize))
+      : eligibleCount;
+    const queue = buildSubjectSprintQueue(normalizedScope, sessionSize);
     if (!queue.length) {
       setTodayCommandStatus("科目補強問題を読み込めませんでした。", true);
       return;
@@ -8123,7 +8658,7 @@
 
   function restartPracticalDrill() {
     if (state.practicalDrill?.bankId === SUBJECT_SPRINT_BANK_ID) {
-      startSubjectSprint(state.practicalDrill.scope);
+      startSubjectSprint(state.practicalDrill.scope, state.practicalDrill.sessionSize);
       return;
     }
     if (state.practicalDrill?.bankId === BUSINESS_FULLSCORE_BANK_ID) {
@@ -8177,8 +8712,9 @@
       selected,
       correct,
       confidence: correct ? "" : "wrong",
-      diagnosticRecorded: !correct && recordBusinessDiagnostic(
+      diagnosticRecorded: !correct && recordPracticalDiagnostic(
         drill.history[question.id],
+        question,
         diagnosticTagsForPracticalSelection(question, selected)
       )
     };
@@ -8204,8 +8740,9 @@
       history.lastConfidence = confidence;
     }
     if (confidence === "uncertain" && !attempt.diagnosticRecorded) {
-      attempt.diagnosticRecorded = recordBusinessDiagnostic(
+      attempt.diagnosticRecorded = recordPracticalDiagnostic(
         history,
+        currentPresentedPracticalQuestion(),
         diagnosticTagsForPracticalSelection(currentPresentedPracticalQuestion(), attempt.selected, true)
       );
     }
@@ -9212,15 +9749,15 @@
       if (elements.streakLabel) elements.streakLabel.textContent = finalized ? "所要時間" : "残り時間";
       if (elements.markedLabel) elements.markedLabel.textContent = "要復習";
       elements.attemptCount.textContent = String(mockAnsweredCount());
-      elements.accuracyText.textContent = finalized ? `${mockScore}/50` : "採点後";
+      elements.accuracyText.textContent = finalized ? `${mockScore}/${mockQuestionIds().length}` : "採点後";
       elements.streakText.textContent = finalized ? formatElapsed(state.mock.elapsedMs) : mockTimeText();
       elements.markedText.textContent = String(weakIds().length);
-      elements.chapterProgressText.textContent = `${state.mock.position + 1} / 50問`;
+      elements.chapterProgressText.textContent = `${state.mock.position + 1} / ${mockQuestionIds().length}問`;
       if (elements.studyTitle) elements.studyTitle.textContent = `宅建 ${mockFormShortLabel()}`;
-      if (elements.todayLabel) elements.todayLabel.textContent = "本試験配分50問・120分";
+      if (elements.todayLabel) elements.todayLabel.textContent = `本試験配分${mockQuestionIds().length}問・${examProfileDurationMinutes(state.mock.examProfile)}分`;
       if (elements.progressDrawerSummary) {
         elements.progressDrawerSummary.textContent =
-          `模試 ${mockAnsweredCount()} / 50・要復習${weakIds().length}`;
+          `模試 ${mockAnsweredCount()} / ${mockQuestionIds().length}・要復習${weakIds().length}`;
       }
       return;
     }
@@ -9258,27 +9795,28 @@
     state.daily = normalizeDailyState(state.daily);
     elements.questCard?.classList.toggle("is-mock", isMockMode());
     elements.questCard?.classList.toggle("is-first-pass", isFirstPassMode());
-    [elements.mockAButton, elements.mockBButton].forEach((button) => {
+    [elements.mockAButton, elements.mockBButton, elements.mockCButton].forEach((button) => {
       if (!button) return;
       button.disabled = false;
-      button.title = "内部問題の50問診断。RETIO公式未見は消費しません。";
+      button.title = "内部問題の本試験配分診断。RETIO公式未見は消費しません。";
       button.classList.remove("is-active");
     });
     if (isMockMode()) {
       const form = currentMockForm();
       const answered = mockAnsweredCount();
-      const remaining = Math.max(0, form.ids.length - answered);
-      if (elements.questLabel) elements.questLabel.textContent = "50問確認模試";
-      elements.dailyQuestTitle.textContent = `${mockFormShortLabel(form)} ${state.mock.position + 1} / ${form.ids.length}`;
+      const formIds = mockQuestionIds();
+      const remaining = Math.max(0, formIds.length - answered);
+      if (elements.questLabel) elements.questLabel.textContent = `${formIds.length}問確認模試`;
+      elements.dailyQuestTitle.textContent = `${mockFormShortLabel(form)} ${state.mock.position + 1} / ${formIds.length}`;
       if (elements.dailyAnswerLabel) elements.dailyAnswerLabel.textContent = "解答";
       if (elements.dailyCorrectLabel) elements.dailyCorrectLabel.textContent = "未回答";
       if (elements.dailyWeakLabel) elements.dailyWeakLabel.textContent = "残り時間";
       elements.dailyAnswerText.textContent = `${answered}問`;
       elements.dailyCorrectText.textContent = `${remaining}問`;
       elements.dailyWeakText.textContent = mockTimeText();
-      elements.dailyQuestFill.style.width = `${Math.round((answered / form.ids.length) * 100)}%`;
+      elements.dailyQuestFill.style.width = `${Math.round((answered / formIds.length) * 100)}%`;
       if (elements.dailyQuestSource) {
-        elements.dailyQuestSource.textContent = "50問・120分・正誤は終了後に採点";
+        elements.dailyQuestSource.textContent = `${formIds.length}問・${examProfileDurationMinutes(state.mock.examProfile)}分・正誤は終了後に採点`;
       }
       if (elements.questRewardRail) elements.questRewardRail.hidden = true;
       elements.dailyQuestButton.textContent = "模試を中断";
@@ -9286,17 +9824,21 @@
       elements.passQuestButton.disabled = true;
       elements.weakQuestButton.disabled = true;
       elements.sprintButton.disabled = true;
-      const activeButton = form.id === "form-a" ? elements.mockAButton : elements.mockBButton;
+      const activeButton = {
+        "form-a": elements.mockAButton,
+        "form-b": elements.mockBButton,
+        "form-c": elements.mockCButton
+      }[form.id];
       activeButton?.classList.add("is-active");
       return;
     }
     elements.dailyQuestButton.disabled = false;
     elements.passQuestButton.disabled = false;
     elements.sprintButton.disabled = false;
-    [elements.mockAButton, elements.mockBButton].forEach((button) => {
+    [elements.mockAButton, elements.mockBButton, elements.mockCButton].forEach((button) => {
       if (!button) return;
       button.disabled = false;
-      button.title = "内部問題の50問診断。RETIO公式未見は消費しません。";
+      button.title = "内部問題の本試験配分診断。RETIO公式未見は消費しません。";
     });
     const target = state.daily.target || DAILY_TARGET;
     const fixedIds = dailyQuestIds();
@@ -9557,7 +10099,7 @@
     if (isMockMode()) {
       elements.coachTitle.textContent = `${mockFormShortLabel()}・安全圏目標${MOCK_SAFE_TARGET}点`;
       elements.coachText.textContent =
-        "コア100から本試験配分で組んだ50問を120分で解く。途中の正誤・解説は隠す。既習問題の定着確認なので、初見実力は公式過去問で別に測る。";
+        `${mockQuestionIds().length}問を${examProfileDurationMinutes(state.mock.examProfile)}分で解く。途中の正誤・解説は隠す。既習問題の定着確認なので、初見実力は公式過去問で別に測る。`;
       return;
     }
 
@@ -9933,6 +10475,9 @@
     }
     const form = mockFormById(formId);
     if (!form) return;
+    const examProfile = normalizeExamProfile(state.examProfile);
+    const formIds = mockIdsForForm(form, examProfile);
+    if (formIds.length !== examProfileQuestionCount(examProfile)) return;
     const activeAttempt = isMockMode() && !state.mock.finalized && mockAnsweredCount() > 0;
     if (
       activeAttempt &&
@@ -9943,10 +10488,10 @@
     state.runMode = RUN_MODE_MOCK;
     state.chapterModeId = "";
     state.mock = {
-      ...createMockState(form.id),
+      ...createMockState(form.id, examProfile),
       startedAt: new Date().toISOString()
     };
-    state.index = ORDER.indexOf(form.ids[0]);
+    state.index = ORDER.indexOf(formIds[0]);
     state.answered = null;
     state.activeCutCheck = null;
     state.dailyFinishedDate = "";
@@ -9955,8 +10500,9 @@
     saveState();
     logStudyEvent("mock-start", {
       formId: form.id,
-      questionCount: form.ids.length,
-      durationMinutes: MOCK_DURATION_MINUTES
+      examProfile,
+      questionCount: formIds.length,
+      durationMinutes: examProfileDurationMinutes(examProfile)
     });
     render();
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -9970,7 +10516,7 @@
     if (!window.confirm("この模試の途中結果を破棄して日課へ戻る？")) return;
     state.runMode = "quest";
     state.chapterModeId = "";
-    state.mock = createMockState();
+    state.mock = createMockState("", state.examProfile);
     state.answered = null;
     state.activeCutCheck = null;
     state.finished = false;
@@ -10295,6 +10841,13 @@
       clearDayKeys: isCorrect
         ? [...new Set([...normalizedComprehensionDayKeys(previous), todayKey()])].sort().slice(-8)
         : normalizedComprehensionDayKeys(previous),
+      currentLawGateDayKeys: CURRENT_LAW_GATE_IDS.includes(question.id)
+        ? [...new Set([
+            ...(Array.isArray(previous.currentLawGateDayKeys) ? previous.currentLawGateDayKeys : [])
+              .filter((day) => day !== todayKey()),
+            ...(isCorrect ? [todayKey()] : [])
+          ])].sort().slice(-8)
+        : (Array.isArray(previous.currentLawGateDayKeys) ? previous.currentLawGateDayKeys : []),
       understandingDayKeys: normalizedUnderstandingDayKeys(previous),
       lastConfidence: isCorrect ? "clear" : "wrong",
       lastConfidenceAt: state.answered.at,
@@ -10437,10 +10990,17 @@
     const recordedAt = new Date().toISOString();
     const clearDayKeys = normalizedComprehensionDayKeys(stats)
       .filter((day) => day !== todayKey());
+    const currentLawGateDayKeys = (Array.isArray(stats.currentLawGateDayKeys)
+      ? stats.currentLawGateDayKeys
+      : [])
+      .filter((day) => day !== todayKey());
     const previousClearAt = localDateKey(stats.lastClearAt) === todayKey()
       ? String(state.answered.previousClearAt || "")
       : stats.lastClearAt;
     if (value === "clear") clearDayKeys.push(todayKey());
+    if (value === "clear" && CURRENT_LAW_GATE_IDS.includes(id)) {
+      currentLawGateDayKeys.push(todayKey());
+    }
     state.answered.confidence = value;
     state.questionStats[id] = {
       ...stats,
@@ -10448,7 +11008,8 @@
       lastConfidenceAt: recordedAt,
       lastConfidenceDayKey: todayKey(),
       lastClearAt: value === "clear" ? recordedAt : previousClearAt,
-      clearDayKeys: [...new Set(clearDayKeys)].sort().slice(-8)
+      clearDayKeys: [...new Set(clearDayKeys)].sort().slice(-8),
+      currentLawGateDayKeys: [...new Set(currentLawGateDayKeys)].sort().slice(-8)
     };
     state.daily = normalizeDailyState(state.daily);
     if (shouldMark) {
@@ -10638,7 +11199,8 @@
 
   function finishMock() {
     const form = currentMockForm();
-    if (!form || state.mock.finalized || state.mock.results.length !== form.ids.length) return;
+    const formIds = mockQuestionIds();
+    if (!form || state.mock.finalized || state.mock.results.length !== formIds.length) return;
     const finishedAt = new Date().toISOString();
     const elapsedMs = mockElapsedMs();
     const results = state.mock.results.map((result) => ({ ...result }));
@@ -10688,12 +11250,23 @@
       ...(state.mockHistory || []),
       {
         formId: form.id,
+        examProfile: normalizeExamProfile(state.mock.examProfile),
+        evidenceVersion: INTERNAL_MOCK_EVIDENCE_VERSION,
+        lawBaseline: "2026-04-01",
+        questionCount: formIds.length,
         completedAt: finishedAt,
+        dayKey: todayKey(),
         score,
         elapsedMs,
         sectionScores
       }
     ].slice(-10);
+    const elapsedMinutes = Math.max(1, Math.ceil(elapsedMs / 60000));
+    const currentMission = missionForDate(todayKey());
+    setMissionForDate(todayKey(), {
+      minutes: Math.max(currentMission.minutes, Math.min(600, elapsedMinutes)),
+      sundayMode: currentMission.sundayMode
+    });
     state.answered = null;
     state.activeCutCheck = null;
     state.finished = true;
@@ -10730,7 +11303,7 @@
     });
   }
 
-  function showQuizResult(markup) {
+  function showQuizResult(buildView) {
     resetQuizCardView();
     [
       elements.roundLabel?.closest(".quiz-meta"),
@@ -10743,8 +11316,42 @@
     const view = document.createElement("div");
     view.className = "quiz-result-view";
     view.dataset.quizResultView = "";
-    view.innerHTML = markup;
+    buildView(view);
     elements.quizCard.append(view);
+  }
+
+  function resultElement(tagName, { className = "", id = "", text = "" } = {}) {
+    const element = document.createElement(tagName);
+    if (className) element.className = className;
+    if (id) element.id = id;
+    if (text !== "") element.textContent = text;
+    return element;
+  }
+
+  function resultDefinition(label, value) {
+    const row = document.createElement("div");
+    row.append(resultElement("dt", { text: label }), resultElement("dd", { text: value }));
+    return row;
+  }
+
+  function appendQuizMeta(view, primary, secondary) {
+    const meta = resultElement("div", { className: "quiz-meta" });
+    meta.append(resultElement("strong", { text: primary }), resultElement("span", { text: secondary }));
+    view.append(meta);
+  }
+
+  function appendSafeSourceLink(parent, question) {
+    const link = resultElement("a", { className: "mock-source-link" });
+    try {
+      const url = new URL(question.sourceUrl, window.location.href);
+      if (url.protocol === "https:" || url.protocol === "http:") link.href = url.href;
+    } catch {
+      // The source record is invalid. Leave the link inert rather than creating an executable URL.
+    }
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.textContent = `公式根拠: ${question.sourceLocator || question.sourceRef}（基準日 ${question.legalBaseline}）`;
+    parent.append(link);
   }
 
   function showMockFinished() {
@@ -10760,116 +11367,111 @@
       document.body.classList.remove("has-answer-dock");
     }
     const results = state.mock.results;
+    const questionCount = mockQuestionIds().length;
+    const readiness = passReadinessSnapshot();
+    const passTarget = readiness?.targets?.total || STUDY_TARGETS.total;
+    const safeTarget = Math.min(questionCount, passTarget + 2);
     const score = results.filter((result) => result.correct).length;
     const sectionScores = mockSectionScores(results);
     const wrongResults = results.filter((result) => !result.correct);
-    const targetReached = score >= MOCK_SAFE_TARGET;
-    const strategyTargetReached = score >= STUDY_TARGETS.total;
-    const otherFormId = form.id === "form-a" ? "form-b" : "form-a";
+    const targetReached = score >= safeTarget;
+    const strategyTargetReached = score >= passTarget;
+    const otherFormId = nextMockFormId();
     const strategyRows = mockStrategyRows(sectionScores);
     const priority = mockPriorityRow(sectionScores);
-    const sectionCards = strategyRows.map((row) => {
-      return `
-        <div class="mock-section-card ${row.deficit > 0 ? "is-below-target" : "is-on-target"}" data-section="${escapeHtml(row.id)}">
-          <span>${escapeHtml(row.label)}</span>
-          <strong>${row.correct} / ${row.total}<small>目標 ${row.target}</small></strong>
-        </div>`;
-    }).join("");
     const scoreMessage = targetReached
-      ? `安全圏${MOCK_SAFE_TARGET}点を達成`
+      ? `演習安全圏${safeTarget}点を達成`
       : (strategyTargetReached
-          ? `合格戦略目標${STUDY_TARGETS.total}点を達成。安全圏${MOCK_SAFE_TARGET}点まであと${MOCK_SAFE_TARGET - score}点`
-          : `合格戦略目標${STUDY_TARGETS.total}点まであと${STUDY_TARGETS.total - score}点`);
-    const priorityPanel = priority
-      ? `
-        <section class="mock-priority is-below-target">
-          <span>次の最優先</span>
-          <strong>${escapeHtml(priority.label)} ${priority.correct}/${priority.total} → 目標${priority.target}</strong>
-          <p>今日は誤答の解説と根拠を確認して終了。翌日の日課で本試験比率を保ちながら、弱点を優先して再テストする。</p>
-        </section>`
-      : `
-        <section class="mock-priority is-on-target">
-          <span>次の目標</span>
-          <strong>4分野すべて目標達成</strong>
-          <p>定着ロードで弱点と最終接触が古い問題を回し、安全圏${MOCK_SAFE_TARGET}点を別フォームでも再現する。</p>
-        </section>`;
+          ? `内部目標${passTarget}点を達成。演習安全圏${safeTarget}点まであと${safeTarget - score}点`
+          : `内部目標${passTarget}点まであと${passTarget - score}点`);
     const historyItems = [...(state.mockHistory || [])]
       .sort((left, right) => (Date.parse(right.completedAt) || 0) - (Date.parse(left.completedAt) || 0))
-      .slice(0, 3)
-      .map((item) => `
-        <div class="mock-history-item">
-          <span>${escapeHtml(shortDateLabel(item.completedAt))} ${escapeHtml(mockFormShortLabel(mockFormById(item.formId)))}</span>
-          <strong>${Math.max(0, Number(item.score) || 0)} / 50</strong>
-          <small>${escapeHtml(formatElapsed(Math.max(0, Number(item.elapsedMs) || 0)))}</small>
-        </div>`)
-      .join("");
-    const wrongReview = wrongResults.length
-      ? wrongResults.map((result) => {
-          const question = QUESTIONS[result.id];
-          const position = form.ids.indexOf(result.id) + 1;
-          return `
-            <details class="mock-wrong-item">
-              <summary>問${position} ${escapeHtml(question.tag)}：選択${result.selected + 1} → 正解${question.answer + 1}</summary>
-              <p>${escapeHtml(question.text)}</p>
-              <dl>
-                <div><dt>あなたの解答</dt><dd>${result.selected + 1}. ${escapeHtml(question.choices[result.selected])}</dd></div>
-                <div><dt>正解</dt><dd>${question.answer + 1}. ${escapeHtml(question.choices[question.answer])}</dd></div>
-              </dl>
-              <p>${escapeHtml(question.explain)}</p>
-              <a class="mock-source-link" href="${escapeHtml(question.sourceUrl)}" target="_blank" rel="noopener noreferrer">公式根拠: ${escapeHtml(question.sourceLocator || question.sourceRef)}（基準日 ${escapeHtml(question.legalBaseline)}）</a>
-            </details>`;
-        }).join("")
-      : `<p class="mock-perfect">全50問正解。誤答レビューはありません。</p>`;
+      .slice(0, 3);
 
-    showQuizResult(`
-      <div class="quiz-meta">
-        <strong>${escapeHtml(mockFormShortLabel(form))}</strong>
-        <span>模試完了</span>
-      </div>
-      <section class="mock-results" data-mock-result="${escapeHtml(form.id)}">
-        <div class="mock-score-hero ${targetReached ? "is-target" : "is-below"}">
-          <span>得点</span>
-          <strong>${score}<small> / 50</small></strong>
-          <p>${scoreMessage}</p>
-        </div>
-        <div class="mock-result-meta">
-          <span>所要時間 <strong>${formatElapsed(state.mock.elapsedMs)}</strong></span>
-          <span>誤答 <strong>${wrongResults.length}問</strong></span>
-          <span>弱点へ登録 <strong>${wrongResults.length}問</strong></span>
-        </div>
-        <h3>分野別得点と目標</h3>
-        <div class="mock-section-grid">${sectionCards}</div>
-        ${priorityPanel}
-        <section class="mock-history">
-          <h3>直近の模試</h3>
-          <div class="mock-history-grid">${historyItems}</div>
-        </section>
-        <section class="mock-calibration">
-          <strong>初見実力は公式過去問で確認</strong>
-          <p>フォームA・Bはコア100の再構成。得点は定着確認に使い、初見の合否判定には使わない。過年度問題は法改正で現在法と異なる場合がある。</p>
-          <button id="mockOfficialExamButton" class="ghost-button" type="button">露出記録つき公式50問へ</button>
-        </section>
-        <section class="mock-wrong-review">
-          <h3>誤答レビュー</h3>
-          <p>誤答は弱点リストへ登録済み。各問を開くと正解と解説を確認できます。</p>
-          ${wrongReview}
-        </section>
-        <div class="finish-actions mock-finish-actions">
-          <button id="mockDailyButton" class="next-button" type="button">日課へ戻る</button>
-          <button id="mockOtherButton" class="ghost-button" type="button">${otherFormId === "form-a" ? "フォームA" : "フォームB"}へ</button>
-          <button id="mockRetryButton" class="ghost-button" type="button">同じフォームを再挑戦</button>
-        </div>
-      </section>
-    `);
+    showQuizResult((view) => {
+      appendQuizMeta(view, mockFormShortLabel(form), "模試完了");
+      const resultsView = resultElement("section", { className: "mock-results" });
+      resultsView.dataset.mockResult = form.id;
+      const hero = resultElement("div", { className: `mock-score-hero ${targetReached ? "is-target" : "is-below"}` });
+      const scoreValue = resultElement("strong", { text: String(score) });
+      scoreValue.append(resultElement("small", { text: ` / ${questionCount}` }));
+      hero.append(resultElement("span", { text: "得点" }), scoreValue, resultElement("p", { text: scoreMessage }));
+      const meta = resultElement("div", { className: "mock-result-meta" });
+      [["所要時間", formatElapsed(state.mock.elapsedMs)], ["誤答", `${wrongResults.length}問`], ["弱点へ登録", `${wrongResults.length}問`]].forEach(([label, value]) => {
+        const item = resultElement("span", { text: `${label} ` });
+        item.append(resultElement("strong", { text: value }));
+        meta.append(item);
+      });
+      const sectionGrid = resultElement("div", { className: "mock-section-grid" });
+      strategyRows.forEach((row) => {
+        const card = resultElement("div", { className: `mock-section-card ${row.deficit > 0 ? "is-below-target" : "is-on-target"}` });
+        card.dataset.section = row.id;
+        const line = resultElement("strong", { text: `${row.correct} / ${row.total}` });
+        line.append(resultElement("small", { text: `目標 ${row.target}` }));
+        card.append(resultElement("span", { text: row.label }), line);
+        sectionGrid.append(card);
+      });
+      const priorityPanel = resultElement("section", { className: `mock-priority ${priority ? "is-below-target" : "is-on-target"}` });
+      priorityPanel.append(
+        resultElement("span", { text: priority ? "次の最優先" : "次の目標" }),
+        resultElement("strong", { text: priority ? `${priority.label} ${priority.correct}/${priority.total} → 目標${priority.target}` : "4分野すべて目標達成" }),
+        resultElement("p", { text: priority ? "今日は誤答の解説と根拠を確認して終了。翌日の日課で本試験比率を保ちながら、弱点を優先して再テストする。" : `定着ロードで弱点と最終接触が古い問題を回し、演習安全圏${safeTarget}点を別フォームでも再現する。` })
+      );
+      const history = resultElement("section", { className: "mock-history" });
+      const historyGrid = resultElement("div", { className: "mock-history-grid" });
+      historyItems.forEach((item) => {
+        const historyItem = resultElement("div", { className: "mock-history-item" });
+        historyItem.append(
+          resultElement("span", { text: `${shortDateLabel(item.completedAt)} ${mockFormShortLabel(mockFormById(item.formId))}` }),
+          resultElement("strong", { text: `${Math.max(0, Number(item.score) || 0)} / ${Number(item.questionCount) || 50}` }),
+          resultElement("small", { text: formatElapsed(Math.max(0, Number(item.elapsedMs) || 0)) })
+        );
+        historyGrid.append(historyItem);
+      });
+      history.append(resultElement("h3", { text: "直近の模試" }), historyGrid);
+      const calibration = resultElement("section", { className: "mock-calibration" });
+      const officialButton = resultElement("button", { className: "ghost-button", id: "mockOfficialExamButton", text: `露出記録つき公式${examProfileQuestionCount(state.examProfile)}問へ` });
+      officialButton.type = "button";
+      calibration.append(resultElement("strong", { text: "初見実力は公式過去問で確認" }), resultElement("p", { text: "フォームA・B・Cは確認済み内部問題の再構成。3フォーム・別日・改正確認・学習時間を満たすまで安定扱いにせず、初見の合否判定には使わない。" }), officialButton);
+      const wrongReview = resultElement("section", { className: "mock-wrong-review" });
+      wrongReview.append(resultElement("h3", { text: "誤答レビュー" }), resultElement("p", { text: "誤答は弱点リストへ登録済み。各問を開くと正解と解説を確認できます。" }));
+      if (!wrongResults.length) {
+        wrongReview.append(resultElement("p", { className: "mock-perfect", text: `全${questionCount}問正解。誤答レビューはありません。` }));
+      } else {
+        wrongResults.forEach((result) => {
+          const question = QUESTIONS[result.id];
+          const position = mockIdsForForm(form, state.mock.examProfile).indexOf(result.id) + 1;
+          const details = resultElement("details", { className: "mock-wrong-item" });
+          const answers = document.createElement("dl");
+          details.append(
+            resultElement("summary", { text: `問${position} ${question.tag}：選択${result.selected + 1} → 正解${question.answer + 1}` }),
+            resultElement("p", { text: question.text }),
+            answers,
+            resultElement("p", { text: question.explain })
+          );
+          answers.append(resultDefinition("あなたの解答", `${result.selected + 1}. ${question.choices[result.selected]}`), resultDefinition("正解", `${question.answer + 1}. ${question.choices[question.answer]}`));
+          appendSafeSourceLink(details, question);
+          wrongReview.append(details);
+        });
+      }
+      const actions = resultElement("div", { className: "finish-actions mock-finish-actions" });
+      [["mockDailyButton", "next-button", "日課へ戻る"], ["mockOtherButton", "ghost-button", `${mockFormShortLabel(mockFormById(otherFormId))}へ`], ["mockRetryButton", "ghost-button", "同じフォームを再挑戦"]].forEach(([id, className, text]) => {
+        const button = resultElement("button", { id, className, text });
+        button.type = "button";
+        actions.append(button);
+      });
+      resultsView.append(hero, meta, resultElement("h3", { text: "分野別得点と目標" }), sectionGrid, priorityPanel, history, calibration, wrongReview, actions);
+      view.append(resultsView);
+    });
     const reloadIntoMock = (targetFormId) => {
       const targetForm = mockFormById(targetFormId);
       state.runMode = RUN_MODE_MOCK;
       state.chapterModeId = "";
       state.mock = {
-        ...createMockState(targetForm.id),
+        ...createMockState(targetForm.id, state.examProfile),
         startedAt: new Date().toISOString()
       };
-      state.index = ORDER.indexOf(targetForm.ids[0]);
+      state.index = ORDER.indexOf(mockIdsForForm(targetForm, state.examProfile)[0]);
       state.answered = null;
       state.finished = false;
       saveState();
@@ -10924,30 +11526,37 @@
     const answeredCount = chapter.ids.filter(answeredToday).length;
     const correctCount = chapter.ids.filter(correctToday).length;
     const retainedCount = chapter.ids.filter(isRetained).length;
-    showQuizResult(`
-      <div class="quiz-meta">
-        <strong>${chapter.ids.length} / ${chapter.ids.length}</strong>
-        <span>テーマ完了</span>
-      </div>
-      <section class="feedback" data-chapter-result="${escapeHtml(chapter.id)}">
-        <h3>${escapeHtml(chapter.label)}</h3>
-        <p class="question-text">選択テーマの問題だけを完了。固定10問は変更していません。</p>
-        <dl class="answer-grid">
-          <div><dt>テーマ問題</dt><dd>${chapter.ids.length}問</dd></div>
-          <div><dt>本日解答</dt><dd>${answeredCount}問</dd></div>
-          <div><dt>本日正解</dt><dd>${correctCount}問</dd></div>
-          <div><dt>定着</dt><dd>${retainedCount}問</dd></div>
-        </dl>
-        ${nextDescriptor ? `
-          <p class="explain-text"><strong>${escapeHtml(nextDescriptor.stage)}：</strong>${escapeHtml(nextDescriptor.title)}。${escapeHtml(nextDescriptor.text)}</p>
-        ` : ""}
-        <div class="finish-actions chapter-finish-actions">
-          ${nextDescriptor ? `<button id="chapterNextButton" class="next-button chapter-next-button" type="button">${escapeHtml(nextActionLabel)}</button>` : ""}
-          <button id="chapterRetryButton" class="${nextDescriptor ? "ghost-button" : "next-button"}" type="button">このテーマをもう一度</button>
-          <button id="chapterDailyButton" class="ghost-button" type="button">固定10問へ戻る</button>
-        </div>
-      </section>
-    `);
+    showQuizResult((view) => {
+      appendQuizMeta(view, `${chapter.ids.length} / ${chapter.ids.length}`, "テーマ完了");
+      const feedback = resultElement("section", { className: "feedback" });
+      feedback.dataset.chapterResult = chapter.id;
+      const grid = resultElement("dl", { className: "answer-grid" });
+      grid.append(
+        resultDefinition("テーマ問題", `${chapter.ids.length}問`),
+        resultDefinition("本日解答", `${answeredCount}問`),
+        resultDefinition("本日正解", `${correctCount}問`),
+        resultDefinition("定着", `${retainedCount}問`)
+      );
+      feedback.append(resultElement("h3", { text: chapter.label }), resultElement("p", { className: "question-text", text: "選択テーマの問題だけを完了。固定10問は変更していません。" }), grid);
+      if (nextDescriptor) {
+        const nextText = resultElement("p", { className: "explain-text" });
+        nextText.append(resultElement("strong", { text: `${nextDescriptor.stage}：` }), document.createTextNode(`${nextDescriptor.title}。${nextDescriptor.text}`));
+        feedback.append(nextText);
+      }
+      const actions = resultElement("div", { className: "finish-actions chapter-finish-actions" });
+      if (nextDescriptor) {
+        const nextButton = resultElement("button", { id: "chapterNextButton", className: "next-button chapter-next-button", text: nextActionLabel });
+        nextButton.type = "button";
+        actions.append(nextButton);
+      }
+      [["chapterRetryButton", nextDescriptor ? "ghost-button" : "next-button", "このテーマをもう一度"], ["chapterDailyButton", "ghost-button", "固定10問へ戻る"]].forEach(([id, className, text]) => {
+        const button = resultElement("button", { id, className, text });
+        button.type = "button";
+        actions.append(button);
+      });
+      feedback.append(actions);
+      view.append(feedback);
+    });
     const chapterNextButton = $("#chapterNextButton");
     if (chapterNextButton && nextDescriptor) {
       setRouteAction(chapterNextButton, nextDescriptor, nextActionLabel);
@@ -10985,31 +11594,28 @@
       ? `${scopeState.scope.shortLabel}${scopeState.total}問に一通り接触。`
       : `${scopeState.scope.shortLabel}の今回ルートを完走。`;
     const nextText = allContacted
-      ? "翌日以降の固定10問で定着を確認し、全100問接触後は模試A・Bで50問演習へ進む。"
+      ? "翌日以降の固定10問で定着を確認し、全100問接触後は模試A・B・Cで本試験形式の演習へ進む。"
       : `次は翌日以降の固定10問で定着を確認する。1回の正解だけでは定着扱いにしない。`;
-    const finishActions = `<div class="finish-actions">
-        <button id="finishDailyButton" class="next-button" type="button">固定10問へ戻る</button>
-        <button id="finishResetButton" class="ghost-button finish-reset" type="button">全記録リセット</button>
-      </div>`;
-    showQuizResult(`
-      <div class="quiz-meta">
-        <strong>${scopeState.contacted} / ${scopeState.total}</strong>
-        <span>完了</span>
-      </div>
-      <p class="question-text">${finishText}</p>
-      <section class="feedback">
-        <h3>結果</h3>
-        <dl class="answer-grid">
-          <div><dt>解答</dt><dd>${state.attempts}問</dd></div>
-          <div><dt>範囲接触</dt><dd>${scopeState.contacted}問</dd></div>
-          <div><dt>範囲定着</dt><dd>${scopeState.retained}問</dd></div>
-          <div><dt>正解</dt><dd>${state.correct}問</dd></div>
-          <div><dt>正答率</dt><dd>${accuracy}</dd></div>
-        </dl>
-        <p class="explain-text">${nextText}</p>
-        ${finishActions}
-      </section>
-    `);
+    showQuizResult((view) => {
+      appendQuizMeta(view, `${scopeState.contacted} / ${scopeState.total}`, "完了");
+      const feedback = resultElement("section", { className: "feedback" });
+      const grid = resultElement("dl", { className: "answer-grid" });
+      grid.append(
+        resultDefinition("解答", `${state.attempts}問`),
+        resultDefinition("範囲接触", `${scopeState.contacted}問`),
+        resultDefinition("範囲定着", `${scopeState.retained}問`),
+        resultDefinition("正解", `${state.correct}問`),
+        resultDefinition("正答率", accuracy)
+      );
+      const actions = resultElement("div", { className: "finish-actions" });
+      [["finishDailyButton", "next-button", "固定10問へ戻る"], ["finishResetButton", "ghost-button finish-reset", "全記録リセット"]].forEach(([id, className, text]) => {
+        const button = resultElement("button", { id, className, text });
+        button.type = "button";
+        actions.append(button);
+      });
+      feedback.append(resultElement("h3", { text: "結果" }), grid, resultElement("p", { className: "explain-text", text: nextText }), actions);
+      view.append(resultElement("p", { className: "question-text", text: finishText }), feedback);
+    });
     $("#finishDailyButton")?.addEventListener("click", () => {
       state.runMode = "quest";
       state.chapterModeId = "";
@@ -11178,9 +11784,12 @@
     elements.passQuestButton?.addEventListener("click", startFirstPass);
     elements.mockAButton?.addEventListener("click", () => startMock("form-a"));
     elements.mockBButton?.addEventListener("click", () => startMock("form-b"));
+    elements.mockCButton?.addEventListener("click", () => startMock("form-c"));
     elements.passBusinessAction?.addEventListener("click", (event) => runPassCommandAction(event.currentTarget));
     elements.passThemeAction?.addEventListener("click", (event) => runPassCommandAction(event.currentTarget));
+    elements.passLawGateAction?.addEventListener("click", (event) => runPassCommandAction(event.currentTarget));
     elements.passMockAction?.addEventListener("click", (event) => runPassCommandAction(event.currentTarget));
+    elements.examProfileSelect?.addEventListener("change", changeExamProfile);
     document.querySelectorAll("[data-subject-sprint]").forEach((button) => {
       button.addEventListener("click", () => startSubjectSprint(button.dataset.subjectSprint));
       button.disabled = !SUBJECT_SPRINT_READY;
@@ -11256,8 +11865,9 @@
     elements.officialExamQuestionLink?.addEventListener("click", (event) => {
       if (state.officialExamSession) return;
       event.preventDefault();
+      const profile = normalizeExamProfile(state.examProfile);
       setOfficialExamStatus(
-        "初見証跡を守るため、先に120分計測を開始してください。開始時に露出記録を保存してからPDFを開けます。",
+        `初見証跡を守るため、先に${examProfileDurationMinutes(profile)}分計測を開始してください。開始時に露出記録を保存してからPDFを開けます。`,
         true
       );
     });

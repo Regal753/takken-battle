@@ -83,6 +83,8 @@ async function main() {
       currentRoadmap: document.querySelectorAll(".pass-roadmap li.is-current").length,
       commandTitle: document.querySelector("#todayCommandTitle")?.textContent?.trim() || "",
       commandStep: document.querySelector("#todayCommandKicker")?.textContent?.trim() || "",
+      secondaryAction: document.querySelector("#todayCommandPracticalButton")?.textContent?.trim() || "",
+      secondaryHidden: Boolean(document.querySelector("#todayCommandPracticalButton")?.hidden),
       passPlanOpen: Boolean(document.querySelector("#passPlanPanel")?.open),
       targets: Array.from(document.querySelectorAll("#passSubjectGrid article")).map((item) =>
         item.textContent.replace(/\s+/g, " ").trim()
@@ -98,9 +100,11 @@ async function main() {
       initial.mission !== "0 / 45単元" ||
       initial.official !== "測定中・初見0/10・再0/3" ||
       initial.currentRoadmap !== 1 ||
-      !initial.commandTitle.includes("宅建業法") ||
+      !initial.commandTitle.includes("本試験50問・120分") ||
+      initial.secondaryHidden ||
+      !initial.secondaryAction.includes("短縮75") ||
       !initial.commandStep.includes("8/31まで高速一周") ||
-      !initial.passPlanOpen ||
+      initial.passPlanOpen ||
       initial.targets.length !== 5 ||
       !initial.targets.some((value) => value.includes("宅建業法 20問") && value.includes("18")) ||
       !initial.targets.some((value) => value.includes("権利関係 14問") && value.includes("9")) ||
@@ -114,6 +118,7 @@ async function main() {
       throw new Error(`Initial pass plan mismatch: ${JSON.stringify(initial)}`);
     }
 
+    await page.locator("#passPlanPanel > summary").click();
     await page.locator(".official-ledger > summary").click();
     await page.locator(".official-manual-entry > summary").click();
     await page.evaluate(() => {
@@ -305,6 +310,7 @@ async function main() {
     await touchedPage.waitForFunction(() =>
       (document.querySelector("#foundationGateStatus")?.textContent || "").includes("45 / 45")
     );
+    await touchedPage.locator("#passPlanPanel > summary").click();
     await touchedPage.locator(".official-ledger > summary").click();
     const touchedProtection = await touchedPage.evaluate(() => {
       const touched = document.querySelector('#officialExamId option[value="2025"]');
