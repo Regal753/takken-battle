@@ -5,10 +5,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const ROOT = __dirname;
-const EXPECTED_CACHE_VERSION = "20260816-pass-readiness-v29-1";
-// v29 adds three independently audited readiness assets. Keep a narrow buffer
-// for review-only copy and guards while still failing on accidental bundles.
-const MAX_PUBLIC_JS_BYTES = 1_180_000;
+const EXPECTED_CACHE_VERSION = "20260816-pass-hardening-v30-1";
+// v30 adds the auditable official-topic repair map and stricter readiness
+// guards. This leaves under 5% headroom over the current 26-file runtime.
+const MAX_PUBLIC_JS_BYTES = 1_275_000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
   "scripts/validate-public.mjs",

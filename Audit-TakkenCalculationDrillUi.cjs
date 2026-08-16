@@ -68,6 +68,7 @@ async function gotoReview(page, baseUrl, namespace) {
   url.searchParams.set("review", namespace);
   await page.goto(url.toString(), { waitUntil: "networkidle", timeout: 15000 });
   await page.locator("#calculationDrillPanel").waitFor({ state: "visible" });
+  await page.waitForFunction(() => document.querySelector("#saveProtectionStatus")?.textContent !== "セーブ保護を確認中", null, { timeout: 5000 });
 }
 
 async function noHorizontalOverflow(page) {
@@ -129,6 +130,13 @@ async function answerCurrentCorrectly(page) {
     });
     await gotoReview(desktop, server.baseUrl, "calc-desktop");
 
+    const bankCoverage = await desktop.evaluate(() => ({
+      count: window.TAKKEN_CALCULATION_DRILL?.QUESTIONS?.length,
+      units: [...new Set((window.TAKKEN_CALCULATION_DRILL?.QUESTIONS || []).map((item) => item.unit))].sort()
+    }));
+    assert.equal(bankCoverage.count, 35);
+    assert.deepEqual(bankCoverage.units, ["m", "㎡", "円", "分"]);
+
     const initial = await desktop.evaluate((storageId) => ({
       open: document.querySelector("#calculationDrillPanel")?.open,
       quickAction: document.querySelector("#todayCommandCalculationButton")?.textContent?.trim(),
@@ -137,13 +145,14 @@ async function answerCurrentCorrectly(page) {
       saved: JSON.parse(localStorage.getItem(storageId) || "{}").calculationDrill
     }), storageIdFor("calc-desktop"));
     assert.equal(initial.open, false);
-    assert.equal(initial.quickActionHidden, false);
-    assert.equal(initial.quickAction, "計算・金額を24問で特訓する");
-    assert.equal(initial.summary, "累計接触 0 / 24・再出題 0");
-    assert.equal(initial.saved?.stage, "idle");
+    assert.equal(initial.quickActionHidden, true, "pass-readiness keeps the calculation lane secondary to today's core command");
+    assert.equal(initial.quickAction, "計算・数値を35問で特訓する");
+    assert.equal(initial.summary, "累計接触 0 / 35・再出題 0");
+    assert.equal(initial.saved?.stage, "idle", "the initialized v30 save must persist the calculation drill state");
     assert.deepEqual(initial.saved?.queue, []);
 
-    await desktop.locator("#todayCommandCalculationButton").click();
+    await desktop.locator("#calculationDrillPanel > summary").click();
+    await desktop.locator("#calculationDrillResetButton").click();
     const started = await desktop.evaluate((storageId) => {
       const saved = JSON.parse(localStorage.getItem(storageId) || "{}").calculationDrill;
       return {
@@ -158,7 +167,7 @@ async function answerCurrentCorrectly(page) {
     assert.ok(started.prompt.includes("200万円"));
     assert.equal(started.choices, 4);
     assert.equal(started.stage, "active");
-    assert.equal(started.queue, 24);
+    assert.equal(started.queue, 35);
 
     await desktop.reload({ waitUntil: "networkidle" });
     const immediateReload = await desktop.evaluate((storageId) => {
@@ -174,7 +183,7 @@ async function answerCurrentCorrectly(page) {
     assert.deepEqual(immediateReload, {
       open: true,
       stage: "active",
-      queue: 24,
+      queue: 35,
       position: 0,
       attempts: 0
     });
@@ -199,7 +208,7 @@ async function answerCurrentCorrectly(page) {
         attempts: saved.calculationDrill?.attempts
       };
     }, storageIdFor("calc-desktop"));
-    assert.equal(persistedBeforeReload.schema, 9);
+    assert.equal(persistedBeforeReload.schema, 10);
     assert.equal(persistedBeforeReload.currentAttempt?.confidence, "uncertain");
     assert.deepEqual(persistedBeforeReload.retryIds, ["calc-sale-200", "calc-sale-300"]);
     assert.equal(persistedBeforeReload.attempts, 2);
@@ -229,11 +238,11 @@ async function answerCurrentCorrectly(page) {
     }, storageIdFor("calc-desktop"));
     assert.equal(completed.stage, "complete");
     assert.deepEqual(completed.retryIds, []);
-    assert.equal(completed.mastered, 24);
-    assert.equal(completed.attempts, 26);
-    assert.equal(completed.correct, 25);
+    assert.equal(completed.mastered, 35);
+    assert.equal(completed.attempts, 37);
+    assert.equal(completed.correct, 36);
     assert.ok(Number.isFinite(Date.parse(completed.completedAt)));
-    assert.match(await desktop.locator("#calculationDrillCompleteText").textContent(), /累計26解答/);
+    assert.match(await desktop.locator("#calculationDrillCompleteText").textContent(), /累計37解答/);
     const desktopOverflow = await noHorizontalOverflow(desktop);
     assert.equal(desktopOverflow.rootOverflow, 0, JSON.stringify(desktopOverflow));
     assert.deepEqual(desktopOverflow.offenders, [], JSON.stringify(desktopOverflow));
@@ -243,13 +252,13 @@ async function answerCurrentCorrectly(page) {
     assert.equal(await desktop.locator("#calculationDrillPanel").evaluate((node) => node.open), true);
     assert.equal(await desktop.locator("#calculationDrillComplete").isVisible(), true);
     assert.equal(await desktop.locator("#calculationDrillResetButton").isVisible(), false);
-    assert.equal(await desktop.locator("#calculationDrillRestartButton").textContent(), "同じ24問をもう一周");
+    assert.equal(await desktop.locator("#calculationDrillRestartButton").textContent(), "同じ35問をもう一周");
     assert.equal(await desktop.locator("#calculationDrillExitButton").textContent(), "学習画面へ戻る");
 
     await desktop.locator("#calculationDrillExitButton").click();
     assert.equal(await desktop.locator("#calculationDrillPanel").evaluate((node) => node.open), false);
-    assert.equal(await desktop.locator("#todayCommandCalculationButton").textContent(), "計算特訓の結果を確認する");
-    await desktop.locator("#todayCommandCalculationButton").click();
+    assert.equal(await desktop.locator("#todayCommandCalculationButton").isHidden(), true);
+    await desktop.locator("#calculationDrillPanel > summary").click();
     assert.equal(await desktop.locator("#calculationDrillComplete").isVisible(), true);
 
     await desktop.locator("#calculationDrillRestartButton").click();
@@ -267,14 +276,14 @@ async function answerCurrentCorrectly(page) {
     }, storageIdFor("calc-desktop"));
     assert.deepEqual(restarted, {
       stage: "active",
-      queue: 24,
-      attempts: 26,
-      correct: 25,
-      history: 24,
-      mastered: 24,
+      queue: 35,
+      attempts: 37,
+      correct: 36,
+      history: 35,
+      mastered: 35,
       completedAt: ""
     });
-    assert.equal(await desktop.locator("#calculationDrillSummary").textContent(), "累計接触 24 / 24・再出題 0");
+    assert.equal(await desktop.locator("#calculationDrillSummary").textContent(), "累計接触 35 / 35・再出題 0");
     assert.equal(await desktop.locator("#calculationDrillPanel").evaluate((node) => node.open), true);
     await desktopContext.close();
 
@@ -306,7 +315,7 @@ async function answerCurrentCorrectly(page) {
       };
     }, storageIdFor("calc-legacy"));
     assert.deepEqual(migrated, {
-      schema: 9,
+      schema: 10,
       attempts: 37,
       correct: 25,
       q1Correct: 2,
@@ -324,7 +333,8 @@ async function answerCurrentCorrectly(page) {
       if (message.type() === "error") errors.push(`mobile console: ${message.text()}`);
     });
     await gotoReview(mobile, server.baseUrl, "calc-mobile");
-    await mobile.locator("#todayCommandCalculationButton").click();
+    await mobile.locator("#calculationDrillPanel > summary").click();
+    await mobile.locator("#calculationDrillResetButton").click();
     assert.equal(await mobile.locator("#calculationDrillPanel").evaluate((node) => node.open), true);
     const mobileLayout = await mobile.evaluate(() => {
       const choice = document.querySelector(".calculation-drill-choice")?.getBoundingClientRect();
@@ -348,7 +358,7 @@ async function answerCurrentCorrectly(page) {
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({
       status: "ok",
-      desktop: { initial, started, immediateReload, completed, restarted, overflow: desktopOverflow },
+      desktop: { bankCoverage, initial, started, immediateReload, completed, restarted, overflow: desktopOverflow },
       legacyMigration: migrated,
       mobile390: { ...mobileLayout, overflow: mobileOverflow },
       screenshots: screenshotDir

@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  validate:
+  static:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -43,10 +43,12 @@ jobs:
       - run: node Audit-TakkenSubjectSprintBank.js
       - run: node Audit-TakkenPassReadiness.js
       - run: node Audit-TakkenExamCurrentYear2026.js
+      - run: node Audit-TakkenOfficialTopicMap.js
       - run: node Audit-TakkenPublicPerformance.js
       - run: node scripts/validate-public.mjs
 
   browser:
+    needs: static
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -79,3 +81,21 @@ jobs:
           node Audit-TakkenBusinessKnockUi.cjs
           node Audit-TakkenFullExamUi.cjs
           node Audit-TakkenPassReadinessUi.cjs
+          node Audit-TakkenCalculationDrillUi.cjs
+          node Audit-TakkenPassPlanUi.cjs
+          node Audit-TakkenPassLoopV12Ui.cjs
+
+  validate:
+    if: ${{ always() }}
+    needs:
+      - static
+      - browser
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require static and browser audits
+        env:
+          STATIC_RESULT: ${{ needs.static.result }}
+          BROWSER_RESULT: ${{ needs.browser.result }}
+        run: |
+          test "$STATIC_RESULT" = "success"
+          test "$BROWSER_RESULT" = "success"

@@ -13,6 +13,7 @@ const required = [
   "subject-sprint-bank.js",
   "pass-readiness.js",
   "exam-current-year-2026.js",
+  "official-topic-map.js",
   "business-mastery.js",
   "business-knock.js",
   "business-pace.js",
@@ -66,6 +67,7 @@ const required = [
   "Audit-TakkenPassReadiness.js",
   "Audit-TakkenPassReadinessUi.cjs",
   "Audit-TakkenExamCurrentYear2026.js",
+  "Audit-TakkenOfficialTopicMap.js",
   "scripts/verify-deployed-page.mjs",
   "README.md",
 ];
@@ -104,6 +106,7 @@ assert.match(app, /function renderPassReadinessCard/);
 assert.match(app, /TAKKEN_PASS_READINESS/);
 assert.match(app, /TAKKEN_SUBJECT_SPRINT_BANK/);
 assert.match(app, /TAKKEN_EXAM_CURRENT_YEAR_2026/);
+assert.match(app, /TAKKEN_OFFICIAL_TOPIC_MAP/);
 assert.match(app, /function foundationLearningRoute/);
 assert.match(app, /function renderFoundationRoutePanel/);
 assert.match(app, /function startPracticalDrillForUnit/);
@@ -186,22 +189,23 @@ assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 第2分冊・権利関係を固める/);
 assert.match(index, /③ 法令・税その他へ進む/);
 assert.match(index, /④ 全分野を混ぜる/);
-assert.match(index, /styles\.css\?v=20260816-pass-readiness-v29-1/);
-assert.match(index, /subject-sprint-bank\.js\?v=20260816-pass-readiness-v29-1/);
-assert.match(index, /pass-readiness\.js\?v=20260816-pass-readiness-v29-1/);
-assert.match(index, /exam-current-year-2026\.js\?v=20260816-pass-readiness-v29-1/);
-assert.match(index, /business-mastery\.js\?v=20260816-pass-readiness-v29-1/);
-assert.match(index, /business-knock\.js\?v=20260816-pass-readiness-v29-1/);
-assert.match(index, /business-pace\.js\?v=20260816-pass-readiness-v29-1/);
-assert.match(index, /business-fullscore-supplement\.js\?v=20260816-pass-readiness-v29-1/);
-assert.match(index, /business-fullscore-bank\.js\?v=20260816-pass-readiness-v29-1/);
-assert.match(index, /practical-question-bank\.js\?v=20260816-pass-readiness-v29-1/);
-assert.match(index, /calculation-drill\.js\?v=20260816-pass-readiness-v29-1/);
-assert.match(index, /app\.js\?v=20260816-pass-readiness-v29-1/);
-assert.match(index, /save-store\.js\?v=20260816-pass-readiness-v29-1/);
-assert.match(index, /official-exam-data\.js\?v=20260816-pass-readiness-v29-1/);
-assert.match(index, /official-law-baseline\.js\?v=20260816-pass-readiness-v29-1/);
-assert.match(index, /state-sync\.js\?v=20260816-pass-readiness-v29-1/);
+assert.match(index, /styles\.css\?v=20260816-pass-hardening-v30-1/);
+assert.match(index, /subject-sprint-bank\.js\?v=20260816-pass-hardening-v30-1/);
+assert.match(index, /pass-readiness\.js\?v=20260816-pass-hardening-v30-1/);
+assert.match(index, /exam-current-year-2026\.js\?v=20260816-pass-hardening-v30-1/);
+assert.match(index, /official-topic-map\.js\?v=20260816-pass-hardening-v30-1/);
+assert.match(index, /business-mastery\.js\?v=20260816-pass-hardening-v30-1/);
+assert.match(index, /business-knock\.js\?v=20260816-pass-hardening-v30-1/);
+assert.match(index, /business-pace\.js\?v=20260816-pass-hardening-v30-1/);
+assert.match(index, /business-fullscore-supplement\.js\?v=20260816-pass-hardening-v30-1/);
+assert.match(index, /business-fullscore-bank\.js\?v=20260816-pass-hardening-v30-1/);
+assert.match(index, /practical-question-bank\.js\?v=20260816-pass-hardening-v30-1/);
+assert.match(index, /calculation-drill\.js\?v=20260816-pass-hardening-v30-1/);
+assert.match(index, /app\.js\?v=20260816-pass-hardening-v30-1/);
+assert.match(index, /save-store\.js\?v=20260816-pass-hardening-v30-1/);
+assert.match(index, /official-exam-data\.js\?v=20260816-pass-hardening-v30-1/);
+assert.match(index, /official-law-baseline\.js\?v=20260816-pass-hardening-v30-1/);
+assert.match(index, /state-sync\.js\?v=20260816-pass-hardening-v30-1/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
 assert.doesNotMatch(index, /understanding-system\.js/);
@@ -254,8 +258,9 @@ assert.match(pagesWorkflow, /node Audit-TakkenStateSync\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenSubjectSprintBank\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenPassReadiness\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenExamCurrentYear2026\.js/);
+assert.match(pagesWorkflow, /node Audit-TakkenOfficialTopicMap\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
-assert.match(pagesWorkflow, /20260816-pass-readiness-v29-1/);
+assert.match(pagesWorkflow, /20260816-pass-hardening-v30-1/);
 assert.doesNotMatch(pagesWorkflow, /cp [^\n]*understanding-system\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*calculation-drill\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*business-mastery\.js[^\n]*_site\//);
@@ -269,6 +274,7 @@ assert.match(pagesWorkflow, /cp [^\n]*exam-current-year-2026\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*practical-question-bank\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*official-exam-data\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*official-law-baseline\.js[^\n]*_site\//);
+assert.match(pagesWorkflow, /cp [^\n]*official-topic-map\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*save-store\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*save-transfer\.js[^\n]*_site\//);
 assert.match(pagesWorkflow, /cp [^\n]*state-sync\.js[^\n]*_site\//);
@@ -285,7 +291,12 @@ assert.match(ciWorkflow, /node Audit-TakkenStateSync\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenSubjectSprintBank\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenPassReadiness\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenPassReadinessUi\.cjs/);
+assert.match(ciWorkflow, /node Audit-TakkenCalculationDrillUi\.cjs/);
+assert.match(ciWorkflow, /node Audit-TakkenPassPlanUi\.cjs/);
+assert.match(ciWorkflow, /node Audit-TakkenPassLoopV12Ui\.cjs/);
+assert.match(ciWorkflow, /static:[\s\S]*browser:[\s\S]*needs: static[\s\S]*validate:[\s\S]*needs:[\s\S]*- static[\s\S]*- browser/);
 assert.match(ciWorkflow, /node Audit-TakkenExamCurrentYear2026\.js/);
+assert.match(ciWorkflow, /node Audit-TakkenOfficialTopicMap\.js/);
 assert.match(ciWorkflow, /node Audit-Takken2026Coverage\.js/);
 assert.doesNotMatch(ciWorkflow, /node Audit-TakkenRuleChoiceAmbiguity\.js/);
 

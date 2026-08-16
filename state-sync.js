@@ -486,15 +486,16 @@
       "lastUnderstandingAt", "lastUnderstandingPassedAt"
     ]);
 
-    ["correctDayKeys", "clearDayKeys", "understandingDayKeys"].forEach((key) => {
+    ["correctDayKeys", "clearDayKeys", "understandingDayKeys", "currentLawGateDayKeys"].forEach((key) => {
       let values = unionPrimitiveArrays(safeBase[key], safeLocal[key], safeRemote[key]).sort();
-      if (key === "clearDayKeys" && ["unsure", "cuts", "wrong"].includes(outcomeWinner.lastConfidence)) {
+      if (["clearDayKeys", "currentLawGateDayKeys"].includes(key) &&
+          ["unsure", "cuts", "wrong"].includes(outcomeWinner.lastConfidence)) {
         const invalidatedDay = validDayKey(outcomeWinner.lastConfidenceDayKey) ||
           localDayKey(outcomeWinner.lastConfidenceAt);
         if (invalidatedDay) values = values.filter((day) => day !== invalidatedDay);
       }
       if (values.length) merged[key] = values;
-      else if (key === "clearDayKeys") merged[key] = [];
+      else if (["clearDayKeys", "currentLawGateDayKeys"].includes(key)) merged[key] = [];
     });
     const firstAttemptAt = earliestTimestamp(
       safeBase.firstAttemptAt,

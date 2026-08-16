@@ -49,13 +49,14 @@ jobs:
       - run: node Audit-TakkenSubjectSprintBank.js
       - run: node Audit-TakkenPassReadiness.js
       - run: node Audit-TakkenExamCurrentYear2026.js
+      - run: node Audit-TakkenOfficialTopicMap.js
       - run: node Audit-TakkenPublicPerformance.js
       - run: node scripts/validate-public.mjs
       - name: Assemble static site
         shell: bash
         run: |
           mkdir _site
-          cp index.html styles.css app.js subject-sprint-bank.js pass-readiness.js exam-current-year-2026.js business-mastery.js business-knock.js business-pace.js business-fullscore-supplement.js business-fullscore-bank.js practical-question-bank.js calculation-drill.js official-exam-data.js official-law-baseline.js save-store.js save-transfer.js state-sync.js reward-system.js question-bank.js question-balance.js exam-blueprint.js exam-question-core.js exam-questions-rights.js exam-questions-restrictions.js exam-questions-tax-other.js exam-questions-business.js _site/
+          cp index.html styles.css app.js subject-sprint-bank.js pass-readiness.js exam-current-year-2026.js business-mastery.js business-knock.js business-pace.js business-fullscore-supplement.js business-fullscore-bank.js practical-question-bank.js calculation-drill.js official-exam-data.js official-law-baseline.js official-topic-map.js save-store.js save-transfer.js state-sync.js reward-system.js question-bank.js question-balance.js exam-blueprint.js exam-question-core.js exam-questions-rights.js exam-questions-restrictions.js exam-questions-tax-other.js exam-questions-business.js _site/
           cp -R assets _site/assets
           touch _site/.nojekyll
       - uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6
@@ -78,4 +79,4 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
       - name: Verify deployed page
-        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260816-pass-readiness-v29-1"
+        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260816-pass-hardening-v30-1"

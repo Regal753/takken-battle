@@ -131,6 +131,42 @@ const expectedMockWeights = {
   other: 5
 };
 
+const requiredMockFormIds = ["form-a", "form-b", "form-c"];
+const mockFormsById = Object.fromEntries(blueprint.mockForms.map((form) => [form.id, form]));
+if (blueprint.mockForms.length !== requiredMockFormIds.length) {
+  issues.push(`expected ${requiredMockFormIds.length} internal mock forms, got ${blueprint.mockForms.length}`);
+}
+requiredMockFormIds.forEach((id) => {
+  if (!mockFormsById[id]) issues.push(`missing required mock form: ${id}`);
+});
+if (new Set(blueprint.mockForms.map((form) => form.id)).size !== blueprint.mockForms.length) {
+  issues.push("duplicate mock form id");
+}
+
+// A/B はコア100を固定で二分する既存フォームとして保存する。
+const expectedCoreForms = {
+  "form-a": [
+    ...blueprint.idsBySection.rights.slice(0, 14),
+    ...blueprint.idsBySection.restrictions.slice(0, 8),
+    ...blueprint.idsBySection.tax.slice(0, 3),
+    ...blueprint.idsBySection.business.slice(0, 20),
+    ...blueprint.idsBySection.other.slice(0, 5)
+  ],
+  "form-b": [
+    ...blueprint.idsBySection.rights.slice(14, 28),
+    ...blueprint.idsBySection.restrictions.slice(8, 16),
+    ...blueprint.idsBySection.tax.slice(3, 6),
+    ...blueprint.idsBySection.business.slice(20, 40),
+    ...blueprint.idsBySection.other.slice(5, 10)
+  ]
+};
+Object.entries(expectedCoreForms).forEach(([formId, expectedIds]) => {
+  const actualIds = mockFormsById[formId]?.ids || [];
+  if (actualIds.join("|") !== expectedIds.join("|")) {
+    issues.push(`${formId}: existing core form changed`);
+  }
+});
+
 const expectedStudyTargets = {
   total: 40,
   safe: 42,
@@ -181,6 +217,41 @@ blueprint.mockForms.forEach((form) => {
   });
 });
 
+const formC = mockFormsById["form-c"];
+if (formC && formC.evidenceClass !== "internal-mixed-practice") {
+  issues.push("form-c must remain labelled as internal mixed practice");
+}
+if (formC) {
+  blueprint.sections.forEach((section) => {
+    const availableSupplemental = supplementalIds.filter((id) => questions[id]?.sectionId === section.id);
+    const usedSupplemental = formC.ids.filter((id) => availableSupplemental.includes(id));
+    const feasibleCount = Math.min(availableSupplemental.length, expectedMockWeights[section.id]);
+    if (usedSupplemental.length !== feasibleCount) {
+      issues.push(
+        `form-c/${section.id}: expected ${feasibleCount} feasible supplemental ids, got ${usedSupplemental.length}`
+      );
+    }
+  });
+}
+
+const formOverlap = (left, right) =>
+  left.ids.filter((id) => right.ids.includes(id));
+const formOverlapReport = blueprint.mockForms.flatMap((form, index) =>
+  blueprint.mockForms.slice(index + 1).map((other) => {
+    const questionIds = formOverlap(form, other);
+    const leftSources = new Set(form.ids.map((id) => questions[id]?.sourceUrl).filter(Boolean));
+    const rightSources = new Set(other.ids.map((id) => questions[id]?.sourceUrl).filter(Boolean));
+    return {
+      forms: [form.id, other.id],
+      questionIdOverlap: questionIds.length,
+      questionIds,
+      sourceUrlOverlap: [...leftSources].filter((url) => rightSources.has(url)).length
+    };
+  })
+);
+const mockUnionIds = new Set(blueprint.mockForms.flatMap((form) => form.ids));
+const formCOmittedSupplementalIds = supplementalIds.filter((id) => !formC?.ids.includes(id));
+
 const report = {
   version: blueprint.version,
   legalBaseline: blueprint.legalBaseline,
@@ -198,7 +269,18 @@ const report = {
   dailyBlocks: blueprint.dailyBlocks.length,
   studyTargets: blueprint.studyTargets,
   masteryDailyQuotas: blueprint.masteryDailyQuotas,
-  mockForms: blueprint.mockForms.map((form) => ({ id: form.id, questions: form.ids.length })),
+  mockForms: blueprint.mockForms.map((form) => ({
+    id: form.id,
+    questions: form.ids.length,
+    evidenceClass: form.evidenceClass || "internal-core-practice"
+  })),
+  mockCoverage: {
+    distinctFormIds: blueprint.mockForms.map((form) => form.id),
+    unionQuestions: mockUnionIds.size,
+    supplementalInFormC: formC ? formC.ids.filter((id) => supplementalIds.includes(id)).length : 0,
+    formCOmittedSupplementalIds,
+    crossFormOverlap: formOverlapReport
+  },
   sourceUrls: new Set(Object.values(questions).map((question) => question.sourceUrl)).size,
   issues
 };

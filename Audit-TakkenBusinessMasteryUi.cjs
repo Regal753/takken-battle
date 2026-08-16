@@ -687,6 +687,49 @@ async function installFullScoreProofFixture(page, mode) {
     assert.match(await page.locator("#businessMasteryPrimary").textContent(), /公式50問で測定（未見\d+回）/);
     assert.doesNotMatch(await page.locator("#foundationGateStatus").textContent(), /45 \/ 45/);
 
+    // Registered-course completers take Q1-45 in 110 minutes.  Exercise the
+    // actual official runner, rather than only its pure-data projection: the
+    // profile has to survive save/reload and Q26-45 must remain the business
+    // section of the same answer sheet.
+    await page.locator("#passPlanPanel > summary").click();
+    await page.locator("#examProfileSelect").selectOption("fiveExempt");
+    await page.waitForFunction(() =>
+      document.querySelector("#officialExamStartButton")?.textContent?.includes("45問・110分")
+    );
+    assert.match(await page.locator("#currentYearExamProfileNote").textContent(), /問1〜45・110分/);
+    await page.locator("#businessMasteryPrimary").click();
+    saved = await readSavedState(page);
+    assert.equal(saved.examProfile, "fiveExempt");
+    assert.equal(saved.officialExamSession.examProfile, "fiveExempt");
+    assert.equal(await page.locator("#officialExamTimer").textContent(), "110:00");
+    assert.match(await page.locator("#officialExamProgress").textContent(), /^1 \/ 45・解答0・110分$/);
+    assert.equal(await page.locator("#officialExamJumpSelect option").count(), 45);
+    assert.equal(await page.locator("#officialExamJumpSelect option").last().textContent(), "問45");
+    await page.locator("#officialExamJumpSelect").selectOption("25");
+    assert.equal(await page.locator("#officialExamQuestionNumber").textContent(), "問26");
+    assert.match(await page.locator("#officialExamQuestionSection").textContent(), /業法・歴史問題/);
+    await page.locator('label:has(input[name="official-exam-answer"][value="1"])').click();
+    await page.locator("#officialExamJumpSelect").selectOption("44");
+    assert.equal(await page.locator("#officialExamQuestionNumber").textContent(), "問45");
+    assert.match(await page.locator("#officialExamQuestionSection").textContent(), /業法・歴史問題/);
+    saved = await readSavedState(page);
+    assert.equal(saved.officialExamSession.position, 44);
+    assert.equal(saved.officialExamSession.answers[26], 1);
+    await page.reload({ waitUntil: "networkidle" });
+    await waitForApp(page);
+    saved = await readSavedState(page);
+    assert.equal(saved.officialExamSession.examProfile, "fiveExempt");
+    assert.equal(saved.officialExamSession.position, 44);
+    assert.equal(saved.officialExamSession.answers[26], 1);
+    assert.match(await page.locator("#officialExamProgress").textContent(), /^45 \/ 45・解答1・110分$/);
+    assert.equal(await page.locator("#officialExamJumpSelect option").count(), 45);
+    page.once("dialog", (dialog) => dialog.accept());
+    await page.locator("#officialExamAbandonButton").click();
+    await page.locator("#examProfileSelect").selectOption("general");
+    await page.waitForFunction(() =>
+      document.querySelector("#officialExamStartButton")?.textContent?.includes("50問・120分")
+    );
+
     const failureExamId = await page.locator("#officialExamId").inputValue();
     const exposureBeforeFailure = Object.keys((await readSavedState(page)).officialExamExposure || {}).sort();
     await injectPrimarySaveFailure(page);
@@ -936,6 +979,7 @@ async function installFullScoreProofFixture(page, mode) {
       variableUnitSession: unitFixture.size,
       foundationRetained: 44,
       officialUnlockedBeforeAll45: true,
+      fiveExemptOfficialRunner: "45q-110m-save-reload-q26-45-business",
       saveFailureRolledBack: true,
       staleTabInitialRejected: true,
       staleTabDailyPdfRejected: true,

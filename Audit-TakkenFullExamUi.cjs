@@ -87,6 +87,15 @@ async function seedAdvancedFoundation(page, storageId) {
 }
 
 async function main() {
+  const runtimeSource = fs.readFileSync(path.join(__dirname, "pass-readiness.js"), "utf8");
+  // Strict readiness is intentionally more than three high scores: form, day,
+  // current-law, and rolling-capacity evidence are all required.
+  if (!runtimeSource.includes("ids.size === 3") ||
+      !runtimeSource.includes("days.size === 3") ||
+      !runtimeSource.includes("currentLawGate.passed") ||
+      !runtimeSource.includes("capacity.verified")) {
+    throw new Error("Strict three-form/current-law/capacity readiness guard is missing from runtime.");
+  }
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   try {
     const context = await browser.newContext({
@@ -134,14 +143,16 @@ async function main() {
       action: document.querySelector("#foundationRoutePrimaryButton")?.textContent?.trim() || "",
       gate: document.querySelector("#foundationGateStatus")?.textContent?.trim() || "",
       mockDisabled: Boolean(document.querySelector("#mockAButton")?.disabled),
-      mockTitle: document.querySelector("#mockAButton")?.title || ""
+      mockTitle: document.querySelector("#mockAButton")?.title || "",
+      formCExists: Boolean(document.querySelector("#mockCButton"))
     }));
     if (
       foundationEntry.title !== "01-01 宅建業法の基本" ||
       !foundationEntry.action.includes("読後2問") ||
       foundationEntry.gate !== "単元 0 / 45" ||
       foundationEntry.mockDisabled ||
-      !foundationEntry.mockTitle.includes("RETIO公式未見")
+      !foundationEntry.mockTitle.includes("RETIO公式未見") ||
+      !foundationEntry.formCExists
     ) {
       throw new Error(`Foundation entry mismatch: ${JSON.stringify(foundationEntry)}`);
     }
@@ -185,7 +196,7 @@ async function main() {
       blueprintAudit.roundLabel !== "今日 1 / 10" ||
       blueprintAudit.commandTitle !== "固定10問を解く" ||
       blueprintAudit.commandStep !== "今やる・STEP 1 / 4" ||
-      !blueprintAudit.passPlanOpen ||
+      blueprintAudit.passPlanOpen ||
       blueprintAudit.themeOpen ||
       blueprintAudit.progressOpen
     ) {
@@ -484,12 +495,12 @@ async function main() {
       .fill("根拠を飛ばした → 条文の主体を先に囲む");
     await page.locator("#todayCommandReviewButton").click();
     await page.waitForFunction(() =>
-      (document.querySelector("#todayCommandTitle")?.textContent || "").includes("合計90分まで")
+      (document.querySelector("#todayCommandTitle")?.textContent || "").includes("最低75分まで")
     );
     await page.locator("#missionMinutesInput").fill("90");
     await page.locator("#missionMinutesButton").click();
     await page.waitForFunction(() =>
-      document.querySelector("#todayCommandTitle")?.textContent?.trim() === "90分クエスト完了"
+      document.querySelector("#todayCommandTitle")?.textContent?.trim() === "最低75分ライン完了"
     );
     const completedMission = await page.evaluate((id) => {
       const saved = JSON.parse(localStorage.getItem(id) || "{}");
@@ -506,7 +517,7 @@ async function main() {
       };
     }, storageId);
     if (
-      completedMission.title !== "90分クエスト完了" ||
+      completedMission.title !== "最低75分ライン完了" ||
       completedMission.step !== "今日の作戦・4 / 4" ||
       completedMission.missionCount !== "4 / 4" ||
       !completedMission.reviewed ||
@@ -583,7 +594,7 @@ async function main() {
       zeroReviewAudit.reviewTargets.length !== 0 ||
       zeroReviewAudit.missionCount !== "3 / 4" ||
       zeroReviewAudit.reviewStatus !== "対象0件" ||
-      !zeroReviewAudit.command.includes("合計90分まで")
+      !zeroReviewAudit.command.includes("最低75分まで")
     ) {
       throw new Error(`Zero-review transition mismatch: ${JSON.stringify(zeroReviewAudit)}`);
     }
@@ -766,7 +777,7 @@ async function main() {
     };
     if (
       !mockResult.scoreText.includes("40 / 50") ||
-      !mockResult.targetText.includes("合格戦略目標40点を達成") ||
+      !mockResult.targetText.includes("内部目標40点を達成") ||
       mockResult.wrongItems !== 10 ||
       JSON.stringify(mockResult.sections) !== JSON.stringify(expectedSections) ||
       !mockResult.priorityText.includes("宅建業法 16/20 → 目標18") ||
@@ -823,6 +834,24 @@ async function main() {
     if (formBStart.formId !== "form-b" || formBStart.position !== 0 || formBStart.current !== "1 / 50") {
       throw new Error(`Mock B did not start correctly: ${JSON.stringify(formBStart)}`);
     }
+    const formCPage = await context.newPage();
+    const formCReview = `formc${Date.now().toString(36)}`.slice(0, 24);
+    const formCUrl = new URL(baseUrl);
+    formCUrl.searchParams.set("review", formCReview);
+    formCUrl.searchParams.set("today", "1");
+    await formCPage.goto(formCUrl.toString(), { waitUntil: "networkidle" });
+    const questMenu = formCPage.locator(".quest-card");
+    if (!(await questMenu.evaluate((node) => node.open))) await questMenu.locator(":scope > summary").click();
+    await formCPage.locator("#mockCButton").click();
+    await formCPage.waitForFunction(() => document.querySelector(".quest-card")?.classList.contains("is-mock"));
+    const formCStart = await formCPage.evaluate((id) => {
+      const saved = JSON.parse(localStorage.getItem(id) || "{}");
+      return { formId: saved.mock?.formId, position: saved.mock?.position, current: document.querySelector("#roundLabel")?.textContent?.trim() || "" };
+    }, `takken-battle-study-clean-v2-hard-review-${formCReview}`);
+    if (formCStart.formId !== "form-c" || formCStart.position !== 0 || formCStart.current !== "1 / 50") {
+      throw new Error(`Mock C did not start correctly: ${JSON.stringify(formCStart)}`);
+    }
+    await formCPage.close();
 
     const textbookIdsForFixtures = await page.evaluate(() =>
       Object.values(window.TAKKEN_EXAM_BLUEPRINT.textbookRanges)
@@ -1107,7 +1136,7 @@ async function main() {
     if (
       migration.currentId !== "b001" ||
       migration.index !== 1 ||
-      migration.examContentVersion !== 3 ||
+      migration.examContentVersion !== 4 ||
       migration.attempts !== 65 ||
       migration.totalXp !== 5000 ||
       !migration.legacyWeakKept ||
@@ -1264,6 +1293,7 @@ async function main() {
       noLeakAudit,
       mockResult,
       formBStart,
+      formCStart,
       masteryAudit,
       masteryReloadStable: JSON.stringify(masteryReload.planIds) === JSON.stringify(masteryAudit.planIds),
       foundationUnitResume: unitResumeAudit,

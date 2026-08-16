@@ -195,7 +195,10 @@ Object.entries(requiredNewTopics).forEach(([id, pattern]) => {
 if (blueprint.curriculumOrder.length !== 100) issues.push("core curriculum must remain 100");
 blueprint.mockForms.forEach((form) => {
   if (form.ids.length !== 50) issues.push(`${form.id}: mock must remain 50 questions`);
-  if (form.ids.some((id) => expectedSupplemental.includes(id))) {
+  if (
+    form.evidenceClass !== "internal-mixed-practice" &&
+    form.ids.some((id) => expectedSupplemental.includes(id))
+  ) {
     issues.push(`${form.id}: supplemental question leaked into fixed mock`);
   }
 });

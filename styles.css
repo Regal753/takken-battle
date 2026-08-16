@@ -24,13 +24,14 @@
 .app-header { order: 0; }
 .public-mode-note { order: 1; }
 #todayCommandPanel { order: 2; }
-#themeDrawer { order: 3; }
-.quest-card { order: 4; }
-.study-shell { order: 5; }
-#practicalDrillPanel { order: 6; }
-#calculationDrillPanel { order: 7; }
-#passPlanPanel { order: 8; }
-.app-footer { order: 9; }
+#passPlanPanel { order: 3; }
+#businessMasteryPanel { order: 4; }
+#themeDrawer { order: 5; }
+.quest-card { order: 6; }
+.study-shell { order: 7; }
+#practicalDrillPanel { order: 8; }
+#calculationDrillPanel { order: 9; }
+.app-footer { order: 10; }
 
 .foundation-route-card {
   display: grid;
@@ -6546,6 +6547,67 @@ button.mission-step:disabled {
   display: grid;
   gap: 11px;
   padding: 13px;
+}
+
+.official-repair-plans {
+  margin-top: 4px;
+  border-top: 1px solid var(--line-soft);
+  padding-top: 6px;
+}
+
+.official-repair-plans summary {
+  cursor: pointer;
+  color: #f4ca68;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.official-repair-plans ul {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.official-repair-plans li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.official-repair-button {
+  min-height: 44px;
+  padding: 7px 10px;
+  border: 1px solid rgba(107, 196, 232, 0.48);
+  border-radius: 7px;
+  color: var(--text);
+  background: rgba(47, 145, 194, 0.18);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+}
+
+.exam-profile-field {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  color: #d9e7df;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.exam-profile-field select {
+  min-height: 44px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid rgba(107, 196, 232, 0.42);
+  border-radius: 8px;
+  color: var(--text);
+  background: #0a1b15;
+  font: inherit;
 }
 
 .pass-readiness-card > header {

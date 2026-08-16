@@ -114,7 +114,10 @@ if (blueprint.curriculumOrder?.length !== 100) issues.push("core curriculum must
 if (coreRights.length !== 28) issues.push(`core rights must remain 28, got ${coreRights.length}`);
 blueprint.mockForms.forEach((form) => {
   if (form.ids.length !== 50) issues.push(`${form.id}: mock must remain 50 questions`);
-  if (form.ids.some((id) => expectedSupplemental.includes(id))) {
+  if (
+    form.evidenceClass !== "internal-mixed-practice" &&
+    form.ids.some((id) => expectedSupplemental.includes(id))
+  ) {
     issues.push(`${form.id}: supplemental question leaked into fixed mock`);
   }
 });

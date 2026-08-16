@@ -156,8 +156,11 @@
     const callback = typeof options.qualifies === "function" ? options.qualifies : null;
     const startedAt = Date.parse(item?.startedAt || "");
     const completedAt = Date.parse(item?.completedAt || "");
+    const profile = item?.examProfile === "fiveExempt" ? "fiveExempt" : "general";
+    const questionCount = profile === "fiveExempt" ? 45 : 50;
+    const durationMinutes = profile === "fiveExempt" ? 110 : 120;
     const elapsedMinutes = item?.elapsedMinutes;
-    const expectedKeys = Array.from({ length: 50 }, (_, index) => String(index + 1));
+    const expectedKeys = Array.from({ length: questionCount }, (_, index) => String(index + 1));
     const answerKeys = Object.keys(answers).sort((left, right) => Number(left) - Number(right));
     const evidenceVersion = Number(item?.evidenceVersion) || 0;
     const currentEvidence = evidenceVersion >= FULL_SCORE_EVIDENCE_VERSION &&
@@ -175,8 +178,9 @@
       item.sourceMode === "timed-answer-sheet" &&
       (currentEvidence || legacyEvidence) &&
       item.timed120 === true &&
-      Number.isInteger(elapsedMinutes) && elapsedMinutes >= 1 && elapsedMinutes <= 120 &&
-      answerKeys.length === 50 &&
+      Number(item?.questionCount ?? questionCount) === questionCount &&
+      Number.isInteger(elapsedMinutes) && elapsedMinutes >= 1 && elapsedMinutes <= durationMinutes &&
+      answerKeys.length === questionCount &&
       answerKeys.every((key, index) => key === expectedKeys[index] &&
         Number.isInteger(answers[key]) && answers[key] >= 1 && answers[key] <= 4) &&
       Number.isFinite(startedAt) && Number.isFinite(completedAt) && completedAt >= startedAt &&
