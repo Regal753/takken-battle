@@ -9,7 +9,11 @@ const { chromium } = require("playwright");
 
 const root = __dirname;
 const screenshotDir = process.env.TAKKEN_SCREENSHOT_DIR || path.join(root, "output", "playwright", "calculation-drill");
-const chromePath = process.env.TAKKEN_CHROME_PATH || "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe";
+const chromePath = process.env.TAKKEN_CHROME_PATH || (
+  process.platform === "win32"
+    ? "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe"
+    : "/usr/bin/google-chrome"
+);
 const storageIdFor = (namespace) => `takken-battle-study-clean-v2-hard-review-${namespace}`;
 
 function startStaticServer() {

@@ -64,6 +64,7 @@ jobs:
         shell: bash
         env:
           TAKKEN_BASE_URL: http://127.0.0.1:8783/
+          TAKKEN_CHROME_PATH: /usr/bin/google-chrome
         run: |
           set -euo pipefail
           google-chrome --version
