@@ -30,8 +30,8 @@ async function chooseDrillConfidence(page, storageId, number, confidence) {
 
 async function chooseDrillAnswer(page, storageId, number, answer) {
   await page.locator(
-    `input[name="official-drill-q${number}"][value="${answer}"]`
-  ).click({ force: true });
+    `input[name="official-drill-q${number}"][value="${answer}"] + span`
+  ).click();
   await page.waitForFunction(({ id, number: questionNumber, answer: value }) => {
     const saved = JSON.parse(localStorage.getItem(id) || "{}");
     const date = new Date().toLocaleDateString("sv-SE");
