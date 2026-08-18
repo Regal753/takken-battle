@@ -260,6 +260,19 @@ assert.match(coolingOff.reasons[2], /8日経過.*発送時/, "cooling-off period
 assert.match(coolingOff.reasons[3], /引渡しを受け、かつ、代金全額を支払った/, "cooling-off completion condition");
 assert.doesNotMatch(anchorBlob(coolingOff), /履行/, "cooling-off must not use performance-start as an end condition");
 
+const multipleBrokerRemuneration = supplement.ANCHORS_BY_ID.bs014;
+assert.match(multipleBrokerRemuneration.prompt, /同一依頼者に複数業者/, "multiple-broker scope must name the same client");
+assert.match(
+  multipleBrokerRemuneration.statements[3],
+  /同一の依頼者（例：売主）.*その依頼者から受領する総額/,
+  "multiple-broker false proposition must distinguish one client from the transaction as a whole"
+);
+assert.match(
+  multipleBrokerRemuneration.reasons[3],
+  /同一の依頼者（例：売主）.*総額.*告示第二の上限.*売主側・買主側.*依頼者が別.*それぞれ上限/,
+  "multiple-broker reason must distinguish same-client aggregation from separate seller/buyer principals"
+);
+
 const discipline = supplement.ANCHORS_BY_ID.bs015;
 assert.match(discipline.reasons[0], /最長1年.*業務地知事.*免許取消し.*免許権者/, "disciplinary jurisdiction and duration");
 assert.match(discipline.reasons[3], /3年以下の拘禁刑.*300万円以下の罰金.*併科/, "current custodial-penalty terminology and quantum");

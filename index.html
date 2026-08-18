@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests">
-    <meta name="description" content="2026年宅建試験へ向け、科目別40点目標・8月末の高速一周・宅建業法ノック・全科目補強・50問時間計測を一つにした学習ツールです。">
+    <meta name="description" content="2026年宅建試験へ向け、科目別40点目標・8月末の高速一周・宅建業法ノック・全科目補強・受験区分別の本試験形式時間計測を一つにした学習ツールです。">
     <meta name="theme-color" content="#17261f">
     <meta name="takken-runtime" content="public-static">
     <meta property="og:title" content="宅建バトル Study Quest">
@@ -12,35 +12,38 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://regal753.github.io/takken-battle/">
     <link rel="canonical" href="https://regal753.github.io/takken-battle/">
+    <link rel="manifest" href="./manifest.webmanifest?v=20260818-pass-corrections-v31-1">
+    <link rel="icon" type="image/svg+xml" sizes="192x192" href="./assets/pwa-icon-192.svg?v=20260818-pass-corrections-v31-1">
+    <link rel="apple-touch-icon" href="./assets/pwa-icon-192.svg?v=20260818-pass-corrections-v31-1">
     <title>宅建バトル Study Quest</title>
-    <link rel="icon" href="data:,">
-    <link rel="stylesheet" href="./styles.css?v=20260816-pass-hardening-v30-1">
-    <script defer src="./exam-blueprint.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./exam-question-core.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./exam-questions-rights.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./exam-questions-restrictions.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./exam-questions-tax-other.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./exam-questions-business.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./subject-sprint-bank.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./business-fullscore-supplement.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./business-fullscore-bank.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./practical-question-bank.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./question-bank.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./question-balance.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./reward-system.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./official-exam-data.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./official-law-baseline.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./official-topic-map.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./calculation-drill.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./save-store.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./save-transfer.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./state-sync.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./business-mastery.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./business-knock.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./business-pace.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./pass-readiness.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./exam-current-year-2026.js?v=20260816-pass-hardening-v30-1"></script>
-    <script defer src="./app.js?v=20260816-pass-hardening-v30-1"></script>
+    <link rel="stylesheet" href="./styles.css?v=20260818-pass-corrections-v31-1">
+    <script defer src="./exam-blueprint.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./exam-question-core.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./exam-questions-rights.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./exam-questions-restrictions.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./exam-questions-tax-other.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./exam-questions-business.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./subject-sprint-bank.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./business-fullscore-supplement.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./business-fullscore-bank.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./practical-question-bank.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./question-bank.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./question-balance.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./reward-system.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./official-exam-data.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./official-law-baseline.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./official-topic-map.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./calculation-drill.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./save-store.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./save-transfer.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./state-sync.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./business-mastery.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./business-knock.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./business-pace.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./pass-readiness.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./exam-current-year-2026.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./pwa-runtime.js?v=20260818-pass-corrections-v31-1"></script>
+    <script defer src="./app.js?v=20260818-pass-corrections-v31-1"></script>
   </head>
   <body>
     <div class="app-root">
@@ -258,7 +261,7 @@
         </summary>
 
         <div class="pass-plan-body">
-          <p id="passPhaseText" class="pass-plan-lead">業法20問を毎日固定し、曜日別の未接触分野を進め、内部50問で40点の再現性を測る。</p>
+          <p id="passPhaseText" class="pass-plan-lead">業法20問を毎日固定し、曜日別の未接触分野を進め、受験区分と同じ問題数・時間の内部模試で40点の再現性を測る。</p>
 
           <section id="passReadinessCard" class="pass-readiness-card" aria-labelledby="passReadinessTitle">
             <header>
@@ -287,9 +290,9 @@
               <button id="passBusinessAction" class="today-command-primary" type="button">宅建業法を20問ノック</button>
               <button id="passThemeAction" class="today-command-secondary" type="button">今日の未接触分野へ</button>
               <button id="passLawGateAction" class="today-command-secondary" type="button">2026改正2問を確認</button>
-              <button id="passMockAction" class="today-command-secondary" type="button">内部50問で現在地を測る</button>
+              <button id="passMockAction" class="today-command-secondary" type="button">内部本試験形式で現在地を測る</button>
             </div>
-            <small class="pass-time-allocation">50問演習は100分で一周、残り20分を保留・マークミス確認へ。1問で止まり続けず、根拠が出ない肢は保留して戻ります。</small>
+            <small id="passTimeAllocation" class="pass-time-allocation">受験区分に応じた一周時間と見直し時間を表示します。</small>
             <p id="passReadinessStatus" class="pass-readiness-status" aria-live="polite"></p>
           </section>
 
@@ -452,7 +455,7 @@
         <details class="pass-roadmap">
           <summary>10/18までの攻略順</summary>
           <ol>
-            <li data-pass-phase="foundation"><strong>8/16–8/31</strong><span>業法20問を毎日固定し、曜日テーマの未接触単元を高速一周。内部50問は診断として今すぐ利用可</span></li>
+            <li data-pass-phase="foundation"><strong>8/16–8/31</strong><span>業法20問を毎日固定し、曜日テーマの未接触単元を高速一周。内部本試験形式は診断として今すぐ利用可</span></li>
             <li data-pass-phase="august"><strong>一周直後</strong><span>科目別の一意80問と既存実践180問を使い、未接触論点・誤答・迷いを同セット内で回収</span></li>
             <li data-pass-phase="september"><strong>9月</strong><span>週1回以上、本試験と同じ問題数・制限時間で測定。公式未見は露出台帳で保全し、異なる3フォームの科目別目標を連続再現する</span></li>
             <li data-pass-phase="october"><strong>10/1–10/11</strong><span>2回以上の誤答、2026法改正、当年税・統計だけを補修し、新教材を止める</span></li>

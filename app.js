@@ -851,6 +851,7 @@
     passThemeAction: $("#passThemeAction"),
     passLawGateAction: $("#passLawGateAction"),
     passMockAction: $("#passMockAction"),
+    passTimeAllocation: $("#passTimeAllocation"),
     passSubjectBusiness: $("#passSubjectBusiness"),
     passSubjectRights: $("#passSubjectRights"),
     passSubjectRestrictions: $("#passSubjectRestrictions"),
@@ -1253,6 +1254,16 @@
 
   function examProfileDurationMinutes(profile = state?.examProfile) {
     return normalizeExamProfile(profile) === EXAM_PROFILE_FIVE_EXEMPT ? 110 : 120;
+  }
+
+  function examProfileSummary(profile = state?.examProfile) {
+    return `${examProfileQuestionCount(profile)}問・${examProfileDurationMinutes(profile)}分`;
+  }
+
+  function examProfileTimeAllocation(profile = state?.examProfile) {
+    const normalized = normalizeExamProfile(profile);
+    const firstPassMinutes = normalized === EXAM_PROFILE_FIVE_EXEMPT ? 90 : 100;
+    return `${examProfileQuestionCount(normalized)}問演習は${firstPassMinutes}分で一周、残り20分を保留・マークミス確認へ。1問で止まり続けず、根拠が出ない肢は保留して戻ります。`;
   }
 
   function mockIdsForForm(form, profile = state?.examProfile) {
@@ -2570,7 +2581,7 @@
         requiredNoActiveOfficialExamId &&
         String(remote.officialExamSession?.examId || "") === requiredNoActiveOfficialExamId
       ) {
-        throw new Error("この公式試験回は別タブで50問測定中です。");
+        throw new Error(`この公式試験回は別タブで${examProfileSummary(remote.officialExamSession?.examProfile || state.examProfile)}測定中です。`);
       }
       if (replace) {
         const generation = Math.max(
@@ -3942,8 +3953,15 @@
   }
 
   function activeLearningSession() {
-    if (state.officialExamSession) return { kind: "official", label: "計測中の公式50問" };
-    if (isMockMode() && !state.mock?.finalized) return { kind: "mock", label: "進行中の50問模試" };
+    if (state.officialExamSession) {
+      return {
+        kind: "official",
+        label: `計測中の公式${examProfileSummary(state.officialExamSession.examProfile || state.examProfile)}`
+      };
+    }
+    if (isMockMode() && !state.mock?.finalized) {
+      return { kind: "mock", label: `進行中の${examProfileSummary(state.mock?.examProfile || state.examProfile)}模試` };
+    }
     if (["active", "retry"].includes(state.practicalDrill?.stage)) {
       return {
         kind: "practical",
@@ -4283,7 +4301,7 @@
       return {
         id: "foundation",
         title: "8/31まで高速一周",
-        text: "業法20問を毎日固定し、曜日別の未接触単元を先に潰す。内部50問は診断に使い、RETIO公式未見は保全する。"
+        text: `業法20問を毎日固定し、曜日別の未接触単元を先に潰す。内部${examProfileSummary()}は診断に使い、RETIO公式未見は保全する。`
       };
     }
     if (date <= "2026-08-31") {
@@ -5562,7 +5580,7 @@
     return {
       stage: "基礎一周完了",
       title: "公式問題で初見力を測る",
-      text: "全45単元の読後問題へ接触済み。ここから公式20問と公式50問を測定として使う。",
+      text: `全45単元の読後問題へ接触済み。ここから公式20問と公式${examProfileQuestionCount()}問を測定として使う。`,
       button: "実力測定を開く",
       action: "official",
       unitId: "",
@@ -6308,6 +6326,9 @@
         ? "登録講習修了者モード：問1〜45・110分。問46〜50（その他5問）は合格安定判定に含めません。"
         : "一般受験モード：全50問・120分。問46〜50も含めて判定します。";
     }
+    if (elements.passTimeAllocation) {
+      elements.passTimeAllocation.textContent = examProfileTimeAllocation(state.examProfile);
+    }
     const metrics = passSubjectMetrics();
     const latestMock = latestMockAttempt();
     const targetByKey = Object.fromEntries(snapshot.targets.subjects.map((subject) => [subject.key, subject]));
@@ -6353,9 +6374,26 @@
     elements.passReadinessNote.textContent = staleDays > 1
       ? `最終学習から${staleDays}日空いています。今日は未接触を減らしつつ、業法20問で再起動します。`
       : `内部目標は${snapshot.targets.total}/${snapshot.targets.questions}。未測定は弱点と決めつけず、接触→時間測定→不足点補強の順で処理します。`;
+    const mockEvidence = snapshot.timed50.mock;
+    const formEvidenceLabel = mockEvidence.passedRecentCount < 3
+      ? `${mockEvidence.passedRecentCount}/3`
+      : !mockEvidence.latestRecentEnough
+        ? mockEvidence.latestAgeDays !== null && mockEvidence.latestAgeDays < 0
+          ? "要再測定（未来日付を除外）"
+          : `要再測定（最新が${mockEvidence.latestAgeDays ?? "不明"}日前）`
+        : !mockEvidence.withinRollingWindow
+          ? `要再測定（3回が${(mockEvidence.windowSpanDays ?? 0) + 1}日間）`
+          : "通過";
+    const lawEvidenceLabel = snapshot.currentLawGate.passed
+      ? "通過"
+      : snapshot.currentLawGate.validAttemptCount < 2
+        ? `${snapshot.currentLawGate.validAttemptCount}/2`
+        : !snapshot.currentLawGate.recentEnough
+          ? "要再確認（両日14日以内）"
+          : "条件未達";
     elements.passReadinessStatus.textContent = snapshot.timed50.stable && snapshot.currentYearFreshness.passed && snapshot.capacity.verified
       ? `異なる3フォーム・3日、改正確認2日、当年資料、直近7日の学習時間をすべて通過しました。`
-      : `フォーム ${snapshot.timed50.mock.passedRecentCount}/3・改正確認 ${snapshot.currentLawGate.passed ? "通過" : `${snapshot.currentLawGate.validAttemptCount}/2`}・当年資料 ${snapshot.currentYearFreshness.passed ? "確認済" : "要再確認"}・学習時間 ${snapshot.capacity.verified ? "確認済" : `${snapshot.capacity.observedDays}/4日`}`;
+      : `フォーム ${formEvidenceLabel}・改正確認 ${lawEvidenceLabel}・当年資料 ${snapshot.currentYearFreshness.passed ? "確認済" : "要再確認"}・学習時間 ${snapshot.capacity.verified ? "確認済" : `${snapshot.capacity.observedDays}/4日`}`;
     elements.passReadinessStatus.classList.toggle("is-urgent", snapshot.urgent || remainingUnits > 0);
 
     const active = activeLearningSession();
@@ -6449,8 +6487,8 @@
     ).length;
     elements.foundationGateStatus.textContent = `単元 ${completedTextbookUnits} / ${TEXTBOOK_CHAPTERS.length}`;
     elements.foundationGateStatus.title = foundationComplete
-      ? "高速一周の接触完了。50問測定と不足点補強へ進めます。"
-      : `8/31まで残り${TEXTBOOK_CHAPTERS.length - completedTextbookUnits}単元。内部50問は現在地診断として利用できます。`;
+      ? `高速一周の接触完了。${examProfileQuestionCount()}問測定と不足点補強へ進めます。`
+      : `8/31まで残り${TEXTBOOK_CHAPTERS.length - completedTextbookUnits}単元。内部${examProfileSummary()}は現在地診断として利用できます。`;
     elements.textbookCoverageStatus.textContent =
       `接触 ${TEXTBOOK_IDS.filter(isContacted).length} / ${TEXTBOOK_IDS.length}`;
     elements.textbookRetentionStatus.textContent =
@@ -8156,7 +8194,7 @@
     const needsOfficial = !summary.official.ready || summary.official.currentMiss;
     const reserve = businessOfficialReserve();
     if (!summary.transferReady && needsOfficial && reserve?.canStartInitial) {
-      return { kind: "official", label: summary.official.currentMiss ? "公式50問で再調整" : `公式50問で測定（未見${reserve.unseenExams}回）` };
+      return { kind: "official", label: summary.official.currentMiss ? `公式${examProfileQuestionCount()}問で再調整` : `公式${examProfileQuestionCount()}問で測定（未見${reserve.unseenExams}回）` };
     }
     const dueKey = businessNextDueKey();
     if (!summary.transferReady && dueKey) return { kind: "wait", label: `次回復習 ${dueKey}` };
@@ -8164,7 +8202,7 @@
       return { kind: "practice", states: new Set(["learning"]), label: `根拠未確定 ${Math.min(10, questions.learning)}問` };
     }
     if (needsOfficial) {
-      return { kind: "official", label: summary.official.currentMiss ? "公式50問で再調整" : "未接触の公式50問へ" };
+      return { kind: "official", label: summary.official.currentMiss ? `公式${examProfileQuestionCount()}問で再調整` : `未接触の公式${examProfileQuestionCount()}問へ` };
     }
     return { kind: "ready", label: "満点圏の証拠を確認" };
   }
@@ -8927,7 +8965,7 @@
       elements.battleAnnouncement.textContent = `反撃を受けた。FOCUS ${answered.focusDelta}`;
     } else {
       elements.battleAnnouncement.textContent = isMockMode() && answered
-        ? "解答を記録。正誤は50問終了後にまとめて採点。"
+        ? `解答を記録。正誤は${mockQuestionIds().length}問終了後にまとめて採点。`
         : `${battleProfile.trait}。正解で一撃撃破。`;
     }
     elements.comboSubtext.textContent = state.streak >= 5
@@ -9266,7 +9304,7 @@
       return;
     }
     const answerGrid = elements.feedbackBox.querySelector(".answer-grid");
-    if (answered.mock) {
+    if (answered.mock && !state.mock?.finalized) {
       elements.feedbackBox
         .querySelectorAll(".cut-list, .verdict-board, .reasoning-path, .mistake-capture, .memory-rule, .confidence-check, .adaptive-note")
         .forEach((node) => node.remove());
@@ -9276,7 +9314,7 @@
       elements.trapText.textContent = "";
       elements.bookRef.textContent = "";
       elements.explainText.textContent =
-        "正誤・正解肢・解説は50問終了後にまとめて表示します。途中で答え合わせはしません。";
+        `解答を保存しました。正誤・正解肢・解説は${mockQuestionIds().length}問終了後にまとめて表示します。途中で答え合わせはしません。`;
       elements.nextButton.textContent = nextActionLabel();
       return;
     }

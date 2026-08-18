@@ -9,4 +9,5 @@ node_modules/
 coverage/
 qa-screenshots/
 output/
+_site/
 tunnel-logs/

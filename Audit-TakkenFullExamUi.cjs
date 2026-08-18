@@ -30,8 +30,8 @@ async function chooseDrillConfidence(page, storageId, number, confidence) {
 
 async function chooseDrillAnswer(page, storageId, number, answer) {
   await page.locator(
-    `input[name="official-drill-q${number}"][value="${answer}"]`
-  ).click({ force: true });
+    `input[name="official-drill-q${number}"][value="${answer}"] + span`
+  ).click();
   await page.waitForFunction(({ id, number: questionNumber, answer: value }) => {
     const saved = JSON.parse(localStorage.getItem(id) || "{}");
     const date = new Date().toLocaleDateString("sv-SE");
@@ -99,6 +99,7 @@ async function main() {
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   try {
     const context = await browser.newContext({
+      serviceWorkers: "block",
       viewport: { width: 1440, height: 1000 },
       reducedMotion: "reduce",
       locale: "ja-JP",
@@ -359,7 +360,7 @@ async function main() {
       throw new Error(`Unstudied section leaked into business scope: ${visitedSections.join(",")}`);
     }
     const allowedSourceHosts = new Set([
-      "elaws.e-gov.go.jp",
+      "laws.e-gov.go.jp",
       "www.jhf.go.jp",
       "www.mlit.go.jp",
       "www.moj.go.jp",
@@ -561,9 +562,23 @@ async function main() {
       localStorage.setItem(id, JSON.stringify(saved));
     }, storageId);
     await page.reload({ waitUntil: "domcontentloaded" });
-    await page.waitForFunction(() =>
-      (document.querySelector("#todayCommandKicker")?.textContent || "").includes("STEP 2")
-    );
+    try {
+      await page.waitForFunction(() =>
+        (document.querySelector("#todayCommandKicker")?.textContent || "").includes("STEP 2"),
+      null, { timeout: 10000 });
+    } catch (error) {
+      const command = await page.evaluate((id) => {
+        const saved = JSON.parse(localStorage.getItem(id) || "{}");
+        const date = new Date().toLocaleDateString("sv-SE");
+        return {
+          kicker: document.querySelector("#todayCommandKicker")?.textContent?.trim() || "",
+          title: document.querySelector("#todayCommandTitle")?.textContent?.trim() || "",
+          status: document.querySelector("#todayCommandStatus")?.textContent?.trim() || "",
+          mission: saved.missionLog?.[date] || null
+        };
+      }, storageId);
+      throw new Error(`STEP 2 did not return after clearing today's mission: ${JSON.stringify(command)}`, { cause: error });
+    }
     await page.locator("#officialDrillOpenButton").click();
     await page.locator("#officialDrillStartButton").click();
     const perfectNumbers = drillNumbers;
@@ -859,6 +874,7 @@ async function main() {
         .flatMap((chapter) => chapter.ids)
     );
     const masteryContext = await browser.newContext({
+      serviceWorkers: "block",
       viewport: { width: 390, height: 844 },
       reducedMotion: "reduce",
       locale: "ja-JP",
@@ -1004,6 +1020,7 @@ async function main() {
     }
 
     const unitResumeContext = await browser.newContext({
+      serviceWorkers: "block",
       viewport: { width: 390, height: 844 },
       reducedMotion: "reduce",
       locale: "ja-JP",
@@ -1079,6 +1096,7 @@ async function main() {
     }
 
     const migrationContext = await browser.newContext({
+      serviceWorkers: "block",
       viewport: { width: 900, height: 800 },
       locale: "ja-JP",
       timezoneId: "Asia/Tokyo"
@@ -1152,6 +1170,7 @@ async function main() {
     }
 
     const handoffContext = await browser.newContext({
+      serviceWorkers: "block",
       viewport: { width: 390, height: 844 },
       reducedMotion: "reduce",
       locale: "ja-JP",
@@ -1229,6 +1248,7 @@ async function main() {
     }
 
     const receiverContext = await browser.newContext({
+      serviceWorkers: "block",
       viewport: { width: 390, height: 844 },
       reducedMotion: "reduce",
       locale: "ja-JP",
