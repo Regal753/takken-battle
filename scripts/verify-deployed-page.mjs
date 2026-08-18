@@ -28,8 +28,8 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
       assert.match(html, new RegExp(`id="${id}"`), `${id} missing`);
     }
     assert.match(html, /name="takken-runtime" content="public-static"/, "public-static marker missing");
-    assert.match(html, new RegExp(`rel="manifest"[^>]+manifest\\.webmanifest\\?v=${expectedVersion}`), "versioned manifest missing");
-    assert.match(html, new RegExp(`pwa-runtime\\.js\\?v=${expectedVersion}`), "versioned PWA runtime missing");
+    assert.ok(html.includes(`manifest.webmanifest?v=${expectedVersion}`), "versioned manifest missing");
+    assert.ok(html.includes(`pwa-runtime.js?v=${expectedVersion}`), "versioned PWA runtime missing");
     const references = [...new Set(localReferences(html))];
     assert.ok(references.length >= 30, "runtime references unexpectedly incomplete");
     for (const reference of references) {
@@ -47,7 +47,7 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
       await fetchAsset(icon.src, new URL(manifestReference, response.url), `manifest icon ${icon.src}`);
     }
     const serviceWorker = await fetchAsset(`service-worker.js?v=${expectedVersion}`, response.url, "service worker");
-    assert.match(serviceWorker, new RegExp(`const VERSION = "${expectedVersion}"`), "service worker version missing");
+    assert.ok(serviceWorker.includes(`const VERSION = "${expectedVersion}"`), "service worker version missing");
     for (const reference of references) {
       const pathname = new URL(reference, response.url).pathname.split("/").pop();
       assert.match(serviceWorker, new RegExp(pathname.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `service worker does not precache ${reference}`);
