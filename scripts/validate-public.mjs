@@ -8,6 +8,12 @@ const rootPath = fileURLToPath(root);
 const text = (path) => readFileSync(new URL(path, root), "utf8");
 const required = [
   "index.html",
+  "manifest.webmanifest",
+  "pwa-runtime.js",
+  "service-worker.js",
+  "Audit-TakkenPwaOffline.cjs",
+  "scripts/assemble-site.mjs",
+  "scripts/verify-deployed-browser.cjs",
   "styles.css",
   "app.js",
   "subject-sprint-bank.js",
@@ -83,6 +89,9 @@ const pagesWorkflow = text(".github/workflows/pages.yml");
 const ciWorkflow = text(".github/workflows/ci.yml");
 
 assert.match(index, /name="takken-runtime" content="public-static"/);
+assert.match(index, /manifest\.webmanifest\?v=20260818-pass-corrections-v31-1/);
+assert.match(index, /pwa-runtime\.js\?v=20260818-pass-corrections-v31-1/);
+assert.match(text("service-worker.js"), /const VERSION = "20260818-pass-corrections-v31-1"/);
 assert.match(app, /const PUBLIC_STATIC_MODE/);
 assert.match(app, /function publicTodayQuest/);
 assert.match(app, /const DEFAULT_STUDY_SCOPE = "business"/);
@@ -126,7 +135,9 @@ assert.match(app, /function saveMissionReview/);
 assert.match(app, /function recordOfficialExam/);
 assert.match(app, /function normalizeOfficialExamHistory/);
 assert.match(app, /const DAILY_STUDY_MINUTES = 90/);
-assert.match(app, /正誤・正解肢・解説は50問終了後/);
+assert.match(app, /正誤・正解肢・解説は\$\{mockQuestionIds\(\)\.length\}問終了後/);
+assert.match(app, /function examProfileTimeAllocation/);
+assert.match(index, /id="passTimeAllocation"/);
 assert.doesNotMatch(
   app.match(/function publicTodayQuest\(\) \{[\s\S]*?\n  \}/)?.[0] || "",
   /Math\.random|seed|shuffle/i,
@@ -189,23 +200,23 @@ assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 第2分冊・権利関係を固める/);
 assert.match(index, /③ 法令・税その他へ進む/);
 assert.match(index, /④ 全分野を混ぜる/);
-assert.match(index, /styles\.css\?v=20260816-pass-hardening-v30-1/);
-assert.match(index, /subject-sprint-bank\.js\?v=20260816-pass-hardening-v30-1/);
-assert.match(index, /pass-readiness\.js\?v=20260816-pass-hardening-v30-1/);
-assert.match(index, /exam-current-year-2026\.js\?v=20260816-pass-hardening-v30-1/);
-assert.match(index, /official-topic-map\.js\?v=20260816-pass-hardening-v30-1/);
-assert.match(index, /business-mastery\.js\?v=20260816-pass-hardening-v30-1/);
-assert.match(index, /business-knock\.js\?v=20260816-pass-hardening-v30-1/);
-assert.match(index, /business-pace\.js\?v=20260816-pass-hardening-v30-1/);
-assert.match(index, /business-fullscore-supplement\.js\?v=20260816-pass-hardening-v30-1/);
-assert.match(index, /business-fullscore-bank\.js\?v=20260816-pass-hardening-v30-1/);
-assert.match(index, /practical-question-bank\.js\?v=20260816-pass-hardening-v30-1/);
-assert.match(index, /calculation-drill\.js\?v=20260816-pass-hardening-v30-1/);
-assert.match(index, /app\.js\?v=20260816-pass-hardening-v30-1/);
-assert.match(index, /save-store\.js\?v=20260816-pass-hardening-v30-1/);
-assert.match(index, /official-exam-data\.js\?v=20260816-pass-hardening-v30-1/);
-assert.match(index, /official-law-baseline\.js\?v=20260816-pass-hardening-v30-1/);
-assert.match(index, /state-sync\.js\?v=20260816-pass-hardening-v30-1/);
+assert.match(index, /styles\.css\?v=20260818-pass-corrections-v31-1/);
+assert.match(index, /subject-sprint-bank\.js\?v=20260818-pass-corrections-v31-1/);
+assert.match(index, /pass-readiness\.js\?v=20260818-pass-corrections-v31-1/);
+assert.match(index, /exam-current-year-2026\.js\?v=20260818-pass-corrections-v31-1/);
+assert.match(index, /official-topic-map\.js\?v=20260818-pass-corrections-v31-1/);
+assert.match(index, /business-mastery\.js\?v=20260818-pass-corrections-v31-1/);
+assert.match(index, /business-knock\.js\?v=20260818-pass-corrections-v31-1/);
+assert.match(index, /business-pace\.js\?v=20260818-pass-corrections-v31-1/);
+assert.match(index, /business-fullscore-supplement\.js\?v=20260818-pass-corrections-v31-1/);
+assert.match(index, /business-fullscore-bank\.js\?v=20260818-pass-corrections-v31-1/);
+assert.match(index, /practical-question-bank\.js\?v=20260818-pass-corrections-v31-1/);
+assert.match(index, /calculation-drill\.js\?v=20260818-pass-corrections-v31-1/);
+assert.match(index, /app\.js\?v=20260818-pass-corrections-v31-1/);
+assert.match(index, /save-store\.js\?v=20260818-pass-corrections-v31-1/);
+assert.match(index, /official-exam-data\.js\?v=20260818-pass-corrections-v31-1/);
+assert.match(index, /official-law-baseline\.js\?v=20260818-pass-corrections-v31-1/);
+assert.match(index, /state-sync\.js\?v=20260818-pass-corrections-v31-1/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
 assert.doesNotMatch(index, /understanding-system\.js/);
@@ -260,25 +271,12 @@ assert.match(pagesWorkflow, /node Audit-TakkenPassReadiness\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenExamCurrentYear2026\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenOfficialTopicMap\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
-assert.match(pagesWorkflow, /20260816-pass-hardening-v30-1/);
-assert.doesNotMatch(pagesWorkflow, /cp [^\n]*understanding-system\.js[^\n]*_site\//);
-assert.match(pagesWorkflow, /cp [^\n]*calculation-drill\.js[^\n]*_site\//);
-assert.match(pagesWorkflow, /cp [^\n]*business-mastery\.js[^\n]*_site\//);
-assert.match(pagesWorkflow, /cp [^\n]*business-knock\.js[^\n]*_site\//);
-assert.match(pagesWorkflow, /cp [^\n]*business-pace\.js[^\n]*_site\//);
-assert.match(pagesWorkflow, /cp [^\n]*business-fullscore-supplement\.js[^\n]*_site\//);
-assert.match(pagesWorkflow, /cp [^\n]*business-fullscore-bank\.js[^\n]*_site\//);
-assert.match(pagesWorkflow, /cp [^\n]*subject-sprint-bank\.js[^\n]*_site\//);
-assert.match(pagesWorkflow, /cp [^\n]*pass-readiness\.js[^\n]*_site\//);
-assert.match(pagesWorkflow, /cp [^\n]*exam-current-year-2026\.js[^\n]*_site\//);
-assert.match(pagesWorkflow, /cp [^\n]*practical-question-bank\.js[^\n]*_site\//);
-assert.match(pagesWorkflow, /cp [^\n]*official-exam-data\.js[^\n]*_site\//);
-assert.match(pagesWorkflow, /cp [^\n]*official-law-baseline\.js[^\n]*_site\//);
-assert.match(pagesWorkflow, /cp [^\n]*official-topic-map\.js[^\n]*_site\//);
-assert.match(pagesWorkflow, /cp [^\n]*save-store\.js[^\n]*_site\//);
-assert.match(pagesWorkflow, /cp [^\n]*save-transfer\.js[^\n]*_site\//);
-assert.match(pagesWorkflow, /cp [^\n]*state-sync\.js[^\n]*_site\//);
-assert.match(pagesWorkflow, /cp [^\n]*exam-blueprint\.js[^\n]*_site\//);
+assert.match(pagesWorkflow, /node scripts\/verify-deployed-browser\.cjs/);
+assert.match(pagesWorkflow, /playwright@1\.62\.1/);
+assert.match(pagesWorkflow, /20260818-pass-corrections-v31-1/);
+assert.match(pagesWorkflow, /node scripts\/assemble-site\.mjs/);
+assert.match(ciWorkflow, /node Audit-TakkenPwaOffline\.cjs/);
+assert.doesNotMatch(pagesWorkflow, /\bcp\b[^\n]*_site\//, "asset assembly must derive the release files from HTML references");
 assert.match(ciWorkflow, /node Audit-TakkenUnderstandingDepth\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenBusinessMastery\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenBusinessKnock\.js/);

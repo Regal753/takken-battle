@@ -1,5 +1,7 @@
 "use strict";
 
+const assert = require("node:assert/strict");
+
 global.window = {};
 require("./exam-blueprint.js");
 require("./exam-question-core.js");
@@ -20,6 +22,25 @@ const allQuestionIds = [...allIds, ...supplementalIds];
 const answerCounts = [0, 0, 0, 0];
 const formatCounts = {};
 const promptOwners = new Map();
+
+assert.equal(blueprint.legalBaseline, "2026-04-01", "blueprint legal baseline");
+const legalSourceEntries = Object.entries(blueprint.sources).filter(([, source]) => {
+  try {
+    return new URL(source.url).hostname === "laws.e-gov.go.jp";
+  } catch {
+    return false;
+  }
+});
+assert.equal(legalSourceEntries.length, 16, "all declared statutory sources use the pinned e-Gov baseline");
+for (const [sourceId, source] of legalSourceEntries) {
+  const url = new URL(source.url);
+  assert.equal(url.protocol, "https:", `${sourceId}: statutory source HTTPS`);
+  assert.equal(url.searchParams.get("occasion_date"), "20260401", `${sourceId}: statutory source pinned to 2026-04-01`);
+}
+assert.ok(
+  !Object.values(blueprint.sources).some((source) => String(source.url || "").includes("elaws.e-gov.go.jp")),
+  "legacy unpinned e-Laws source URLs must not remain in the blueprint"
+);
 
 if (allIds.length !== 100) issues.push(`expected 100 blueprint ids, got ${allIds.length}`);
 if (uniqueIds.size !== allIds.length) issues.push("duplicate blueprint question id");

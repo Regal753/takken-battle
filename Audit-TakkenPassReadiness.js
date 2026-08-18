@@ -8,6 +8,9 @@ assert.equal(typeof browserContext.TAKKEN_PASS_READINESS?.calculatePassReadiness
 assert.equal(readiness.EXAM_DAY_KEY, "2026-10-18");
 assert.equal(readiness.TARGET_TOTAL, 40); assert.equal(readiness.QUESTION_TOTAL, 50);
 assert.equal(readiness.MIN_TIMED_MOCK_MINUTES, 30);
+assert.equal(readiness.STABILITY_LATEST_MAX_AGE_DAYS, 14);
+assert.equal(readiness.STABILITY_WINDOW_DAYS, 21);
+assert.equal(readiness.CURRENT_LAW_ATTEMPT_MAX_AGE_DAYS, 14);
 assert.equal(readiness.validDayKey("2026-02-29"), ""); assert.equal(readiness.validDayKey("2028-02-29"), "2028-02-29");
 assert.equal(readiness.dayKey(new Date("2026-08-29T15:30:00Z")), "2026-08-30", "Date inputs use JST regardless of host timezone");
 
@@ -45,10 +48,51 @@ assert.equal(badSectionSum.timed50.mock.validTimed50Count, 0);
 const unordered = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: [attempts[2], attempts[0], attempts[1]], currentLawGate: gate, studyMinutesHistory: capacity });
 assert.equal(unordered.timed50.stable, true, "valid attempts are sorted before evaluation");
 
+const datedAttempts = (dates) => dates.map((dateKey, index) => ({ ...attempts[index], dayKey: dateKey, completedAt: `${dateKey}T10:00:00+09:00` }));
+const staleSpread = readiness.calculatePassReadiness({ todayKey: "2026-08-01", subjects, mockHistory: datedAttempts(["2026-04-01", "2026-05-01", "2026-08-01"]), currentLawGate: gate, studyMinutesHistory: capacity });
+assert.equal(staleSpread.timed50.mock.latestRecentEnough, true, "a latest attempt can be fresh while its streak is still too old");
+assert.equal(staleSpread.timed50.mock.withinRollingWindow, false);
+assert.equal(staleSpread.timed50.stable, false, "4/1, 5/1, 8/1 cannot establish a current streak");
+const boundaryStreak = readiness.calculatePassReadiness({ todayKey: "2026-08-29", subjects, mockHistory: datedAttempts(["2026-08-01", "2026-08-10", "2026-08-21"]), currentLawGate: gate, studyMinutesHistory: capacity });
+assert.equal(boundaryStreak.timed50.mock.windowSpanDays, 20);
+assert.equal(boundaryStreak.timed50.mock.withinRollingWindow, true, "a 21-calendar-day inclusive streak is permitted");
+assert.equal(boundaryStreak.timed50.mock.latestAgeDays, 8);
+assert.equal(boundaryStreak.timed50.mock.stable, true);
+const overWindowStreak = readiness.calculatePassReadiness({ todayKey: "2026-08-29", subjects, mockHistory: datedAttempts(["2026-08-01", "2026-08-10", "2026-08-22"]), currentLawGate: gate, studyMinutesHistory: capacity });
+assert.equal(overWindowStreak.timed50.mock.windowSpanDays, 21);
+assert.equal(overWindowStreak.timed50.mock.withinRollingWindow, false);
+assert.equal(overWindowStreak.timed50.mock.stable, false, "a 22-calendar-day inclusive streak is too wide");
+const latestBoundaryStreak = readiness.calculatePassReadiness({ todayKey: "2026-08-29", subjects, mockHistory: datedAttempts(["2026-08-01", "2026-08-08", "2026-08-15"]), currentLawGate: gate, studyMinutesHistory: capacity });
+assert.equal(latestBoundaryStreak.timed50.mock.latestAgeDays, 14);
+assert.equal(latestBoundaryStreak.timed50.mock.stable, true, "a latest qualifying form exactly 14 days old is accepted");
+const futureStreak = readiness.calculatePassReadiness({ todayKey: "2026-08-29", subjects, mockHistory: datedAttempts(["2026-08-10", "2026-08-20", "2026-08-30"]), currentLawGate: gate, studyMinutesHistory: capacity });
+assert.equal(futureStreak.timed50.mock.latestAgeDays, -1);
+assert.equal(futureStreak.timed50.mock.latestRecentEnough, false);
+assert.equal(futureStreak.timed50.mock.stable, false, "future-dated evidence fails closed");
+
 const missingGate = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, studyMinutesHistory: capacity });
 assert.equal(missingGate.timed50.baseStable, true); assert.equal(missingGate.timed50.stable, false); assert.equal(missingGate.reason, "current-law-gate-unverified");
 const staleGate = readiness.calculatePassReadiness({ todayKey: "2026-09-25", subjects, mockHistory: attempts, currentLawGate: gate, studyMinutesHistory: capacity });
 assert.equal(staleGate.currentLawGate.passed, false);
+const splitAgeGate = readiness.calculatePassReadiness({ todayKey: "2026-08-18", subjects, mockHistory: attempts, currentLawGate: { attempts: [
+  { ...gate.attempts[0], dayKey: "2026-04-01", completedAt: "2026-04-01T10:00:00+09:00" },
+  { ...gate.attempts[1], dayKey: "2026-08-18", completedAt: "2026-08-18T10:00:00+09:00" }
+] }, studyMinutesHistory: capacity });
+assert.deepEqual(splitAgeGate.currentLawGate.attemptAgeDays, [139, 0]);
+assert.equal(splitAgeGate.currentLawGate.recentEnough, false);
+assert.equal(splitAgeGate.currentLawGate.passed, false, "4/1 plus 8/18 cannot satisfy the current-law gate");
+const gateBoundary = readiness.calculatePassReadiness({ todayKey: "2026-08-18", subjects, mockHistory: attempts, currentLawGate: { attempts: [
+  { ...gate.attempts[0], dayKey: "2026-08-04", completedAt: "2026-08-04T10:00:00+09:00" },
+  { ...gate.attempts[1], dayKey: "2026-08-18", completedAt: "2026-08-18T10:00:00+09:00" }
+] }, studyMinutesHistory: capacity });
+assert.deepEqual(gateBoundary.currentLawGate.attemptAgeDays, [14, 0]);
+assert.equal(gateBoundary.currentLawGate.passed, true, "both gate attempts exactly within the 14-day boundary are accepted");
+const futureGate = readiness.calculatePassReadiness({ todayKey: "2026-08-18", subjects, mockHistory: attempts, currentLawGate: { attempts: [
+  { ...gate.attempts[0], dayKey: "2026-08-17", completedAt: "2026-08-17T10:00:00+09:00" },
+  { ...gate.attempts[1], dayKey: "2026-08-19", completedAt: "2026-08-19T10:00:00+09:00" }
+] }, studyMinutesHistory: capacity });
+assert.equal(futureGate.currentLawGate.recentEnough, false);
+assert.equal(futureGate.currentLawGate.passed, false, "future-dated current-law evidence fails closed");
 const oneDayGate = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, currentLawGate: { attempts: gate.attempts.map((entry) => ({ ...entry, dayKey: "2026-09-03" })) }, studyMinutesHistory: capacity });
 assert.equal(oneDayGate.currentLawGate.passed, false);
 const unverifiedCapacity = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, currentLawGate: gate });

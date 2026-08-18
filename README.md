@@ -129,7 +129,7 @@ node .\Audit-TakkenRealSaveCompatibility.cjs
 ```
 
 GitHub Actionsでも同じ検証を行い、成功した`main`だけをGitHub Pagesへ配信します。
-Pages配信後は公開HTMLを最大12回再取得し、模試A/Bボタンと配信バージョンが実際に反映されたことまで自動確認します。
+Pages配信後は公開HTMLを最大12回再取得し、HTMLが参照する全ローカルscript／stylesheet／manifest／iconを実取得して配信バージョンまで自動確認します。続けて公開URLをChromeで実起動し、27本の同一版runtime、schema 10、Service Worker制御、390px／320px、console／page error 0件まで確認します。ブラウザ監査では初回オンライン読込後のオフライン再読込、localStorageの保持、更新時に強制リロードせず本人操作で更新する通知契約も確認します。Service Workerが使えない環境では、通常のオンライン学習へ安全にフォールバックします。
 
 `Audit-TakkenQuestionQuality.js`は、正解肢と○×解説の一致、個数問題の正しい肢数、公式根拠ドメイン、同文選択肢の矛盾、設問の類似重複、正解肢の長さ・絶対表現による手掛かり、模試内の正解位置連続を監査します。`Audit-TakkenExplanationMastery.js`は全124問・496肢について、項目名だけの理由を禁止し、判定理由・判断軸・誤認境界・再現則の最低品質と役割分離を検査します。`Audit-TakkenUnderstandingDepth.js`は全124問に3段階の直接解説があり、15字入力・判断軸4択・転用ミニ問が通常導線から除去され、解答保存後に解説が描画されることと、契約不適合責任の2年論点を検査します。`Audit-Takken2026Coverage.js`は全124問の根拠位置と令和8年度改正5論点を検査します。`Audit-TakkenPracticalVariations.js`は、実践180問が全45単元に4問ずつあり、630件の出典事実が元問題の正誤・文・理由から変わっていないこと、全問が異なる2問以上を参照すること、形式90／45／45と正答位置45問ずつを検査します。`Audit-TakkenChapter2Range.js`は第2分冊の21単元・44問を個別検算し、`Audit-TakkenTextbookRanges.js`は全3分冊・4章・45単元・124問、各単元最低2問、補助24問の現在法・公式根拠、コア100／固定50問への非混入を検算します。
 

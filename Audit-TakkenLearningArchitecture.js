@@ -62,10 +62,12 @@ requireText(app, "function foundationCoverageComplete", "foundation coverage gat
 requireText(app, "planMode: \"unit\"", "unit plan persistence is missing");
 requireText(app, "const FIRST_PASS_DEADLINE_LABEL = \"8/31\";", "first-pass deadline is missing");
 requireText(app, "const MIN_INTERNAL_MOCK_ELAPSED_MINUTES = 30;", "implausibly fast mock results are not excluded from stability evidence");
+requireText(app, "要再測定（最新が", "stale three-form evidence is not explained to the learner");
+requireText(app, "要再確認（両日14日以内）", "stale current-law evidence is not explained to the learner");
 requireText(app, "localDateKey(completedAt) === dayKey", "mock evidence does not bind the saved JST day to its completion timestamp");
 requireText(app, "examProfileQuestionCount(state.examProfile)", "mock-day progress does not honor the selected 45/50-question profile");
 requireText(app, "function startMock(formId)", "internal 50-question diagnostic is missing");
-requireText(app, "内部50問は診断に使い、RETIO公式未見は保全する。", "internal-diagnostic / official-reserve policy is missing");
+requireText(app, "内部${examProfileSummary()}は診断に使い、RETIO公式未見は保全する。", "profile-aware internal-diagnostic / official-reserve policy is missing");
 requireText(app, "!foundationComplete && !businessUnlocked", "official full-exam protection gate is missing");
 if (/function startMock\(formId\)[\s\S]{0,900}foundationCoverageComplete\(\)/.test(app)) {
   issues.push("internal 50-question diagnostic must remain available before full foundation coverage");
@@ -85,8 +87,8 @@ if (app.includes("JULY_GATE_DEADLINE") || html.includes("7/31学習ゲート")) 
 ].forEach((id) => requireText(html, `id=\"${id}\"`, `${id} is missing from the page`));
 requireText(html, "本文＋読後問題", "foundation-first mission label is missing");
 requireText(html, "8/31まで高速一周", "8/31 fast-first-pass copy is missing");
-requireText(html, "内部50問は診断として今すぐ利用可", "internal diagnostic availability copy is missing");
-requireText(html, "20260816-pass-hardening-v30-1", "pass readiness cache version is missing");
+requireText(html, "内部本試験形式は診断として今すぐ利用可", "profile-aware internal diagnostic availability copy is missing");
+requireText(html, "20260818-pass-corrections-v31-1", "pass readiness cache version is missing");
 requireText(html, '<details class="quest-card"', "review-10 menu must be collapsed by default");
 requireText(html, 'id="nextButton"', "inline next-question button is missing");
 requireText(css, ".quest-card:not([open]) > .quest-card-body", "collapsed review menu rule is missing");

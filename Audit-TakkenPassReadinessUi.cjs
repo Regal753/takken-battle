@@ -144,6 +144,7 @@ async function main() {
     assert.equal(initial.bDisabled, false);
     assert.equal(initial.cDisabled, false);
     assert.equal(initial.profile, "general");
+    assert.match(await page.locator("#passTimeAllocation").textContent(), /50問演習は100分で一周、残り20分/);
     assert.equal(initial.passPlanOpen, false, "the long-term plan must not push today\'s command below the fold");
     assert.match(initial.lawGateLabel, /2026改正2問/);
     assert.deepEqual(initial.exposure || {}, {});
@@ -164,6 +165,7 @@ async function main() {
     // course completer gets exactly questions 1-45 and 110 minutes; switching
     // back restores the general 50/120 lane without touching official exposure.
     await page.locator("#examProfileSelect").selectOption("fiveExempt");
+    assert.match(await page.locator("#passTimeAllocation").textContent(), /45問演習は90分で一周、残り20分/);
     await openPassPanel(page);
     await page.locator("#passMockAction").click();
     await page.waitForFunction(() => document.querySelector(".quest-card")?.classList.contains("is-mock"));
@@ -171,11 +173,33 @@ async function main() {
     assert.equal(fiveExemptMock.state.mock.examProfile, "fiveExempt");
     assert.match(await page.locator("#chapterProgressText").textContent(), /1 \/ 45問/);
     assert.match(await page.locator("#dailyWeakText").textContent(), /^110:/);
+    await page.locator(".choice-button").first().click();
+    await page.locator("#feedbackBox").waitFor({ state: "visible" });
+    const fiveExemptAnswerLock = await page.evaluate(() => ({
+      answerGridHidden: Boolean(document.querySelector("#feedbackBox .answer-grid")?.hidden),
+      answer: document.querySelector("#correctAnswer")?.textContent?.trim() || "",
+      trap: document.querySelector("#trapText")?.textContent?.trim() || "",
+      reference: document.querySelector("#bookRef")?.textContent?.trim() || "",
+      explanation: document.querySelector("#explainText")?.textContent?.trim() || "",
+      title: document.querySelector("#feedbackTitle")?.textContent?.trim() || ""
+    }));
+    assert.deepEqual(fiveExemptAnswerLock, {
+      answerGridHidden: true,
+      answer: "",
+      trap: "",
+      reference: "",
+      explanation: "解答を保存しました。正誤・正解肢・解説は45問終了後にまとめて表示します。途中で答え合わせはしません。",
+      title: "解答を記録しました"
+    });
+    await page.reload({ waitUntil: "networkidle" });
+    assert.match(await page.locator("#dailyQuestSource").textContent(), /45問・110分・正誤は終了後に採点/);
     page.once("dialog", (dialog) => dialog.accept());
     await page.evaluate(() => document.querySelector("#dailyQuestButton")?.click());
     await page.waitForFunction(() => !document.querySelector(".quest-card")?.classList.contains("is-mock"));
+    await openPassPanel(page);
     await page.locator("#examProfileSelect").selectOption("general");
     assert.equal((await stored(page)).state.examProfile, "general");
+    assert.match(await page.locator("#passTimeAllocation").textContent(), /50問演習は100分で一周、残り20分/);
 
     // Current-law proof is deliberately an explicit two-question set.  It
     // must start as a normal saved daily session so a second calendar day can

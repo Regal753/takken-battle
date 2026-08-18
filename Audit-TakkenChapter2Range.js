@@ -91,7 +91,7 @@ expectedSupplemental.forEach((id) => {
   } catch {
     issues.push(`${id}: invalid source URL`);
   }
-  if (host && !["elaws.e-gov.go.jp", "www.moj.go.jp"].includes(host)) {
+  if (host && !["laws.e-gov.go.jp", "www.moj.go.jp"].includes(host)) {
     issues.push(`${id}: non-official source host ${host}`);
   }
 });

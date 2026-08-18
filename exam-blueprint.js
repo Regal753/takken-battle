@@ -274,11 +274,11 @@
   const sources = {
     civil: {
       label: "民法",
-      url: "https://elaws.e-gov.go.jp/document?lawid=129AC0000000089"
+      url: "https://laws.e-gov.go.jp/law/129AC0000000089?occasion_date=20260401"
     },
     lease: {
       label: "借地借家法",
-      url: "https://elaws.e-gov.go.jp/document?lawid=403AC0000000090"
+      url: "https://laws.e-gov.go.jp/law/403AC0000000090?occasion_date=20260401"
     },
     condominium: {
       label: "区分所有法・令和8年改正",
@@ -290,59 +290,59 @@
     },
     cityPlanning: {
       label: "都市計画法",
-      url: "https://elaws.e-gov.go.jp/document?lawid=343AC0000000100"
+      url: "https://laws.e-gov.go.jp/law/343AC0000000100?occasion_date=20260401"
     },
     building: {
       label: "建築基準法",
-      url: "https://elaws.e-gov.go.jp/document?lawid=325AC0000000201"
+      url: "https://laws.e-gov.go.jp/law/325AC0000000201?occasion_date=20260401"
     },
     landUse: {
       label: "国土利用計画法",
-      url: "https://elaws.e-gov.go.jp/document?lawid=349AC0000000092"
+      url: "https://laws.e-gov.go.jp/law/349AC0000000092?occasion_date=20260401"
     },
     agricultural: {
       label: "農地法",
-      url: "https://elaws.e-gov.go.jp/document?lawid=327AC0000000229"
+      url: "https://laws.e-gov.go.jp/law/327AC0000000229?occasion_date=20260401"
     },
     readjustment: {
       label: "土地区画整理法",
-      url: "https://elaws.e-gov.go.jp/document?lawid=329AC0000000119"
+      url: "https://laws.e-gov.go.jp/law/329AC0000000119?occasion_date=20260401"
     },
     fill: {
       label: "宅地造成及び特定盛土等規制法",
-      url: "https://elaws.e-gov.go.jp/document?lawid=336AC0000000191"
+      url: "https://laws.e-gov.go.jp/law/336AC0000000191?occasion_date=20260401"
     },
     culturalProperty: {
       label: "文化財保護法",
-      url: "https://laws.e-gov.go.jp/law/325AC0100000214/"
+      url: "https://laws.e-gov.go.jp/law/325AC0100000214?occasion_date=20260401"
     },
     road: {
       label: "道路法",
-      url: "https://laws.e-gov.go.jp/law/327AC1000000180/"
+      url: "https://laws.e-gov.go.jp/law/327AC1000000180?occasion_date=20260401"
     },
     localTax: {
       label: "地方税法",
-      url: "https://elaws.e-gov.go.jp/document?lawid=325AC0000000226"
+      url: "https://laws.e-gov.go.jp/law/325AC0000000226?occasion_date=20260401"
     },
     registrationTax: {
       label: "登録免許税法",
-      url: "https://elaws.e-gov.go.jp/document?lawid=342AC0000000035"
+      url: "https://laws.e-gov.go.jp/law/342AC0000000035?occasion_date=20260401"
     },
     stampTax: {
       label: "印紙税法",
-      url: "https://elaws.e-gov.go.jp/document?lawid=342AC0000000023"
+      url: "https://laws.e-gov.go.jp/law/342AC0000000023?occasion_date=20260401"
     },
     incomeTax: {
       label: "所得税法",
-      url: "https://elaws.e-gov.go.jp/document?lawid=340AC0000000033"
+      url: "https://laws.e-gov.go.jp/law/340AC0000000033?occasion_date=20260401"
     },
     business: {
       label: "宅地建物取引業法",
-      url: "https://elaws.e-gov.go.jp/document?lawid=327AC1000000176"
+      url: "https://laws.e-gov.go.jp/law/327AC1000000176?occasion_date=20260401"
     },
     housingDefect: {
       label: "住宅瑕疵担保履行法",
-      url: "https://laws.e-gov.go.jp/law/419AC0000000066/"
+      url: "https://laws.e-gov.go.jp/law/419AC0000000066?occasion_date=20260401"
     },
     retio: {
       label: "RETIO 宅建試験の概要・公式問題",

@@ -5,19 +5,34 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const ROOT = __dirname;
-const EXPECTED_CACHE_VERSION = "20260816-pass-hardening-v30-1";
-// v30 adds the auditable official-topic repair map and stricter readiness
-// guards. This leaves under 5% headroom over the current 26-file runtime.
+const EXPECTED_CACHE_VERSION = "20260818-pass-corrections-v31-1";
+// v31 adds the auditable PWA runtime while keeping modest headroom over the
+// current 27-file script set.
 const MAX_PUBLIC_JS_BYTES = 1_275_000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
+  "pwa-runtime.js",
+  "service-worker.js",
   "scripts/validate-public.mjs",
   "scripts/verify-deployed-page.mjs",
+  "scripts/verify-deployed-browser.cjs",
   ".github/workflows/pages.yml"
 ];
 
 const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), "utf8");
 const html = read("index.html");
+
+assert.match(html, new RegExp(`manifest\\.webmanifest\\?v=${EXPECTED_CACHE_VERSION}`), "versioned manifest missing");
+assert.match(html, new RegExp(`pwa-runtime\\.js\\?v=${EXPECTED_CACHE_VERSION}`), "versioned PWA runtime missing");
+assert.match(read("service-worker.js"), new RegExp(`const VERSION = "${EXPECTED_CACHE_VERSION}"`), "service worker version missing");
+assert.match(read("service-worker.js"), /self\.clients\.claim\(\)/, "activated update must take control of the current page");
+assert.match(read("service-worker.js"), /IMMUTABLE_BY_PATH[\s\S]*requestUrl\.pathname/, "unversioned display assets must resolve to versioned precache entries");
+assert.match(read("pwa-runtime.js"), /controllerchange[\s\S]*reloadRequested[\s\S]*window\.location\.reload\(\)/, "explicit update must reload only after controller change");
+assert.match(read("pwa-runtime.js"), /TAKKEN_SKIP_WAITING/, "explicit update message missing");
+assert.match(read("pwa-runtime.js"), /registration\.waiting\.scriptURL[\s\S]*waitingVersion/, "update message must target the waiting worker's own version");
+for (const asset of ["grassland-route.webp", "contract-mimic.webp", "deadline-warden.webp", "law-citadel-boss.webp", "license-sentinel.webp", "notice-gargoyle.webp", "registry-sphinx.webp", "study-knight.webp", "vault-tortoise.webp"]) {
+  assert.match(read("service-worker.js"), new RegExp(asset.replace(".", "\\.")), `offline precache missing ${asset}`);
+}
 
 const attributeValue = (tag, name) => {
   const match = tag.match(new RegExp(`\\b${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)'|([^\\s>]+))`, "i"));

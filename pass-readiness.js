@@ -11,6 +11,12 @@
   const DEFAULT_DAILY_MINUTES = 90;
   const MIN_TIMED_MOCK_MINUTES = 30;
   const MIN_RETENTION_RATE = 2 / 3;
+  // Evidence is intentionally short-lived: a three-form streak must fit in a
+  // rolling 21 calendar-day window (inclusive, so a 20-day date difference).
+  // This prevents an old score from masking a current weakness.
+  const STABILITY_LATEST_MAX_AGE_DAYS = 14;
+  const STABILITY_WINDOW_DAYS = 21;
+  const CURRENT_LAW_ATTEMPT_MAX_AGE_DAYS = 14;
   const MS_PER_DAY = 24 * 60 * 60 * 1000;
   const DATE_KEY = /^(\d{4})-(\d{2})-(\d{2})$/;
   const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,3})?(?:Z|[+-]\d{2}:\d{2})$/;
@@ -99,14 +105,19 @@
     const sectionTargetsMet = profileSubjects(profile).every((subject) => scores[subject.key] >= subject.target);
     return { total, count, timed: true, formId, completedAt, completedAtMs: Date.parse(completedAt), dateKey: date, elapsedMinutes, sections: scores, sectionsMeasurable: true, sectionTargetsMet };
   }
-  function stabilityFrom(history, profile) {
+  function stabilityFrom(history, profile, todayKey) {
     const raw = Array.isArray(history) ? history : [], attempts = raw.map((entry) => normalizeTimedAttempt(entry, profile)).filter(Boolean).sort((a, b) => a.completedAtMs - b.completedAtMs);
     const recent = attempts.slice(-3), ids = new Set(recent.map((entry) => entry.formId)), days = new Set(recent.map((entry) => entry.dateKey));
     const chronological = recent.length === 3 && recent[0].completedAtMs < recent[1].completedAtMs && recent[1].completedAtMs < recent[2].completedAtMs;
     const diverse = ids.size === 3 && days.size === 3;
     const passedRecentCount = recent.filter((entry) => entry.total >= targetTotal(profile) && entry.sectionTargetsMet).length;
-    const stable = recent.length === 3 && chronological && diverse && passedRecentCount === 3;
-    return { suppliedCount: raw.length, validTimedCount: attempts.length, validTimed50Count: profile.questions === 50 ? attempts.length : 0, recent, requiredAttempts: 3, passedRecentCount, distinctFormCount: ids.size, distinctDayCount: days.size, chronological, stable, status: attempts.length < 3 ? "unmeasured" : stable ? "stable" : "unstable" };
+    const latest = recent[recent.length - 1], earliest = recent[0];
+    const latestAgeDays = latest ? daysBetween(latest.dateKey, todayKey) : null;
+    const latestRecentEnough = latestAgeDays !== null && latestAgeDays >= 0 && latestAgeDays <= STABILITY_LATEST_MAX_AGE_DAYS;
+    const windowSpanDays = earliest && latest ? daysBetween(earliest.dateKey, latest.dateKey) : null;
+    const withinRollingWindow = windowSpanDays !== null && windowSpanDays >= 0 && windowSpanDays < STABILITY_WINDOW_DAYS;
+    const stable = recent.length === 3 && chronological && diverse && passedRecentCount === 3 && latestRecentEnough && withinRollingWindow;
+    return { suppliedCount: raw.length, validTimedCount: attempts.length, validTimed50Count: profile.questions === 50 ? attempts.length : 0, recent, requiredAttempts: 3, passedRecentCount, distinctFormCount: ids.size, distinctDayCount: days.size, chronological, latestDayKey: latest ? latest.dateKey : "", latestAgeDays, latestMaxAgeDays: STABILITY_LATEST_MAX_AGE_DAYS, latestRecentEnough, windowSpanDays, rollingWindowDays: STABILITY_WINDOW_DAYS, withinRollingWindow, stable, status: attempts.length < 3 ? "unmeasured" : stable ? "stable" : "unstable" };
   }
   function normalizeGateAttempt(entry) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
@@ -120,11 +131,12 @@
     const raw = ownObject(input), attempts = (Array.isArray(raw.attempts) ? raw.attempts : []).map(normalizeGateAttempt).filter(Boolean).sort((a, b) => a.completedAtMs - b.completedAtMs);
     const recent = attempts.slice(-2), coverage = new Set(recent.flatMap((attempt) => attempt.clusters));
     const latest = recent[recent.length - 1], ageDays = latest ? daysBetween(latest.dateKey, todayKey) : null;
-    const recentEnough = ageDays !== null && ageDays >= 0 && ageDays <= 14;
+    const attemptAgeDays = recent.map((attempt) => daysBetween(attempt.dateKey, todayKey));
+    const recentEnough = attemptAgeDays.length === 2 && attemptAgeDays.every((ageDays) => ageDays !== null && ageDays >= 0 && ageDays <= CURRENT_LAW_ATTEMPT_MAX_AGE_DAYS);
     const consecutive = recent.length === 2 && recent[0].completedAtMs < recent[1].completedAtMs && recent[0].dateKey !== recent[1].dateKey;
     const covered = CURRENT_LAW_CLUSTERS.every((cluster) => coverage.has(cluster));
     const passed = consecutive && covered && recentEnough;
-    return { suppliedCount: Array.isArray(raw.attempts) ? raw.attempts.length : 0, validAttemptCount: attempts.length, requiredAttempts: 2, recent, requiredClusters: [...CURRENT_LAW_CLUSTERS], coveredClusters: [...coverage], latestDayKey: latest ? latest.dateKey : "", ageDays, recentEnough, consecutive, covered, passed, status: attempts.length < 2 ? "unmeasured" : passed ? "passed" : "failed" };
+    return { suppliedCount: Array.isArray(raw.attempts) ? raw.attempts.length : 0, validAttemptCount: attempts.length, requiredAttempts: 2, recent, requiredClusters: [...CURRENT_LAW_CLUSTERS], coveredClusters: [...coverage], latestDayKey: latest ? latest.dateKey : "", ageDays, attemptAgeDays, maxAttemptAgeDays: CURRENT_LAW_ATTEMPT_MAX_AGE_DAYS, recentEnough, consecutive, covered, passed, status: attempts.length < 2 ? "unmeasured" : passed ? "passed" : "failed" };
   }
   function median(values) { const sorted = [...values].sort((a, b) => a - b), mid = Math.floor(sorted.length / 2); return sorted.length ? (sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2) : null; }
   function capacityFrom(history, todayKey) {
@@ -158,7 +170,7 @@
     if (todayKey >= EXAM_DAY_KEY) return invalidResult("exam-window-closed", todayKey, dailyAvailableMinutes, profile);
     const activeSubjects = profileSubjects(profile), subjects = activeSubjects.map((subject) => normalizeSubject(subject, options.subjects)), invalidSubjects = subjects.filter((subject) => !subject.metricValid), unmeasuredSubjects = subjects.filter((subject) => subject.state === "unmeasured"), weakSubjects = subjects.filter((subject) => subject.weak);
     const knownRemainingContact = subjects.reduce((sum, subject) => sum + (subject.remainingContact ?? 0), 0), contactUnknown = subjects.some((subject) => subject.remainingContact === null), deadlineDelta = daysBetween(todayKey, FIRST_PASS_DEADLINE_KEY), firstPassWindowOpen = deadlineDelta !== null && deadlineDelta >= 0, firstPassDaysInclusive = firstPassWindowOpen ? deadlineDelta + 1 : 0, requiredContactsPerDay = !contactUnknown && firstPassDaysInclusive > 0 ? Math.ceil(knownRemainingContact / firstPassDaysInclusive) : null;
-    const mockHistory = stabilityFrom(options.mockHistory, profile), officialHistory = stabilityFrom(options.officialHistory, profile), currentLawGate = currentLawGateFrom(options.currentLawGate, todayKey), capacity = capacityFrom(options.studyMinutesHistory, todayKey), currentYearFreshness = currentYearFreshnessFrom(options.currentYearFreshness);
+    const mockHistory = stabilityFrom(options.mockHistory, profile, todayKey), officialHistory = stabilityFrom(options.officialHistory, profile, todayKey), currentLawGate = currentLawGateFrom(options.currentLawGate, todayKey), capacity = capacityFrom(options.studyMinutesHistory, todayKey), currentYearFreshness = currentYearFreshnessFrom(options.currentYearFreshness);
     const timed50 = { mock: mockHistory, official: officialHistory, baseStable: mockHistory.stable, currentLawGatePassed: currentLawGate.passed, stable: mockHistory.stable && currentLawGate.passed, status: mockHistory.stable && currentLawGate.passed ? "stable" : mockHistory.validTimedCount < 3 || currentLawGate.status === "unmeasured" ? "unmeasured" : "unstable" };
     const deadlinePassedWithWork = !firstPassWindowOpen && (!contactUnknown ? knownRemainingContact > 0 : unmeasuredSubjects.length > 0);
     const behind = dailyAvailableMinutes < 75 || deadlinePassedWithWork || capacity.status === "below-minimum";
@@ -166,7 +178,7 @@
     const urgent = behind || readinessBlocked || (firstPassWindowOpen && knownRemainingContact > 0 && firstPassDaysInclusive <= 7) || weakSubjects.length > 0;
     const status = invalidSubjects.length ? "invalid" : unmeasuredSubjects.length ? "unmeasured" : behind ? "behind" : urgent ? "urgent" : "on-track";
     const reason = invalidSubjects.length ? "invalid-subject-metric" : deadlinePassedWithWork ? "first-pass-deadline-passed" : dailyAvailableMinutes < 75 ? "daily-time-below-minimum" : capacity.status === "below-minimum" ? "observed-capacity-below-minimum" : unmeasuredSubjects.length ? "subject-unmeasured" : weakSubjects.length ? "weak-retention" : !mockHistory.stable ? "timed-stability-unverified" : !currentLawGate.passed ? "current-law-gate-unverified" : !capacity.verified ? "observed-capacity-unverified" : !currentYearFreshness.passed ? "current-year-freshness-unverified" : "within-plan";
-    return { valid: !invalidSubjects.length, reason, status, onTrack: status === "on-track", urgent, behind, todayKey, dailyAvailableMinutes, examDayKey: EXAM_DAY_KEY, lawBaselineDayKey: LAW_BASELINE_DAY_KEY, firstPassDeadlineKey: FIRST_PASS_DEADLINE_KEY, examProfile: profile, daysToExam: daysBetween(todayKey, EXAM_DAY_KEY), firstPass: { deadlineKey: FIRST_PASS_DEADLINE_KEY, daysRemainingInclusive: firstPassDaysInclusive, knownRemainingContact, contactUnknown, requiredContactsPerDay, deadlinePassedWithWork }, targets: { total: targetTotal(profile), questions: profile.questions, subjects: activeSubjects.map((subject) => ({ ...subject })) }, subjects, unmeasuredSubjectKeys: unmeasuredSubjects.map((subject) => subject.key), weakSubjectKeys: weakSubjects.map((subject) => subject.key), timed50, currentLawGate, capacity, currentYearFreshness, dailyPlan: buildDailyPlan(todayKey, dailyAvailableMinutes, profile), mockCadence: { startKey: todayKey <= FIRST_PASS_DEADLINE_KEY ? FIRST_PASS_DEADLINE_KEY : todayKey, frequency: "weekly", day: "Sunday", requiredMinutes: profile.minutes, stabilityRule: `異なるフォーム・JST日付の時間計測${profile.questions}問を3回連続で、合計${targetTotal(profile)}点以上かつ全科目目標以上。改正確認ゲート・当年資料の鮮度も必須。` } };
+    return { valid: !invalidSubjects.length, reason, status, onTrack: status === "on-track", urgent, behind, todayKey, dailyAvailableMinutes, examDayKey: EXAM_DAY_KEY, lawBaselineDayKey: LAW_BASELINE_DAY_KEY, firstPassDeadlineKey: FIRST_PASS_DEADLINE_KEY, examProfile: profile, daysToExam: daysBetween(todayKey, EXAM_DAY_KEY), firstPass: { deadlineKey: FIRST_PASS_DEADLINE_KEY, daysRemainingInclusive: firstPassDaysInclusive, knownRemainingContact, contactUnknown, requiredContactsPerDay, deadlinePassedWithWork }, targets: { total: targetTotal(profile), questions: profile.questions, subjects: activeSubjects.map((subject) => ({ ...subject })) }, subjects, unmeasuredSubjectKeys: unmeasuredSubjects.map((subject) => subject.key), weakSubjectKeys: weakSubjects.map((subject) => subject.key), timed50, currentLawGate, capacity, currentYearFreshness, dailyPlan: buildDailyPlan(todayKey, dailyAvailableMinutes, profile), mockCadence: { startKey: todayKey <= FIRST_PASS_DEADLINE_KEY ? FIRST_PASS_DEADLINE_KEY : todayKey, frequency: "weekly", day: "Sunday", requiredMinutes: profile.minutes, stabilityRule: `異なるフォーム・JST日付の時間計測${profile.questions}問を3回連続で、合計${targetTotal(profile)}点以上かつ全科目目標以上。最新は14日以内、3回全体は21日間以内（両端を含む）とする。改正確認2回も各14日以内、当年資料の鮮度も必須。` } };
   }
-  return { EXAM_DAY_KEY, LAW_BASELINE_DAY_KEY, FIRST_PASS_DEADLINE_KEY, DEFAULT_DAILY_MINUTES, MIN_TIMED_MOCK_MINUTES, MIN_RETENTION_RATE, SUBJECTS, EXAM_PROFILES, CURRENT_LAW_CLUSTERS, TARGET_TOTAL, QUESTION_TOTAL, validDayKey, dayKey, daysBetween, calculatePassReadiness };
+  return { EXAM_DAY_KEY, LAW_BASELINE_DAY_KEY, FIRST_PASS_DEADLINE_KEY, DEFAULT_DAILY_MINUTES, MIN_TIMED_MOCK_MINUTES, MIN_RETENTION_RATE, STABILITY_LATEST_MAX_AGE_DAYS, STABILITY_WINDOW_DAYS, CURRENT_LAW_ATTEMPT_MAX_AGE_DAYS, SUBJECTS, EXAM_PROFILES, CURRENT_LAW_CLUSTERS, TARGET_TOTAL, QUESTION_TOTAL, validDayKey, dayKey, daysBetween, calculatePassReadiness };
 });
