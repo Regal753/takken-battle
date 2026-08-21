@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20260818-pass-corrections-v31-1";
+  const VERSION = "20260822-cross-device-recovery-v32-1";
   const BANNER_ID = "pwaUpdateNotice";
   let reloadRequested = false;
 

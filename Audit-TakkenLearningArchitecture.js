@@ -88,7 +88,7 @@ if (app.includes("JULY_GATE_DEADLINE") || html.includes("7/31学習ゲート")) 
 requireText(html, "本文＋読後問題", "foundation-first mission label is missing");
 requireText(html, "8/31まで高速一周", "8/31 fast-first-pass copy is missing");
 requireText(html, "内部本試験形式は診断として今すぐ利用可", "profile-aware internal diagnostic availability copy is missing");
-requireText(html, "20260818-pass-corrections-v31-1", "pass readiness cache version is missing");
+requireText(html, "20260822-cross-device-recovery-v32-1", "pass readiness cache version is missing");
 requireText(html, '<details class="quest-card"', "review-10 menu must be collapsed by default");
 requireText(html, 'id="nextButton"', "inline next-question button is missing");
 requireText(css, ".quest-card:not([open]) > .quest-card-body", "collapsed review menu rule is missing");

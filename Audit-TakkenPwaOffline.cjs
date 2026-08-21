@@ -7,7 +7,9 @@ const baseUrl = process.env.TAKKEN_BASE_URL || "http://127.0.0.1:8783/";
 const chromePath = process.env.TAKKEN_CHROME_PATH || undefined;
 
 (async () => {
-  const browser = await chromium.launch({ headless: true, executablePath: chromePath });
+  const browser = await chromium.launch(chromePath
+    ? { headless: true, executablePath: chromePath }
+    : { headless: true, channel: "chrome" });
   const context = await browser.newContext();
   const page = await context.newPage();
   await page.goto(baseUrl, { waitUntil: "networkidle" });

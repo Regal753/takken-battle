@@ -4,6 +4,7 @@
 const fs = require("fs");
 const path = require("path");
 const { chromium } = require("playwright");
+const transfer = require("./save-transfer.js");
 
 const baseUrl = process.env.TAKKEN_BASE_URL || "http://127.0.0.1:8783/";
 const screenshotDir = process.env.TAKKEN_SCREENSHOT_DIR || "";
@@ -934,6 +935,7 @@ async function main() {
         };
       });
       localStorage.setItem(storageId, JSON.stringify({
+        stateSchemaVersion: 10,
         index: 0,
         attempts: 100,
         correct: 96,
@@ -1180,25 +1182,46 @@ async function main() {
     const handoffNamespace = `handoff${Date.now().toString(36)}`;
     const handoffStorageId = `takken-battle-study-clean-v2-hard-review-${handoffNamespace}`;
     await handoffPage.addInitScript(({ storageId }) => {
-      localStorage.setItem(storageId, JSON.stringify({
-        index: 0,
-        attempts: 65,
-        correct: 50,
-        totalXp: 4631,
-        progressionVersion: 4,
-        examContentVersion: 1,
-        crystals: 1160,
-        centralProgress: { answers: 162, correct: 120, wrong: 42 },
-        marked: { q127: true },
-        questionStats: {
-          q127: { attempts: 3, correct: 1, wrong: 2, lastStep: 65 }
-        }
-      }));
+      const marker = `${storageId}-seeded`;
+      if (!sessionStorage.getItem(marker)) {
+        localStorage.setItem(storageId, JSON.stringify({
+          stateSchemaVersion: 10,
+          index: 0,
+          attempts: 65,
+          correct: 50,
+          totalXp: 4631,
+          progressionVersion: 4,
+          examContentVersion: 1,
+          crystals: 1160,
+          centralProgress: { answers: 162, correct: 120, wrong: 42 },
+          marked: { q127: true },
+          questionStats: {
+            q127: { attempts: 3, correct: 1, wrong: 2, lastStep: 65 }
+          }
+        }));
+        sessionStorage.setItem(marker, "1");
+      }
       Object.defineProperty(navigator, "share", {
         configurable: true,
         value: async (payload) => {
+          if (payload.files?.length) {
+            const file = payload.files[0];
+            window.__takkenSharedFilePayload = {
+              name: file.name,
+              type: file.type,
+              size: file.size,
+              text: await file.text(),
+              title: payload.title,
+              shareText: payload.text
+            };
+            return;
+          }
           window.__takkenSharedPayload = payload;
         }
+      });
+      Object.defineProperty(navigator, "canShare", {
+        configurable: true,
+        value: (payload) => Boolean(payload?.files?.length)
       });
     }, { storageId: handoffStorageId });
     const handoffSenderUrl = new URL(baseUrl);
@@ -1207,7 +1230,195 @@ async function main() {
       waitUntil: "domcontentloaded",
       timeout: 15000
     });
+    const transferFixture = await handoffPage.evaluate((storageId) => {
+      const saved = JSON.parse(localStorage.getItem(storageId) || "{}");
+      const bank = window.TAKKEN_BUSINESS_FULLSCORE_BANK;
+      const ids = bank.QUESTIONS.slice(0, 20).map((question) => question.id);
+      const historyIds = ids.slice(0, 15);
+      saved.stateSchemaVersion = 10;
+      saved.attempts = 117;
+      saved.correct = 99;
+      saved.practicalDrill = {
+        ...saved.practicalDrill,
+        bankId: "business-fullscore",
+        bankVersion: bank.VERSION,
+        presentationKey: "2026-08-22:transfer-audit",
+        planMode: "knock",
+        knockPreset: { mode: "mixed", size: 20, unitId: "", lastPresentationOffset: null },
+        stage: "active",
+        scope: "business",
+        unitId: "",
+        sessionSize: 20,
+        sessionIds: ids,
+        queue: ids,
+        position: 15,
+        currentAttempt: null,
+        retryIds: [],
+        history: Object.fromEntries(historyIds.map((id, index) => [id, {
+          attempts: 1,
+          correct: index < 12 ? 1 : 0,
+          wrong: index < 12 ? 0 : 1,
+          uncertain: 0,
+          lastSelected: index % 4,
+          lastCorrect: index < 12,
+          lastConfidence: index < 12 ? "confident" : "wrong",
+          lastAnsweredAt: `2026-08-21T0${index % 10}:00:00+09:00`,
+          reviewLevel: index < 12 ? 1 : 0,
+          masteryDueKey: "",
+          confidentDayKeys: index < 12 ? ["2026-08-21"] : []
+        }])),
+        attempts: 15,
+        correctAttempts: 12,
+        sessionsCompleted: 0,
+        sessionStartedAt: "2026-08-21T21:00:00+09:00",
+        completedAt: ""
+      };
+      localStorage.setItem(storageId, JSON.stringify(saved));
+      return { ids, historyIds };
+    }, handoffStorageId);
+    await handoffPage.reload({ waitUntil: "domcontentloaded" });
     await handoffPage.locator(".public-mode-note > summary").click();
+    await capture(handoffPage, "save-transfer-mobile.png");
+    await handoffPage.locator("#saveExportButton").click();
+    await handoffPage.waitForFunction(() => Boolean(window.__takkenSharedFilePayload?.text));
+    const sharedFile = await handoffPage.evaluate(() => window.__takkenSharedFilePayload);
+    const sharedFilePackage = transfer.validatePackage(JSON.parse(sharedFile.text));
+    if (
+      !/^takken-battle-save-\d{8}\.json$/.test(sharedFile.name) ||
+      sharedFile.type !== "application/json" ||
+      sharedFilePackage.state.stateSchemaVersion !== 10 ||
+      sharedFilePackage.state.attempts !== 117 ||
+      sharedFilePackage.state.correct !== 99 ||
+      sharedFilePackage.state.practicalDrill?.bankId !== "business-fullscore" ||
+      sharedFilePackage.state.practicalDrill?.stage !== "active" ||
+      sharedFilePackage.state.practicalDrill?.position !== 15 ||
+      Object.keys(sharedFilePackage.state.practicalDrill?.history || {}).length !== 15 ||
+      !sharedFile.shareText.includes("端末117解答・正解99")
+    ) {
+      throw new Error(`JSON backup share invalid: ${JSON.stringify({
+        file: { name: sharedFile.name, type: sharedFile.type, size: sharedFile.size },
+        summary: sharedFile.shareText,
+        state: {
+          schema: sharedFilePackage.state.stateSchemaVersion,
+          attempts: sharedFilePackage.state.attempts,
+          correct: sharedFilePackage.state.correct,
+          practicalDrill: sharedFilePackage.state.practicalDrill
+        }
+      })}`);
+    }
+    const fileShareStatus = ((await handoffPage.locator("#saveTransferStatus").textContent()) || "").trim();
+    if (!fileShareStatus.includes("JSONバックアップを共有しました") || !fileShareStatus.includes("端末117解答・正解99")) {
+      throw new Error(`JSON backup share status missing: ${fileShareStatus}`);
+    }
+    await handoffPage.evaluate(() => {
+      window.__takkenUnexpectedShareCalls = 0;
+      Object.defineProperty(navigator, "canShare", {
+        configurable: true,
+        value: () => false
+      });
+      Object.defineProperty(navigator, "share", {
+        configurable: true,
+        value: async () => {
+          window.__takkenUnexpectedShareCalls += 1;
+        }
+      });
+    });
+    const directDownloadPromise = handoffPage.waitForEvent("download");
+    await handoffPage.locator("#saveExportButton").click();
+    const directDownload = await directDownloadPromise;
+    const directDownloadAudit = await handoffPage.evaluate(() => ({
+      shareCalls: window.__takkenUnexpectedShareCalls,
+      status: document.querySelector("#saveTransferStatus")?.textContent?.trim() || "",
+      button: document.querySelector("#saveExportButton")?.textContent?.trim() || ""
+    }));
+    if (
+      !/^takken-battle-save-\d{8}\.json$/.test(directDownload.suggestedFilename()) ||
+      directDownloadAudit.shareCalls !== 0 ||
+      !directDownloadAudit.status.includes("JSONバックアップを保存しました") ||
+      directDownloadAudit.button !== "JSON保存・共有"
+    ) {
+      throw new Error(`JSON direct download fallback invalid: ${JSON.stringify({
+        filename: directDownload.suggestedFilename(),
+        ...directDownloadAudit
+      })}`);
+    }
+    await handoffPage.evaluate(() => {
+      Object.defineProperty(navigator, "canShare", {
+        configurable: true,
+        value: (payload) => Boolean(payload?.files?.length)
+      });
+      Object.defineProperty(navigator, "share", {
+        configurable: true,
+        value: async () => {
+          const error = new Error("share blocked");
+          Object.defineProperty(error, "name", { value: "NotAllowedError" });
+          throw error;
+        }
+      });
+    });
+    await handoffPage.locator("#saveExportButton").click();
+    const retryPrompt = await handoffPage.evaluate(() => ({
+      status: document.querySelector("#saveTransferStatus")?.textContent?.trim() || "",
+      error: document.querySelector("#saveTransferStatus")?.classList.contains("is-error"),
+      button: document.querySelector("#saveExportButton")?.textContent?.trim() || ""
+    }));
+    if (
+      !retryPrompt.status.includes("もう一度") ||
+      !retryPrompt.error ||
+      retryPrompt.button !== "JSONをダウンロード"
+    ) {
+      throw new Error(`JSON retry prompt invalid: ${JSON.stringify(retryPrompt)}`);
+    }
+    const retryDownloadPromise = handoffPage.waitForEvent("download");
+    await handoffPage.locator("#saveExportButton").click();
+    const retryDownload = await retryDownloadPromise;
+    const retryDownloadAudit = await handoffPage.evaluate(() => ({
+      status: document.querySelector("#saveTransferStatus")?.textContent?.trim() || "",
+      error: document.querySelector("#saveTransferStatus")?.classList.contains("is-error"),
+      button: document.querySelector("#saveExportButton")?.textContent?.trim() || ""
+    }));
+    if (
+      !/^takken-battle-save-\d{8}\.json$/.test(retryDownload.suggestedFilename()) ||
+      !retryDownloadAudit.status.includes("JSONバックアップを保存しました") ||
+      retryDownloadAudit.error ||
+      retryDownloadAudit.button !== "JSON保存・共有"
+    ) {
+      throw new Error(`JSON retry download invalid: ${JSON.stringify({
+        filename: retryDownload.suggestedFilename(),
+        ...retryDownloadAudit
+      })}`);
+    }
+    await handoffPage.evaluate(() => {
+      Object.defineProperty(navigator, "share", {
+        configurable: true,
+        value: async () => {
+          const error = new Error("share cancelled");
+          Object.defineProperty(error, "name", { value: "AbortError" });
+          throw error;
+        }
+      });
+    });
+    await handoffPage.locator("#saveExportButton").click();
+    const cancelledShare = await handoffPage.evaluate(() => ({
+      status: document.querySelector("#saveTransferStatus")?.textContent?.trim() || "",
+      error: document.querySelector("#saveTransferStatus")?.classList.contains("is-error"),
+      button: document.querySelector("#saveExportButton")?.textContent?.trim() || ""
+    }));
+    if (
+      !cancelledShare.status.includes("キャンセルしました") ||
+      cancelledShare.error ||
+      cancelledShare.button !== "JSON保存・共有"
+    ) {
+      throw new Error(`JSON share cancellation invalid: ${JSON.stringify(cancelledShare)}`);
+    }
+    await handoffPage.evaluate(() => {
+      Object.defineProperty(navigator, "share", {
+        configurable: true,
+        value: async (payload) => {
+          window.__takkenSharedPayload = payload;
+        }
+      });
+    });
     await handoffPage.locator("#saveShareButton").click();
     await handoffPage.waitForFunction(() => Boolean(window.__takkenSharedPayload?.url));
     const sharedPayload = await handoffPage.evaluate(() => window.__takkenSharedPayload);
@@ -1219,7 +1430,7 @@ async function main() {
       throw new Error(`Manual handoff payload invalid: ${JSON.stringify(sharedPayload)}`);
     }
     const senderStatus = ((await handoffPage.locator("#saveTransferStatus").textContent()) || "").trim();
-    if (!senderStatus.includes("共有しました")) {
+    if (!senderStatus.includes("共有しました") || !senderStatus.includes("端末117解答・正解99")) {
       throw new Error(`Manual handoff sender status missing: ${senderStatus}`);
     }
     await handoffPage.evaluate(() => {
@@ -1270,11 +1481,18 @@ async function main() {
       return {
         hash: window.location.hash,
         attempts: saved.attempts,
+        correct: saved.correct,
+        schema: saved.stateSchemaVersion,
         totalXp: saved.totalXp,
         crystals: saved.crystals,
         centralAnswers: saved.centralProgress?.answers,
         legacyWeakKept: Boolean(saved.marked?.q127),
         legacyStatsKept: Number(saved.questionStats?.q127?.attempts) || 0,
+        practicalBank: saved.practicalDrill?.bankId,
+        practicalStage: saved.practicalDrill?.stage,
+        practicalPosition: saved.practicalDrill?.position,
+        practicalSessionIds: saved.practicalDrill?.sessionIds?.length || 0,
+        practicalHistory: Object.keys(saved.practicalDrill?.history || {}).length,
         status: document.querySelector("#saveTransferStatus")?.textContent?.trim() || "",
         overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth
       };
@@ -1283,12 +1501,19 @@ async function main() {
     await handoffContext.close();
     if (
       handoff.hash ||
-      handoff.attempts !== 65 ||
+      handoff.attempts !== 117 ||
+      handoff.correct !== 99 ||
+      handoff.schema !== 10 ||
       handoff.totalXp !== 4631 ||
       handoff.crystals !== 1160 ||
       handoff.centralAnswers !== 162 ||
       !handoff.legacyWeakKept ||
       handoff.legacyStatsKept !== 3 ||
+      handoff.practicalBank !== "business-fullscore" ||
+      handoff.practicalStage !== "active" ||
+      handoff.practicalPosition !== 15 ||
+      handoff.practicalSessionIds !== transferFixture.ids.length ||
+      handoff.practicalHistory !== transferFixture.historyIds.length ||
       handoff.overflow > 1 ||
       receiverRequests.some((urlValue) => urlValue.includes("save=") || urlValue.includes("savegz="))
     ) {

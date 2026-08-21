@@ -2677,7 +2677,9 @@
     const contacted = Object.values(stats).filter((item) =>
       Math.max(Number(item?.attempts) || 0, Number(item?.centralAttempts) || 0) > 0
     ).length;
-    return `${contacted}問接触・端末${Number(parsed.state.attempts) || 0}解答`;
+    const attempts = Math.max(0, Number(parsed.state.attempts) || 0);
+    const correct = Math.min(attempts, Math.max(0, Number(parsed.state.correct) || 0));
+    return `${contacted}問接触・端末${attempts}解答・正解${correct}`;
   }
 
   function importSavePackage(input, sourceLabel = "セーブファイル") {
@@ -2735,31 +2737,108 @@
     return true;
   }
 
-  function downloadSaveBackup() {
-    try {
-      const savePackage = SAVE_TRANSFER.createSavePackage(state);
-      const blob = new Blob([JSON.stringify(savePackage, null, 2)], {
-        type: "application/json;charset=utf-8"
-      });
-      const link = document.createElement("a");
-      const day = todayKey().replace(/-/g, "");
-      const objectUrl = URL.createObjectURL(blob);
-      link.href = objectUrl;
-      link.download = `takken-battle-save-${day}.json`;
-      document.body.append(link);
-      link.click();
-      link.remove();
-      window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
-      state.saveMeta = {
-        lastExportedAt: new Date().toISOString(),
-        lastExportHash: String(savePackage.integrity?.value || "")
-      };
-      saveState();
+  let pendingSaveBackupDownload = null;
+
+  function setSaveBackupDownloadPending(pending) {
+    if (!elements.saveExportButton) return;
+    elements.saveExportButton.textContent = pending ? "JSONをダウンロード" : "JSON保存・共有";
+  }
+
+  function createSaveBackupAsset() {
+    const savePackage = SAVE_TRANSFER.createSavePackage(state);
+    const json = JSON.stringify(savePackage, null, 2);
+    const fileName = `takken-battle-save-${todayKey().replace(/-/g, "")}.json`;
+    const mimeType = "application/json";
+    const blob = new Blob([json], { type: `${mimeType};charset=utf-8` });
+    const file = typeof File === "function"
+      ? new File([json], fileName, { type: mimeType, lastModified: Date.now() })
+      : null;
+    return { savePackage, blob, file, fileName };
+  }
+
+  function recordSaveBackup(savePackage, actionLabel) {
+    state.saveMeta = {
+      lastExportedAt: new Date().toISOString(),
+      lastExportHash: String(savePackage.integrity?.value || "")
+    };
+    if (!saveState()) {
       setSaveTransferStatus(
-        `セーブのバックアップを保存しました（照合 ${state.saveMeta.lastExportHash || "なし"}）。`
+        `${actionLabel}。JSON本体は有効ですが、端末内のバックアップ日時を記録できませんでした。`,
+        true
       );
+      return false;
+    }
+    setSaveTransferStatus(
+      `${actionLabel}：${savePackageSummary(savePackage)}（照合 ${state.saveMeta.lastExportHash || "なし"}）。`
+    );
+    return true;
+  }
+
+  function downloadSaveBackupAsset({ blob, fileName }) {
+    const link = document.createElement("a");
+    const objectUrl = URL.createObjectURL(blob);
+    link.href = objectUrl;
+    link.download = fileName;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  }
+
+  async function exportSaveBackup() {
+    try {
+      if (pendingSaveBackupDownload) {
+        const pending = pendingSaveBackupDownload;
+        pendingSaveBackupDownload = null;
+        setSaveBackupDownloadPending(false);
+        downloadSaveBackupAsset(pending);
+        recordSaveBackup(pending.savePackage, "JSONバックアップを保存しました");
+        return;
+      }
+      const asset = createSaveBackupAsset();
+      let canShareFile = false;
+      if (asset.file && typeof navigator.share === "function" && typeof navigator.canShare === "function") {
+        try {
+          canShareFile = navigator.canShare({ files: [asset.file] });
+        } catch {
+          canShareFile = false;
+        }
+      }
+      if (canShareFile) {
+        try {
+          await navigator.share({
+            title: "宅建バトル JSONバックアップ",
+            text: `本人用の宅建バトルセーブです（${savePackageSummary(asset.savePackage)}）。`,
+            files: [asset.file]
+          });
+          pendingSaveBackupDownload = null;
+          setSaveBackupDownloadPending(false);
+          recordSaveBackup(asset.savePackage, "JSONバックアップを共有しました");
+          return;
+        } catch (error) {
+          if (error?.name === "AbortError") {
+            pendingSaveBackupDownload = null;
+            setSaveBackupDownloadPending(false);
+            setSaveTransferStatus("JSONバックアップの共有をキャンセルしました。");
+            return;
+          }
+          pendingSaveBackupDownload = asset;
+          setSaveBackupDownloadPending(true);
+          setSaveTransferStatus(
+            "JSON共有を開始できませんでした。もう一度「JSONをダウンロード」を押して保存してください。",
+            true
+          );
+          return;
+        }
+      }
+      downloadSaveBackupAsset(asset);
+      pendingSaveBackupDownload = null;
+      setSaveBackupDownloadPending(false);
+      recordSaveBackup(asset.savePackage, "JSONバックアップを保存しました");
     } catch (error) {
-      setSaveTransferStatus(error?.message || "バックアップに失敗しました。", true);
+      pendingSaveBackupDownload = null;
+      setSaveBackupDownloadPending(false);
+      setSaveTransferStatus(error?.message || "JSONバックアップに失敗しました。", true);
     }
   }
 
@@ -2788,14 +2867,15 @@
     try {
       const savePackage = SAVE_TRANSFER.createSavePackage(state);
       const transferUrl = await SAVE_TRANSFER.createCompressedTransferUrl(savePackage, window.location.href);
+      const summary = savePackageSummary(savePackage);
       if (typeof navigator.share === "function") {
         try {
           await navigator.share({
             title: "宅建バトル セーブ引継ぎ",
-            text: "本人用の宅建バトル引継ぎリンクです。次の端末で開いてください。",
+            text: `本人用の宅建バトル引継ぎリンクです（${summary}）。次の端末で開いてください。`,
             url: transferUrl
           });
-          setSaveTransferStatus("本人用引継ぎリンクを共有しました。");
+          setSaveTransferStatus(`本人用引継ぎリンクを共有しました：${summary}。`);
           return;
         } catch (error) {
           if (error?.name === "AbortError") {
@@ -2805,7 +2885,7 @@
         }
       }
       await copyTransferUrl(transferUrl);
-      setSaveTransferStatus("本人用引継ぎリンクをコピーしました。次の端末で開いてください。");
+      setSaveTransferStatus(`本人用引継ぎリンクをコピーしました：${summary}。次の端末で開いてください。`);
     } catch (error) {
       setSaveTransferStatus(error?.message || "引継ぎリンクを作れませんでした。", true);
     }
@@ -11836,7 +11916,7 @@
     elements.sprintButton?.addEventListener("click", toggleSprint);
     elements.codexBriefButton?.addEventListener("click", requestCodexBrief);
     elements.armoryButton?.addEventListener("click", forgeNextArmoryRank);
-    elements.saveExportButton?.addEventListener("click", downloadSaveBackup);
+    elements.saveExportButton?.addEventListener("click", exportSaveBackup);
     elements.saveShareButton?.addEventListener("click", shareSaveTransfer);
     elements.saveRestorePreviousButton?.addEventListener("click", restorePreviousSave);
     elements.saveImportButton?.addEventListener("click", () => elements.saveImportInput?.click());
