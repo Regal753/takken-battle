@@ -564,6 +564,7 @@ async function installFullScoreProofFixture(page, mode) {
     await page.reload({ waitUntil: "networkidle" });
     await waitForApp(page);
     await page.locator("#officialDrillOpenButton").click();
+    await page.locator("#officialDrillPanel").waitFor({ state: "visible" });
     assert.equal(await page.locator("#officialDrillPanel").isVisible(), true);
     const dailyFailurePageCount = context.pages().length;
     await injectPrimarySaveFailure(page);
