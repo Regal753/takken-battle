@@ -251,6 +251,10 @@ async function runOfficialExamScenario(browser, baseUrl) {
   );
 
   await page.evaluate(() => {
+    Object.defineProperty(navigator, "canShare", {
+      configurable: true,
+      value: () => false
+    });
     const originalClick = HTMLAnchorElement.prototype.click;
     HTMLAnchorElement.prototype.click = function captureBackupClick() {
       window.__takkenBackupClick = {

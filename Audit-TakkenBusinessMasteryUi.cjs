@@ -251,11 +251,20 @@ async function installOfficialUnlockFixture(page, masteryMode = "learning") {
     earlier.setDate(earlier.getDate() - 2);
     const previous = new Date(now);
     previous.setDate(previous.getDate() - 1);
-    const dayKey = (value) => [
-      value.getFullYear(),
-      String(value.getMonth() + 1).padStart(2, "0"),
-      String(value.getDate()).padStart(2, "0")
-    ].join("-");
+    const jstDateFormatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Tokyo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    });
+    const dayKey = (value) => {
+      const parts = Object.fromEntries(
+        jstDateFormatter.formatToParts(value)
+          .filter((part) => part.type !== "literal")
+          .map((part) => [part.type, part.value])
+      );
+      return `${parts.year}-${parts.month}-${parts.day}`;
+    };
     state.questionStats = {};
     baseIds.forEach((id) => {
       state.questionStats[id] = {
@@ -349,11 +358,20 @@ async function installDailyDrillReadyFixture(page) {
     earlier.setDate(earlier.getDate() - 2);
     const previous = new Date(now);
     previous.setDate(previous.getDate() - 1);
-    const dayKey = (value) => [
-      value.getFullYear(),
-      String(value.getMonth() + 1).padStart(2, "0"),
-      String(value.getDate()).padStart(2, "0")
-    ].join("-");
+    const jstDateFormatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Tokyo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    });
+    const dayKey = (value) => {
+      const parts = Object.fromEntries(
+        jstDateFormatter.formatToParts(value)
+          .filter((part) => part.type !== "literal")
+          .map((part) => [part.type, part.value])
+      );
+      return `${parts.year}-${parts.month}-${parts.day}`;
+    };
     const planIds = allIds.slice(0, 10);
     allIds.forEach((id) => {
       const answeredNow = planIds.includes(id);
@@ -519,7 +537,10 @@ async function installFullScoreProofFixture(page, mode) {
 (async () => {
   const local = await startStaticServer(process.cwd());
   const browser = await chromium.launch({ channel: "chrome", headless: true });
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const page = await browser.newPage({
+    viewport: { width: 390, height: 844 },
+    timezoneId: "Asia/Tokyo"
+  });
   const context = page.context();
   const errors = [];
   page.on("pageerror", (error) => errors.push(`page: ${error.message}`));
@@ -888,7 +909,10 @@ async function installFullScoreProofFixture(page, mode) {
     await waitForApp(page);
     assert.equal(await page.locator("#businessMasteryStatus").textContent(), "満点圏（アプリ内判定）");
 
-    const dailyRaceContext = await browser.newContext({ viewport: { width: 390, height: 844 } });
+    const dailyRaceContext = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      timezoneId: "Asia/Tokyo"
+    });
     const dailyRaceOwner = await dailyRaceContext.newPage();
     const dailyRaceUrl = reviewUrl(local.baseUrl);
     await dailyRaceOwner.goto(dailyRaceUrl, { waitUntil: "networkidle" });
