@@ -251,11 +251,20 @@ async function installOfficialUnlockFixture(page, masteryMode = "learning") {
     earlier.setDate(earlier.getDate() - 2);
     const previous = new Date(now);
     previous.setDate(previous.getDate() - 1);
-    const dayKey = (value) => [
-      value.getFullYear(),
-      String(value.getMonth() + 1).padStart(2, "0"),
-      String(value.getDate()).padStart(2, "0")
-    ].join("-");
+    const jstDateFormatter = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Asia/Tokyo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    });
+    const dayKey = (value) => {
+      const parts = Object.fromEntries(
+        jstDateFormatter.formatToParts(value)
+          .filter((part) => part.type !== "literal")
+          .map((part) => [part.type, part.value])
+      );
+      return `${parts.year}-${parts.month}-${parts.day}`;
+    };
     state.questionStats = {};
     baseIds.forEach((id) => {
       state.questionStats[id] = {
