@@ -16,8 +16,8 @@
 
   // Answer/presentation compatibility version. Explanation-only releases keep
   // this value so an already-recorded currentAttempt survives an app update.
-  const VERSION = 2;
-  const QUALITY_VERSION = 3;
+  const VERSION = 3;
+  const QUALITY_VERSION = 4;
   const kana = Object.freeze(["ア", "イ", "ウ", "エ"]);
   const countLabels = Object.freeze(["一つ", "二つ", "三つ", "四つ"]);
   const formatLabels = Object.freeze({

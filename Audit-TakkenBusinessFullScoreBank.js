@@ -229,8 +229,8 @@ assert.throws(
   "bank must fail closed when the supplement is invalid"
 );
 
-assert.equal(bank.VERSION, 2, "explanation-only updates must retain answer compatibility");
-assert.equal(bank.QUALITY_VERSION, 3, "deep explanation content version");
+assert.equal(bank.VERSION, 3, "explanation-only updates must retain the v32 answer compatibility version");
+assert.equal(bank.QUALITY_VERSION, 4, "deep explanation content version");
 assert.equal(bank.LEGAL_BASELINE, blueprint.legalBaseline);
 assert.equal(bank.QUESTIONS.length, 134);
 assert.equal(Object.keys(bank.QUESTIONS_BY_ID).length, 134);
@@ -384,7 +384,7 @@ for (const question of bank.QUESTIONS) {
   assert.equal(question.unitLabel, unitById[question.unitId].label, `${question.id}: unit label`);
   assert.equal(question.unitPage, unitById[question.unitId].page, `${question.id}: unit page`);
   assert.equal(question.legalBaseline, blueprint.legalBaseline, `${question.id}: legal baseline`);
-  assert.equal(question.qualityVersion, 3, `${question.id}: quality version`);
+  assert.equal(question.qualityVersion, 4, `${question.id}: quality version`);
   assert.ok(Object.hasOwn(expectedFormats, question.formatKey), `${question.id}: known format`);
   assert.equal(question.format, bank.FORMAT_LABELS[question.formatKey], `${question.id}: format label`);
   assert.equal(question.choices.length, 4, `${question.id}: four choices`);

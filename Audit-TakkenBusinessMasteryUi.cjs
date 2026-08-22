@@ -282,16 +282,16 @@ async function installAnsweredV32FullScoreFixture(page) {
     );
     const state = JSON.parse(localStorage.getItem(key));
     const bank = window.TAKKEN_BUSINESS_FULLSCORE_BANK;
-    if (bank.VERSION !== 2) throw new Error("v32 answer-compatibility version must remain 2");
+    if (bank.VERSION !== 3) throw new Error("v32 answer-compatibility version must remain 3");
     const question = bank.QUESTIONS[0];
-    const presentationKey = "2026-08-21:bank-2";
+    const presentationKey = "2026-08-21:bank-3";
     const presented = bank.presentQuestion(question, presentationKey);
     const answeredAt = "2026-08-21T20:00:00+09:00";
     const previous = state.practicalDrill;
     state.practicalDrill = {
       ...previous,
       bankId: "business-fullscore",
-      bankVersion: 2,
+      bankVersion: 3,
       presentationKey,
       stage: "active",
       scope: "business",
@@ -736,7 +736,7 @@ async function installFullScoreProofFixture(page, mode) {
     await page.reload({ waitUntil: "networkidle" });
     await waitForApp(page);
     let compatibilitySaved = await readSavedState(page);
-    assert.equal(compatibilitySaved.practicalDrill.bankVersion, 2);
+    assert.equal(compatibilitySaved.practicalDrill.bankVersion, 3);
     assert.equal(compatibilitySaved.practicalDrill.currentAttempt?.id, answeredV32.id);
     assert.equal(compatibilitySaved.practicalDrill.currentAttempt?.selected, answeredV32.selected);
     assert.equal(compatibilitySaved.practicalDrill.history[answeredV32.id].attempts, 1);
