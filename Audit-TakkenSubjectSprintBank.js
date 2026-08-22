@@ -17,6 +17,11 @@ const expectedSourceIds = Object.freeze({
   other: ["o001","o002","o003","o004","o005","o006","o007","o008","o009","o010","o101","o102"]
 });
 const expectedTotal = Object.values(expectedSourceIds).flat().length;
+function countPromptStatements(source) {
+  return String(source.text || "").split(/\r?\n/).slice(1)
+    .map((line) => line.match(/^\s*[アイウエ]\s+(.+)$/)?.[1]?.trim())
+    .filter(Boolean);
+}
 assert.equal(bank.VERSION, 2, "bank version");
 assert.equal(bank.LEGAL_BASELINE, "2026-04-01", "legal baseline");
 assert.strictEqual(window.TAKKEN_SUBJECT_SPRINT_BANK, bank, "browser/CommonJS identity");
@@ -41,13 +46,17 @@ for (const question of bank.QUESTIONS) {
   assert.strictEqual(question.choices, source.choices, `${question.id}: reuses choices without stale copy`);
   assert.equal(question.answer, source.answer, `${question.id}: answer traceability`);
   assert.equal(question.format, source.format, `${question.id}: format traceability`);
+  assert.deepEqual(question.statementExplanations, source.choiceExplanations, `${question.id}: source-statement explanations are explicit`);
   assert.equal(question.legalBaseline, "2026-04-01", `${question.id}: legal baseline`);
   assert.match(question.sourceUrl, /^https:\/\//, `${question.id}: official source URL`);
   assert.ok(question.tag.length >= 2 && question.diagnosticTags.length >= 1, `${question.id}: topic routing`);
   assert.equal(question.sourceFacts.length, 4, `${question.id}: four source facts`);
   question.sourceFacts.forEach((fact, index) => {
     assert.equal(fact.key, `${source.id}:${index}`, `${question.id}: stable source-fact key`);
-    assert.equal(fact.statement, source.choices[index], `${question.id}: statement traceability`);
+    const expectedStatement = source.format === "個数問題"
+      ? countPromptStatements(source)[index]
+      : source.choices[index];
+    assert.equal(fact.statement, expectedStatement, `${question.id}: statement traceability`);
     assert.equal(fact.legalBaseline, "2026-04-01", `${question.id}: fact baseline`);
     assert.ok(typeof fact.truth === "boolean", `${question.id}: fact truth`);
     assert.ok(fact.reason.length > 8, `${question.id}: fact explanation`);
@@ -59,6 +68,13 @@ for (const question of bank.QUESTIONS) {
     assert.equal(presented.choices.length, 4, `${question.id}: four presented choices`);
     assert.ok(presented.answer >= 0 && presented.answer < 4, `${question.id}: valid presented answer`);
     assert.equal(presented.choices[presented.answer], source.choices[source.answer], `${question.id}: answer survives rotation`);
+    if (source.format === "個数問題") {
+      assert.deepEqual(presented.sourceFacts, question.sourceFacts, `${question.id}: count prompt facts keep ア〜エ order`);
+      assert.deepEqual(presented.statementExplanations, question.statementExplanations, `${question.id}: count explanations keep ア〜エ order`);
+    } else {
+      assert.deepEqual(presented.sourceFacts.map((fact) => fact.statement), presented.choices, `${question.id}: single facts follow presented choices`);
+      assert.deepEqual(presented.statementExplanations, presented.presentationOrder.map((index) => source.choiceExplanations[index]), `${question.id}: single explanations follow presented choices`);
+    }
   }
   assert.notDeepEqual(presentedA.presentationOrder, presentedB.presentationOrder, `${question.id}: daily presentation rotation`);
 }

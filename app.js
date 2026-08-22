@@ -7537,9 +7537,11 @@
             unitId: question.unitId,
             unitLabel: question.unitLabel,
             unitPage: question.unitPage,
-            statementExplanations: Array.isArray(presented.choiceExplanations)
-              ? presented.choiceExplanations.map(String)
-              : question.statementExplanations
+            statementExplanations: Array.isArray(presented.statementExplanations)
+              ? presented.statementExplanations.map(String)
+              : Array.isArray(presented.choiceExplanations)
+                ? presented.choiceExplanations.map(String)
+                : question.statementExplanations
           };
         }
       } catch {
@@ -7559,7 +7561,9 @@
     }
     const order = BUSINESS_MASTERY.choiceOrder(question.id, presentationKey, question.choices.length);
     const statementExplanations = Array.isArray(question.statementExplanations)
-      ? order.map((index) => question.statementExplanations[index]).filter(Boolean)
+      ? question.formatKey === "single"
+        ? order.map((index) => question.statementExplanations[index]).filter(Boolean)
+        : [...question.statementExplanations]
       : [];
     return {
       ...question,
@@ -7732,6 +7736,125 @@
     const body = document.createElement("p");
     body.textContent = text;
     copy.append(heading, body);
+    item.append(marker, copy);
+    return item;
+  }
+
+  function practicalStatementReviewData(question) {
+    const labels = question.formatKey === "combination"
+      ? ["ア・前半", "ア・後半", "イ・前半", "イ・後半"]
+      : ["ア", "イ", "ウ", "エ"];
+    const sourceFacts = Array.isArray(question.sourceFacts) ? question.sourceFacts : [];
+    const isFullScoreSourceReview = String(question.variationKind || "").startsWith("fullscore-") &&
+      ["combination", "count", "case"].includes(question.formatKey) &&
+      sourceFacts.length === 4;
+    if (isFullScoreSourceReview) {
+      return sourceFacts.map((fact, index) => ({
+        label: labels[index],
+        verdict: fact.truth ? "○" : "×",
+        premise: String(fact.presentedContext || fact.context || ""),
+        statement: String(fact.presentedStatement || fact.statement || ""),
+        reason: String(fact.reason || "")
+      }));
+    }
+
+    const isSubjectSprintSourceReview = Boolean(question.sourceQuestionId) && sourceFacts.length === 4;
+    if (isSubjectSprintSourceReview) {
+      return sourceFacts.map((fact, index) => ({
+        label: question.format === "個数問題" ? ["ア", "イ", "ウ", "エ"][index] : String(index + 1),
+        verdict: fact.truth ? "○" : "×",
+        premise: "",
+        statement: String(fact.statement || ""),
+        reason: String(fact.reason || "")
+      }));
+    }
+
+    return (question.statementExplanations || []).map((value, index) => {
+      const text = String(value || "").trim();
+      const parsed = text.match(/^([^\s]+)\s+([○×])\s+(.+)$/);
+      return {
+        label: parsed?.[1] || labels[index] || String(index + 1),
+        verdict: parsed?.[2] || "",
+        premise: "",
+        statement: "",
+        reason: parsed?.[3] || text
+      };
+    }).filter((item) => item.reason);
+  }
+
+  function practicalStatementReviewStep(question) {
+    const item = document.createElement("li");
+    item.className = "practical-statement-review-step";
+    const marker = document.createElement("span");
+    marker.textContent = "2";
+    const copy = document.createElement("div");
+    const heading = document.createElement("strong");
+    heading.textContent = "各記述を1つずつ判定";
+    const intro = document.createElement("p");
+    intro.className = "practical-statement-review-intro";
+    const aggregateFormat = ["combination", "count", "case"].includes(question.formatKey) ||
+      /個数|組合せ/.test(String(question.format || ""));
+    intro.textContent = aggregateFormat
+      ? "個数・組合せの答え合わせではなく、各記述がなぜ○／×になるかを確認する。"
+      : "正解肢だけでなく、各記述がなぜ○／×になるかを確認する。";
+    const entries = practicalStatementReviewData(question);
+    if (!entries.length) {
+      entries.push({
+        label: "判断",
+        verdict: "",
+        premise: "",
+        statement: "",
+        reason: String(question.explain || "正解肢と各肢の根拠を確認する。")
+      });
+    }
+    const premises = [...new Set(entries.map((entry) => entry.premise).filter(Boolean))];
+    const sharedPremise = premises.length === 1 && entries.length > 1 ? premises[0] : "";
+    const review = document.createElement("div");
+    review.className = "practical-statement-review";
+    review.setAttribute("role", "list");
+
+    entries.forEach((entry) => {
+      const card = document.createElement("article");
+      card.className = "practical-statement-review-card";
+      card.classList.toggle("is-correct", entry.verdict === "○");
+      card.classList.toggle("is-wrong", entry.verdict === "×");
+      card.setAttribute("role", "listitem");
+      const cardHead = document.createElement("header");
+      const label = document.createElement("strong");
+      label.textContent = entry.label;
+      const verdict = document.createElement("span");
+      verdict.className = "practical-statement-verdict";
+      verdict.textContent = entry.verdict === "○" ? "○ 正しい" : entry.verdict === "×" ? "× 誤り" : "根拠";
+      cardHead.append(label, verdict);
+      const details = document.createElement("dl");
+      const appendDetail = (term, description) => {
+        if (!description) return;
+        const row = document.createElement("div");
+        const key = document.createElement("dt");
+        key.textContent = term;
+        const value = document.createElement("dd");
+        value.textContent = description;
+        row.append(key, value);
+        details.append(row);
+      };
+      appendDetail("前提", sharedPremise ? "" : entry.premise);
+      appendDetail("記述", entry.statement);
+      appendDetail("理由・ルール", entry.reason);
+      card.append(cardHead, details);
+      review.append(card);
+    });
+    copy.append(heading, intro);
+    if (sharedPremise) {
+      const shared = document.createElement("div");
+      shared.className = "practical-statement-shared-premise";
+      const sharedLabel = document.createElement("strong");
+      sharedLabel.textContent = "共通前提";
+      const sharedText = document.createElement("p");
+      sharedText.textContent = sharedPremise;
+      shared.append(sharedLabel, sharedText);
+      copy.append(shared);
+    }
+    copy.append(review);
     item.append(marker, copy);
     return item;
   }
@@ -7997,7 +8120,7 @@
       : `誤答。正解は「${question.choices[question.answer]}」。今回の再出題へ追加した。`;
     elements.practicalDrillReasoning.replaceChildren(
       practicalReasoningStep(1, "判断軸", question.explain),
-      practicalReasoningStep(2, "各肢への当てはめ", (question.statementExplanations || []).join("\n") || question.explain),
+      practicalStatementReviewStep(question),
       practicalReasoningStep(3, "間違いやすい境界", question.trap),
       practicalReasoningStep(4, "次に再現する一文", question.memoryRule)
     );
@@ -9134,6 +9257,15 @@
     return statements.length === 4 ? statements : [];
   }
 
+  function displayedChoiceStatements(question) {
+    const reorderedCountToSingle = question.balanceSourceFormat === "個数問題" &&
+      !Array.isArray(question.statementExplanations);
+    if (reorderedCountToSingle && Array.isArray(question.choices) && question.choices.length === 4) {
+      return question.choices.map((text, index) => ({ label: String(index + 1), text: String(text) }));
+    }
+    return choiceStatements(question);
+  }
+
   function choiceCutFacts(question) {
     const sourceExplanations = Array.isArray(question.statementExplanations)
       ? question.statementExplanations
@@ -9145,7 +9277,7 @@
     if (lines.length !== 4) {
       return [];
     }
-    const statements = choiceStatements(question);
+    const statements = displayedChoiceStatements(question);
     const facts = lines.map((line, index) => {
       const marker = String(line).match(/[○×]/)?.[0];
       if (!marker) return null;
@@ -9283,6 +9415,8 @@
 
       const actions = document.createElement("div");
       actions.className = "cut-check-actions";
+      actions.setAttribute("role", "group");
+      actions.setAttribute("aria-label", `肢${fact.index + 1}の○×判定`);
       [
         { value: true, label: "○" },
         { value: false, label: "×" }
@@ -9291,7 +9425,9 @@
         button.type = "button";
         button.className = "cut-check-button";
         button.textContent = item.label;
+        button.setAttribute("aria-label", `肢${fact.index + 1}を${item.value ? "正しい" : "誤り"}と判定`);
         button.classList.toggle("is-selected", active.answers[String(fact.index)] === item.value);
+        button.setAttribute("aria-pressed", String(active.answers[String(fact.index)] === item.value));
         button.addEventListener("click", () => setCutCheck(fact.index, item.value));
         actions.append(button);
       });
@@ -10994,7 +11130,8 @@
         answer: question.answer,
         trap: question.trap,
         explain: question.explain,
-        choiceExplanations: question.choiceExplanations || []
+        choiceExplanations: question.choiceExplanations || [],
+        statementExplanations: question.statementExplanations || []
       },
       selected: index,
       selectedText: question.choices[index],

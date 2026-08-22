@@ -159,6 +159,42 @@ function assertDisplayModel(question) {
   }
 }
 
+function assertUnderlyingStatementExplanations(question) {
+  if (!new Set(["combination", "count", "case"]).has(question.formatKey)) return;
+
+  const explanations = question.statementExplanations;
+  const labels = question.formatKey === "combination"
+    ? ["ア・前半", "ア・後半", "イ・前半", "イ・後半"]
+    : ["ア", "イ", "ウ", "エ"];
+  assert.ok(Array.isArray(explanations), `${question.id}: underlying statement explanations exist`);
+  assert.equal(explanations.length, 4, `${question.id}: four underlying statement explanations`);
+  assert.ok(Object.isFrozen(explanations), `${question.id}: underlying statement explanations frozen`);
+
+  explanations.forEach((line, index) => {
+    const fact = question.sourceFacts[index];
+    const text = cleanText(line);
+    assert.ok(fact, `${question.id}/${labels[index]}: source fact exists`);
+    assert.match(
+      text,
+      new RegExp(`^${labels[index]}\\s+${fact.truth ? "○" : "×"}\\s+`),
+      `${question.id}/${labels[index]}: label and verdict trace source fact`
+    );
+    assert.ok(
+      text.includes(fact.presentedStatement),
+      `${question.id}/${labels[index]}: application names the underlying statement`
+    );
+    assert.ok(
+      text.includes(fact.reason),
+      `${question.id}/${labels[index]}: legal basis is retained`
+    );
+    assert.doesNotMatch(
+      text,
+      /^(?:ア|イ|ウ|エ)(?:・(?:前半|後半))?\s+[○×]\s+(?:正しい記述は\d+つ|実際はア[○×]・イ[○×]|4場面を個別に判定)/,
+      `${question.id}/${labels[index]}: not a choice-matching template`
+    );
+  });
+}
+
 assert.equal(supplement.VERSION, 2);
 assert.equal(supplement.LEGAL_BASELINE, blueprint.legalBaseline);
 assert.equal(supplement.ANCHORS.length, 18);
@@ -193,7 +229,8 @@ assert.throws(
   "bank must fail closed when the supplement is invalid"
 );
 
-assert.equal(bank.VERSION, 3);
+assert.equal(bank.VERSION, 3, "explanation-only updates must retain the v32 answer compatibility version");
+assert.equal(bank.QUALITY_VERSION, 4, "deep explanation content version");
 assert.equal(bank.LEGAL_BASELINE, blueprint.legalBaseline);
 assert.equal(bank.QUESTIONS.length, 134);
 assert.equal(Object.keys(bank.QUESTIONS_BY_ID).length, 134);
@@ -347,7 +384,7 @@ for (const question of bank.QUESTIONS) {
   assert.equal(question.unitLabel, unitById[question.unitId].label, `${question.id}: unit label`);
   assert.equal(question.unitPage, unitById[question.unitId].page, `${question.id}: unit page`);
   assert.equal(question.legalBaseline, blueprint.legalBaseline, `${question.id}: legal baseline`);
-  assert.equal(question.qualityVersion, 3, `${question.id}: quality version`);
+  assert.equal(question.qualityVersion, 4, `${question.id}: quality version`);
   assert.ok(Object.hasOwn(expectedFormats, question.formatKey), `${question.id}: known format`);
   assert.equal(question.format, bank.FORMAT_LABELS[question.formatKey], `${question.id}: format label`);
   assert.equal(question.choices.length, 4, `${question.id}: four choices`);
@@ -361,6 +398,7 @@ for (const question of bank.QUESTIONS) {
   assert.ok(question.sourceUrls.length >= 1, `${question.id}: source URLs`);
   assert.equal(question.reasoningSteps.length, 4, `${question.id}: four reasoning steps`);
   assertDisplayModel(question);
+  assertUnderlyingStatementExplanations(question);
   question.reasoningSteps.forEach((step) => {
     assert.ok(cleanText(step.label), `${question.id}: reasoning label`);
     assert.ok(cleanText(step.text), `${question.id}: reasoning text`);

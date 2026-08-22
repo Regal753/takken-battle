@@ -79,6 +79,8 @@ jobs:
           done
           curl --fail --silent --show-error "$TAKKEN_BASE_URL" >/dev/null
           node Audit-TakkenBusinessMasteryUi.cjs
+          node Audit-TakkenStatementReviewUi.cjs
+          node Audit-TakkenBalancedExplanationUi.cjs
           node Audit-TakkenBusinessKnockUi.cjs
           node Audit-TakkenFullExamUi.cjs
           node Audit-TakkenPassReadinessUi.cjs

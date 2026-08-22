@@ -53,6 +53,10 @@
     return [...String(value || "")].reduce((total, char) => (total * 31 + char.charCodeAt(0)) >>> 0, 0);
   }
 
+  function explanationClause(value) {
+    return String(value || "").trim().replace(/[。．.!！]+$/, "");
+  }
+
   function convertCountQuestion(question) {
     const copy = cloneQuestion(question);
     if (copy.format !== "個数問題") return copy;
@@ -92,10 +96,21 @@
       const offset = distractors.length ? stringHash(copy.id) % distractors.length : 0;
       const rotated = distractors.slice(offset).concat(distractors.slice(0, offset));
       copy.choices = [correct, ...rotated.slice(0, 3)];
-      copy.choiceExplanations = copy.choices.map((label, index) => index === 0
-        ? `${index + 1} ○ 正しい肢の組合せは${correct}。`
-        : `${index + 1} × ${label}は正しい肢の組合せと一致しない。`
-      );
+      copy.choiceExplanations = copy.choices.map((label, index) => {
+        const labels = label.split("・");
+        const labelIndexes = labels.map((item) => ["ア", "イ", "ウ", "エ"].indexOf(item));
+        if (index === 0) {
+          const reasons = labelIndexes.map((statementIndex, labelIndex) =>
+            `${labels[labelIndex]}は${explanationClause(explanations[statementIndex].reason)}`
+          );
+          return `${index + 1} ○ ${label}: ${reasons.join("、")}。`;
+        }
+        const falseIndexes = labelIndexes.filter((statementIndex) => !truths[statementIndex]);
+        const reasons = falseIndexes.map((statementIndex) =>
+          `${["ア", "イ", "ウ", "エ"][statementIndex]}が誤り（${explanationClause(explanations[statementIndex].reason)}）`
+        );
+        return `${index + 1} × ${label}: ${reasons.join("、")}。`;
+      });
       copy.answer = 0;
     } else {
       return copy;

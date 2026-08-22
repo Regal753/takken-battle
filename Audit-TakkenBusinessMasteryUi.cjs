@@ -232,6 +232,125 @@ async function installFullScoreUnitFixture(page) {
   });
 }
 
+async function installFullScoreQuestionFixture(page, questionId) {
+  return page.evaluate((id) => {
+    const key = Object.keys(localStorage).find((candidate) =>
+      candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+      !candidate.includes("backup") && !candidate.includes("-before-") && !candidate.includes("previous") &&
+      !candidate.includes("corrupt") && !candidate.endsWith("event-outbox")
+    );
+    const state = JSON.parse(localStorage.getItem(key));
+    const bank = window.TAKKEN_BUSINESS_FULLSCORE_BANK;
+    const question = bank.QUESTIONS_BY_ID[id];
+    if (!question || question.formatKey !== "count") throw new Error(`missing count fixture ${id}`);
+    state.practicalDrill = {
+      ...state.practicalDrill,
+      bankId: "business-fullscore",
+      bankVersion: bank.VERSION,
+      presentationKey: `${bank.localDayKey(new Date())}:statement-review-audit`,
+      stage: "active",
+      scope: "business",
+      unitId: question.unitId,
+      sessionSize: 1,
+      sessionIds: [id],
+      queue: [id],
+      position: 0,
+      currentAttempt: null,
+      retryIds: [],
+      sessionStartedAt: new Date().toISOString(),
+      completedAt: ""
+    };
+    localStorage.setItem(key, JSON.stringify(state));
+    return {
+      id: question.id,
+      truths: question.sourceFacts.map((fact) => fact.truth),
+      sourceFacts: question.sourceFacts.map((fact) => ({
+        context: fact.presentedContext || fact.context,
+        statement: fact.presentedStatement || fact.statement,
+        reason: fact.reason
+      }))
+    };
+  }, questionId);
+}
+
+async function installAnsweredV32FullScoreFixture(page) {
+  return page.evaluate(() => {
+    const key = Object.keys(localStorage).find((candidate) =>
+      candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+      !candidate.includes("backup") && !candidate.includes("-before-") && !candidate.includes("previous") &&
+      !candidate.includes("corrupt") && !candidate.endsWith("event-outbox")
+    );
+    const state = JSON.parse(localStorage.getItem(key));
+    const bank = window.TAKKEN_BUSINESS_FULLSCORE_BANK;
+    if (bank.VERSION !== 3) throw new Error("v32 answer-compatibility version must remain 3");
+    const question = bank.QUESTIONS[0];
+    const presentationKey = "2026-08-21:bank-3";
+    const presented = bank.presentQuestion(question, presentationKey);
+    const answeredAt = "2026-08-21T20:00:00+09:00";
+    const previous = state.practicalDrill;
+    state.practicalDrill = {
+      ...previous,
+      bankId: "business-fullscore",
+      bankVersion: 3,
+      presentationKey,
+      stage: "active",
+      scope: "business",
+      unitId: question.unitId,
+      sessionSize: 1,
+      sessionIds: [question.id],
+      queue: [question.id],
+      position: 0,
+      currentAttempt: {
+        id: question.id,
+        selected: presented.answer,
+        correct: true,
+        confidence: "confident",
+        masteryRecorded: true,
+        diagnosticRecorded: true
+      },
+      retryIds: [],
+      attempts: 1,
+      correct: 1,
+      wrong: 0,
+      history: {
+        ...previous.history,
+        [question.id]: {
+          attempts: 1,
+          correct: 1,
+          wrong: 0,
+          uncertain: 0,
+          lastSelected: presented.answer,
+          lastCorrect: true,
+          lastConfidence: "confident",
+          lastAnsweredAt: answeredAt,
+          reviewLevel: 1,
+          masteryDueKey: "2026-08-22",
+          confidentDayKeys: ["2026-08-21"],
+          mistakeTags: {},
+          lastMistakeTags: []
+        }
+      },
+      sessionStartedAt: answeredAt,
+      completedAt: ""
+    };
+    localStorage.setItem(key, JSON.stringify(state));
+    return { previous, id: question.id, selected: presented.answer };
+  });
+}
+
+async function restorePracticalDrillFixture(page, practicalDrill) {
+  await page.evaluate((previous) => {
+    const key = Object.keys(localStorage).find((candidate) =>
+      candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+      !candidate.includes("backup") && !candidate.includes("-before-") && !candidate.includes("previous") &&
+      !candidate.includes("corrupt") && !candidate.endsWith("event-outbox")
+    );
+    const state = JSON.parse(localStorage.getItem(key));
+    state.practicalDrill = previous;
+    localStorage.setItem(key, JSON.stringify(state));
+  }, practicalDrill);
+}
+
 async function installOfficialUnlockFixture(page, masteryMode = "learning") {
   return page.evaluate((requestedMasteryMode) => {
     const key = Object.keys(localStorage).find((candidate) =>
@@ -613,6 +732,26 @@ async function installFullScoreProofFixture(page, mode) {
       /接触済み/
     );
 
+    const answeredV32 = await installAnsweredV32FullScoreFixture(page);
+    await page.reload({ waitUntil: "networkidle" });
+    await waitForApp(page);
+    let compatibilitySaved = await readSavedState(page);
+    assert.equal(compatibilitySaved.practicalDrill.bankVersion, 3);
+    assert.equal(compatibilitySaved.practicalDrill.currentAttempt?.id, answeredV32.id);
+    assert.equal(compatibilitySaved.practicalDrill.currentAttempt?.selected, answeredV32.selected);
+    assert.equal(compatibilitySaved.practicalDrill.history[answeredV32.id].attempts, 1);
+    assert.equal(compatibilitySaved.practicalDrill.attempts, 1);
+    assert.equal(await page.locator("#practicalDrillFeedback").isVisible(), true);
+    assert.equal(await page.locator(".practical-drill-choice:disabled").count(), 4);
+    await page.reload({ waitUntil: "networkidle" });
+    await waitForApp(page);
+    compatibilitySaved = await readSavedState(page);
+    assert.equal(compatibilitySaved.practicalDrill.history[answeredV32.id].attempts, 1, "v32 answer must not be counted again after v33 reload");
+    assert.equal(compatibilitySaved.practicalDrill.attempts, 1, "session attempt total must remain stable after v33 reload");
+    await restorePracticalDrillFixture(page, answeredV32.previous);
+    await page.reload({ waitUntil: "networkidle" });
+    await waitForApp(page);
+
     await page.locator("#businessMasteryFull").click();
     let saved = await readSavedState(page);
     assert.equal(saved.stateSchemaVersion, 10);
@@ -673,6 +812,58 @@ async function installFullScoreProofFixture(page, mode) {
     await page.locator("#businessMasteryFull").click();
     saved = await readSavedState(page);
     assert.equal(saved.practicalDrill.queue[0], originalQuestion.id, "the highest diagnostic retry must lead the next full sweep");
+    await page.locator("#practicalDrillCancelButton").click();
+
+    const statementReviewFixture = await installFullScoreQuestionFixture(
+      page,
+      "bf-business-book-07-count-02"
+    );
+    assert.deepEqual(statementReviewFixture.truths, [true, false, true, true]);
+    await page.reload({ waitUntil: "networkidle" });
+    await waitForApp(page);
+    const statementReviewQuestion = await currentPracticalQuestion(page);
+    assert.equal(statementReviewQuestion.id, statementReviewFixture.id);
+    await answerCurrent(page, statementReviewQuestion.answer);
+    const statementCards = page.locator(".practical-statement-review-card");
+    assert.equal(await statementCards.count(), 4);
+    const statementReview = await statementCards.evaluateAll((cards) => cards.map((card) => ({
+      label: card.querySelector("header strong")?.textContent?.trim() || "",
+      verdict: card.querySelector(".practical-statement-verdict")?.textContent?.trim() || "",
+      terms: [...card.querySelectorAll("dt")].map((node) => node.textContent?.trim() || ""),
+      values: [...card.querySelectorAll("dd")].map((node) => node.textContent?.trim() || ""),
+      text: card.textContent || ""
+    })));
+    const sharedPremise = await page.locator(".practical-statement-shared-premise").evaluateAll((nodes) =>
+      nodes.map((node) => node.querySelector("p")?.textContent?.trim() || "")
+    );
+    assert.deepEqual(statementReview.map((card) => card.label), ["ア", "イ", "ウ", "エ"]);
+    assert.ok(sharedPremise.length <= 1, "statement review has at most one shared premise");
+    const sourcePremises = statementReviewFixture.sourceFacts.map((fact) => fact.context);
+    const hasSharedPremise = sharedPremise.length === 1;
+    if (hasSharedPremise) {
+      assert.equal(new Set(sourcePremises).size, 1, "only a common premise may be deduplicated");
+      assert.equal(sharedPremise[0], sourcePremises[0], "shared premise traces the source facts");
+    }
+    statementReview.forEach((card, index) => {
+      assert.match(card.verdict, new RegExp(`^${statementReviewFixture.truths[index] ? "○ 正しい" : "× 誤り"}$`));
+      assert.deepEqual(card.terms, hasSharedPremise ? ["記述", "理由・ルール"] : ["前提", "記述", "理由・ルール"]);
+      assert.deepEqual(card.values, hasSharedPremise
+        ? [
+            statementReviewFixture.sourceFacts[index].statement,
+            statementReviewFixture.sourceFacts[index].reason
+          ]
+        : [
+            statementReviewFixture.sourceFacts[index].context,
+            statementReviewFixture.sourceFacts[index].statement,
+            statementReviewFixture.sourceFacts[index].reason
+          ]);
+      assert.doesNotMatch(card.text, /正しい記述は3つなので/);
+    });
+    assert.equal(await horizontalOverflow(page), 0, "statement-review cards must fit at 390px");
+    await page.setViewportSize({ width: 320, height: 700 });
+    assert.equal(await statementCards.count(), 4);
+    assert.equal(await horizontalOverflow(page), 0, "statement-review cards must fit at 320px");
+    await page.setViewportSize({ width: 390, height: 844 });
     await page.locator("#practicalDrillCancelButton").click();
 
     await installOfficialUnlockFixture(page, "wrong");
