@@ -63,6 +63,8 @@ const required = [
   "Audit-TakkenBusinessMastery.js",
   "Audit-TakkenBusinessKnock.js",
   "Audit-TakkenBusinessMasteryUi.cjs",
+  "Audit-TakkenStatementReviewUi.cjs",
+  "Audit-TakkenBalancedExplanationUi.cjs",
   "Audit-TakkenBusinessKnockUi.cjs",
   "Audit-TakkenBusinessPace.js",
   "Audit-TakkenBusinessFullScoreSupplement.js",
@@ -89,9 +91,9 @@ const pagesWorkflow = text(".github/workflows/pages.yml");
 const ciWorkflow = text(".github/workflows/ci.yml");
 
 assert.match(index, /name="takken-runtime" content="public-static"/);
-assert.match(index, /manifest\.webmanifest\?v=20260822-cross-device-recovery-v32-1/);
-assert.match(index, /pwa-runtime\.js\?v=20260822-cross-device-recovery-v32-1/);
-assert.match(text("service-worker.js"), /const VERSION = "20260822-cross-device-recovery-v32-1"/);
+assert.match(index, /manifest\.webmanifest\?v=20260822-explanation-depth-v33-1/);
+assert.match(index, /pwa-runtime\.js\?v=20260822-explanation-depth-v33-1/);
+assert.match(text("service-worker.js"), /const VERSION = "20260822-explanation-depth-v33-1"/);
 assert.match(app, /const PUBLIC_STATIC_MODE/);
 assert.match(app, /function publicTodayQuest/);
 assert.match(app, /const DEFAULT_STUDY_SCOPE = "business"/);
@@ -119,6 +121,11 @@ assert.match(app, /TAKKEN_OFFICIAL_TOPIC_MAP/);
 assert.match(app, /function foundationLearningRoute/);
 assert.match(app, /function renderFoundationRoutePanel/);
 assert.match(app, /function startPracticalDrillForUnit/);
+assert.match(app, /function practicalStatementReviewData/);
+assert.match(app, /function practicalStatementReviewStep/);
+assert.match(app, /各記述を1つずつ判定/);
+assert.match(text("styles.css"), /\.practical-statement-review-card/);
+assert.match(text("business-fullscore-bank.js"), /function sourceStatementExplanations/);
 assert.match(app, /const PRACTICAL_SESSION_SIZES = Object\.freeze\(\[4, 10, 20, 45\]\)/);
 assert.match(app, /const STATE_SCHEMA_VERSION = 10/);
 assert.match(app, /const BUSINESS_FULLSCORE_EXPECTED_QUESTIONS = 134/);
@@ -202,23 +209,23 @@ assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 第2分冊・権利関係を固める/);
 assert.match(index, /③ 法令・税その他へ進む/);
 assert.match(index, /④ 全分野を混ぜる/);
-assert.match(index, /styles\.css\?v=20260822-cross-device-recovery-v32-1/);
-assert.match(index, /subject-sprint-bank\.js\?v=20260822-cross-device-recovery-v32-1/);
-assert.match(index, /pass-readiness\.js\?v=20260822-cross-device-recovery-v32-1/);
-assert.match(index, /exam-current-year-2026\.js\?v=20260822-cross-device-recovery-v32-1/);
-assert.match(index, /official-topic-map\.js\?v=20260822-cross-device-recovery-v32-1/);
-assert.match(index, /business-mastery\.js\?v=20260822-cross-device-recovery-v32-1/);
-assert.match(index, /business-knock\.js\?v=20260822-cross-device-recovery-v32-1/);
-assert.match(index, /business-pace\.js\?v=20260822-cross-device-recovery-v32-1/);
-assert.match(index, /business-fullscore-supplement\.js\?v=20260822-cross-device-recovery-v32-1/);
-assert.match(index, /business-fullscore-bank\.js\?v=20260822-cross-device-recovery-v32-1/);
-assert.match(index, /practical-question-bank\.js\?v=20260822-cross-device-recovery-v32-1/);
-assert.match(index, /calculation-drill\.js\?v=20260822-cross-device-recovery-v32-1/);
-assert.match(index, /app\.js\?v=20260822-cross-device-recovery-v32-1/);
-assert.match(index, /save-store\.js\?v=20260822-cross-device-recovery-v32-1/);
-assert.match(index, /official-exam-data\.js\?v=20260822-cross-device-recovery-v32-1/);
-assert.match(index, /official-law-baseline\.js\?v=20260822-cross-device-recovery-v32-1/);
-assert.match(index, /state-sync\.js\?v=20260822-cross-device-recovery-v32-1/);
+assert.match(index, /styles\.css\?v=20260822-explanation-depth-v33-1/);
+assert.match(index, /subject-sprint-bank\.js\?v=20260822-explanation-depth-v33-1/);
+assert.match(index, /pass-readiness\.js\?v=20260822-explanation-depth-v33-1/);
+assert.match(index, /exam-current-year-2026\.js\?v=20260822-explanation-depth-v33-1/);
+assert.match(index, /official-topic-map\.js\?v=20260822-explanation-depth-v33-1/);
+assert.match(index, /business-mastery\.js\?v=20260822-explanation-depth-v33-1/);
+assert.match(index, /business-knock\.js\?v=20260822-explanation-depth-v33-1/);
+assert.match(index, /business-pace\.js\?v=20260822-explanation-depth-v33-1/);
+assert.match(index, /business-fullscore-supplement\.js\?v=20260822-explanation-depth-v33-1/);
+assert.match(index, /business-fullscore-bank\.js\?v=20260822-explanation-depth-v33-1/);
+assert.match(index, /practical-question-bank\.js\?v=20260822-explanation-depth-v33-1/);
+assert.match(index, /calculation-drill\.js\?v=20260822-explanation-depth-v33-1/);
+assert.match(index, /app\.js\?v=20260822-explanation-depth-v33-1/);
+assert.match(index, /save-store\.js\?v=20260822-explanation-depth-v33-1/);
+assert.match(index, /official-exam-data\.js\?v=20260822-explanation-depth-v33-1/);
+assert.match(index, /official-law-baseline\.js\?v=20260822-explanation-depth-v33-1/);
+assert.match(index, /state-sync\.js\?v=20260822-explanation-depth-v33-1/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
 assert.doesNotMatch(index, /understanding-system\.js/);
@@ -276,12 +283,14 @@ assert.match(pagesWorkflow, /node Audit-TakkenOfficialTopicMap\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-browser\.cjs/);
 assert.match(pagesWorkflow, /playwright@1\.62\.1/);
-assert.match(pagesWorkflow, /20260822-cross-device-recovery-v32-1/);
+assert.match(pagesWorkflow, /20260822-explanation-depth-v33-1/);
 assert.match(pagesWorkflow, /node scripts\/assemble-site\.mjs/);
 assert.match(ciWorkflow, /node Audit-TakkenPwaOffline\.cjs/);
 assert.doesNotMatch(pagesWorkflow, /\bcp\b[^\n]*_site\//, "asset assembly must derive the release files from HTML references");
 assert.match(ciWorkflow, /node Audit-TakkenUnderstandingDepth\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenBusinessMastery\.js/);
+assert.match(ciWorkflow, /node Audit-TakkenStatementReviewUi\.cjs/);
+assert.match(ciWorkflow, /node Audit-TakkenBalancedExplanationUi\.cjs/);
 assert.match(ciWorkflow, /node Audit-TakkenBusinessKnock\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenBusinessKnockUi\.cjs/);
 assert.match(ciWorkflow, /node Audit-TakkenBusinessFullScoreSupplement\.js/);

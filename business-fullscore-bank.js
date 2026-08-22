@@ -14,7 +14,10 @@
     throw new Error("business full-score bank requires exam blueprint, base questions and full-score supplement");
   }
 
-  const VERSION = 3;
+  // Answer/presentation compatibility version. Explanation-only releases keep
+  // this value so an already-recorded currentAttempt survives an app update.
+  const VERSION = 2;
+  const QUALITY_VERSION = 3;
   const kana = Object.freeze(["ア", "イ", "ウ", "エ"]);
   const countLabels = Object.freeze(["一つ", "二つ", "三つ", "四つ"]);
   const formatLabels = Object.freeze({
@@ -500,7 +503,7 @@
     });
   }
 
-  function sourceFactView(fact, presentedStatement = "") {
+  function sourceFactView(fact, presentedStatement = "", presentedContext = "") {
     return Object.freeze({
       sourceType: fact.sourceType,
       key: fact.key,
@@ -511,6 +514,7 @@
       tag: fact.tag,
       truth: fact.truth,
       context: fact.context,
+      presentedContext: presentedContext || fact.context,
       statement: fact.statement,
       presentedStatement: presentedStatement || fact.presentedStatement || fact.statement,
       reason: fact.reason,
@@ -522,13 +526,22 @@
     });
   }
 
-  function commonFields(id, unit, formatKey, facts, answer, globalIndex, presentedStatements = []) {
+  function commonFields(
+    id,
+    unit,
+    formatKey,
+    facts,
+    answer,
+    globalIndex,
+    presentedStatements = [],
+    presentedContexts = []
+  ) {
     const diagnosticTags = Object.freeze(uniqueStrings(
       facts.flatMap((fact) => fact.diagnosticTags)
     ).filter((tag) => allowedDiagnosticTagSet.has(tag)));
     if (!diagnosticTags.length) throw new Error(`${id}: diagnostic tags are required`);
     const sourceFacts = Object.freeze(facts.map((fact, index) =>
-      sourceFactView(fact, presentedStatements[index])
+      sourceFactView(fact, presentedStatements[index], presentedContexts[index])
     ));
     const sourceQuestionIds = Object.freeze(uniqueStrings(facts.map((fact) => fact.questionId)));
     const sourceAnchorIds = Object.freeze(uniqueStrings(facts.map((fact) => fact.anchorId)));
@@ -560,7 +573,7 @@
       verifiedAt: facts.map((fact) => fact.verifiedAt).filter(Boolean).sort().at(-1) || "",
       diagnosticTags,
       bankIndex: globalIndex,
-      qualityVersion: VERSION
+      qualityVersion: QUALITY_VERSION
     };
   }
 
@@ -571,6 +584,16 @@
       Object.freeze({ label: "根拠", text: uniqueStrings(facts.map((fact) => fact.reason)).join("／") }),
       Object.freeze({ label: "境界", text: boundary || uniqueStrings(facts.map((fact) => fact.trap)).join("／") })
     ]);
+  }
+
+  function sourceStatementExplanations(sourceFacts, labels = kana) {
+    return Object.freeze(sourceFacts.map((fact, index) => {
+      const label = labels[index] || kana[index] || String(index + 1);
+      const verdict = fact.truth ? "○" : "×";
+      const conclusion = fact.truth ? "この記述は正しい。" : "この記述は誤り。";
+      return `${label} ${verdict} 【前提】${fact.presentedContext || fact.context} ` +
+        `【当てはめ】${fact.presentedStatement} 【根拠】${fact.reason} 【結論】${conclusion}`;
+    }));
   }
 
   // Keep the source question text intact for compatibility, but expose the
@@ -692,6 +715,10 @@
         ? `${index + 1} ○ 実際は${actual}なので一致する。`
         : `${index + 1} × 実際は${actual}なので一致しない。`
     ));
+    const statementExplanations = sourceStatementExplanations(
+      fields.sourceFacts,
+      ["ア・前半", "ア・後半", "イ・前半", "イ・後半"]
+    );
     const judgment = `${actual}。アは${left.reason}。イは${right.reason}。`;
     const intro = "次のア・イを判定し、正しい組合せを選べ。";
     return Object.freeze({
@@ -703,6 +730,7 @@
         displayBlock("ア", [facts[0], facts[1]], left.text),
         displayBlock("イ", [facts[2], facts[3]], right.text)
       ], []),
+      statementExplanations,
       choiceExplanations,
       choiceDiagnosticTags: Object.freeze(displayedPatterns.map(() => fields.diagnosticTags)),
       explain: judgment,
@@ -736,6 +764,7 @@
     ));
     const correctKana = facts.map((fact, index) => fact.truth ? kana[index] : "").filter(Boolean);
     const judgment = `正しいのは${correctKana.join("・")}の${correctCount}つ。`;
+    const statementExplanations = sourceStatementExplanations(fields.sourceFacts);
     const intro = "次の4場面について、正しい記述はいくつあるか。";
     return Object.freeze({
       ...fields,
@@ -745,6 +774,7 @@
       displayModel: displayModel(intro, facts.map((fact, index) =>
         displayBlock(kana[index], [fact], fact.presentedStatement)
       ), []),
+      statementExplanations,
       choiceExplanations,
       choiceDiagnosticTags: Object.freeze(displayedLabels.map(() => fields.diagnosticTags)),
       explain: judgment,
@@ -799,7 +829,8 @@
       facts,
       answerSlot,
       globalIndex,
-      presentedStatements
+      presentedStatements,
+      presentedContexts
     );
     const actualLabel = truthMaskLabel(targetMask);
     const choiceExplanations = Object.freeze(displayedMasks.map((mask, index) =>
@@ -810,6 +841,7 @@
     const judgment = facts.map((fact, index) =>
       `${kana[index]}${fact.truth ? "○" : "×"} ${fact.reason}`
     ).join("／");
+    const statementExplanations = sourceStatementExplanations(fields.sourceFacts);
     const intro = "主体を甲・乙に置き換えた独立4事例である。各判断を個別に切り、正しいものの組合せを選べ。";
     return Object.freeze({
       ...fields,
@@ -820,6 +852,7 @@
       displayModel: displayModel(intro, facts.map((fact, index) =>
         displayBlock(kana[index], [fact], presentedStatements[index], [presentedContexts[index]])
       ), []),
+      statementExplanations,
       choiceExplanations,
       choiceDiagnosticTags: Object.freeze(displayedMasks.map(() => fields.diagnosticTags)),
       explain: judgment,
@@ -1209,6 +1242,7 @@
 
   return Object.freeze({
     VERSION,
+    QUALITY_VERSION,
     LEGAL_BASELINE: blueprint.legalBaseline,
     FORMAT_LABELS: formatLabels,
     ALLOWED_DIAGNOSTIC_TAGS: allowedDiagnosticTags,

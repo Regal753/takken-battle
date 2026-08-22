@@ -128,7 +128,7 @@ async function completeDesktopSet(page) {
   await answerCurrent(page, (first.answer + 1) % 4);
   const feedback = await page.evaluate(() => ({
     verdict: document.querySelector("#practicalDrillVerdict")?.textContent || "",
-    labels: [...document.querySelectorAll("#practicalDrillReasoning li strong")]
+    labels: [...document.querySelectorAll("#practicalDrillReasoning > li > div > strong")]
       .map((node) => node.textContent),
     texts: [...document.querySelectorAll("#practicalDrillReasoning li p")]
       .map((node) => node.textContent),
@@ -139,7 +139,7 @@ async function completeDesktopSet(page) {
   assert.match(feedback.verdict, /再出題/);
   assert.deepEqual(feedback.labels, [
     "判断軸",
-    "各肢への当てはめ",
+    "各記述を1つずつ判定",
     "間違いやすい境界",
     "次に再現する一文"
   ]);

@@ -18,15 +18,26 @@
   const clean = (value) => String(value || "").replace(/\s+/g, " ").trim();
   const stableHash = (value) => [...String(value || "")].reduce((hash, character) => ((hash * 31) + character.codePointAt(0)) >>> 0, 2166136261);
   const rotate = (values, offset) => values.map((_, index) => values[(index + offset) % values.length]);
+  const promptStatements = (question) => {
+    if (question.format !== "個数問題") return question.choices.map(clean);
+    const statements = String(question.text || "").split(/\r?\n/)
+      .slice(1)
+      .map((line) => line.match(/^\s*[アイウエ]\s+(.+)$/)?.[1])
+      .filter(Boolean)
+      .map(clean);
+    if (statements.length !== 4) throw new Error(`${question.id}: count prompt must contain ア〜エ statements`);
+    return statements;
+  };
   const baseFacts = (question) => {
     const explanations = question.choiceExplanations || question.statementExplanations;
     if (!Array.isArray(explanations) || explanations.length !== 4) throw new Error(`${question.id}: four verified base explanations are required`);
+    const statements = promptStatements(question);
     return Object.freeze(explanations.map((explanation, index) => {
       const marker = String(explanation).match(/[○×]/)?.[0];
       if (!marker) throw new Error(`${question.id}:${index}: truth marker is required`);
       return Object.freeze({
         key: `${question.id}:${index}`, sourceType: "base", questionId: question.id, choiceIndex: index,
-        statement: question.choices[index], truth: marker === "○", reason: clean(explanation).replace(/^\d+\s*[○×]\s*/, ""),
+        statement: statements[index], truth: marker === "○", reason: clean(explanation).replace(/^(?:[アイウエ]|\d+)\s*[○×]\s*/, ""),
         sourceRef: clean(question.sourceRef), sourceLocator: clean(question.sourceLocator), sourceUrl: clean(question.sourceUrl),
         legalBaseline: clean(question.legalBaseline), verifiedAt: clean(question.verifiedAt)
       });
@@ -55,7 +66,7 @@
   const questions = definitions.map(([id, baseId, sectionId, tag, diagnosticTags, variantOffset]) => {
     const source = baseQuestions[baseId];
     if (!source || !Array.isArray(source.choices) || source.choices.length !== 4 || !Number.isInteger(source.answer) || source.answer < 0 || source.answer > 3 || clean(source.legalBaseline) !== LEGAL_BASELINE || !clean(source.sourceUrl)) throw new Error(`${id}: safe verified base question ${baseId} is unavailable`);
-    return Object.freeze({id,masteryId:id,sourceQuestionId:baseId,sectionId,tag,diagnosticTags,variantOffset,format:source.format,text:source.text,choices:source.choices,answer:source.answer,explain:source.explain,trap:source.trap,memoryRule:source.memoryRule,choiceExplanations:source.choiceExplanations,sourceFacts:baseFacts(source),sourceRef:source.sourceRef,sourceLocator:source.sourceLocator,sourceUrl:source.sourceUrl,legalBaseline:source.legalBaseline,verifiedAt:source.verifiedAt});
+    return Object.freeze({id,masteryId:id,sourceQuestionId:baseId,sectionId,tag,diagnosticTags,variantOffset,format:source.format,text:source.text,choices:source.choices,answer:source.answer,explain:source.explain,trap:source.trap,memoryRule:source.memoryRule,choiceExplanations:source.choiceExplanations,statementExplanations:source.choiceExplanations,sourceFacts:baseFacts(source),sourceRef:source.sourceRef,sourceLocator:source.sourceLocator,sourceUrl:source.sourceUrl,legalBaseline:source.legalBaseline,verifiedAt:source.verifiedAt});
   });
   const questionsById = Object.freeze(Object.fromEntries(questions.map((question) => [question.id, question])));
   const coveredSourceIds = Object.freeze(questions.map((question) => question.sourceQuestionId));
@@ -66,6 +77,6 @@
     byDiagnosticTag:Object.freeze(Object.fromEntries([...new Set(questions.flatMap((question)=>question.diagnosticTags))].sort().map((tag)=>[tag,questions.filter((question)=>question.diagnosticTags.includes(tag)).length]))),sourceQuestionIds:coveredSourceIds
   });
   function stableQuestion(questionOrId) { const id=typeof questionOrId==="string"?questionOrId:questionOrId?.id; const question=questionsById[id]; if(!question) throw new RangeError("unknown subject sprint question"); return question; }
-  function presentQuestion(questionOrId,presentationKey="") { const question=stableQuestion(questionOrId); const offset=(question.variantOffset+(stableHash(presentationKey||question.id)%4))%4; const order=Object.freeze(rotate([0,1,2,3],offset)); return Object.freeze({...question,choices:Object.freeze(order.map((index)=>question.choices[index])),choiceExplanations:Object.freeze(order.map((index)=>question.choiceExplanations[index])),answer:order.indexOf(question.answer),presentationKey:clean(presentationKey)||question.id,presentationOrder:order,presentationOffset:offset}); }
+  function presentQuestion(questionOrId,presentationKey="") { const question=stableQuestion(questionOrId); const offset=(question.variantOffset+(stableHash(presentationKey||question.id)%4))%4; const order=Object.freeze(rotate([0,1,2,3],offset)); const isSingle=question.format==="単一選択"; const explanations=Object.freeze(isSingle?order.map((index)=>question.statementExplanations[index]):[...question.statementExplanations]); return Object.freeze({...question,choices:Object.freeze(order.map((index)=>question.choices[index])),choiceExplanations:explanations,statementExplanations:explanations,sourceFacts:Object.freeze(isSingle?order.map((index)=>question.sourceFacts[index]):[...question.sourceFacts]),answer:order.indexOf(question.answer),presentationKey:clean(presentationKey)||question.id,presentationOrder:order,presentationOffset:offset}); }
   return Object.freeze({VERSION,LEGAL_BASELINE,QUESTIONS:Object.freeze(questions),QUESTIONS_BY_ID:questionsById,COVERAGE:coverage,presentQuestion,stableQuestion});
 });
