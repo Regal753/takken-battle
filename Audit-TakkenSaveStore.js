@@ -141,6 +141,26 @@ assert.throws(
 assert.equal(failing.getItem(id), legacyRaw);
 assert.equal(failing.getItem(`${id}${store.PREVIOUS_SUFFIX}`), legacyRaw);
 
+const futureState = {
+  stateSchemaVersion: 11,
+  attempts: 91,
+  futureOnly: { retained: true }
+};
+const futureRaw = JSON.stringify(futureState);
+const futureStorage = new MemoryStorage({ [id]: futureRaw });
+const future = store.load(futureStorage, id, 10, 8000);
+assert.equal(future.source, "future");
+assert.equal(future.writeBlocked, true);
+assert.equal(future.isError, true);
+assert.deepEqual(future.value, futureState);
+assert.equal(futureStorage.getItem(id), futureRaw);
+assert.throws(
+  () => store.save(futureStorage, id, { ...futureState, stateSchemaVersion: 10 }),
+  /新しい保存形式v11/
+);
+assert.equal(futureStorage.getItem(id), futureRaw);
+assert.equal(futureStorage.getItem(`${id}${store.PREVIOUS_SUFFIX}`), null);
+
 console.log(JSON.stringify({
   status: "ok",
   schemaUpgradeBackup: true,
@@ -148,6 +168,7 @@ console.log(JSON.stringify({
   previousRestore: true,
   backupRetention: importBackups.length,
   failedWriteKeepsPrimary: true,
+  futureSchemaReadOnly: true,
   preservedAttempts: restored.value.attempts,
   preservedCentralAnswers: restored.value.centralProgress.answers
 }));

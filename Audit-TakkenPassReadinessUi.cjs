@@ -53,7 +53,8 @@ async function questionAnswer(page) {
     const drill = state.practicalDrill;
     const id = drill.queue[drill.position];
     const question = window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS_BY_ID[id];
-    return { id, answer: window.TAKKEN_SUBJECT_SPRINT_BANK.presentQuestion(question, drill.presentationKey).answer };
+    const presentationKey = drill.presentationOverrides?.[id] || drill.presentationKey;
+    return { id, answer: window.TAKKEN_SUBJECT_SPRINT_BANK.presentQuestion(question, presentationKey).answer };
   });
 }
 
@@ -226,10 +227,30 @@ async function main() {
     const retry = await stored(page);
     assert.equal(retry.state.practicalDrill.stage, "retry");
     assert.deepEqual(retry.state.practicalDrill.queue, [wrong.id]);
+    const retried = await questionAnswer(page);
+    assert.equal(retried.id, wrong.id);
+    assert.notEqual(retried.answer, wrong.answer, "subject retry must rotate the memorized answer position");
     await answerSprint(page);
     const finished = await stored(page);
     assert.equal(finished.state.practicalDrill.stage, "complete");
     assert.deepEqual(finished.state.officialExamExposure || {}, {});
+    const cleanId = finished.state.practicalDrill.sessionIds.find((id) => id !== wrong.id);
+    const sprintMastery = await page.evaluate(({ wrongId, cleanId }) => {
+      const review = new URL(location.href).searchParams.get("review") || "";
+      const key = `takken-battle-study-clean-v2-hard-review-${review}`;
+      const history = JSON.parse(localStorage.getItem(key)).practicalDrill.history;
+      const snapshot = (id) => ({
+        ...window.TAKKEN_BUSINESS_MASTERY.normalizeMasteryHistory(history[id]),
+        state: window.TAKKEN_BUSINESS_MASTERY.stateFor(history[id], new Date())
+      });
+      return { wrong: snapshot(wrongId), clean: snapshot(cleanId) };
+    }, { wrongId: wrong.id, cleanId });
+    [sprintMastery.wrong, sprintMastery.clean].forEach((entry) => {
+      assert.equal(entry.reviewLevel, 1, "same-day sprint success must start, not skip, the spaced chain");
+      assert.match(entry.masteryDueKey, /^\d{4}-\d{2}-\d{2}$/);
+      assert.equal(entry.confidentDayKeys.length, 1);
+      assert.equal(entry.state, "learning", "one-day exposure is not retained evidence");
+    });
 
     for (const [scope, count, prefix] of [
       ["restrictions", 18, "sprint-law-"],
@@ -305,7 +326,7 @@ async function main() {
     }
     assert.deepEqual(errors, []);
     await context.close();
-    console.log(JSON.stringify({ status: "ok", initial, retryId: wrong.id, schema: legacy.state.stateSchemaVersion, errors: errors.length }, null, 2));
+    console.log(JSON.stringify({ status: "ok", initial, retryId: wrong.id, retryAnswerPositionRotated: true, sprintReviewLevel: sprintMastery.wrong.reviewLevel, sprintRetentionState: sprintMastery.wrong.state, schema: legacy.state.stateSchemaVersion, errors: errors.length }, null, 2));
   } finally { await browser.close(); await server.close(); }
 }
 

@@ -595,7 +595,8 @@ async function main() {
       const questionId = state.practicalDrill.queue[state.practicalDrill.position];
       const bank = window.TAKKEN_BUSINESS_FULLSCORE_BANK;
       const question = (bank.QUESTIONS || []).find((item) => item.id === questionId);
-      const presented = bank.presentQuestion(question, state.practicalDrill.presentationKey);
+      const presentationKey = state.practicalDrill.presentationOverrides?.[id] || state.practicalDrill.presentationKey;
+      const presented = bank.presentQuestion(question, presentationKey);
       return { id: questionId, wrongChoice: (presented.answer + 1) % 4 };
     }, importStorageId);
     await importPage.locator("#practicalDrillChoices button").nth(wrongTarget.wrongChoice).click();

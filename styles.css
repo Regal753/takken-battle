@@ -281,6 +281,27 @@ button {
   cursor: pointer;
 }
 
+.choice-button:focus-visible,
+.cut-check-button:focus-visible,
+.ghost-button:focus-visible,
+.mark-button:focus-visible,
+.next-button:focus-visible,
+.dock-explain-button:focus-visible,
+.dock-unsure-button:focus-visible,
+.dock-next-button:focus-visible,
+.practical-drill-choice:focus-visible,
+.practical-drill-confidence button:focus-visible,
+.calculation-drill-choice:focus-visible,
+.calculation-drill-confidence button:focus-visible,
+.feedback:focus-visible,
+.practical-drill-feedback:focus-visible,
+.calculation-drill-feedback:focus-visible,
+.today-command-primary:focus-visible,
+.today-command-secondary:focus-visible {
+  outline: 3px solid #ffe08a;
+  outline-offset: 3px;
+}
+
 .ghost-button {
   display: grid;
   place-items: center;
@@ -485,7 +506,7 @@ button {
   grid-column: 2;
   grid-row: 1 / 3;
   min-width: 58px;
-  min-height: 38px;
+  min-height: 44px;
   padding: 0 8px;
   border: 1px solid rgba(242, 185, 77, 0.5);
   border-radius: 4px;
@@ -3018,7 +3039,7 @@ body.has-answer-dock {
 
   .dock-unsure-button {
     min-width: 42px;
-    min-height: 34px;
+    min-height: 44px;
     padding: 0 3px;
     font-size: 9px;
   }
@@ -4838,6 +4859,12 @@ body {
 
 .save-protection-status.is-warning {
   color: #ffb0a6;
+}
+
+body.is-save-read-only .save-protection-status {
+  border-color: rgba(255, 224, 138, 0.72);
+  color: #fff0bd;
+  background: rgba(97, 61, 13, 0.42);
 }
 
 .save-transfer-help {
@@ -7700,7 +7727,7 @@ button.mission-step:disabled {
 
 .practical-statement-review-card dd {
   color: #edf8f3;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 720;
   line-height: 1.6;
 }
@@ -7725,7 +7752,7 @@ button.mission-step:disabled {
 }
 
 .practical-drill-confidence button {
-  min-height: 38px;
+  min-height: 44px;
   padding: 7px 10px;
   border: 1px solid rgba(184, 173, 255, 0.28);
   border-radius: 6px;
@@ -7999,7 +8026,7 @@ button.mission-step:disabled {
 }
 
 .calculation-drill-confidence button {
-  min-height: 38px;
+  min-height: 44px;
   padding: 7px 10px;
   border: 1px solid rgba(143, 212, 244, 0.26);
   border-radius: 6px;
@@ -8135,6 +8162,8 @@ button.mission-step:disabled {
 
   .practical-statement-review-card dd {
     padding-top: 3px;
+    font-size: 14px;
+    line-height: 1.65;
   }
 
   .practical-drill-confidence button,

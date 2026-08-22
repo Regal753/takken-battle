@@ -116,7 +116,10 @@ async function currentPracticalQuestion(page) {
       : window.TAKKEN_PRACTICAL_VARIATIONS;
     const question = bank.QUESTIONS_BY_ID[id];
     const presented = state.practicalDrill.bankId === "business-fullscore"
-      ? bank.presentQuestion(question, state.practicalDrill.presentationKey)
+      ? bank.presentQuestion(
+        question,
+        state.practicalDrill.presentationOverrides?.[id] || state.practicalDrill.presentationKey
+      )
       : question;
     return {
       id,

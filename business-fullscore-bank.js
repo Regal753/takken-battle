@@ -719,6 +719,12 @@
       fields.sourceFacts,
       ["ア・前半", "ア・後半", "イ・前半", "イ・後半"]
     );
+    const choiceDiagnosticTags = Object.freeze(displayedPatterns.map((pattern) =>
+      Object.freeze(uniqueStrings([
+        ...(pattern.a === left.truth ? [] : fields.sourceFacts.slice(0, 2).flatMap((fact) => fact.diagnosticTags)),
+        ...(pattern.b === right.truth ? [] : fields.sourceFacts.slice(2, 4).flatMap((fact) => fact.diagnosticTags))
+      ]).filter((tag) => allowedDiagnosticTagSet.has(tag)))
+    ));
     const judgment = `${actual}。アは${left.reason}。イは${right.reason}。`;
     const intro = "次のア・イを判定し、正しい組合せを選べ。";
     return Object.freeze({
@@ -732,7 +738,7 @@
       ], []),
       statementExplanations,
       choiceExplanations,
-      choiceDiagnosticTags: Object.freeze(displayedPatterns.map(() => fields.diagnosticTags)),
+      choiceDiagnosticTags,
       explain: judgment,
       trap: uniqueStrings(facts.map((fact) => fact.trap)).join("／"),
       memoryRule: uniqueStrings(facts.map((fact) => fact.memoryRule)).join("／"),
@@ -842,6 +848,11 @@
       `${kana[index]}${fact.truth ? "○" : "×"} ${fact.reason}`
     ).join("／");
     const statementExplanations = sourceStatementExplanations(fields.sourceFacts);
+    const choiceDiagnosticTags = Object.freeze(displayedMasks.map((mask) =>
+      Object.freeze(uniqueStrings(fields.sourceFacts.flatMap((fact, index) =>
+        ((mask & (1 << index)) !== 0) === fact.truth ? [] : fact.diagnosticTags
+      )).filter((tag) => allowedDiagnosticTagSet.has(tag)))
+    ));
     const intro = "主体を甲・乙に置き換えた独立4事例である。各判断を個別に切り、正しいものの組合せを選べ。";
     return Object.freeze({
       ...fields,
@@ -854,7 +865,7 @@
       ), []),
       statementExplanations,
       choiceExplanations,
-      choiceDiagnosticTags: Object.freeze(displayedMasks.map(() => fields.diagnosticTags)),
+      choiceDiagnosticTags,
       explain: judgment,
       trap: uniqueStrings(facts.map((fact) => fact.trap)).join("／"),
       memoryRule: uniqueStrings(facts.map((fact) => fact.memoryRule)).join("／"),
@@ -1200,6 +1211,9 @@
       masteryId: question.id,
       choices: Object.freeze(order.map((index) => question.choices[index])),
       answer,
+      sourceFacts: question.formatKey === "single"
+        ? Object.freeze(order.map((index) => question.sourceFacts[index]))
+        : question.sourceFacts,
       choiceExplanations: Object.freeze(order.map((index) => question.choiceExplanations[index])),
       choiceDiagnosticTags: Object.freeze(order.map((index) => question.choiceDiagnosticTags[index])),
       displayModel: displayModel(
@@ -1231,11 +1245,14 @@
       question = stableQuestion(questionOrId);
     }
     if (selected === question.answer) return Object.freeze([]);
-    const tags = uniqueStrings([
+    let tags = uniqueStrings([
       ...(question.choiceDiagnosticTags?.[selected] || []),
-      ...(question.choiceDiagnosticTags?.[question.answer] || []),
-      ...(question.diagnosticTags || [])
+      ...(question.choiceDiagnosticTags?.[question.answer] || [])
     ]).filter((tag) => allowedDiagnosticTagSet.has(tag));
+    if (!tags.length) {
+      tags = uniqueStrings(question.diagnosticTags || [])
+        .filter((tag) => allowedDiagnosticTagSet.has(tag));
+    }
     if (!tags.length) throw new Error("wrong selection did not resolve diagnostic tags");
     return Object.freeze(tags);
   }

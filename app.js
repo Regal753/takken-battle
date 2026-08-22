@@ -249,6 +249,7 @@
     source: "empty",
     notice: "",
     isError: false,
+    writeBlocked: false,
     skipPreviousRotation: false
   };
   let lastSuccessfulSaveAt = "";
@@ -1012,6 +1013,7 @@
       bankId: LEGACY_PRACTICAL_BANK_ID,
       bankVersion: PRACTICAL_VARIATIONS?.VERSION || 1,
       presentationKey: "",
+      presentationOverrides: {},
       planMode: "",
       knockPreset: {
         mode: "untouched",
@@ -1110,7 +1112,7 @@
   syncWriterId = createOpaqueId("writer");
   syncBaseState = STATE_SYNC?.clone ? STATE_SYNC.clone(state) : JSON.parse(JSON.stringify(state));
   applyQuestionBalance();
-  saveState();
+  if (!saveStoreSession.writeBlocked) saveState();
   if (saveStoreSession.notice) {
     setSaveTransferStatus(saveStoreSession.notice, saveStoreSession.isError);
   }
@@ -2105,7 +2107,7 @@
               : "",
             mistakeTags: normalizePracticalMistakeTags(item?.mistakeTags, id),
             lastMistakeTags: normalizePracticalTagList(item?.lastMistakeTags, id),
-            ...((ALL_PRACTICAL_QUESTION_BY_ID[id]?.scopeId === "business" || preserved.has(id))
+            ...((ALL_PRACTICAL_QUESTION_BY_ID[id] || preserved.has(id))
               ? BUSINESS_MASTERY.normalizeMasteryHistory(item)
               : {})
           }
@@ -2207,7 +2209,21 @@
     const presentationKey = [BUSINESS_FULLSCORE_BANK_ID, SUBJECT_SPRINT_BANK_ID].includes(bankId)
       ? String(input?.presentationKey || "").replace(/[^0-9a-z:_-]/gi, "").slice(0, 80)
       : "";
-    const presentedQuestion = presentPracticalQuestion(currentQuestion, bankId, presentationKey);
+    const presentationOverrides = {};
+    if ([BUSINESS_FULLSCORE_BANK_ID, SUBJECT_SPRINT_BANK_ID].includes(bankId) &&
+        input?.presentationOverrides && typeof input.presentationOverrides === "object" &&
+        !Array.isArray(input.presentationOverrides)) {
+      Object.entries(input.presentationOverrides).forEach(([id, key]) => {
+        if (!practicalQuestionFor(id, bankId)) return;
+        const normalizedKey = String(key || "").replace(/[^0-9a-z:_-]/gi, "").slice(0, 80);
+        if (normalizedKey) presentationOverrides[id] = normalizedKey;
+      });
+    }
+    const presentedQuestion = presentPracticalQuestion(
+      currentQuestion,
+      bankId,
+      presentationOverrides[currentId] || presentationKey
+    );
     // 問題IDと履歴は維持する。問題本文・正答が更新された場合だけ、
     // 途中で表示中だった一問の選択を外して旧正答の誤判定を防ぐ。
     const currentAttempt = !bankChanged && presentedQuestion && rawAttempt?.id === currentId &&
@@ -2228,6 +2244,7 @@
       bankId,
       bankVersion: currentBankVersion,
       presentationKey,
+      presentationOverrides,
       planMode,
       knockPreset: {
         mode: knockMode,
@@ -2559,6 +2576,9 @@
   function saveState(options = {}) {
     let releaseLease = null;
     try {
+      if (saveStoreSession.writeBlocked) {
+        throw new Error("新しい保存形式を保護中です。アプリを更新するまで端末セーブは変更しません。");
+      }
       releaseLease = acquireStateSaveLease();
       if (!releaseLease) {
         throw new Error("別タブが保存中です。数秒後にもう一度お試しください。");
@@ -2652,7 +2672,9 @@
       renderSaveProtectionStatus();
       return true;
     } catch (error) {
-      lastSaveError = `自動保存に失敗しました：${error?.message || "保存領域を利用できません。"} バックアップを保存してから再試行してください。`;
+      lastSaveError = saveStoreSession.writeBlocked
+        ? saveStoreSession.notice
+        : `自動保存に失敗しました：${error?.message || "保存領域を利用できません。"} バックアップを保存してから再試行してください。`;
       setSaveTransferStatus(lastSaveError, true);
       renderSaveProtectionStatus();
       return false;
@@ -3380,23 +3402,35 @@
     const previous = SAVE_STORE?.getPrevious(localStorage, STORAGE_ID);
     const canRestore = Boolean(previous);
     if (elements.saveRestorePreviousButton) {
-      elements.saveRestorePreviousButton.disabled = !canRestore;
+      elements.saveRestorePreviousButton.disabled = saveStoreSession.writeBlocked || !canRestore;
     }
     const quotaText = storageEstimate
       ? `・保存領域${Math.round(storageEstimate.ratio * 100)}%`
       : "";
     elements.saveProtectionStatus.textContent = lastSaveError
       ? lastSaveError
+      : saveStoreSession.writeBlocked
+        ? saveStoreSession.notice
       : `自動保護：保存形式v${STATE_SCHEMA_VERSION}・` +
         `${canRestore ? "直前セーブあり" : "初回スナップショット待ち"}・` +
         `${backupAgeLabel(state.saveMeta?.lastExportedAt)}${quotaText}`;
     elements.saveProtectionStatus.classList.toggle(
       "is-warning",
-      Boolean(lastSaveError || (storageEstimate && storageEstimate.ratio >= 0.8))
+      Boolean(saveStoreSession.writeBlocked || lastSaveError || (storageEstimate && storageEstimate.ratio >= 0.8))
     );
     if (!storageEstimateChecked && !storageEstimatePending) {
       void refreshStorageEstimate();
     }
+  }
+
+  function applySaveWriteProtection() {
+    if (!saveStoreSession.writeBlocked) return;
+    document.body.classList.add("is-save-read-only");
+    document.querySelectorAll("button, input, select, textarea").forEach((control) => {
+      if (control.closest("#pwaUpdateNotice")) return;
+      control.disabled = true;
+      control.title = "新しい保存形式を保護中です。アプリを更新して再読み込みしてください。";
+    });
   }
 
   function restorePreviousSave() {
@@ -5833,15 +5867,27 @@
       .filter(Boolean));
   }
 
+  function subjectSprintSourceRetained(subjectKey) {
+    const scope = subjectKey === "tax" ? "taxOther" : subjectKey;
+    return new Set(SUBJECT_SPRINT_QUESTIONS
+      .filter((question) => question.scopeId === scope)
+      .filter((question) => ["retained", "durable"].includes(
+        BUSINESS_MASTERY.stateFor(state.practicalDrill?.history?.[question.id] || {}, new Date())
+      ))
+      .map((question) => question.sourceQuestionId)
+      .filter(Boolean));
+  }
+
   function passSubjectMetrics() {
     return Object.fromEntries(["business", "rights", "restrictions", "tax", "other"].map((subjectKey) => {
       const ids = passSubjectIds(subjectKey);
       const sprintContacts = subjectSprintSourceContacts(subjectKey);
+      const sprintRetained = subjectSprintSourceRetained(subjectKey);
       const contacted = ids.filter((id) => isContacted(id) || sprintContacts.has(id)).length;
       return [subjectKey, {
         total: ids.length,
         contacted,
-        retained: ids.filter(isRetained).length
+        retained: ids.filter((id) => isRetained(id) || sprintRetained.has(id)).length
       }];
     }));
   }
@@ -7075,7 +7121,13 @@
   function renderAnswerDock(question) {
     if (!elements.answerDock) return;
     const answered = state.answered;
-    const visible = Boolean(answered && !state.finished && !isDailyQuestPaused());
+    const auxiliaryDrillOwnsNextAction = [
+      state.practicalDrill?.stage,
+      state.calculationDrill?.stage
+    ].some((stage) => stage && stage !== "idle");
+    const visible = Boolean(
+      answered && !state.finished && !isDailyQuestPaused() && !auxiliaryDrillOwnsNextAction
+    );
     elements.answerDock.hidden = !visible;
     document.body.classList.toggle("has-answer-dock", visible);
     if (!visible) return;
@@ -7210,6 +7262,7 @@
   function renderCalculationDrill() {
     if (!elements.calculationDrillPanel || !CALCULATION_QUESTION_IDS.length) return;
     const drill = state.calculationDrill;
+    renderAnswerDock(currentQuestion());
     const contacted = CALCULATION_QUESTION_IDS.filter((id) => (drill.history[id]?.attempts || 0) > 0).length;
     const retryCount = drill.retryIds.length;
     elements.calculationDrillSummary.textContent = `累計接触 ${contacted} / ${CALCULATION_QUESTION_IDS.length}・再出題 ${retryCount}`;
@@ -7252,6 +7305,7 @@
       button.type = "button";
       button.className = "calculation-drill-choice";
       button.textContent = `${index + 1}. ${formatCalculationValue(value, item.unit)}`;
+      button.setAttribute("aria-pressed", String(Boolean(attempt && attempt.selected === index)));
       button.disabled = Boolean(attempt);
       if (attempt) {
         button.classList.toggle("is-selected", attempt.selected === index);
@@ -7291,10 +7345,9 @@
     elements.calculationDrillConfidence
       .querySelectorAll("[data-calculation-confidence]")
       .forEach((button) => {
-        button.classList.toggle(
-          "is-selected",
-          button.dataset.calculationConfidence === attempt.confidence
-        );
+        const selected = button.dataset.calculationConfidence === attempt.confidence;
+        button.classList.toggle("is-selected", selected);
+        button.setAttribute("aria-pressed", String(selected));
       });
     elements.calculationDrillNextButton.disabled = attempt.correct && !attempt.confidence;
     elements.calculationDrillNextButton.textContent = drill.position + 1 < drill.queue.length
@@ -7338,6 +7391,10 @@
     }
     saveState();
     renderCalculationDrill();
+    window.requestAnimationFrame(() => {
+      elements.calculationDrillFeedback?.focus({ preventScroll: true });
+      elements.calculationDrillFeedback?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
   }
 
   function setCalculationConfidence(confidence) {
@@ -7386,9 +7443,14 @@
     saveState();
     renderCalculationDrill();
     renderPassPlan();
-    window.requestAnimationFrame(() =>
-      elements.calculationDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
-    );
+    window.requestAnimationFrame(() => {
+      if (["active", "retry"].includes(drill.stage)) {
+        elements.calculationDrillChoices?.querySelector("button:not(:disabled)")?.focus({ preventScroll: true });
+      } else if (drill.stage === "complete") {
+        elements.calculationDrillRestartButton?.focus({ preventScroll: true });
+      }
+      elements.calculationDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
   }
 
   function startCalculationDrill() {
@@ -7573,6 +7635,28 @@
     };
   }
 
+  function nextPracticalRetryPresentationKey(question, bankId, baseKey, previousKey, sequence) {
+    if (!question || ![BUSINESS_FULLSCORE_BANK_ID, SUBJECT_SPRINT_BANK_ID].includes(bankId)) {
+      return "";
+    }
+    const previous = presentPracticalQuestion(question, bankId, previousKey || baseKey);
+    if (!previous?.choices?.length) return previousKey || baseKey || "";
+    const root = String(baseKey || previousKey || "retry")
+      .replace(/[^0-9a-z:_-]/gi, "")
+      .slice(0, 56);
+    let changedOrderKey = "";
+    for (const suffix of "abcdefghijklmnop") {
+      const candidateKey = `${root}:retry:${Math.max(1, Number(sequence) || 1)}:${suffix}`.slice(0, 80);
+      const candidate = presentPracticalQuestion(question, bankId, candidateKey);
+      if (!candidate?.choices?.length) continue;
+      if (candidate.answer !== previous.answer) return candidateKey;
+      if (!changedOrderKey && candidate.choices.join("\u0000") !== previous.choices.join("\u0000")) {
+        changedOrderKey = candidateKey;
+      }
+    }
+    return changedOrderKey || previousKey || baseKey || "";
+  }
+
   function renderPracticalDrillLauncher() {
     if (!elements.practicalDrillStartButton) return;
     const requestedScope = String(elements.practicalDrillScope?.value || state.practicalDrill.scope);
@@ -7586,17 +7670,10 @@
 
   function practicalPriority(question, drill = state.practicalDrill) {
     const history = drill.history[question.id] || {};
-    if (question.scopeId === "business") {
-      return BUSINESS_MASTERY.priorityFor({
-        ...history,
-        lastConfidence: drill.retryIds.includes(question.id) ? "wrong" : history.lastConfidence
-      }, new Date());
-    }
-    const needsRetry = drill.retryIds.includes(question.id) ||
-      ["wrong", "uncertain"].includes(history.lastConfidence);
-    if (needsRetry) return 0;
-    if (!(history.attempts > 0)) return 1;
-    return 2;
+    return BUSINESS_MASTERY.priorityFor({
+      ...history,
+      lastConfidence: drill.retryIds.includes(question.id) ? "wrong" : history.lastConfidence
+    }, new Date());
   }
 
   function practicalDiagnosticWeight(question, drill = state.practicalDrill) {
@@ -7719,10 +7796,11 @@
 
   function currentPresentedPracticalQuestion() {
     const drill = state.practicalDrill;
+    const question = currentPracticalQuestion();
     return presentPracticalQuestion(
-      currentPracticalQuestion(),
+      question,
       drill?.bankId,
-      drill?.presentationKey
+      drill?.presentationOverrides?.[question?.id] || drill?.presentationKey
     );
   }
 
@@ -7741,30 +7819,23 @@
   }
 
   function practicalStatementReviewData(question) {
-    const labels = question.formatKey === "combination"
-      ? ["ア・前半", "ア・後半", "イ・前半", "イ・後半"]
-      : ["ア", "イ", "ウ", "エ"];
     const sourceFacts = Array.isArray(question.sourceFacts) ? question.sourceFacts : [];
-    const isFullScoreSourceReview = String(question.variationKind || "").startsWith("fullscore-") &&
-      ["combination", "count", "case"].includes(question.formatKey) &&
-      sourceFacts.length === 4;
-    if (isFullScoreSourceReview) {
+    const formatKey = question.formatKey || (question.format === "単一選択"
+      ? "single"
+      : question.format === "組合せ問題"
+        ? "combination"
+        : question.format === "個数問題" ? "count" : "");
+    const labels = formatKey === "single"
+      ? ["1", "2", "3", "4"]
+      : formatKey === "combination" && sourceFacts.length === 4
+        ? ["ア・前半", "ア・後半", "イ・前半", "イ・後半"]
+        : ["ア", "イ", "ウ", "エ"];
+    if (sourceFacts.length) {
       return sourceFacts.map((fact, index) => ({
-        label: labels[index],
+        label: labels[index] || String(index + 1),
         verdict: fact.truth ? "○" : "×",
         premise: String(fact.presentedContext || fact.context || ""),
         statement: String(fact.presentedStatement || fact.statement || ""),
-        reason: String(fact.reason || "")
-      }));
-    }
-
-    const isSubjectSprintSourceReview = Boolean(question.sourceQuestionId) && sourceFacts.length === 4;
-    if (isSubjectSprintSourceReview) {
-      return sourceFacts.map((fact, index) => ({
-        label: question.format === "個数問題" ? ["ア", "イ", "ウ", "エ"][index] : String(index + 1),
-        verdict: fact.truth ? "○" : "×",
-        premise: "",
-        statement: String(fact.statement || ""),
         reason: String(fact.reason || "")
       }));
     }
@@ -7807,8 +7878,16 @@
         reason: String(question.explain || "正解肢と各肢の根拠を確認する。")
       });
     }
-    const premises = [...new Set(entries.map((entry) => entry.premise).filter(Boolean))];
-    const sharedPremise = premises.length === 1 && entries.length > 1 ? premises[0] : "";
+    const premiseUses = new Map();
+    entries.forEach((entry, index) => {
+      if (!entry.premise) return;
+      if (!premiseUses.has(entry.premise)) premiseUses.set(entry.premise, []);
+      premiseUses.get(entry.premise).push(index);
+    });
+    const sharedPremiseGroups = [...premiseUses.entries()]
+      .filter(([, indexes]) => indexes.length > 1)
+      .map(([text, indexes]) => ({ text, indexes }));
+    const sharedPremiseTexts = new Set(sharedPremiseGroups.map((group) => group.text));
     const review = document.createElement("div");
     review.className = "practical-statement-review";
     review.setAttribute("role", "list");
@@ -7837,23 +7916,23 @@
         row.append(key, value);
         details.append(row);
       };
-      appendDetail("前提", sharedPremise ? "" : entry.premise);
+      appendDetail("前提", sharedPremiseTexts.has(entry.premise) ? "" : entry.premise);
       appendDetail("記述", entry.statement);
       appendDetail("理由・ルール", entry.reason);
       card.append(cardHead, details);
       review.append(card);
     });
     copy.append(heading, intro);
-    if (sharedPremise) {
+    sharedPremiseGroups.forEach((group) => {
       const shared = document.createElement("div");
       shared.className = "practical-statement-shared-premise";
       const sharedLabel = document.createElement("strong");
-      sharedLabel.textContent = "共通前提";
+      sharedLabel.textContent = `共通前提（${group.indexes.map((index) => entries[index].label).join("・")}）`;
       const sharedText = document.createElement("p");
-      sharedText.textContent = sharedPremise;
+      sharedText.textContent = group.text;
       shared.append(sharedLabel, sharedText);
       copy.append(shared);
-    }
+    });
     copy.append(review);
     item.append(marker, copy);
     return item;
@@ -7870,7 +7949,7 @@
     );
   }
 
-  function practicalPromptItem(block) {
+  function practicalPromptItem(block, blockIndex, sharedPremiseGroups = []) {
     const item = document.createElement("article");
     item.className = "practical-prompt-item";
     item.setAttribute("role", "listitem");
@@ -7879,18 +7958,12 @@
     marker.className = "practical-prompt-marker";
     marker.textContent = block.label || "記述";
 
-    const premise = document.createElement("div");
-    premise.className = "practical-prompt-premise";
-    const premiseLabel = document.createElement("span");
-    premiseLabel.className = "practical-prompt-label";
-    premiseLabel.textContent = "前提";
-    const premiseList = document.createElement("ul");
-    premiseList.replaceChildren(...block.premises.map((text) => {
-      const row = document.createElement("li");
-      row.textContent = text;
-      return row;
-    }));
-    premise.append(premiseLabel, premiseList);
+    const relevantGroups = sharedPremiseGroups.filter((group) => group.blockIndexes.includes(blockIndex));
+    const sharedTexts = new Set(relevantGroups.map((group) => group.text));
+    const ownPremises = block.premises.filter((text) => !sharedTexts.has(text));
+    if (relevantGroups.length) {
+      item.setAttribute("aria-describedby", relevantGroups.map((group) => group.id).join(" "));
+    }
 
     const judgment = document.createElement("div");
     judgment.className = "practical-prompt-judgment";
@@ -7901,26 +7974,46 @@
     judgmentText.textContent = block.judgment;
     judgment.append(judgmentLabel, judgmentText);
 
-    item.append(marker, premise, judgment);
+    item.append(marker);
+    if (ownPremises.length) {
+      const premise = document.createElement("div");
+      premise.className = "practical-prompt-premise";
+      const premiseLabel = document.createElement("span");
+      premiseLabel.className = "practical-prompt-label";
+      premiseLabel.textContent = "前提";
+      const premiseList = document.createElement("ul");
+      premiseList.replaceChildren(...ownPremises.map((text) => {
+        const row = document.createElement("li");
+        row.textContent = text;
+        return row;
+      }));
+      premise.append(premiseLabel, premiseList);
+      item.append(premise);
+    }
+    item.append(judgment);
     return item;
   }
 
-  function practicalSharedPremiseGroups(choiceBlocks) {
-    if (!Array.isArray(choiceBlocks) || choiceBlocks.length !== 4 ||
-        !choiceBlocks.every(validPracticalDisplayBlock)) return [];
+  function practicalSharedPremiseGroups(blocks, targetKind = "choice") {
+    if (!Array.isArray(blocks) || blocks.length < 2 ||
+        !blocks.every(validPracticalDisplayBlock)) return [];
     const uses = new Map();
-    choiceBlocks.forEach((block, choiceIndex) => {
+    blocks.forEach((block, blockIndex) => {
       new Set(block.premises).forEach((text) => {
         if (!uses.has(text)) uses.set(text, []);
-        uses.get(text).push(choiceIndex);
+        uses.get(text).push(blockIndex);
       });
     });
     return [...uses.entries()]
-      .filter(([, choiceIndexes]) => choiceIndexes.length > 1)
-      .map(([text, choiceIndexes], index) => ({
+      .filter(([, blockIndexes]) => blockIndexes.length > 1)
+      .map(([text, blockIndexes], index) => ({
         id: `practicalSharedPremise${index + 1}`,
         text,
-        choiceIndexes
+        blockIndexes,
+        targetKind,
+        targetLabels: blockIndexes.map((blockIndex) =>
+          targetKind === "choice" ? String(blockIndex + 1) : (blocks[blockIndex].label || String(blockIndex + 1))
+        )
       }));
   }
 
@@ -7938,7 +8031,7 @@
       row.className = "practical-prompt-shared-row";
       const targets = document.createElement("span");
       targets.className = "practical-prompt-shared-targets";
-      targets.textContent = `選択肢 ${group.choiceIndexes.map((index) => index + 1).join("・")}`;
+      targets.textContent = `${group.targetKind === "choice" ? "選択肢" : "記述"} ${group.targetLabels.join("・")}`;
       const text = document.createElement("p");
       text.className = "practical-prompt-shared-text";
       text.textContent = group.text;
@@ -7969,7 +8062,7 @@
       const list = document.createElement("div");
       list.className = "practical-prompt-items";
       list.setAttribute("role", "list");
-      list.replaceChildren(...items.map(practicalPromptItem));
+      list.replaceChildren(...items.map((block, index) => practicalPromptItem(block, index, sharedPremiseGroups)));
       parts.push(list);
     }
     elements.practicalDrillPrompt.dataset.structured = "true";
@@ -7983,7 +8076,7 @@
       button.textContent = `${index + 1}. ${choice}`;
       return;
     }
-    const relevantGroups = sharedPremiseGroups.filter((group) => group.choiceIndexes.includes(index));
+    const relevantGroups = sharedPremiseGroups.filter((group) => group.blockIndexes.includes(index));
     const sharedTexts = new Set(relevantGroups.map((group) => group.text));
     const ownPremises = block.premises.filter((text) => !sharedTexts.has(text));
     if (relevantGroups.length) {
@@ -8023,6 +8116,7 @@
   function renderPracticalDrill() {
     if (!elements.practicalDrillPanel || !PRACTICAL_QUESTION_IDS.length) return;
     const drill = state.practicalDrill;
+    renderAnswerDock(currentQuestion());
     const activeQuestions = activePracticalQuestions(drill);
     const activeIds = activeQuestions.map((question) => question.id);
     const contacted = activeIds.filter((id) => (drill.history[id]?.attempts || 0) > 0).length;
@@ -8095,14 +8189,24 @@
     const choiceBlocks = Array.isArray(question.displayModel?.choiceBlocks)
       ? question.displayModel.choiceBlocks
       : [];
-    const sharedPremiseGroups = practicalSharedPremiseGroups(choiceBlocks);
+    const promptItems = Array.isArray(question.displayModel?.items) ? question.displayModel.items : [];
+    const sharedPremiseGroups = choiceBlocks.length
+      ? practicalSharedPremiseGroups(choiceBlocks, "choice")
+      : practicalSharedPremiseGroups(promptItems, "item");
     renderPracticalPrompt(question, sharedPremiseGroups);
     elements.practicalDrillChoices.replaceChildren();
     question.choices.forEach((choice, index) => {
       const button = document.createElement("button");
       button.type = "button";
       button.className = "practical-drill-choice";
-      renderPracticalChoice(button, choice, index, choiceBlocks[index], sharedPremiseGroups);
+      button.setAttribute("aria-pressed", String(Boolean(attempt && attempt.selected === index)));
+      renderPracticalChoice(
+        button,
+        choice,
+        index,
+        choiceBlocks[index],
+        choiceBlocks.length ? sharedPremiseGroups : []
+      );
       button.disabled = Boolean(attempt);
       if (attempt) {
         button.classList.toggle("is-selected", attempt.selected === index);
@@ -8140,6 +8244,10 @@
     elements.practicalDrillConfidence
       .querySelectorAll("[data-practical-confidence]")
       .forEach((button) => {
+        button.setAttribute(
+          "aria-pressed",
+          String(button.dataset.practicalConfidence === attempt.confidence)
+        );
         button.classList.toggle(
           "is-selected",
           button.dataset.practicalConfidence === attempt.confidence
@@ -8673,6 +8781,7 @@
       bankId: BUSINESS_FULLSCORE_BANK_ID,
       bankVersion: BUSINESS_FULLSCORE_BANK.VERSION,
       presentationKey: sessionPresentationKey,
+      presentationOverrides: {},
       planMode: sessionPlanMode,
       knockPreset: normalizeBusinessKnockPreset(knockPreset || state.practicalDrill.knockPreset),
       stage: "active",
@@ -8777,6 +8886,7 @@
       bankVersion: SUBJECT_SPRINT_BANK.VERSION,
       presentationKey: `${todayKey()}:subject-sprint:${normalizedScope}:${createOpaqueId("cycle")}`
         .replace(/[^0-9a-z:_-]/gi, "").slice(0, 80),
+      presentationOverrides: {},
       planMode: "sprint",
       stage: "active",
       scope: normalizedScope,
@@ -8812,6 +8922,7 @@
       bankId: LEGACY_PRACTICAL_BANK_ID,
       bankVersion: PRACTICAL_VARIATIONS?.VERSION || 1,
       presentationKey: "",
+      presentationOverrides: {},
       planMode: "legacy",
       stage: "active",
       scope,
@@ -8874,6 +8985,7 @@
       bankId: LEGACY_PRACTICAL_BANK_ID,
       bankVersion: PRACTICAL_VARIATIONS?.VERSION || 1,
       presentationKey: "",
+      presentationOverrides: {},
       planMode: "legacy",
       stage: "active",
       scope,
@@ -8964,6 +9076,10 @@
     renderPracticalDrill();
     renderBusinessMastery();
     renderPassPlan();
+    window.requestAnimationFrame(() => {
+      elements.practicalDrillFeedback?.focus({ preventScroll: true });
+      elements.practicalDrillFeedback?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
   }
 
   function setPracticalConfidence(confidence) {
@@ -9001,7 +9117,7 @@
     if (!drill.currentAttempt || (drill.currentAttempt.correct && !drill.currentAttempt.confidence)) return;
     const answeredQuestion = currentPracticalQuestion();
     const history = answeredQuestion && drill.history[answeredQuestion.id];
-    if (answeredQuestion?.scopeId === "business" && history && !drill.currentAttempt.masteryRecorded) {
+    if (answeredQuestion && history && !drill.currentAttempt.masteryRecorded) {
       Object.assign(history, BUSINESS_MASTERY.recordOutcome(history, { correct: drill.currentAttempt.correct, confidence: drill.currentAttempt.confidence, answeredAt: history.lastAnsweredAt }));
       drill.currentAttempt.masteryRecorded = true;
     }
@@ -9011,6 +9127,21 @@
     } else {
       const pending = drill.retryIds.filter((id) => drill.sessionIds.includes(id));
       if (pending.length) {
+        const previousOverrides = drill.presentationOverrides || {};
+        const nextOverrides = {};
+        pending.forEach((id, index) => {
+          const question = practicalQuestionFor(id, drill.bankId);
+          const previousKey = previousOverrides[id] || drill.presentationKey;
+          const nextKey = nextPracticalRetryPresentationKey(
+            question,
+            drill.bankId,
+            drill.presentationKey,
+            previousKey,
+            drill.attempts + index + 1
+          );
+          if (nextKey) nextOverrides[id] = nextKey;
+        });
+        drill.presentationOverrides = nextOverrides;
         drill.stage = "retry";
         drill.queue = pending;
         drill.position = 0;
@@ -9020,6 +9151,7 @@
         drill.queue = [];
         drill.position = 0;
         drill.currentAttempt = null;
+        drill.presentationOverrides = {};
         drill.sessionsCompleted += 1;
         drill.completedAt = new Date().toISOString();
       }
@@ -9028,9 +9160,14 @@
     renderPracticalDrill();
     renderBusinessMastery();
     renderPassPlan();
-    window.requestAnimationFrame(() =>
-      elements.practicalDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
-    );
+    window.requestAnimationFrame(() => {
+      if (["active", "retry"].includes(drill.stage)) {
+        elements.practicalDrillChoices?.querySelector("button:not(:disabled)")?.focus({ preventScroll: true });
+      } else if (drill.stage === "complete") {
+        elements.practicalDrillRestartButton?.focus({ preventScroll: true });
+      }
+      elements.practicalDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
   }
 
   function cancelPracticalDrill() {
@@ -9043,6 +9180,7 @@
       queue: [],
       position: 0,
       currentAttempt: null,
+      presentationOverrides: {},
       sessionStartedAt: "",
       completedAt: ""
     };
@@ -9239,6 +9377,7 @@
     renderSprint();
     renderPassPlan();
     updateLogStatusText();
+    applySaveWriteProtection();
   }
 
   function removeCutCheck() {
@@ -9464,6 +9603,7 @@
       const button = document.createElement("button");
       button.type = "button";
       button.className = "choice-button";
+      button.setAttribute("aria-pressed", String(Boolean(answered && answered.selected === index)));
       button.disabled = Boolean(answered) || lockedByCutCheck;
       button.classList.toggle("is-locked", lockedByCutCheck && !answered);
       if (lockedByCutCheck && !answered) {
@@ -11175,11 +11315,10 @@
       }
     });
     render();
-    if (isCorrect) {
-      elements.battleField.scrollIntoView({ block: "center", behavior: "auto" });
-    } else {
-      elements.feedbackBox.scrollIntoView({ block: "start", behavior: "smooth" });
-    }
+    window.requestAnimationFrame(() => {
+      elements.feedbackBox?.focus({ preventScroll: true });
+      elements.feedbackBox?.scrollIntoView({ block: "start", behavior: isCorrect ? "auto" : "smooth" });
+    });
   }
 
   function confirmWeakBreak(id) {
@@ -12153,6 +12292,7 @@
       if (elements.progressDrawer) elements.progressDrawer.open = true;
     });
     window.addEventListener("keydown", (event) => {
+      if (saveStoreSession.writeBlocked) return;
       if (event.altKey || event.ctrlKey || event.metaKey) return;
       if (
         event.target instanceof HTMLInputElement ||
@@ -12205,11 +12345,13 @@
     saveState();
   }
   renderCurrentView();
+  applySaveWriteProtection();
   void (async () => {
     await checkStudyServer();
     await syncCentralProgress();
     await loadTodayQuest();
     grantQuestCompletionIfEarned();
     renderCurrentView();
+    applySaveWriteProtection();
   })();
 })();

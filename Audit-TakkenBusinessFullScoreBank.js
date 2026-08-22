@@ -418,8 +418,10 @@ for (const question of bank.QUESTIONS) {
     assert.ok(allowedDiagnosticTags.has(tag), `${question.id}: allowed diagnostic tag ${tag}`);
     observedDiagnosticTags.add(tag);
   });
-  question.choiceDiagnosticTags.forEach((tags) => {
-    assert.ok(tags.length >= 1, `${question.id}: nonempty choice diagnostic tags`);
+  question.choiceDiagnosticTags.forEach((tags, choiceIndex) => {
+    const focusedAggregateAnswer = ["combination", "case"].includes(question.formatKey) &&
+      choiceIndex === question.answer;
+    assert.ok(focusedAggregateAnswer || tags.length >= 1, `${question.id}: wrong choices have diagnostic tags`);
     tags.forEach((tag) => assert.ok(allowedDiagnosticTags.has(tag), `${question.id}: choice diagnostic ${tag}`));
   });
   question.sourceUrls.forEach((url) => {
@@ -589,7 +591,25 @@ presentations.forEach((presentedQuestions, keyIndex) => {
     assert.equal(presented.masteryId, stable.id, `${stable.id}: presented mastery ID`);
     assert.equal(presented.presentationKey, presentationKeys[keyIndex], `${stable.id}: presentation key`);
     assert.equal(presented.choices[presented.answer], stable.choices[stable.answer], `${stable.id}: rotated answer content`);
-    assert.strictEqual(presented.sourceFacts, stable.sourceFacts, `${stable.id}: source facts remain stable`);
+    if (stable.formatKey === "single") {
+      assert.notStrictEqual(presented.sourceFacts, stable.sourceFacts, `${stable.id}: presented single facts use rotated view`);
+      assert.deepEqual(
+        presented.sourceFacts.map((fact) => fact.key),
+        presented.presentationOrder.map((stableIndex) => stable.sourceFacts[stableIndex].key),
+        `${stable.id}: single facts rotate with choices`
+      );
+    } else {
+      assert.strictEqual(presented.sourceFacts, stable.sourceFacts, `${stable.id}: aggregate facts remain stable`);
+    }
+    if (["combination", "case"].includes(stable.formatKey)) {
+      assert.deepEqual(presented.choiceDiagnosticTags[presented.answer], [], `${stable.id}: correct aggregate choice has no misconception tags`);
+      presented.choiceDiagnosticTags.forEach((tags, choiceIndex) => {
+        if (choiceIndex !== presented.answer) {
+          assert.ok(tags.length >= 1, `${stable.id}: wrong aggregate choice has focused tags`);
+          assert.ok(tags.length <= stable.diagnosticTags.length, `${stable.id}: focused tags do not exceed question union`);
+        }
+      });
+    }
     assertDeepFrozen(presented.displayModel, `${stable.id}: presented display model`);
     assert.equal(presented.displayModel.items.length, stable.displayModel.items.length, `${stable.id}: presented display items`);
     assert.equal(presented.displayModel.choiceBlocks.length, stable.displayModel.choiceBlocks.length, `${stable.id}: presented display choice blocks`);
@@ -598,6 +618,8 @@ presentations.forEach((presentedQuestions, keyIndex) => {
         const stableIndex = presented.presentationOrder[presentedIndex];
         assert.strictEqual(block, stable.displayModel.choiceBlocks[stableIndex], `${stable.id}: choice block rotates with choice`);
         assert.equal(presented.choices[presentedIndex], stable.choices[stableIndex], `${stable.id}: displayed choice rotates with block`);
+        assert.equal(block.sourceFactKeys[0], presented.sourceFacts[presentedIndex].key, `${stable.id}: displayed fact rotates with block`);
+        assert.equal(block.judgment, presented.sourceFacts[presentedIndex].presentedStatement, `${stable.id}: displayed fact rotates with judgment`);
       });
     }
     assert.deepEqual(bank.diagnosticsForSelection(presented, presented.answer), [], `${stable.id}: presented correct diagnosis`);

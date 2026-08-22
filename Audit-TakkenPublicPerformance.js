@@ -5,7 +5,7 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const ROOT = __dirname;
-const EXPECTED_CACHE_VERSION = "20260822-explanation-depth-v33-1";
+const EXPECTED_CACHE_VERSION = "20260823-mastery-hardening-v34-1";
 // v31 adds the auditable PWA runtime while keeping modest headroom over the
 // current 27-file script set.
 const MAX_PUBLIC_JS_BYTES = 1_275_000;
@@ -29,7 +29,10 @@ assert.match(read("service-worker.js"), /self\.clients\.claim\(\)/, "activated u
 assert.match(read("service-worker.js"), /IMMUTABLE_BY_PATH[\s\S]*requestUrl\.pathname/, "unversioned display assets must resolve to versioned precache entries");
 assert.match(read("pwa-runtime.js"), /controllerchange[\s\S]*reloadRequested[\s\S]*window\.location\.reload\(\)/, "explicit update must reload only after controller change");
 assert.match(read("pwa-runtime.js"), /TAKKEN_SKIP_WAITING/, "explicit update message missing");
-assert.match(read("pwa-runtime.js"), /registration\.waiting\.scriptURL[\s\S]*waitingVersion/, "update message must target the waiting worker's own version");
+assert.match(read("pwa-runtime.js"), /registration\.waiting\.postMessage\(\{ type: "TAKKEN_SKIP_WAITING" \}\)/, "old runtime must be able to activate the waiting worker without query-version coupling");
+assert.doesNotMatch(read("pwa-runtime.js"), /waitingVersion|registration\.waiting\.scriptURL/, "waiting worker activation must not trust a legacy registration query");
+assert.match(read("service-worker.js"), /TAKKEN_SKIP_WAITING"\) event\.waitUntil\(self\.skipWaiting\(\)\)/, "waiting worker must finish skipWaiting before the message event settles");
+assert.match(read("service-worker.js"), /requestedVersion[\s\S]*requestedVersion !== VERSION[\s\S]*fetch\(event\.request\)/, "mismatched versioned assets must prefer the network");
 for (const asset of ["grassland-route.webp", "contract-mimic.webp", "deadline-warden.webp", "law-citadel-boss.webp", "license-sentinel.webp", "notice-gargoyle.webp", "registry-sphinx.webp", "study-knight.webp", "vault-tortoise.webp"]) {
   assert.match(read("service-worker.js"), new RegExp(asset.replace(".", "\\.")), `offline precache missing ${asset}`);
 }

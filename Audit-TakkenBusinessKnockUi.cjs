@@ -81,6 +81,7 @@ async function resetKnockState(page, history = {}) {
       bankId: "business-fullscore",
       bankVersion: window.TAKKEN_BUSINESS_FULLSCORE_BANK.VERSION,
       presentationKey: "",
+      presentationOverrides: {},
       planMode: "",
       knockPreset: { mode: "untouched", size: 20, unitId: "" },
       stage: "idle",
@@ -134,7 +135,8 @@ async function currentPresented(page) {
     const saved = JSON.parse(localStorage.getItem(key));
     const id = saved.practicalDrill.queue[saved.practicalDrill.position];
     const question = window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS_BY_ID[id];
-    const presented = window.TAKKEN_BUSINESS_FULLSCORE_BANK.presentQuestion(question, saved.practicalDrill.presentationKey);
+    const presentationKey = saved.practicalDrill.presentationOverrides?.[id] || saved.practicalDrill.presentationKey;
+    const presented = window.TAKKEN_BUSINESS_FULLSCORE_BANK.presentQuestion(question, presentationKey);
     return { id, answer: presented.answer, choices: [...presented.choices] };
   });
 }
@@ -158,8 +160,14 @@ async function completeTenWithTwoRetries(page) {
   let saved = await readSavedState(page);
   assert.equal(saved.practicalDrill.stage, "retry", "wrong and uncertain answers must enter the same-set retry queue");
   assert.deepEqual(saved.practicalDrill.queue, [wrong.id, uncertain.id]);
-  await answerAndAdvance(page, "confident");
-  await answerAndAdvance(page, "confident");
+  const retriedWrong = await answerAndAdvance(page, "confident");
+  const retriedUncertain = await answerAndAdvance(page, "confident");
+  assert.equal(retriedWrong.id, wrong.id);
+  assert.equal(retriedUncertain.id, uncertain.id);
+  assert.notEqual(retriedWrong.answer, wrong.answer, "retry must move the correct answer away from the memorized position");
+  assert.notEqual(retriedUncertain.answer, uncertain.answer, "uncertain retry must move the correct answer away from the memorized position");
+  assert.notDeepEqual(retriedWrong.choices, wrong.choices, "retry choices must be re-presented");
+  assert.notDeepEqual(retriedUncertain.choices, uncertain.choices, "uncertain retry choices must be re-presented");
   await page.locator("#practicalDrillComplete").waitFor({ state: "visible" });
   return { wrong, uncertain, saved: await readSavedState(page) };
 }
@@ -185,6 +193,7 @@ async function forcePracticalQuestion(page, { bankId, id, presentationKey = "pre
         ? window.TAKKEN_BUSINESS_FULLSCORE_BANK.VERSION
         : window.TAKKEN_PRACTICAL_VARIATIONS.VERSION,
       presentationKey: fullScore ? nextPresentationKey : "",
+      presentationOverrides: {},
       planMode: fullScore ? "knock" : "legacy",
       stage: "active",
       scope: fullScore ? "business" : "all",
@@ -220,8 +229,9 @@ async function presentedFixture(page) {
     const question = fullScore
       ? window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS_BY_ID[saved.practicalDrill.queue[0]]
       : window.TAKKEN_PRACTICAL_VARIATIONS.QUESTIONS.find((item) => item.id === saved.practicalDrill.queue[0]);
+    const presentationKey = saved.practicalDrill.presentationOverrides?.[question.id] || saved.practicalDrill.presentationKey;
     const presented = fullScore
-      ? window.TAKKEN_BUSINESS_FULLSCORE_BANK.presentQuestion(question, saved.practicalDrill.presentationKey)
+      ? window.TAKKEN_BUSINESS_FULLSCORE_BANK.presentQuestion(question, presentationKey)
       : question;
     return {
       id: presented.id,
@@ -402,22 +412,55 @@ async function presentedFixture(page) {
       await forcePracticalQuestion(page, { bankId: "business-fullscore", id: fixture.id });
       const expected = await presentedFixture(page);
       const prompt = page.locator("#practicalDrillPrompt");
+      const premiseUses = new Map();
+      expected.displayModel.items.forEach((block, blockIndex) => {
+        new Set(block.premises).forEach((text) => {
+          if (!premiseUses.has(text)) premiseUses.set(text, []);
+          premiseUses.get(text).push(blockIndex);
+        });
+      });
+      const expectedSharedItems = [...premiseUses.entries()]
+        .filter(([, blockIndexes]) => blockIndexes.length > 1)
+        .map(([text, blockIndexes], index) => ({
+          id: `practicalSharedPremise${index + 1}`,
+          text,
+          blockIndexes
+        }));
+      const sharedItemTexts = new Set(expectedSharedItems.map((group) => group.text));
+      const expectedItemBlocks = expected.displayModel.items.map((item, blockIndex) => ({
+        label: item.label,
+        premises: item.premises.filter((text) => !sharedItemTexts.has(text)),
+        judgment: item.judgment,
+        describedBy: expectedSharedItems
+          .filter((group) => group.blockIndexes.includes(blockIndex))
+          .map((group) => group.id)
+          .join(" ") || null
+      }));
       assert.equal(await prompt.getAttribute("data-structured"), "true", `${fixture.formatKey} prompt must be structured`);
       assert.equal(await prompt.locator(".practical-prompt-intro").textContent(), expected.displayModel.intro);
       assert.equal(await prompt.locator(".practical-prompt-item").count(), expected.displayModel.items.length);
-      assert.equal(await prompt.locator(".practical-prompt-premise").count(), expected.displayModel.items.length);
+      assert.equal(
+        await prompt.locator(".practical-prompt-premise").count(),
+        expectedItemBlocks.filter((item) => item.premises.length).length
+      );
       assert.equal(await prompt.locator(".practical-prompt-judgment").count(), expected.displayModel.items.length);
+      assert.deepEqual(await prompt.locator(".practical-prompt-shared-row").evaluateAll((rows) => rows.map((row) => ({
+        id: row.id,
+        targets: row.querySelector(".practical-prompt-shared-targets")?.textContent,
+        text: row.querySelector(".practical-prompt-shared-text")?.textContent
+      }))), expectedSharedItems.map((group) => ({
+        id: group.id,
+        targets: `記述 ${group.blockIndexes.map((index) => expected.displayModel.items[index].label).join("・")}`,
+        text: group.text
+      })), `${fixture.formatKey} repeated premises must render once above their statements`);
       assert.doesNotMatch(await prompt.textContent(), /【(?:前提|判断)】/, `${fixture.formatKey} must not leave raw premise markers in the learner UI`);
       const actualBlocks = await prompt.locator(".practical-prompt-item").evaluateAll((items) => items.map((item) => ({
         label: item.querySelector(".practical-prompt-marker")?.textContent,
         premises: [...item.querySelectorAll(".practical-prompt-premise li")].map((node) => node.textContent),
-        judgment: item.querySelector(".practical-prompt-judgment p")?.textContent
+        judgment: item.querySelector(".practical-prompt-judgment p")?.textContent,
+        describedBy: item.getAttribute("aria-describedby")
       })));
-      assert.deepEqual(actualBlocks, expected.displayModel.items.map((item) => ({
-        label: item.label,
-        premises: item.premises,
-        judgment: item.judgment
-      })), `${fixture.formatKey} source judgments and premises must survive rendering`);
+      assert.deepEqual(actualBlocks, expectedItemBlocks, `${fixture.formatKey} source judgments and premises must survive rendering`);
     }
 
     // A single-statement question keeps its short intro. Repeated premises are
@@ -532,7 +575,7 @@ async function presentedFixture(page) {
     await fallbackPage.close();
 
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: "ok", plannerSizes: [10, 20, 50, 100], unitFiltered: true, weakDuePrioritized: true, random100Unique: true, randomOrderPreserved: true, reloadPreserved: true, retryLoop: true, sameDayLevelCapped: true, structuredPromptFormats: ["combination", "count", "case"], singleChoiceBlocks: 4, legacyRawFallback: true, coreFallbackWithoutKnock: true, overflow390: 0, overflow320: 0, errors: 0 }));
+    console.log(JSON.stringify({ status: "ok", plannerSizes: [10, 20, 50, 100], unitFiltered: true, weakDuePrioritized: true, random100Unique: true, randomOrderPreserved: true, reloadPreserved: true, retryLoop: true, retryAnswerPositionsRotated: true, sameDayLevelCapped: true, structuredPromptFormats: ["combination", "count", "case"], singleChoiceBlocks: 4, legacyRawFallback: true, coreFallbackWithoutKnock: true, overflow390: 0, overflow320: 0, errors: 0 }));
   } finally {
     await browser.close();
     await local.close();

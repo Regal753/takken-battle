@@ -12,6 +12,9 @@ const required = [
   "pwa-runtime.js",
   "service-worker.js",
   "Audit-TakkenPwaOffline.cjs",
+  "Audit-TakkenPwaUpgrade.cjs",
+  "Audit-TakkenFutureSaveUi.cjs",
+  "Audit-TakkenAccessibilityUi.cjs",
   "scripts/assemble-site.mjs",
   "scripts/verify-deployed-browser.cjs",
   "styles.css",
@@ -91,9 +94,9 @@ const pagesWorkflow = text(".github/workflows/pages.yml");
 const ciWorkflow = text(".github/workflows/ci.yml");
 
 assert.match(index, /name="takken-runtime" content="public-static"/);
-assert.match(index, /manifest\.webmanifest\?v=20260822-explanation-depth-v33-1/);
-assert.match(index, /pwa-runtime\.js\?v=20260822-explanation-depth-v33-1/);
-assert.match(text("service-worker.js"), /const VERSION = "20260822-explanation-depth-v33-1"/);
+assert.match(index, /manifest\.webmanifest\?v=20260823-mastery-hardening-v34-1/);
+assert.match(index, /pwa-runtime\.js\?v=20260823-mastery-hardening-v34-1/);
+assert.match(text("service-worker.js"), /const VERSION = "20260823-mastery-hardening-v34-1"/);
 assert.match(app, /const PUBLIC_STATIC_MODE/);
 assert.match(app, /function publicTodayQuest/);
 assert.match(app, /const DEFAULT_STUDY_SCOPE = "business"/);
@@ -209,23 +212,23 @@ assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 第2分冊・権利関係を固める/);
 assert.match(index, /③ 法令・税その他へ進む/);
 assert.match(index, /④ 全分野を混ぜる/);
-assert.match(index, /styles\.css\?v=20260822-explanation-depth-v33-1/);
-assert.match(index, /subject-sprint-bank\.js\?v=20260822-explanation-depth-v33-1/);
-assert.match(index, /pass-readiness\.js\?v=20260822-explanation-depth-v33-1/);
-assert.match(index, /exam-current-year-2026\.js\?v=20260822-explanation-depth-v33-1/);
-assert.match(index, /official-topic-map\.js\?v=20260822-explanation-depth-v33-1/);
-assert.match(index, /business-mastery\.js\?v=20260822-explanation-depth-v33-1/);
-assert.match(index, /business-knock\.js\?v=20260822-explanation-depth-v33-1/);
-assert.match(index, /business-pace\.js\?v=20260822-explanation-depth-v33-1/);
-assert.match(index, /business-fullscore-supplement\.js\?v=20260822-explanation-depth-v33-1/);
-assert.match(index, /business-fullscore-bank\.js\?v=20260822-explanation-depth-v33-1/);
-assert.match(index, /practical-question-bank\.js\?v=20260822-explanation-depth-v33-1/);
-assert.match(index, /calculation-drill\.js\?v=20260822-explanation-depth-v33-1/);
-assert.match(index, /app\.js\?v=20260822-explanation-depth-v33-1/);
-assert.match(index, /save-store\.js\?v=20260822-explanation-depth-v33-1/);
-assert.match(index, /official-exam-data\.js\?v=20260822-explanation-depth-v33-1/);
-assert.match(index, /official-law-baseline\.js\?v=20260822-explanation-depth-v33-1/);
-assert.match(index, /state-sync\.js\?v=20260822-explanation-depth-v33-1/);
+assert.match(index, /styles\.css\?v=20260823-mastery-hardening-v34-1/);
+assert.match(index, /subject-sprint-bank\.js\?v=20260823-mastery-hardening-v34-1/);
+assert.match(index, /pass-readiness\.js\?v=20260823-mastery-hardening-v34-1/);
+assert.match(index, /exam-current-year-2026\.js\?v=20260823-mastery-hardening-v34-1/);
+assert.match(index, /official-topic-map\.js\?v=20260823-mastery-hardening-v34-1/);
+assert.match(index, /business-mastery\.js\?v=20260823-mastery-hardening-v34-1/);
+assert.match(index, /business-knock\.js\?v=20260823-mastery-hardening-v34-1/);
+assert.match(index, /business-pace\.js\?v=20260823-mastery-hardening-v34-1/);
+assert.match(index, /business-fullscore-supplement\.js\?v=20260823-mastery-hardening-v34-1/);
+assert.match(index, /business-fullscore-bank\.js\?v=20260823-mastery-hardening-v34-1/);
+assert.match(index, /practical-question-bank\.js\?v=20260823-mastery-hardening-v34-1/);
+assert.match(index, /calculation-drill\.js\?v=20260823-mastery-hardening-v34-1/);
+assert.match(index, /app\.js\?v=20260823-mastery-hardening-v34-1/);
+assert.match(index, /save-store\.js\?v=20260823-mastery-hardening-v34-1/);
+assert.match(index, /official-exam-data\.js\?v=20260823-mastery-hardening-v34-1/);
+assert.match(index, /official-law-baseline\.js\?v=20260823-mastery-hardening-v34-1/);
+assert.match(index, /state-sync\.js\?v=20260823-mastery-hardening-v34-1/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
 assert.doesNotMatch(index, /understanding-system\.js/);
@@ -283,9 +286,12 @@ assert.match(pagesWorkflow, /node Audit-TakkenOfficialTopicMap\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-browser\.cjs/);
 assert.match(pagesWorkflow, /playwright@1\.62\.1/);
-assert.match(pagesWorkflow, /20260822-explanation-depth-v33-1/);
+assert.match(pagesWorkflow, /20260823-mastery-hardening-v34-1/);
 assert.match(pagesWorkflow, /node scripts\/assemble-site\.mjs/);
 assert.match(ciWorkflow, /node Audit-TakkenPwaOffline\.cjs/);
+assert.match(ciWorkflow, /node Audit-TakkenPwaUpgrade\.cjs/);
+assert.match(ciWorkflow, /node Audit-TakkenFutureSaveUi\.cjs/);
+assert.match(ciWorkflow, /node Audit-TakkenAccessibilityUi\.cjs/);
 assert.doesNotMatch(pagesWorkflow, /\bcp\b[^\n]*_site\//, "asset assembly must derive the release files from HTML references");
 assert.match(ciWorkflow, /node Audit-TakkenUnderstandingDepth\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenBusinessMastery\.js/);

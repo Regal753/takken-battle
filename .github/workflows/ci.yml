@@ -88,6 +88,9 @@ jobs:
           node Audit-TakkenPassPlanUi.cjs
           node Audit-TakkenPassLoopV12Ui.cjs
           node Audit-TakkenPwaOffline.cjs
+          node Audit-TakkenPwaUpgrade.cjs
+          node Audit-TakkenFutureSaveUi.cjs
+          node Audit-TakkenAccessibilityUi.cjs
 
   validate:
     if: ${{ always() }}

@@ -237,7 +237,9 @@ const amendment = supplement.ANCHORS_BY_ID.bs003;
 assert.deepEqual(amendment.truths, [true, false, true, false], "2024/2025 amendment truth pattern");
 assert.match(amendment.statements[0], /都道府県知事を経由せず.*地方整備局等へ直接申請/, "direct minister-license application");
 assert.match(amendment.reasons[1], /知事免許・取引士手続.*順次運用/, "eMLIT is not a nationwide all-procedure mandate");
-assert.match(amendment.statements[2], /添付書類として提出する略歴書.*住所、電話番号及び生年月日/, "2025 resume-field deletion");
+assert.match(amendment.statements[2], /添付書類が再編.*氏名、住所、電話番号.*連絡先を記載する書面が追加/, "2025 contact-details attachment");
+assert.match(amendment.reasons[2], /施行規則1条の2第1項8号.*略歴書には住所・電話番号・生年月日の欄が残る/, "current resume fields retained");
+assert.doesNotMatch(anchorBlob(amendment), /略歴書から.*(?:住所|電話番号|生年月日).*削除/, "false resume-field deletion must not return");
 assert.match(amendment.reasons[3], /2025年1月1日施行/, "REINS status effective date");
 
 const employeeAndSigns = supplement.ANCHORS_BY_ID.bs007;
