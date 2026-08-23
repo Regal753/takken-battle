@@ -53,7 +53,8 @@ async function questionAnswer(page) {
     const drill = state.practicalDrill;
     const id = drill.queue[drill.position];
     const question = window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS_BY_ID[id];
-    return { id, answer: window.TAKKEN_SUBJECT_SPRINT_BANK.presentQuestion(question, drill.presentationKey).answer };
+    const presentationKey = drill.presentationOverrides?.[id] || drill.presentationKey;
+    return { id, answer: window.TAKKEN_SUBJECT_SPRINT_BANK.presentQuestion(question, presentationKey).answer };
   });
 }
 
@@ -108,7 +109,7 @@ async function main() {
     const page = await context.newPage();
     page.on("pageerror", (error) => errors.push(String(error)));
     page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
-    await page.addInitScript(() => {
+    await context.addInitScript(() => {
       const NativeDate = Date; const fixed = new NativeDate("2026-08-16T10:00:00+09:00").getTime();
       class FixedDate extends NativeDate { constructor(...args) { super(...(args.length ? args : [fixed])); } static now() { return fixed; } }
       window.Date = FixedDate;
@@ -148,6 +149,103 @@ async function main() {
     assert.equal(initial.passPlanOpen, false, "the long-term plan must not push today\'s command below the fold");
     assert.match(initial.lawGateLabel, /2026改正2問/);
     assert.deepEqual(initial.exposure || {}, {});
+
+    // Retention is source-level evidence. A newer source failure must demote
+    // an older retained sprint variant instead of letting the old OR rule push
+    // 30/44 just above the two-thirds ready threshold.
+    const retentionReview = `prretention${Date.now().toString(36)}`;
+    const retentionUrl = new URL(server.baseUrl);
+    retentionUrl.searchParams.set("review", retentionReview);
+    retentionUrl.searchParams.set("today", "1");
+    const retentionPage = await context.newPage();
+    retentionPage.on("pageerror", (error) => errors.push(String(error)));
+    retentionPage.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+    await retentionPage.goto(retentionUrl.toString(), { waitUntil: "networkidle", timeout: 20000 });
+    await retentionPage.waitForFunction(() => window.TAKKEN_SUBJECT_SPRINT_BANK?.QUESTIONS?.length === 80);
+    const retentionFixture = await retentionPage.evaluate(() => {
+      const review = new URL(location.href).searchParams.get("review") || "";
+      const key = `takken-battle-study-clean-v2-hard-review-${review}`;
+      const saved = JSON.parse(localStorage.getItem(key) || "{}");
+      const rights = window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS
+        .filter((question) => question.sectionId === "rights");
+      if (rights.length !== 44) throw new Error(`rights sprint fixture ${rights.length}/44`);
+      const sprintAnsweredAt = "2026-08-15T10:00:00+09:00";
+      saved.practicalDrill.history = Object.fromEntries(rights.map((question, index) => [
+        question.id,
+        index < 30
+          ? {
+              attempts: 2,
+              correct: 2,
+              wrong: 0,
+              uncertain: 0,
+              lastCorrect: true,
+              lastConfidence: "confident",
+              lastAnsweredAt: sprintAnsweredAt,
+              reviewLevel: 2,
+              masteryDueKey: "2026-08-18",
+              confidentDayKeys: ["2026-08-14", "2026-08-15"]
+            }
+          : {
+              attempts: 1,
+              correct: 0,
+              wrong: 1,
+              uncertain: 0,
+              lastCorrect: false,
+              lastConfidence: "wrong",
+              lastAnsweredAt: sprintAnsweredAt,
+              reviewLevel: 0,
+              masteryDueKey: "",
+              confidentDayKeys: []
+            }
+      ]));
+      const target = rights[29];
+      const sourceWrongAt = "2026-08-16T09:00:00+09:00";
+      saved.questionStats[target.sourceQuestionId] = {
+        attempts: 3,
+        correct: 2,
+        wrong: 1,
+        lastAnsweredAt: sourceWrongAt,
+        lastCorrectAt: "2026-08-12T09:00:00+09:00",
+        lastWrongAt: sourceWrongAt,
+        correctDayKeys: ["2026-08-10", "2026-08-12"],
+        clearDayKeys: ["2026-08-10", "2026-08-12"],
+        lastConfidence: "wrong",
+        lastConfidenceAt: sourceWrongAt
+      };
+      localStorage.setItem(key, JSON.stringify(saved));
+      return { targetSprintId: target.id, targetSourceId: target.sourceQuestionId };
+    });
+    await retentionPage.reload({ waitUntil: "networkidle" });
+    const latestEvidenceRetention = await retentionPage.evaluate(() => {
+      const label = document.querySelector("#passSubjectRights")?.closest("article")
+        ?.querySelector("small")?.textContent?.trim() || "";
+      const match = label.match(/接触 (\d+)\/(\d+)・定着 (\d+)\/(\d+)/);
+      if (!match) throw new Error(`rights metric unavailable: ${label}`);
+      const rights = {
+        contacted: Number(match[1]),
+        total: Number(match[2]),
+        retained: Number(match[3])
+      };
+      const readiness = window.TAKKEN_PASS_READINESS.calculatePassReadiness({
+        todayKey: "2026-08-16",
+        dailyAvailableMinutes: 90,
+        subjects: {
+          business: { total: 44, contacted: 0, retained: 0 },
+          rights,
+          restrictions: { total: 18, contacted: 0, retained: 0 },
+          tax: { total: 6, contacted: 0, retained: 0 },
+          other: { total: 12, contacted: 0, retained: 0 }
+        }
+      });
+      return {
+        label,
+        rights,
+        subjectState: readiness.subjects.find((subject) => subject.key === "rights")?.state
+      };
+    });
+    assert.deepEqual(latestEvidenceRetention.rights, { contacted: 44, total: 44, retained: 29 });
+    assert.equal(latestEvidenceRetention.subjectState, "weak", "newer source miss must not leave the subject ready");
+    await retentionPage.close();
 
     await openPassPanel(page);
     await page.locator("#passMockAction").click();
@@ -226,10 +324,30 @@ async function main() {
     const retry = await stored(page);
     assert.equal(retry.state.practicalDrill.stage, "retry");
     assert.deepEqual(retry.state.practicalDrill.queue, [wrong.id]);
+    const retried = await questionAnswer(page);
+    assert.equal(retried.id, wrong.id);
+    assert.notEqual(retried.answer, wrong.answer, "subject retry must rotate the memorized answer position");
     await answerSprint(page);
     const finished = await stored(page);
     assert.equal(finished.state.practicalDrill.stage, "complete");
     assert.deepEqual(finished.state.officialExamExposure || {}, {});
+    const cleanId = finished.state.practicalDrill.sessionIds.find((id) => id !== wrong.id);
+    const sprintMastery = await page.evaluate(({ wrongId, cleanId }) => {
+      const review = new URL(location.href).searchParams.get("review") || "";
+      const key = `takken-battle-study-clean-v2-hard-review-${review}`;
+      const history = JSON.parse(localStorage.getItem(key)).practicalDrill.history;
+      const snapshot = (id) => ({
+        ...window.TAKKEN_BUSINESS_MASTERY.normalizeMasteryHistory(history[id]),
+        state: window.TAKKEN_BUSINESS_MASTERY.stateFor(history[id], new Date())
+      });
+      return { wrong: snapshot(wrongId), clean: snapshot(cleanId) };
+    }, { wrongId: wrong.id, cleanId });
+    [sprintMastery.wrong, sprintMastery.clean].forEach((entry) => {
+      assert.equal(entry.reviewLevel, 1, "same-day sprint success must start, not skip, the spaced chain");
+      assert.match(entry.masteryDueKey, /^\d{4}-\d{2}-\d{2}$/);
+      assert.equal(entry.confidentDayKeys.length, 1);
+      assert.equal(entry.state, "learning", "one-day exposure is not retained evidence");
+    });
 
     for (const [scope, count, prefix] of [
       ["restrictions", 18, "sprint-law-"],
@@ -305,7 +423,7 @@ async function main() {
     }
     assert.deepEqual(errors, []);
     await context.close();
-    console.log(JSON.stringify({ status: "ok", initial, retryId: wrong.id, schema: legacy.state.stateSchemaVersion, errors: errors.length }, null, 2));
+    console.log(JSON.stringify({ status: "ok", initial, latestEvidenceRetention: { ...retentionFixture, ...latestEvidenceRetention }, retryId: wrong.id, retryAnswerPositionRotated: true, sprintReviewLevel: sprintMastery.wrong.reviewLevel, sprintRetentionState: sprintMastery.wrong.state, schema: legacy.state.stateSchemaVersion, errors: errors.length }, null, 2));
   } finally { await browser.close(); await server.close(); }
 }
 

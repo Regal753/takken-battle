@@ -121,13 +121,25 @@
     try {
       const value = parsedObject(raw);
       const previousSchema = Math.max(0, Math.trunc(Number(value.stateSchemaVersion) || 0));
-      if (previousSchema >= schemaVersion) {
+      if (previousSchema === schemaVersion) {
         return {
           value,
           source: "primary",
           notice: "",
           isError: false,
           skipPreviousRotation: false,
+          backupKey: ""
+        };
+      }
+
+      if (previousSchema > schemaVersion) {
+        return {
+          value,
+          source: "future",
+          notice: `このセーブは新しい保存形式v${previousSchema}です。アプリを更新するまで読み取り専用で開きます。`,
+          isError: true,
+          writeBlocked: true,
+          skipPreviousRotation: true,
           backupKey: ""
         };
       }
@@ -151,6 +163,20 @@
       try {
         const value = parsedObject(previousRaw);
         if (value) {
+          const previousSchema = Math.max(0, Math.trunc(Number(value.stateSchemaVersion) || 0));
+          if (previousSchema > schemaVersion) {
+            return {
+              value,
+              source: "future-previous",
+              notice:
+                `破損したセーブを退避しました。直前セーブは新しい保存形式v${previousSchema}です。` +
+                "アプリを更新するまで読み取り専用で開きます。",
+              isError: true,
+              writeBlocked: true,
+              skipPreviousRotation: true,
+              backupKey: corruptKey
+            };
+          }
           return {
             value,
             source: "previous",
@@ -183,6 +209,35 @@
     if (!plainObject(value)) throw new Error("保存する状態がありません。");
     const serialized = JSON.stringify(value);
     const currentRaw = storage.getItem(storageId) || "";
+    if (currentRaw) {
+      try {
+        const current = parsedObject(currentRaw);
+        const currentSchema = Math.max(0, Math.trunc(Number(current?.stateSchemaVersion) || 0));
+        const nextSchema = Math.max(0, Math.trunc(Number(value.stateSchemaVersion) || 0));
+        if (currentSchema > nextSchema) {
+          throw new RangeError(
+            `新しい保存形式v${currentSchema}を古い形式v${nextSchema}で上書きできません。アプリを更新してください。`
+          );
+        }
+      } catch (error) {
+        if (error instanceof RangeError) throw error;
+        // A corrupt primary can only be rewritten by an older runtime when its
+        // valid previous copy is not from a newer schema.
+        try {
+          const previous = parsedObject(storage.getItem(`${storageId}${PREVIOUS_SUFFIX}`) || "");
+          const previousSchema = Math.max(0, Math.trunc(Number(previous?.stateSchemaVersion) || 0));
+          const nextSchema = Math.max(0, Math.trunc(Number(value.stateSchemaVersion) || 0));
+          if (previousSchema > nextSchema) {
+            throw new RangeError(
+              `直前セーブの新しい保存形式v${previousSchema}を古い形式v${nextSchema}で上書きできません。アプリを更新してください。`
+            );
+          }
+        } catch (previousError) {
+          if (previousError instanceof RangeError) throw previousError;
+          // load() retains malformed copies; preserve the established recovery path.
+        }
+      }
+    }
     let previousCreated = false;
 
     if (!skipPreviousRotation && currentRaw && currentRaw !== serialized) {

@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20260822-explanation-depth-v33-1";
+  const VERSION = "20260823-mastery-hardening-v34-1";
   const BANNER_ID = "pwaUpdateNotice";
   let reloadRequested = false;
 
@@ -20,8 +20,7 @@
     reload.addEventListener("click", () => {
       reload.disabled = true;
       reloadRequested = true;
-      const waitingVersion = new URL(registration.waiting.scriptURL).searchParams.get("v") || VERSION;
-      registration.waiting.postMessage({ type: "TAKKEN_SKIP_WAITING", version: waitingVersion });
+      registration.waiting.postMessage({ type: "TAKKEN_SKIP_WAITING" });
     });
     notice.append(reload);
     document.body.append(notice);

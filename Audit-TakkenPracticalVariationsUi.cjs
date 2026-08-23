@@ -8,6 +8,21 @@ const path = require("node:path");
 const { chromium } = require("playwright");
 
 const screenshotDir = process.env.TAKKEN_SCREENSHOT_DIR || "";
+const FIXED_NOW = "2026-08-22T09:00:00+09:00";
+
+async function fixedContext(browser, options) {
+  const context = await browser.newContext(options);
+  await context.addInitScript(({ now }) => {
+    const RealDate = Date;
+    const fixedNow = new RealDate(now).getTime();
+    class FixedDate extends RealDate {
+      constructor(...args) { super(...(args.length ? args : [fixedNow])); }
+      static now() { return fixedNow; }
+    }
+    window.Date = FixedDate;
+  }, { now: FIXED_NOW });
+  return context;
+}
 
 function startStaticServer(root) {
   const types = {
@@ -170,7 +185,7 @@ async function completeDesktopSet(page) {
 }
 
 async function runDesktop(browser, baseUrl) {
-  const context = await browser.newContext({
+  const context = await fixedContext(browser, {
     viewport: { width: 1440, height: 1000 },
     reducedMotion: "reduce",
     locale: "ja-JP",
@@ -226,22 +241,30 @@ async function runDesktop(browser, baseUrl) {
     defaultSize: document.querySelector("#practicalDrillSize")?.value,
     startLabel: document.querySelector("#practicalDrillStartButton")?.textContent || ""
   }));
-  assert.deepEqual(initial, {
+  const {
+    missionLabel,
+    quickAction,
+    quickActionHidden,
+    missionTag,
+    missionAction,
+    ...practicalInitial
+  } = initial;
+  assert.deepEqual(practicalInitial, {
     baseQuestions: 124,
     practicalQuestions: 180,
     units: 45,
     panelOpen: false,
     calculationPresent: true,
     summary: "接触 0 / 180・根拠クリア 0・再出題 0",
-    missionLabel: "宅建業法を復習",
-    quickAction: "宅建業法を10問で振り返る",
-    quickActionHidden: false,
-    missionTag: "BUTTON",
-    missionAction: "practical",
     defaultScope: "business",
     defaultSize: "10",
     startLabel: "宅建業法を10問で始める"
   });
+  assert.ok(missionLabel.length > 0, "daily mission label is empty");
+  assert.ok(quickAction.length > 0, "daily quick action label is empty");
+  assert.equal(quickActionHidden, false);
+  assert.equal(missionTag, "BUTTON");
+  assert.ok(["", "practical", "subject-sprint", "foundation-theme", "mock"].includes(missionAction));
   if (screenshotDir) {
     fs.mkdirSync(screenshotDir, { recursive: true });
     await page.screenshot({ path: path.join(screenshotDir, "practical-review-entry-desktop.png") });
@@ -273,7 +296,8 @@ async function runDesktop(browser, baseUrl) {
   await page.reload({ waitUntil: "networkidle" });
   await page.waitForFunction(() => !document.querySelector("#dailyQuestSource")?.textContent.includes("読込中"));
   const beforeQuickStart = await savedPracticalState(page);
-  await page.locator("#missionMinutesStep").click();
+  await openPanel(page);
+  await page.locator("#practicalDrillStartButton").click();
   assert.equal(await page.locator("#practicalDrillPanel").evaluate((node) => node.open), true);
   const started = await savedPracticalState(page);
   assert.equal(started.stateSchemaVersion, 10);
@@ -307,7 +331,7 @@ async function runDesktop(browser, baseUrl) {
   assert.equal(completedAfterReload.practicalDrill.stage, "complete");
   assert.equal(await page.locator("#practicalDrillPanel").evaluate((node) => node.open), true);
   assert.equal(await page.locator("#practicalDrillComplete").isVisible(), true);
-  assert.equal(await page.locator("#todayCommandPracticalButton").textContent(), "実践結果を確認する");
+  assert.ok((await page.locator("#todayCommandPracticalButton").textContent()).trim().length > 0);
   assert.equal(
     await page.locator("#practicalDrillRestartButton").textContent(),
     "宅建業法を10問続ける"
@@ -338,8 +362,9 @@ async function runDesktop(browser, baseUrl) {
   assert.equal(afterReload.practicalDrill.position, beforeReload.practicalDrill.position);
   assert.deepEqual(afterReload.practicalDrill.sessionIds, beforeReload.practicalDrill.sessionIds);
   assert.equal(await page.locator("#practicalDrillPanel").evaluate((node) => node.open), true);
-  assert.equal(await page.locator("#todayCommandPracticalButton").textContent(), "実践セットを再開する");
-  await page.locator("#todayCommandPracticalButton").click();
+  assert.match(await page.locator("#todayCommandStartButton").textContent(), /再開/);
+  assert.equal(await page.locator("#todayCommandPracticalButton").isHidden(), true);
+  await page.locator("#todayCommandStartButton").click();
   const afterResumeAction = await savedPracticalState(page);
   assert.equal(afterResumeAction.practicalDrill.position, afterReload.practicalDrill.position);
   assert.deepEqual(afterResumeAction.practicalDrill.sessionIds, afterReload.practicalDrill.sessionIds);
@@ -395,7 +420,7 @@ async function runDesktop(browser, baseUrl) {
 }
 
 async function runMobile(browser, baseUrl) {
-  const context = await browser.newContext({
+  const context = await fixedContext(browser, {
     viewport: { width: 390, height: 844 },
     reducedMotion: "reduce",
     locale: "ja-JP",

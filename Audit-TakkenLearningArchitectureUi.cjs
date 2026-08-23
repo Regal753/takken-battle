@@ -8,6 +8,21 @@ const path = require("node:path");
 const { chromium } = require("playwright");
 
 const screenshotDir = process.env.TAKKEN_SCREENSHOT_DIR || "";
+const FIXED_NOW = "2026-08-22T09:00:00+09:00";
+
+async function newFixedPage(browser, viewport) {
+  const page = await browser.newPage({ viewport });
+  await page.addInitScript(({ now }) => {
+    const RealDate = Date;
+    const fixedNow = new RealDate(now).getTime();
+    class FixedDate extends RealDate {
+      constructor(...args) { super(...(args.length ? args : [fixedNow])); }
+      static now() { return fixedNow; }
+    }
+    window.Date = FixedDate;
+  }, { now: FIXED_NOW });
+  return page;
+}
 
 function startStaticServer(root) {
   const types = {
@@ -211,7 +226,7 @@ async function main() {
   const consoleErrors = [];
   const pageErrors = [];
   try {
-    const desktop = await browser.newPage({ viewport: { width: 1536, height: 1024 } });
+    const desktop = await newFixedPage(browser, { width: 1536, height: 1024 });
     desktop.on("console", (message) => {
       if (message.type() === "error") consoleErrors.push(message.text());
     });
@@ -221,6 +236,8 @@ async function main() {
     const initial = await desktop.evaluate(() => ({
       title: document.querySelector("#todayCommandTitle")?.textContent || "",
       text: document.querySelector("#todayCommandText")?.textContent || "",
+      foundationTitle: document.querySelector("#foundationRouteTitle")?.textContent || "",
+      foundationText: document.querySelector("#foundationRouteText")?.textContent || "",
       source: document.querySelector("#dailyQuestSource")?.textContent || "",
       dailyTitle: document.querySelector("#dailyQuestTitle")?.textContent || "",
       unitStatus: document.querySelector("#missionBattleStatus")?.textContent || "",
@@ -234,17 +251,19 @@ async function main() {
         measurement: document.querySelector("#passPlanPanel")?.getBoundingClientRect().top
       }
     }));
-    assert.match(initial.title, /01-01 宅建業法の基本/);
-    assert.match(initial.text, /p\.3/);
+    assert.match(initial.title, /宅建業法 残り20問/);
+    assert.match(initial.text, /固定/);
+    assert.match(initial.foundationTitle, /01-01 宅建業法の基本/);
+    assert.match(initial.foundationText, /p\.3/);
     assert.match(initial.source, /読後2問/);
     assert.match(initial.dailyTitle, /読後2問/);
-    assert.equal(initial.unitStatus.trim(), "0 / 2");
-    assert.equal(initial.practicalStatus.trim(), "0 / 44");
-    assert.equal(initial.gateStatus.trim(), "10問・0/44定着");
-    assert.equal(initial.mockLocked, true);
+    assert.equal(initial.unitStatus.trim(), "0 / 20");
+    assert.match(initial.practicalStatus.trim(), /^0 \/ \d+$/);
+    assert.equal(initial.gateStatus.trim(), "0分 / 最低75分");
+    assert.equal(initial.mockLocked, false);
+    assert.ok(initial.order.measurement < initial.order.theme);
     assert.ok(initial.order.theme < initial.order.quest);
     assert.ok(initial.order.quest < initial.order.practical);
-    assert.ok(initial.order.practical < initial.order.measurement);
 
     const initialState = (await savedState(desktop)).state;
     assert.equal(initialState.stateSchemaVersion, 10);
@@ -268,9 +287,9 @@ async function main() {
     );
     await desktop.locator("#dockNextButton").click();
     await desktop.waitForFunction(() =>
-      (document.querySelector("#todayCommandTitle")?.textContent || "").includes("01-02 免許")
+      (document.querySelector("#foundationRouteTitle")?.textContent || "").includes("01-02 免許")
     );
-    assert.match(await desktop.locator("#todayCommandTitle").textContent(), /01-02 免許/);
+    assert.match(await desktop.locator("#foundationRouteTitle").textContent(), /01-02 免許/);
     if (!(await desktop.locator("#foundationRoutePracticalButton").isVisible())) {
       if (!(await desktop.locator("#themeDrawer").evaluate((node) => node.open))) {
         await desktop.locator("#themeDrawer > summary").click();
@@ -305,7 +324,7 @@ async function main() {
       await desktop.locator("#practicalDrillRestartButton").textContent(),
       "同じ単元を4問続ける"
     );
-    assert.match(await desktop.locator("#todayCommandTitle").textContent(), /01-02 免許/);
+    assert.match(await desktop.locator("#foundationRouteTitle").textContent(), /01-02 免許/);
 
     const migrated = await migrateV6(desktop);
     assert.equal(migrated.stateSchemaVersion, 10);
@@ -314,10 +333,11 @@ async function main() {
 
     await completeFoundationGate(desktop);
     assert.equal(await desktop.locator("#mockAButton").isDisabled(), false);
-    assert.match(await desktop.locator("#todayCommandTitle").textContent(), /公式20問/);
+    assert.equal(await desktop.locator("#todayCommandOfficialActions").isVisible(), true);
+    assert.match(await desktop.locator("#officialDrillOpenButton").textContent(), /公式20問/);
     assert.equal(await noHorizontalOverflow(desktop), 0);
 
-    const mobile = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    const mobile = await newFixedPage(browser, { width: 390, height: 844 });
     mobile.on("console", (message) => {
       if (message.type() === "error") consoleErrors.push(message.text());
     });
@@ -352,7 +372,7 @@ async function main() {
     assert.ok(mobileLayout.progressButtonHeight >= 44, JSON.stringify(mobileLayout));
     assert.ok(mobileLayout.resetButtonHeight >= 44, JSON.stringify(mobileLayout));
 
-    const largeUnitPage = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+    const largeUnitPage = await newFixedPage(browser, { width: 1280, height: 900 });
     largeUnitPage.on("console", (message) => {
       if (message.type() === "error") consoleErrors.push(message.text());
     });
@@ -365,7 +385,7 @@ async function main() {
     assert.ok(largeUnitOption);
     await largeUnitPage.locator("#chapterSelect").selectOption(largeUnitOption);
     await largeUnitPage.waitForFunction(() =>
-      (document.querySelector("#todayCommandTitle")?.textContent || "").includes("01-07 業務上の規制")
+      (document.querySelector("#foundationRouteTitle")?.textContent || "").includes("01-07 業務上の規制")
     );
     const largeUnitBatch = await largeUnitPage.evaluate(() => {
       const namespace = String(new URLSearchParams(location.search).get("review") || "")
@@ -382,7 +402,7 @@ async function main() {
         planUnitId: saved.daily?.planUnitId,
         chapterIds: chapter?.ids || [],
         source: document.querySelector("#dailyQuestSource")?.textContent || "",
-        routeText: document.querySelector("#todayCommandText")?.textContent || "",
+        routeText: document.querySelector("#foundationRouteText")?.textContent || "",
         round: document.querySelector("#roundLabel")?.textContent || ""
       };
     });

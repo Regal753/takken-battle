@@ -1,6 +1,6 @@
 "use strict";
 
-const VERSION = "20260822-explanation-depth-v33-1";
+const VERSION = "20260823-mastery-hardening-v34-1";
 const CACHE_NAME = `takken-battle-${VERSION}`;
 const IMMUTABLE = [
   "styles.css", "exam-blueprint.js", "exam-question-core.js", "exam-questions-rights.js",
@@ -35,7 +35,10 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("message", (event) => {
-  if (event.data?.type === "TAKKEN_SKIP_WAITING" && event.data.version === VERSION) self.skipWaiting();
+  // The message is posted directly to registration.waiting. Do not couple
+  // activation to the query string used by an older runtime: a legacy page can
+  // discover this newer worker under its old registration URL.
+  if (event.data?.type === "TAKKEN_SKIP_WAITING") event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener("fetch", (event) => {
@@ -50,5 +53,15 @@ self.addEventListener("fetch", (event) => {
   }
   const cachedUrl = IMMUTABLE_BY_PATH.get(requestUrl.pathname);
   if (!cachedUrl) return;
-  event.respondWith(caches.open(CACHE_NAME).then(async (cache) => (await cache.match(cachedUrl)) || fetch(event.request)));
+  const requestedVersion = requestUrl.searchParams.get("v") || "";
+  event.respondWith(caches.open(CACHE_NAME).then(async (cache) => {
+    if (requestedVersion && requestedVersion !== VERSION) {
+      try {
+        return await fetch(event.request);
+      } catch {
+        return (await cache.match(cachedUrl)) || Response.error();
+      }
+    }
+    return (await cache.match(cachedUrl)) || fetch(event.request);
+  }));
 });
