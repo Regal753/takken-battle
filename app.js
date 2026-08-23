@@ -5867,27 +5867,57 @@
       .filter(Boolean));
   }
 
-  function subjectSprintSourceRetained(subjectKey) {
+  function subjectSprintSourceRetentionEvidence(subjectKey) {
     const scope = subjectKey === "tax" ? "taxOther" : subjectKey;
-    return new Set(SUBJECT_SPRINT_QUESTIONS
+    const evidence = new Map();
+    const now = new Date();
+    SUBJECT_SPRINT_QUESTIONS
       .filter((question) => question.scopeId === scope)
-      .filter((question) => ["retained", "durable"].includes(
-        BUSINESS_MASTERY.stateFor(state.practicalDrill?.history?.[question.id] || {}, new Date())
-      ))
-      .map((question) => question.sourceQuestionId)
-      .filter(Boolean));
+      .forEach((question) => {
+        const sourceId = question.sourceQuestionId;
+        const history = state.practicalDrill?.history?.[question.id] || {};
+        const answeredAt = Date.parse(history.lastAnsweredAt || "") || 0;
+        if (!sourceId || !(history.attempts > 0) || !answeredAt) return;
+        const candidate = {
+          answeredAt,
+          retained: ["retained", "durable"].includes(
+            BUSINESS_MASTERY.stateFor(history, now)
+          )
+        };
+        const current = evidence.get(sourceId);
+        if (!current || candidate.answeredAt > current.answeredAt) {
+          evidence.set(sourceId, candidate);
+        } else if (candidate.answeredAt === current.answeredAt) {
+          evidence.set(sourceId, {
+            answeredAt: current.answeredAt,
+            retained: current.retained && candidate.retained
+          });
+        }
+      });
+    return evidence;
+  }
+
+  function subjectRetainedFromLatestEvidence(sourceId, sprintEvidence) {
+    const sourceAnsweredAt = lastAnsweredTimestamp(sourceId);
+    const sprint = sprintEvidence.get(sourceId);
+    const sourceRetained = isRetained(sourceId);
+    if (!sprint || sourceAnsweredAt > sprint.answeredAt) return sourceRetained;
+    if (sourceAnsweredAt < sprint.answeredAt) return sprint.retained;
+    return sourceRetained && sprint.retained;
   }
 
   function passSubjectMetrics() {
     return Object.fromEntries(["business", "rights", "restrictions", "tax", "other"].map((subjectKey) => {
       const ids = passSubjectIds(subjectKey);
       const sprintContacts = subjectSprintSourceContacts(subjectKey);
-      const sprintRetained = subjectSprintSourceRetained(subjectKey);
+      const sprintRetentionEvidence = subjectSprintSourceRetentionEvidence(subjectKey);
       const contacted = ids.filter((id) => isContacted(id) || sprintContacts.has(id)).length;
       return [subjectKey, {
         total: ids.length,
         contacted,
-        retained: ids.filter((id) => isRetained(id) || sprintRetained.has(id)).length
+        retained: ids.filter((id) =>
+          subjectRetainedFromLatestEvidence(id, sprintRetentionEvidence)
+        ).length
       }];
     }));
   }

@@ -161,6 +161,31 @@ assert.throws(
 assert.equal(futureStorage.getItem(id), futureRaw);
 assert.equal(futureStorage.getItem(`${id}${store.PREVIOUS_SUFFIX}`), null);
 
+const corruptFuturePrimary = "{broken-future-primary";
+const corruptFutureStorage = new MemoryStorage({
+  [id]: corruptFuturePrimary,
+  [`${id}${store.PREVIOUS_SUFFIX}`]: futureRaw
+});
+const recoveredFuture = store.load(corruptFutureStorage, id, 10, 9000);
+assert.equal(recoveredFuture.source, "future-previous");
+assert.equal(recoveredFuture.writeBlocked, true);
+assert.equal(recoveredFuture.isError, true);
+assert.equal(recoveredFuture.skipPreviousRotation, true);
+assert.deepEqual(recoveredFuture.value, futureState);
+assert.match(recoveredFuture.notice, /直前セーブは新しい保存形式v11/);
+assert.equal(corruptFutureStorage.getItem(id), corruptFuturePrimary);
+assert.equal(corruptFutureStorage.getItem(`${id}${store.PREVIOUS_SUFFIX}`), futureRaw);
+assert.equal(
+  corruptFutureStorage.getItem(`${id}${store.CORRUPT_SUFFIX}9000`),
+  corruptFuturePrimary
+);
+assert.throws(
+  () => store.save(corruptFutureStorage, id, { ...futureState, stateSchemaVersion: 10 }),
+  /直前セーブの新しい保存形式v11/
+);
+assert.equal(corruptFutureStorage.getItem(id), corruptFuturePrimary);
+assert.equal(corruptFutureStorage.getItem(`${id}${store.PREVIOUS_SUFFIX}`), futureRaw);
+
 console.log(JSON.stringify({
   status: "ok",
   schemaUpgradeBackup: true,
@@ -169,6 +194,7 @@ console.log(JSON.stringify({
   backupRetention: importBackups.length,
   failedWriteKeepsPrimary: true,
   futureSchemaReadOnly: true,
+  corruptPrimaryFuturePreviousReadOnly: true,
   preservedAttempts: restored.value.attempts,
   preservedCentralAnswers: restored.value.centralProgress.answers
 }));
