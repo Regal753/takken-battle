@@ -943,6 +943,7 @@
     practicalDrillConfidence: $("#practicalDrillConfidence"),
     practicalDrillNextButton: $("#practicalDrillNextButton"),
     practicalDrillCancelButton: $("#practicalDrillCancelButton"),
+    practicalDrillDiscardButton: $("#practicalDrillDiscardButton"),
     practicalDrillComplete: $("#practicalDrillComplete"),
     practicalDrillCompleteText: $("#practicalDrillCompleteText"),
     practicalDrillRestartButton: $("#practicalDrillRestartButton"),
@@ -6063,10 +6064,14 @@
     return themeKey === "tax-other" ? "taxOther" : themeKey;
   }
 
-  function businessAnswersToday() {
+  function businessAnsweredTodayIds() {
     return BUSINESS_FULLSCORE_QUESTION_IDS.filter((id) =>
       localDateKey(state.practicalDrill?.history?.[id]?.lastAnsweredAt) === todayKey()
-    ).length;
+    );
+  }
+
+  function businessAnswersToday() {
+    return businessAnsweredTodayIds().length;
   }
 
   function themeAnswersToday(themeKey) {
@@ -8589,6 +8594,8 @@
         kind: "practice",
         questionIds: daily.questionIds,
         size: daily.questionIds.length,
+        pending: daily.pending,
+        due: daily.due,
         label: `今日の定着 ${daily.questionIds.length}問（起点${daily.pending}・期限${daily.due}）`
       };
     }
@@ -8639,10 +8646,9 @@
   function businessKnockPlan(preset, seed = "preview") {
     if (!BUSINESS_KNOCK_READY) return null;
     const normalized = normalizeBusinessKnockPreset(preset);
-    const requestedSize = Number(preset?.size);
-    const dailyRemainder = Number.isInteger(requestedSize) && requestedSize > 0 &&
-      !BUSINESS_KNOCK_SIZES.includes(requestedSize)
-      ? Math.min(BUSINESS_FULLSCORE_EXPECTED_QUESTIONS, requestedSize)
+    const requestedDailyRemainder = Number(preset?.dailyRemainder);
+    const dailyRemainder = Number.isInteger(requestedDailyRemainder) && requestedDailyRemainder > 0
+      ? Math.min(BUSINESS_FULLSCORE_EXPECTED_QUESTIONS, requestedDailyRemainder)
       : 0;
     return BUSINESS_KNOCK.plan({
       questions: BUSINESS_FULLSCORE_QUESTIONS,
@@ -8651,6 +8657,7 @@
       unitId: normalized.unitId,
       size: normalized.size,
       dailyRemainder,
+      answeredTodayIds: dailyRemainder ? businessAnsweredTodayIds() : [],
       now: new Date(),
       seed,
       presentationKey: `${todayKey()}:knock:${seed}`
@@ -8763,9 +8770,16 @@
       const reserve = businessOfficialReserve();
       elements.businessMasteryPace.dataset.paceStatus = pace?.status || "unknown";
       if (!pace?.valid) {
+        const todayPending = actionState.kind === "practice"
+          ? Math.max(0, Number(actionState.pending) || 0)
+          : Math.min(pace?.firstStepPending ?? businessFirstStepPending(), 10);
+        const todayDue = actionState.kind === "practice"
+          ? Math.max(0, Number(actionState.due) || 0)
+          : Math.max(0, Number(pace?.existingLoad?.knownActionable) || 0);
         elements.businessMasteryPace.textContent =
           `日程警告: 定着起点の期限${pace?.latestFirstExposureKey || "2026-08-23"}を超過しています。` +
-          `起点未確立${pace?.firstStepPending ?? businessFirstStepPending()}問を優先し、復習期限と併せて再計画します。`;
+          `今日の定着起点${todayPending}問＋期限復習${todayDue}問を実行し、` +
+          `残りの起点未確立${pace?.firstStepPending ?? businessFirstStepPending()}問を再計画します。`;
       } else if ((pace.firstStepPending || 0) > 0) {
         elements.businessMasteryPace.textContent =
           `試験日ペース: 今日の定着起点${pace.todayRequired}問＋期限復習${pace.existingLoad.knownActionable}問 / ` +
@@ -12320,6 +12334,7 @@
     elements.practicalDrillExitButton?.addEventListener("click", exitPracticalDrill);
     elements.practicalDrillNextButton?.addEventListener("click", advancePracticalDrill);
     elements.practicalDrillCancelButton?.addEventListener("click", pausePracticalDrill);
+    elements.practicalDrillDiscardButton?.addEventListener("click", cancelPracticalDrill);
     elements.businessKnockStart?.addEventListener("click", startBusinessKnockSession);
     [elements.businessKnockMode, elements.businessKnockUnit, elements.businessKnockSize]
       .filter(Boolean)

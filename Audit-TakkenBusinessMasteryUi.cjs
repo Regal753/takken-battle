@@ -143,6 +143,18 @@ async function horizontalOverflow(page) {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 }
 
+async function discardPracticalDrill(page) {
+  const accepted = new Promise((resolve, reject) => {
+    page.once("dialog", (dialog) => {
+      const message = dialog.message();
+      dialog.accept().then(() => resolve(message), reject);
+    });
+  });
+  await page.locator("#practicalDrillDiscardButton").click();
+  assert.match(await accepted, /セットを破棄/);
+  await page.locator("#practicalDrillSession").waitFor({ state: "hidden" });
+}
+
 async function installDueFixture(page) {
   return page.evaluate(() => {
     const key = Object.keys(localStorage).find((candidate) =>
@@ -811,11 +823,11 @@ async function installFullScoreProofFixture(page, mode) {
     saved = await readSavedState(page);
     assert.equal(saved.practicalDrill.history[originalQuestion.id].mistakeTags["forged-tag"], undefined);
     assert.ok(!saved.practicalDrill.history[originalQuestion.id].lastMistakeTags.includes("forged-tag"));
-    await page.locator("#practicalDrillCancelButton").click();
+    await discardPracticalDrill(page);
     await page.locator("#businessMasteryFull").click();
     saved = await readSavedState(page);
     assert.equal(saved.practicalDrill.queue[0], originalQuestion.id, "the highest diagnostic retry must lead the next full sweep");
-    await page.locator("#practicalDrillCancelButton").click();
+    await discardPracticalDrill(page);
 
     const statementReviewFixture = await installFullScoreQuestionFixture(
       page,
@@ -867,7 +879,7 @@ async function installFullScoreProofFixture(page, mode) {
     assert.equal(await statementCards.count(), 4);
     assert.equal(await horizontalOverflow(page), 0, "statement-review cards must fit at 320px");
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.locator("#practicalDrillCancelButton").click();
+    await discardPracticalDrill(page);
 
     await installOfficialUnlockFixture(page, "wrong");
     await page.reload({ waitUntil: "networkidle" });
@@ -876,12 +888,15 @@ async function installFullScoreProofFixture(page, mode) {
     const masteryPaceText = await page.locator("#businessMasteryPace").textContent();
     const primaryTarget = Number(masteryPrimaryText.match(/今日の定着 (\d+)問（起点\d+・期限0）/)?.[1]);
     const displayedTarget = Number(masteryPaceText.match(/今日の定着起点(\d+)問/)?.[1]);
-    assert.ok(primaryTarget > 0 && displayedTarget > 0, "the daily mastery-start target must be visible");
+    assert.ok(
+      primaryTarget > 0 && displayedTarget > 0,
+      `the daily mastery-start target must be visible: primary=${masteryPrimaryText}; pace=${masteryPaceText}`
+    );
     assert.equal(primaryTarget, displayedTarget, "the primary batch must match the displayed daily mastery-start target");
     await page.locator("#businessMasteryPrimary").click();
     saved = await readSavedState(page);
     assert.equal(saved.practicalDrill.sessionSize, primaryTarget);
-    await page.locator("#practicalDrillCancelButton").click();
+    await discardPracticalDrill(page);
 
     const unitFixture = await installFullScoreUnitFixture(page);
     await page.reload({ waitUntil: "networkidle" });
@@ -891,7 +906,7 @@ async function installFullScoreProofFixture(page, mode) {
     assert.equal(saved.practicalDrill.unitId, unitFixture.unitId);
     assert.equal(saved.practicalDrill.sessionSize, unitFixture.size, "reload must retain a variable-size unit session");
     assert.equal(saved.practicalDrill.queue.length, unitFixture.size);
-    await page.locator("#practicalDrillCancelButton").click();
+    await discardPracticalDrill(page);
 
     const unlockFixture = await installOfficialUnlockFixture(page);
     assert.equal(unlockFixture.baseCount, 44);

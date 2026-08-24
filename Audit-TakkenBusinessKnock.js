@@ -26,6 +26,19 @@ assert.equal(daily.size, 9, "daily command must fill the visible remainder acros
 assert.deepEqual(new Set(daily.ids.slice(0, 2)), new Set(["q1", "q2"]), "daily command must put retry items first");
 assert.equal(daily.ids[2], "q3", "daily command must put due items before untouched items");
 assert.ok(daily.ids.slice(3).some((id) => !history[id]), "daily command must fill the set with untouched items");
+const dailyAfterAnswered = knock.plan({
+  questions,
+  history,
+  mode: "all-random",
+  size: 10,
+  dailyRemainder: 10,
+  answeredTodayIds: ["q1", "q2"],
+  now,
+  seed: "daily-after-answered"
+});
+assert.equal(dailyAfterAnswered.requestedSize, 10, "an allowed preset size must still be treated as a daily remainder when explicitly marked");
+assert.equal(dailyAfterAnswered.size, 10, "daily remainder must be filled with not-yet-answered ids");
+assert.equal(dailyAfterAnswered.ids.some((id) => ["q1", "q2"].includes(id)), false, "today's answered ids must not consume the visible remainder");
 const first = knock.plan({ questions, history, mode: "all-random", size: 10, now, seed: "fixed" });
 const second = knock.plan({ questions, history, mode: "all-random", size: 10, now, seed: "fixed" });
 assert.deepEqual(first, second, "same input must be deterministic");

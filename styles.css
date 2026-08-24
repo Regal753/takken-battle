@@ -7265,6 +7265,14 @@ button.mission-step:disabled {
   gap: 3px;
 }
 
+.practical-drill-head .practical-drill-head-actions {
+  display: flex;
+  flex: 0 0 auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
 #practicalDrillProgress {
   color: #f1efff;
   font-size: 17px;
@@ -8119,12 +8127,18 @@ button.mission-step:disabled {
     flex-direction: column;
   }
 
-  .practical-drill-head > button,
+  .practical-drill-head-actions,
+  .practical-drill-head-actions > button,
   .practical-drill-controls > button,
   .practical-drill-complete-actions,
   .practical-drill-complete-actions > button,
   .practical-drill-choice {
     width: 100%;
+  }
+
+  .practical-drill-head-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .practical-drill-prompt {

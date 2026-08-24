@@ -204,6 +204,7 @@ assert.match(index, /分野別の振り返り/);
 assert.match(index, /id="todayCommandPracticalButton"/);
 assert.match(index, /id="practicalDrillChangeButton"/);
 assert.match(index, /id="practicalDrillExitButton"/);
+assert.match(index, /id="practicalDrillDiscardButton"/);
 assert.match(index, /id="businessMasteryPanel"/);
 assert.match(index, /id="businessMasteryPrimary"/);
 assert.match(index, /id="businessMasteryFull"/);

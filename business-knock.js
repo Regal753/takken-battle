@@ -85,8 +85,11 @@
     const unitId = clean(input.unitId);
     const eligible = mode === "unit" ? all.filter((question) => question.unitId === unitId) : all;
     const classified = eligible.map((question) => ({ question, entry: historyEntry(history, question.id) }));
+    const answeredTodayIds = new Set(
+      (Array.isArray(input.answeredTodayIds) ? input.answeredTodayIds : []).map(clean).filter(Boolean)
+    );
     let candidates;
-    if (dailyMixed) candidates = classified;
+    if (dailyMixed) candidates = classified.filter(({ question }) => !answeredTodayIds.has(question.id));
     else if (mode === "weak-retry") candidates = classified.filter(({ entry }) => confidenceIsRetry(entry));
     else if (mode === "weak-due") candidates = classified.filter(({ entry }) => confidenceIsRetry(entry) || stateFor(entry, now) === "due");
     else if (mode === "due") candidates = classified.filter(({ entry }) => stateFor(entry, now) === "due");

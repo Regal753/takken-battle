@@ -91,6 +91,22 @@ async function openPassPanel(page) {
   if (!(await panel.evaluate((node) => node.open))) await panel.locator(":scope > summary").click();
 }
 
+async function discardPracticalDrill(page) {
+  // Earlier mock-cancel probes intentionally attach one-shot dialog handlers.
+  // Clear any handler left behind by a no-dialog branch before exercising the
+  // dedicated discard confirmation, otherwise two handlers race to accept it.
+  page.removeAllListeners("dialog");
+  const accepted = new Promise((resolve, reject) => {
+    page.once("dialog", (dialog) => {
+      const message = dialog.message();
+      dialog.accept().then(() => resolve(message), reject);
+    });
+  });
+  await page.locator("#practicalDrillDiscardButton").click();
+  assert.match(await accepted, /セットを破棄/);
+  await page.locator("#practicalDrillSession").waitFor({ state: "hidden" });
+}
+
 async function main() {
   const runtimeSource = fs.readFileSync(path.join(process.cwd(), "app.js"), "utf8");
   const markupSource = fs.readFileSync(path.join(process.cwd(), "index.html"), "utf8");
@@ -368,7 +384,7 @@ async function main() {
       await page.locator('[data-subject-sprint="rights"]').click();
       const resumed = await stored(page);
       assert.deepEqual(resumed.state.practicalDrill.queue, started.state.practicalDrill.queue);
-      await page.locator("#practicalDrillCancelButton").click();
+      await discardPracticalDrill(page);
     }
 
     // The app deliberately caps review namespaces at 24 characters. Keep the

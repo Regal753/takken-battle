@@ -120,25 +120,15 @@ async function startKnock(page, preset) {
 }
 
 async function cancelKnock(page) {
-  await page.locator("#practicalDrillCancelButton").click();
-  await page.locator("#practicalDrillSession").waitFor({ state: "hidden" });
-  await page.evaluate(() => {
-    const key = Object.keys(localStorage).find((candidate) =>
-      candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
-      !candidate.includes("backup") && !candidate.includes("-before-") &&
-      !candidate.includes("previous") && !candidate.includes("corrupt") &&
-      !candidate.endsWith("event-outbox")
-    );
-    const saved = JSON.parse(localStorage.getItem(key));
-    saved.practicalDrill = {
-      ...saved.practicalDrill,
-      stage: "idle", planMode: "", unitId: "", sessionIds: [], queue: [],
-      position: 0, currentAttempt: null, presentationOverrides: {}, sessionStartedAt: "", completedAt: ""
-    };
-    localStorage.setItem(key, JSON.stringify(saved));
+  const accepted = new Promise((resolve, reject) => {
+    page.once("dialog", (dialog) => {
+      const message = dialog.message();
+      dialog.accept().then(() => resolve(message), reject);
+    });
   });
-  await page.reload({ waitUntil: "networkidle" });
-  await waitForApp(page);
+  await page.locator("#practicalDrillDiscardButton").click();
+  assert.match(await accepted, /セットを破棄/);
+  await page.locator("#practicalDrillSession").waitFor({ state: "hidden" });
 }
 
 async function currentPresented(page) {
@@ -315,6 +305,7 @@ async function presentedFixture(page) {
     assert.match(await page.locator("#practicalDrillSummary").textContent(), /^業法ノック累計 接触 0 \/ 134/);
     assert.equal(await page.locator("#practicalDrillCancelButton").textContent(), "一時停止して上へ");
     assert.match(await page.locator("#practicalDrillCancelButton").getAttribute("aria-label"), /問題順、解答、再出題は保存/);
+    assert.equal(await page.locator("#practicalDrillDiscardButton").textContent(), "セットを破棄");
     assert.equal(await page.evaluate(() => document.activeElement?.classList.contains("practical-drill-choice")), true);
     const commandQuestion = await currentPresented(page);
     await page.locator(".practical-drill-choice").nth(commandQuestion.answer).click();
@@ -328,7 +319,7 @@ async function presentedFixture(page) {
     assert.equal(commandSaved.practicalDrill.correctAttempts, 1);
     assert.equal(Object.keys(commandSaved.practicalDrill.history || {}).length, 1);
     assert.equal(commandSaved.practicalDrill.currentAttempt?.id, commandQuestion.id, "reload must retain the single current attempt without duplicating it");
-    await page.evaluate(() => {
+    const todayAnsweredId = await page.evaluate(() => {
       Object.defineProperty(navigator, "share", {
         configurable: true,
         value: async (payload) => { window.__takkenKnockShare = payload; }
@@ -387,6 +378,7 @@ async function presentedFixture(page) {
         lastAnsweredAt: "2026-08-24T01:00:00.000Z"
       };
       localStorage.setItem(key, JSON.stringify(saved));
+      return id;
     });
     await page.reload({ waitUntil: "networkidle" });
     await waitForApp(page);
@@ -395,7 +387,7 @@ async function presentedFixture(page) {
     const remainingSession = await readSavedState(page);
     assert.equal(remainingSession.practicalDrill.sessionSize, 19, "daily remaining CTA must start only the displayed remainder");
     assert.equal(remainingSession.practicalDrill.sessionIds.length, 19, "daily route must ignore a stale unit/100 preset");
-    assert.equal(remainingSession.practicalDrill.sessionIds[0], Object.keys(remainingSession.practicalDrill.history)[0], "daily route must prioritize today's wrong answer before untouched questions");
+    assert.equal(remainingSession.practicalDrill.sessionIds.includes(todayAnsweredId), false, "today's answered id must not consume one of the visible remaining questions");
     await cancelKnock(page);
 
     // Fresh, untouched starts must select precisely the requested unique count.
