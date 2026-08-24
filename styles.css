@@ -298,7 +298,11 @@ button {
 .calculation-drill-feedback:focus-visible,
 .today-command-primary:focus-visible,
 .today-command-secondary:focus-visible,
-.save-transfer-button:focus-visible {
+.save-transfer-button:focus-visible,
+.quick-button:focus-visible,
+.route-node:focus-visible,
+.armory-button:focus-visible,
+.quest-compact-summary:focus-visible {
   outline: 3px solid #ffe08a;
   outline-offset: 3px;
 }
@@ -1031,6 +1035,61 @@ body.has-answer-dock {
   font-weight: 900;
   line-height: 1.42;
   white-space: pre-line;
+}
+
+.core-statement-prompt {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 14px;
+  padding: 11px;
+  border: 1px solid rgba(115, 191, 228, 0.32);
+  border-radius: 8px;
+  background: rgba(31, 105, 145, 0.09);
+}
+
+.core-statement-prompt-title {
+  color: #bfeaff;
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.core-statement-prompt-list {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.core-statement-prompt-item {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 8px;
+  align-items: start;
+  min-width: 0;
+  padding: 9px;
+  border: 1px solid rgba(115, 191, 228, 0.2);
+  border-radius: 7px;
+  background: rgba(4, 20, 28, 0.48);
+}
+
+.core-statement-prompt-item > span {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  place-items: center;
+  border-radius: 50%;
+  color: #10212b;
+  background: #9eddf5;
+  font-weight: 950;
+}
+
+.core-statement-prompt-item > p {
+  min-width: 0;
+  margin: 2px 0 0;
+  color: #e5f2f8;
+  font-size: 15px;
+  font-weight: 750;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
 }
 
 .choice-list {
@@ -2689,7 +2748,7 @@ body.has-answer-dock {
   .study-scope-select,
   .quick-button {
     min-width: 0;
-    min-height: 38px;
+    min-height: 44px;
     padding: 0 8px;
     font-size: 12px;
   }
@@ -3321,8 +3380,8 @@ body {
   position: relative;
   z-index: 1;
   display: grid;
-  width: 36px;
-  height: 42px;
+  width: 44px;
+  height: 44px;
   place-items: center;
   flex: 0 0 auto;
   border: 2px solid #607c8c;
@@ -4290,14 +4349,14 @@ body {
   }
 
   .route-node {
-    width: 29px;
-    height: 34px;
+    width: 44px;
+    height: 44px;
     font-size: 10px;
   }
 
   .route-node.is-boss {
-    width: 34px;
-    height: 38px;
+    width: 48px;
+    height: 48px;
   }
 
   .battle-card {
@@ -4547,7 +4606,7 @@ body {
 
 .armory-button {
   min-width: 112px;
-  min-height: 34px;
+  min-height: 44px;
   border: 1px solid #d6a82f;
   border-radius: 4px;
   color: #171000;
@@ -4635,7 +4694,7 @@ body {
 
   .armory-button {
     min-width: 98px;
-    min-height: 38px;
+    min-height: 44px;
     padding: 0 7px;
   }
 

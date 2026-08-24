@@ -62,10 +62,11 @@ if (!answerBody) {
   issues.push("answer function could not be inspected");
 } else {
   const statsAt = answerBody.indexOf("state.questionStats[question.id] = nextStats;");
-  const saveAt = answerBody.indexOf("saveState();", statsAt);
+  const saveAt = answerBody.indexOf("if (!saveState())", statsAt);
+  const rollbackAt = answerBody.indexOf("rollbackFailedAnswer(previousState);", saveAt);
   const renderAt = answerBody.indexOf("render();", saveAt);
-  if (!(statsAt >= 0 && saveAt > statsAt && renderAt > saveAt)) {
-    issues.push("answer must persist stats before rendering the explanation");
+  if (!(statsAt >= 0 && saveAt > statsAt && rollbackAt > saveAt && renderAt > rollbackAt)) {
+    issues.push("answer must persist stats, roll back a failed write, then render the explanation");
   }
 }
 

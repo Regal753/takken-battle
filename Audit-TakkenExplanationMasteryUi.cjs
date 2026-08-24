@@ -73,10 +73,9 @@ async function selectUnit(page, label) {
 
 async function currentQuestion(page) {
   return page.evaluate(() => {
-    const text = document.querySelector("#questionText")?.textContent || "";
-    const question = Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-      .find((candidate) => candidate.text === text);
-    if (!question) throw new Error(`current question not found: ${text.slice(0, 80)}`);
+    const id = document.querySelector("#quizCard")?.dataset.questionId || "";
+    const question = window.TAKKEN_EXAM_QUESTIONS?.[id];
+    if (!question) throw new Error(`current question not found: ${id || "missing id"}`);
     return { id: question.id, answer: question.answer };
   });
 }
@@ -88,9 +87,8 @@ async function answer(page, index) {
 
 async function readReasoning(page) {
   return page.evaluate(() => {
-    const text = document.querySelector("#questionText")?.textContent || "";
-    const question = Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-      .find((candidate) => candidate.text === text);
+    const id = document.querySelector("#quizCard")?.dataset.questionId || "";
+    const question = window.TAKKEN_EXAM_QUESTIONS?.[id];
     const steps = [...document.querySelectorAll(".reasoning-steps li")].map((item) => ({
       label: item.querySelector("strong")?.textContent || "",
       text: item.querySelector("p")?.textContent || ""

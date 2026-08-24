@@ -5,10 +5,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 
 const ROOT = __dirname;
-const EXPECTED_CACHE_VERSION = "20260824-mobile-study-flow-v35-2";
+const EXPECTED_CACHE_VERSION = "20260825-quest-core-v36-1";
 // v31 adds the auditable PWA runtime while keeping modest headroom over the
 // current 27-file script set.
-const MAX_PUBLIC_JS_BYTES = 1_275_000;
+const MAX_PUBLIC_JS_BYTES = 1_276_000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
   "pwa-runtime.js",

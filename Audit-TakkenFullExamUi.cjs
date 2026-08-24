@@ -238,9 +238,10 @@ async function main() {
       themeHierarchy.businessCoreRows !== 11 ||
       themeHierarchy.optionalRows !== 8 ||
       themeHierarchy.optionalOpen ||
-      !themeHierarchy.optionalText.includes("以前の100問") ||
+      !themeHierarchy.optionalText.includes("旧問題アーカイブ") ||
+      !themeHierarchy.optionalText.includes("定着判定外") ||
       !themeHierarchy.optionalText.includes("解答済 0/100") ||
-      !themeHierarchy.optionGroups.includes("以前の100問（解答履歴を保持）")
+      !themeHierarchy.optionGroups.includes("旧問題アーカイブ（現行の定着判定外）")
     ) {
       throw new Error(`Theme hierarchy details mismatch: ${JSON.stringify(themeHierarchy)}`);
     }
@@ -293,10 +294,9 @@ async function main() {
     const visitedSourceHosts = [];
     for (let index = 0; index < 10; index += 1) {
       const question = await page.evaluate(() => {
-        const text = document.querySelector("#questionText")?.textContent || "";
-        const item = Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-          .find((candidate) => candidate.text === text);
-        if (!item) throw new Error(`Full-exam question not found: ${text.slice(0, 60)}`);
+        const id = document.querySelector("#quizCard")?.dataset.questionId || "";
+        const item = window.TAKKEN_EXAM_QUESTIONS?.[id];
+        if (!item) throw new Error(`Full-exam question not found: ${id || "missing id"}`);
         return {
           id: item.id,
           sectionId: item.sectionId,
@@ -345,10 +345,8 @@ async function main() {
         await page.locator("#dockNextButton").click();
         await page.waitForFunction(
           (id) => {
-            const text = document.querySelector("#questionText")?.textContent || "";
-            const item = Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-              .find((candidate) => candidate.text === text);
-            return item?.id && item.id !== id;
+            const currentId = document.querySelector("#quizCard")?.dataset.questionId || "";
+            return currentId && currentId !== id;
           },
           question.id
         );
@@ -643,11 +641,9 @@ async function main() {
     }
     await page.locator("#mockAButton").waitFor({ state: "visible" });
     await page.locator("#mockAButton").click();
-    await page.waitForFunction(() => {
-      const text = document.querySelector("#questionText")?.textContent || "";
-      return Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-        .find((candidate) => candidate.text === text)?.id === "r001";
-    });
+    await page.waitForFunction(
+      () => document.querySelector("#quizCard")?.dataset.questionId === "r001"
+    );
     const mockStart = await page.evaluate((id) => {
       const saved = JSON.parse(localStorage.getItem(id) || "{}");
       return {
@@ -677,10 +673,9 @@ async function main() {
     let noLeakAudit = null;
     for (let index = 0; index < 50; index += 1) {
       const question = await page.evaluate(() => {
-        const text = document.querySelector("#questionText")?.textContent || "";
-        const item = Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-          .find((candidate) => candidate.text === text);
-        if (!item) throw new Error(`Mock question not found: ${text.slice(0, 60)}`);
+        const id = document.querySelector("#quizCard")?.dataset.questionId || "";
+        const item = window.TAKKEN_EXAM_QUESTIONS?.[id];
+        if (!item) throw new Error(`Mock question not found: ${id || "missing id"}`);
         return { id: item.id, answer: item.answer };
       });
       const selected = index % 5 === 0 ? (question.answer + 1) % 4 : question.answer;
@@ -732,10 +727,8 @@ async function main() {
       if (index < 49) {
         await page.waitForFunction(
           (id) => {
-            const text = document.querySelector("#questionText")?.textContent || "";
-            const item = Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-              .find((candidate) => candidate.text === text);
-            return item?.id && item.id !== id;
+            const currentId = document.querySelector("#quizCard")?.dataset.questionId || "";
+            return currentId && currentId !== id;
           },
           question.id
         );
@@ -834,11 +827,9 @@ async function main() {
       throw new Error(`Mock result horizontal overflow: mobile=${mockMobileOverflow}`);
     }
     await page.locator("#mockOtherButton").click();
-    await page.waitForFunction(() => {
-      const text = document.querySelector("#questionText")?.textContent || "";
-      return Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-        .find((candidate) => candidate.text === text)?.id === "r015";
-    });
+    await page.waitForFunction(
+      () => document.querySelector("#quizCard")?.dataset.questionId === "r015"
+    );
     const formBStart = await page.evaluate((id) => {
       const saved = JSON.parse(localStorage.getItem(id) || "{}");
       return {
@@ -1130,9 +1121,8 @@ async function main() {
     await capture(migrationPage, "legacy-history-mobile.png");
     const migration = await migrationPage.evaluate((storageId) => {
       const saved = JSON.parse(localStorage.getItem(storageId) || "{}");
-      const text = document.querySelector("#questionText")?.textContent || "";
-      const item = Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-        .find((candidate) => candidate.text === text);
+      const currentId = document.querySelector("#quizCard")?.dataset.questionId || "";
+      const item = window.TAKKEN_EXAM_QUESTIONS?.[currentId];
       return {
         currentId: item?.id || "",
         index: saved.index,
@@ -1146,7 +1136,7 @@ async function main() {
         legacyFirstChapter: document.querySelector(".chapter-optional .chapter-row")
           ?.textContent?.replace(/\s+/g, " ").trim() || "",
         legacySelectGroup: [...document.querySelectorAll("#chapterSelect optgroup")]
-          .find((group) => group.label.includes("以前の100問"))?.label || "",
+          .find((group) => group.label.includes("旧問題アーカイブ"))?.label || "",
         legacyFirstOption: [...document.querySelectorAll("#chapterSelect optgroup option")]
           .find((option) => option.textContent.includes("免許・免許換え"))?.textContent || "",
         overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth
@@ -1161,10 +1151,10 @@ async function main() {
       migration.totalXp !== 5000 ||
       !migration.legacyWeakKept ||
       migration.legacyStatsKept !== 3 ||
-      !migration.legacySummary.includes("問題・履歴を保持") ||
+      !migration.legacySummary.includes("参考用・定着判定外") ||
       !migration.legacySummary.includes("解答済 1/100") ||
       !migration.legacyFirstChapter.includes("解答済 1/21") ||
-      migration.legacySelectGroup !== "以前の100問（解答履歴を保持）" ||
+      migration.legacySelectGroup !== "旧問題アーカイブ（現行の定着判定外）" ||
       !migration.legacyFirstOption.includes("解答済1/21") ||
       migration.overflow
     ) {
