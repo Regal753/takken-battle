@@ -9293,6 +9293,7 @@
   function cancelPracticalDrill() {
     const active = ["active", "retry"].includes(state.practicalDrill?.stage);
     if (active && !window.confirm("このセットを破棄します。問題順・途中解答・再出題の位置は消えます。解答履歴は残ります。")) return false;
+    const previousState = cloneStateForSync(state);
     state.practicalDrill = {
       ...state.practicalDrill,
       stage: "idle",
@@ -9306,10 +9307,18 @@
       sessionStartedAt: "",
       completedAt: ""
     };
-    saveState();
+    if (!saveState()) {
+      state = previousState;
+      renderPracticalDrill();
+      renderBusinessMastery();
+      renderPassPlan();
+      setTodayCommandStatus("セットを破棄できませんでした。保存管理を確認して再試行してください。", true);
+      return false;
+    }
     renderPracticalDrill();
     renderBusinessMastery();
     renderPassPlan();
+    if (active) setTodayCommandStatus("セットを破棄しました。解答履歴は残しています。");
     return true;
   }
 

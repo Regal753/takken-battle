@@ -129,6 +129,7 @@ async function cancelKnock(page) {
   await page.locator("#practicalDrillDiscardButton").click();
   assert.match(await accepted, /セットを破棄/);
   await page.locator("#practicalDrillSession").waitFor({ state: "hidden" });
+  assert.equal(await page.locator("#todayCommandStatus").textContent(), "セットを破棄しました。解答履歴は残しています。");
 }
 
 async function currentPresented(page) {
@@ -355,6 +356,32 @@ async function presentedFixture(page) {
     await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
     await page.waitForFunction(() => document.activeElement?.id === "practicalDrillFeedback");
     assert.equal(await page.evaluate(() => document.activeElement?.id), "practicalDrillFeedback", "resume must focus the saved feedback");
+
+    // A failed persistent write must keep both the visible session and the
+    // previously persisted active set instead of announcing a false discard.
+    await page.evaluate(() => {
+      window.__takkenOriginalStorageSetItem = Storage.prototype.setItem;
+      Storage.prototype.setItem = () => {
+        throw new DOMException("storage unavailable", "QuotaExceededError");
+      };
+    });
+    const failedDiscardAccepted = new Promise((resolve, reject) => {
+      page.once("dialog", (dialog) => dialog.accept().then(resolve, reject));
+    });
+    await page.locator("#practicalDrillDiscardButton").click();
+    await failedDiscardAccepted;
+    await page.evaluate(() => {
+      Storage.prototype.setItem = window.__takkenOriginalStorageSetItem;
+      delete window.__takkenOriginalStorageSetItem;
+    });
+    assert.equal(await page.locator("#practicalDrillSession").isVisible(), true, "failed discard must restore the active panel");
+    assert.equal(
+      await page.locator("#todayCommandStatus").textContent(),
+      "セットを破棄できませんでした。保存管理を確認して再試行してください。"
+    );
+    const retainedAfterFailedDiscard = await readSavedState(page);
+    assert.equal(retainedAfterFailedDiscard.practicalDrill.stage, "active", "failed discard must retain persisted session state");
+    assert.equal(retainedAfterFailedDiscard.practicalDrill.currentAttempt?.id, commandQuestion.id);
     await cancelKnock(page);
 
     // The visible remaining label must start exactly that many new questions,
