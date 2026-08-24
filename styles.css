@@ -297,7 +297,8 @@ button {
 .practical-drill-feedback:focus-visible,
 .calculation-drill-feedback:focus-visible,
 .today-command-primary:focus-visible,
-.today-command-secondary:focus-visible {
+.today-command-secondary:focus-visible,
+.save-transfer-button:focus-visible {
   outline: 3px solid #ffe08a;
   outline-offset: 3px;
 }
@@ -4820,7 +4821,7 @@ body {
 .save-transfer-button {
   display: inline-flex;
   align-items: center;
-  min-height: 34px;
+  min-height: 44px;
   padding: 6px 10px;
   border: 1px solid rgba(227, 189, 88, 0.5);
   border-radius: 8px;
@@ -4845,6 +4846,8 @@ body {
 .save-transfer-status {
   max-width: 260px;
   color: #bfe6ca;
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 .save-transfer-status.is-error {
@@ -5932,6 +5935,8 @@ button.mission-step:disabled {
 }
 
 .public-mode-note > summary > small {
+  flex: 0 0 auto;
+  white-space: nowrap;
   color: #e3bd58;
   font-weight: 900;
 }
@@ -8435,7 +8440,40 @@ button.mission-step:disabled {
 #officialExamQuestionLink.is-disabled { border-color: #9aa9a4; color: #5d6b67; background: #e8eeeb; cursor: not-allowed; }
 @media (max-width: 520px) { .business-fullscore-gates { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 620px) { .business-knock-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .business-knock-controls { grid-template-columns: minmax(0, 1fr); } }
-@media (max-width: 360px) { .business-mastery-panel { padding: 12px; } .business-knock-panel { padding: 12px; } .business-mastery-grid { grid-template-columns: minmax(0, 1fr); } .business-mastery-actions { display: grid; grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 360px) {
+  .business-mastery-panel { padding: 12px; }
+  .business-knock-panel { padding: 12px; }
+  .business-mastery-grid { grid-template-columns: minmax(0, 1fr); }
+  .business-mastery-actions { display: grid; grid-template-columns: minmax(0, 1fr); }
+
+  .today-command-panel .daily-mission {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .today-command-panel .mission-step {
+    grid-template-columns: 24px minmax(0, 1fr);
+    min-height: 58px;
+    gap: 6px;
+    padding: 7px;
+  }
+
+  .today-command-panel .mission-step > span {
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+  }
+
+  .today-command-panel .mission-step strong {
+    font-size: 12px;
+    line-height: 1.25;
+  }
+
+  .today-command-panel .mission-step small {
+    font-size: 10px;
+    line-height: 1.3;
+  }
+}
 
 .pwa-update-notice { position: fixed; z-index: 1000; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); left: max(12px, env(safe-area-inset-left)); display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 600px; margin: 0 auto; padding: 12px; border: 1px solid #8da9e7; border-radius: 12px; background: #eff5ff; box-shadow: 0 8px 26px rgba(11, 16, 32, .25); color: #10234b; }
 .pwa-update-notice p { margin: 0; font-size: .88rem; font-weight: 700; line-height: 1.45; }

@@ -2696,12 +2696,63 @@
       return `旧業法${contacted}/100問・弱点${weak}問・中央台帳${parsed.progress.answers}解答`;
     }
     const stats = parsed.state.questionStats || {};
-    const contacted = Object.values(stats).filter((item) =>
+    const practical = parsed.state.practicalDrill || {};
+    const calculation = parsed.state.calculationDrill || {};
+    const practicalHistory = practical.history || {};
+    const calculationHistory = calculation.history || {};
+    const baseContacted = Object.values(stats).filter((item) =>
       Math.max(Number(item?.attempts) || 0, Number(item?.centralAttempts) || 0) > 0
     ).length;
-    const attempts = Math.max(0, Number(parsed.state.attempts) || 0);
-    const correct = Math.min(attempts, Math.max(0, Number(parsed.state.correct) || 0));
-    return `${contacted}問接触・端末${attempts}解答・正解${correct}`;
+    const practicalContacted = Object.values(practicalHistory).filter((item) =>
+      (Number(item?.attempts) || 0) > 0
+    ).length;
+    const calculationContacted = Object.values(calculationHistory).filter((item) =>
+      (Number(item?.attempts) || 0) > 0
+    ).length;
+    const historyTotal = (history, field) => Object.values(history).reduce(
+      (sum, item) => sum + Math.max(0, Number(item?.[field]) || 0),
+      0
+    );
+    const baseAttempts = Math.max(
+      0,
+      Number(parsed.state.attempts) || 0,
+      historyTotal(stats, "attempts")
+    );
+    const practicalAttempts = Math.max(
+      0,
+      Number(practical.attempts) || 0,
+      historyTotal(practicalHistory, "attempts")
+    );
+    const calculationAttempts = Math.max(
+      0,
+      Number(calculation.attempts) || 0,
+      historyTotal(calculationHistory, "attempts")
+    );
+    const baseCorrect = Math.min(baseAttempts, Math.max(0, Number(parsed.state.correct) || 0));
+    const practicalCorrect = Math.min(practicalAttempts, Math.max(
+      0,
+      Number(practical.correctAttempts) || 0,
+      historyTotal(practicalHistory, "correct")
+    ));
+    const calculationCorrect = Math.min(calculationAttempts, Math.max(
+      0,
+      Number(calculation.correctAttempts) || 0,
+      historyTotal(calculationHistory, "correct")
+    ));
+    if (!practicalAttempts && !calculationAttempts) {
+      return `${baseContacted}問接触・端末${baseAttempts}解答・正解${baseCorrect}`;
+    }
+    const summaries = [];
+    if (baseAttempts || baseContacted) {
+      summaries.push(`通常問題${baseContacted}問接触・${baseAttempts}解答・正解${baseCorrect}`);
+    }
+    if (practicalAttempts || practicalContacted) {
+      summaries.push(`実践ノック${practicalContacted}問接触・${practicalAttempts}解答・正解${practicalCorrect}`);
+    }
+    if (calculationAttempts || calculationContacted) {
+      summaries.push(`計算特訓${calculationContacted}問接触・${calculationAttempts}解答・正解${calculationCorrect}`);
+    }
+    return summaries.join("／");
   }
 
   function importSavePackage(input, sourceLabel = "セーブファイル") {
@@ -4109,9 +4160,7 @@
     } else {
       if (elements.practicalDrillPanel) elements.practicalDrillPanel.open = true;
       renderPracticalDrill();
-      window.requestAnimationFrame(() =>
-        elements.practicalDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
-      );
+      focusCurrentPracticalContext({ force: true });
     }
     return true;
   }
@@ -6142,14 +6191,10 @@
     if (action === "resume") {
       resumeActiveLearningSession();
     } else if (action === "business-knock") {
+      const remaining = Math.max(1, 20 - businessAnswersToday());
       if (elements.businessKnockSize) elements.businessKnockSize.value = "20";
-      const summary = businessFullScoreSummary();
-      if (elements.businessKnockMode) {
-        elements.businessKnockMode.value = summary?.transfer?.retry || summary?.transfer?.due
-          ? "weak-due"
-          : summary?.transfer?.untouched ? "untouched" : "all-random";
-      }
-      startBusinessKnockSession();
+      if (elements.businessKnockMode) elements.businessKnockMode.value = "all-random";
+      startBusinessKnockSession(remaining, { daily: true });
     } else if (action === "subject-sprint") {
       startSubjectSprint(button.dataset.scopeId, Number(button.dataset.sessionSize) || 0);
     } else if (action === "foundation-theme") {
@@ -6169,7 +6214,7 @@
       const count = businessAnswersToday();
       if (count < 20) {
         if (elements.businessKnockSize) elements.businessKnockSize.value = "20";
-        startBusinessKnockSession();
+        startBusinessKnockSession(Math.max(1, 20 - count), { daily: true });
       } else {
         startSubjectSprint(
           button.dataset.scopeId || shortSundayScope(passReadinessSnapshot()),
@@ -6244,11 +6289,11 @@
       primary = { action: "mock", label: `本試験${snapshot.examProfile.questions}問を開始` };
     } else if (choiceDay && sundayMode === "short-review") {
       primary = !businessDone
-        ? { action: "sunday-short", label: `宅建業法 残り${20 - businessDoneCount}問`, scope: shortSundayScope(snapshot) }
+        ? { action: "sunday-short", label: `残り${20 - businessDoneCount}問をノック開始`, scope: shortSundayScope(snapshot) }
         : { action: "sunday-short", label: `弱点補強 残り${Math.max(0, 8 - shortCount)}問`, scope: shortSundayScope(snapshot) };
     } else {
       primary = !businessDone
-        ? { action: "business-knock", label: `宅建業法 残り${20 - businessDoneCount}問` }
+        ? { action: "business-knock", label: `残り${20 - businessDoneCount}問をノック開始` }
         : nextChapter
           ? { action: "foundation-theme", label: `${theme.label}の未接触単元へ`, unitId: nextChapter.id }
           : {
@@ -6257,21 +6302,17 @@
               scope: nextThemeSprintScope(theme.key),
               size: Math.max(1, themeTarget - themeCount)
             };
-      secondary = !businessDone
-        ? nextChapter
-          ? { action: "foundation-theme", label: `次に${theme.label}の未接触へ`, unitId: nextChapter.id }
-          : {
-              action: "subject-sprint",
-              label: `${theme.label}を補強`,
-              scope: nextThemeSprintScope(theme.key),
-              size: Math.max(1, themeTarget - themeCount)
-            }
-        : null;
+      // The weekday plan is sequential: finish the fixed business-law knock
+      // before exposing the subject-of-the-day action. Showing both actions at
+      // once made the required first step look optional on a phone.
+      secondary = null;
     }
 
     elements.todayCommandKicker.textContent = `D-${snapshot.daysToExam}・8/31まで高速一周`;
     elements.todayCommandTitle.textContent = active
       ? active.label
+      : !businessDone && (!choiceDay || sundayMode === "short-review")
+        ? `今日の宅建業法 残り${20 - businessDoneCount}問`
       : completed
         ? choiceDay && sundayMode === "full-mock" ? "本試験形式を完了" : "最低75分ライン完了"
         : primary.label;
@@ -6309,15 +6350,15 @@
     elements.missionBattleLabel.textContent = choiceDay ? "日曜モード" : "業法ノック";
     elements.missionBattleStatus.textContent = choiceDay
       ? sundayMode === "full-mock" ? "本試験形式" : sundayMode === "short-review" ? "短縮復習" : "未選択"
-      : `${Math.min(20, businessDoneCount)} / 20`;
+      : `解答済 ${Math.min(20, businessDoneCount)} / 20`;
     elements.missionOfficialLabel.textContent = choiceDay
       ? sundayMode === "full-mock" ? `${snapshot.examProfile.questions}問模試` : "業法20＋弱点8"
       : theme.label;
     elements.missionOfficialStatus.textContent = choiceDay
       ? sundayMode === "full-mock"
-        ? `${Math.min(themeTarget, themeCount)} / ${themeTarget}`
-        : `${Math.min(20, businessDoneCount)} / 20・${Math.min(8, shortCount)} / 8`
-      : `${Math.min(themeTarget, themeCount)} / ${themeTarget}`;
+        ? `解答済 ${Math.min(themeTarget, themeCount)} / ${themeTarget}`
+        : `業法 ${Math.min(20, businessDoneCount)} / 20・弱点 ${Math.min(8, shortCount)} / 8`
+      : `解答済 ${Math.min(themeTarget, themeCount)} / ${themeTarget}`;
     elements.missionReviewLabel.textContent = "セット内誤答";
     elements.missionReviewStatus.textContent = choiceDay && sundayMode === "full-mock"
       ? mockDone ? "採点済み" : "採点後に確認"
@@ -7858,7 +7899,7 @@
     const labels = formatKey === "single"
       ? ["1", "2", "3", "4"]
       : formatKey === "combination" && sourceFacts.length === 4
-        ? ["ア・前半", "ア・後半", "イ・前半", "イ・後半"]
+        ? ["ア-1", "ア-2", "イ-1", "イ-2"]
         : ["ア", "イ", "ウ", "エ"];
     if (sourceFacts.length) {
       return sourceFacts.map((fact, index) => ({
@@ -8156,7 +8197,7 @@
     const bankLabel = knockSession ? "業法ノック"
       : drill.bankId === BUSINESS_FULLSCORE_BANK_ID ? "満点変形"
       : subjectSprintSession ? "科目補強" : "実践";
-    const summaryPrefix = drill.bankId === LEGACY_PRACTICAL_BANK_ID ? "" : `${bankLabel} `;
+    const summaryPrefix = drill.bankId === LEGACY_PRACTICAL_BANK_ID ? "" : `${bankLabel}累計 `;
     elements.practicalDrillSummary.textContent =
       `${summaryPrefix}接触 ${contacted} / ${activeIds.length}・根拠クリア ${grounded}・再出題 ${drill.retryIds.length}`;
     if (elements.practicalDrillScope?.querySelector(`option[value="${drill.scope}"]`)) {
@@ -8211,7 +8252,7 @@
       : unitSession
         ? `${unitSession.label}・${drill.sessionIds.length}問`
         : `${drill.sessionIds.length}問 ${bankLabel}セット`;
-    elements.practicalDrillProgress.textContent = `${drill.position + 1} / ${drill.queue.length}`;
+    elements.practicalDrillProgress.textContent = `第${drill.position + 1}問 / 全${drill.queue.length}問`;
     elements.practicalDrillUnit.textContent = question.unitPage
       ? `${question.unitLabel}・p.${question.unitPage}`
       : question.unitLabel;
@@ -8253,7 +8294,7 @@
       ? `正解。「${question.choices[question.answer]}」を根拠から再現する。`
       : `誤答。正解は「${question.choices[question.answer]}」。今回の再出題へ追加した。`;
     elements.practicalDrillReasoning.replaceChildren(
-      practicalReasoningStep(1, "判断軸", question.explain),
+      practicalReasoningStep(1, "判定のまとめ", question.explain),
       practicalStatementReviewStep(question),
       practicalReasoningStep(3, "間違いやすい境界", question.trap),
       practicalReasoningStep(4, "次に再現する一文", question.memoryRule)
@@ -8287,6 +8328,25 @@
     elements.practicalDrillNextButton.textContent = drill.position + 1 < drill.queue.length
       ? "次の実践問題へ"
       : (sessionRetryCount ? "再出題へ進む" : "今回のセットを完了する");
+  }
+
+  function focusCurrentPracticalContext({ force = false } = {}) {
+    const drill = state.practicalDrill;
+    if (!["active", "retry"].includes(drill?.stage)) return;
+    window.requestAnimationFrame(() => {
+      const activeElement = document.activeElement;
+      const unrelatedControlHasFocus = activeElement &&
+        activeElement !== document.body &&
+        activeElement !== document.documentElement &&
+        !activeElement.closest?.("#practicalDrillPanel");
+      if (!force && unrelatedControlHasFocus) return;
+      const target = drill.currentAttempt
+        ? elements.practicalDrillFeedback
+        : elements.practicalDrillChoices?.querySelector("button:not(:disabled)");
+      if (!target) return;
+      target.focus({ preventScroll: true });
+      target.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
   }
 
   function businessFoundationChapters() {
@@ -8579,12 +8639,18 @@
   function businessKnockPlan(preset, seed = "preview") {
     if (!BUSINESS_KNOCK_READY) return null;
     const normalized = normalizeBusinessKnockPreset(preset);
+    const requestedSize = Number(preset?.size);
+    const dailyRemainder = Number.isInteger(requestedSize) && requestedSize > 0 &&
+      !BUSINESS_KNOCK_SIZES.includes(requestedSize)
+      ? Math.min(BUSINESS_FULLSCORE_EXPECTED_QUESTIONS, requestedSize)
+      : 0;
     return BUSINESS_KNOCK.plan({
       questions: BUSINESS_FULLSCORE_QUESTIONS,
       history: businessFullScoreHistory(),
       mode: normalized.mode,
       unitId: normalized.unitId,
       size: normalized.size,
+      dailyRemainder,
       now: new Date(),
       seed,
       presentationKey: `${todayKey()}:knock:${seed}`
@@ -8831,9 +8897,7 @@
     renderPracticalDrill();
     renderBusinessMastery();
     renderPassPlan();
-    window.requestAnimationFrame(() =>
-      elements.practicalDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
-    );
+    focusCurrentPracticalContext({ force: true });
   }
 
   function nextBusinessKnockPresentation(cycleId, previousOffset) {
@@ -8849,9 +8913,17 @@
     throw new Error("次の業法ノックの肢順を生成できませんでした。");
   }
 
-  function startBusinessKnockSession() {
+  function startBusinessKnockSession(requestedSize = 0, options = {}) {
     if (resumeActiveLearningSession()) return;
-    const preset = normalizeBusinessKnockPreset();
+    const defaultPreset = normalizeBusinessKnockPreset();
+    const daily = Boolean(options?.daily);
+    const preset = Number.isInteger(requestedSize) && requestedSize > 0
+      ? {
+          ...defaultPreset,
+          ...(daily ? { mode: "all-random", unitId: "", dailyRemainder: requestedSize } : {}),
+          size: requestedSize
+        }
+      : defaultPreset;
     const cycleId = createOpaqueId("cycle");
     const plan = businessKnockPlan(preset, cycleId);
     if (!plan?.ids?.length) {
@@ -8939,9 +9011,7 @@
     }
     renderPracticalDrill();
     renderPassPlan();
-    window.requestAnimationFrame(() =>
-      elements.practicalDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
-    );
+    focusCurrentPracticalContext({ force: true });
   }
 
   function startPracticalDrillWith(scope, sessionSize) {
@@ -8971,9 +9041,7 @@
     renderPracticalDrill();
     renderBusinessMastery();
     renderPassPlan();
-    window.requestAnimationFrame(() =>
-      elements.practicalDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
-    );
+    focusCurrentPracticalContext({ force: true });
   }
 
   function startPracticalDrill() {
@@ -9034,9 +9102,7 @@
     renderPracticalDrill();
     renderBusinessMastery();
     renderPassPlan();
-    window.requestAnimationFrame(() =>
-      elements.practicalDrillPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
-    );
+    focusCurrentPracticalContext({ force: true });
   }
 
   function restartPracticalDrill() {
@@ -9200,7 +9266,19 @@
     });
   }
 
+  function pausePracticalDrill() {
+    if (!["active", "retry"].includes(state.practicalDrill?.stage)) return;
+    if (elements.practicalDrillPanel) elements.practicalDrillPanel.open = false;
+    setTodayCommandStatus("セットを一時停止しました。次は保存位置から再開します。");
+    window.requestAnimationFrame(() => {
+      elements.todayCommandPanel?.scrollIntoView({ block: "start", behavior: "smooth" });
+      elements.todayCommandStartButton?.focus({ preventScroll: true });
+    });
+  }
+
   function cancelPracticalDrill() {
+    const active = ["active", "retry"].includes(state.practicalDrill?.stage);
+    if (active && !window.confirm("このセットを破棄します。問題順・途中解答・再出題の位置は消えます。解答履歴は残ります。")) return false;
     state.practicalDrill = {
       ...state.practicalDrill,
       stage: "idle",
@@ -9218,13 +9296,14 @@
     renderPracticalDrill();
     renderBusinessMastery();
     renderPassPlan();
+    return true;
   }
 
   function changePracticalDrillSettings() {
     const wasBusinessKnock = state.practicalDrill?.bankId === BUSINESS_FULLSCORE_BANK_ID &&
       state.practicalDrill?.planMode === "knock";
     const wasSubjectSprint = state.practicalDrill?.bankId === SUBJECT_SPRINT_BANK_ID;
-    cancelPracticalDrill();
+    if (!cancelPracticalDrill()) return;
     if (wasBusinessKnock) {
       window.requestAnimationFrame(() =>
         elements.businessKnockPanel?.scrollIntoView({ block: "center", behavior: "smooth" })
@@ -9238,7 +9317,7 @@
   }
 
   function exitPracticalDrill() {
-    cancelPracticalDrill();
+    if (!cancelPracticalDrill()) return;
     if (elements.practicalDrillPanel) elements.practicalDrillPanel.open = false;
     elements.todayCommandPanel?.scrollIntoView({ block: "start", behavior: "smooth" });
   }
@@ -12240,7 +12319,7 @@
     elements.practicalDrillChangeButton?.addEventListener("click", changePracticalDrillSettings);
     elements.practicalDrillExitButton?.addEventListener("click", exitPracticalDrill);
     elements.practicalDrillNextButton?.addEventListener("click", advancePracticalDrill);
-    elements.practicalDrillCancelButton?.addEventListener("click", cancelPracticalDrill);
+    elements.practicalDrillCancelButton?.addEventListener("click", pausePracticalDrill);
     elements.businessKnockStart?.addEventListener("click", startBusinessKnockSession);
     [elements.businessKnockMode, elements.businessKnockUnit, elements.businessKnockSize]
       .filter(Boolean)
@@ -12375,6 +12454,7 @@
     saveState();
   }
   renderCurrentView();
+  focusCurrentPracticalContext();
   applySaveWriteProtection();
   void (async () => {
     await checkStudyServer();
@@ -12382,6 +12462,7 @@
     await loadTodayQuest();
     grantQuestCompletionIfEarned();
     renderCurrentView();
+    focusCurrentPracticalContext();
     applySaveWriteProtection();
   })();
 })();

@@ -74,18 +74,26 @@
     const now = normalizedNow(input.now);
     const history = input.history && typeof input.history === "object" ? input.history : {};
     const all = questionsFor(input);
-    const requestedSize = SIZES.includes(Number(input.size)) ? Number(input.size) : 10;
+    // The panel accepts only named presets. The daily command sends its exact
+    // remainder separately, so arbitrary public `size` input remains
+    // fail-closed to 10.
+    const remainder = Number(input.dailyRemainder);
+    const dailyMixed = Number.isInteger(remainder) && remainder > 0;
+    const requestedSize = dailyMixed
+      ? Math.min(all.length, remainder)
+      : SIZES.includes(Number(input.size)) ? Number(input.size) : 10;
     const unitId = clean(input.unitId);
     const eligible = mode === "unit" ? all.filter((question) => question.unitId === unitId) : all;
     const classified = eligible.map((question) => ({ question, entry: historyEntry(history, question.id) }));
     let candidates;
-    if (mode === "weak-retry") candidates = classified.filter(({ entry }) => confidenceIsRetry(entry));
+    if (dailyMixed) candidates = classified;
+    else if (mode === "weak-retry") candidates = classified.filter(({ entry }) => confidenceIsRetry(entry));
     else if (mode === "weak-due") candidates = classified.filter(({ entry }) => confidenceIsRetry(entry) || stateFor(entry, now) === "due");
     else if (mode === "due") candidates = classified.filter(({ entry }) => stateFor(entry, now) === "due");
     else if (mode === "untouched") candidates = classified.filter(({ entry }) => !attemptsFor(entry));
     else candidates = classified;
     const seed = clean(input.seed) || clean(input.presentationKey) || "default";
-    const ranked = mode === "all-random"
+    const ranked = mode === "all-random" && !dailyMixed
       ? seededOrder(candidates, seed)
       : candidates.sort((left, right) => {
         const priority = priorityFor(left.entry, now) - priorityFor(right.entry, now);

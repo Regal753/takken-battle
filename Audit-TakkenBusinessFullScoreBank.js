@@ -127,7 +127,7 @@ function assertDeepFrozen(value, owner) {
 
 function assertDisplayModel(question) {
   const model = question.displayModel;
-  const expectedItems = question.formatKey === "combination" ? 2 :
+  const expectedItems = question.formatKey === "combination" ? 4 :
     (question.formatKey === "count" || question.formatKey === "case" ? 4 : 0);
   const expectedChoiceBlocks = question.formatKey === "single" ? 4 : 0;
   assert.ok(model, `${question.id}: display model exists`);
@@ -157,6 +157,20 @@ function assertDisplayModel(question) {
       assert.equal(question.choices[index], `【前提】${fact.context} 【判断】${fact.presentedStatement}`, `${question.id}: single raw choice retained`);
     });
   }
+  if (question.formatKey === "combination") {
+    assert.match(model.intro, /2つとも正しい場合だけ○/, `${question.id}: combination rule is explicit`);
+    assert.deepEqual(model.items.map((item) => item.label), ["ア-1", "ア-2", "イ-1", "イ-2"], `${question.id}: combination statements are split`);
+    model.items.forEach((item, index) => {
+      const fact = question.sourceFacts[index];
+      assert.deepEqual(item.sourceFactKeys, [fact.key], `${question.id}: combination display fact ${index}`);
+      assert.equal(item.judgment, fact.presentedStatement, `${question.id}: combination display judgment ${index}`);
+    });
+    assert.doesNotMatch(question.explain, /前半[○×]（/, `${question.id}: combination summary is concise`);
+  }
+  if (question.formatKey === "count") {
+    assert.match(model.intro, /4つの記述/, `${question.id}: count wording matches the rendered structure`);
+    assert.doesNotMatch(model.intro, /4場面/, `${question.id}: count wording is not a case-question label`);
+  }
 }
 
 function assertUnderlyingStatementExplanations(question) {
@@ -164,7 +178,7 @@ function assertUnderlyingStatementExplanations(question) {
 
   const explanations = question.statementExplanations;
   const labels = question.formatKey === "combination"
-    ? ["ア・前半", "ア・後半", "イ・前半", "イ・後半"]
+    ? ["ア-1", "ア-2", "イ-1", "イ-2"]
     : ["ア", "イ", "ウ", "エ"];
   assert.ok(Array.isArray(explanations), `${question.id}: underlying statement explanations exist`);
   assert.equal(explanations.length, 4, `${question.id}: four underlying statement explanations`);
@@ -230,7 +244,7 @@ assert.throws(
 );
 
 assert.equal(bank.VERSION, 3, "explanation-only updates must retain the v32 answer compatibility version");
-assert.equal(bank.QUALITY_VERSION, 4, "deep explanation content version");
+assert.equal(bank.QUALITY_VERSION, 5, "mobile-readable prompt and explanation version");
 assert.equal(bank.LEGAL_BASELINE, blueprint.legalBaseline);
 assert.equal(bank.QUESTIONS.length, 134);
 assert.equal(Object.keys(bank.QUESTIONS_BY_ID).length, 134);
@@ -384,7 +398,7 @@ for (const question of bank.QUESTIONS) {
   assert.equal(question.unitLabel, unitById[question.unitId].label, `${question.id}: unit label`);
   assert.equal(question.unitPage, unitById[question.unitId].page, `${question.id}: unit page`);
   assert.equal(question.legalBaseline, blueprint.legalBaseline, `${question.id}: legal baseline`);
-  assert.equal(question.qualityVersion, 4, `${question.id}: quality version`);
+  assert.equal(question.qualityVersion, 5, `${question.id}: quality version`);
   assert.ok(Object.hasOwn(expectedFormats, question.formatKey), `${question.id}: known format`);
   assert.equal(question.format, bank.FORMAT_LABELS[question.formatKey], `${question.id}: format label`);
   assert.equal(question.choices.length, 4, `${question.id}: four choices`);

@@ -69,7 +69,7 @@ async function installFixture(page, descriptor) {
     const labels = formatKey === "single"
       ? ["1", "2", "3", "4"]
       : formatKey === "combination" && facts.length === 4
-        ? ["ア・前半", "ア・後半", "イ・前半", "イ・後半"]
+        ? ["ア-1", "ア-2", "イ-1", "イ-2"]
         : ["ア", "イ", "ウ", "エ"];
     state.practicalDrill = {
       ...state.practicalDrill,

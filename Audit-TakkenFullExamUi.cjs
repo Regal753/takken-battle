@@ -1293,7 +1293,7 @@ async function main() {
       sharedFilePackage.state.practicalDrill?.stage !== "active" ||
       sharedFilePackage.state.practicalDrill?.position !== 15 ||
       Object.keys(sharedFilePackage.state.practicalDrill?.history || {}).length !== 15 ||
-      !sharedFile.shareText.includes("端末117解答・正解99")
+      !sharedFile.shareText.includes("通常問題1問接触・117解答・正解99／実践ノック15問接触・15解答・正解12")
     ) {
       throw new Error(`JSON backup share invalid: ${JSON.stringify({
         file: { name: sharedFile.name, type: sharedFile.type, size: sharedFile.size },
@@ -1307,7 +1307,7 @@ async function main() {
       })}`);
     }
     const fileShareStatus = ((await handoffPage.locator("#saveTransferStatus").textContent()) || "").trim();
-    if (!fileShareStatus.includes("JSONバックアップを共有しました") || !fileShareStatus.includes("端末117解答・正解99")) {
+    if (!fileShareStatus.includes("JSONバックアップを共有しました") || !fileShareStatus.includes("通常問題1問接触・117解答・正解99／実践ノック15問接触・15解答・正解12")) {
       throw new Error(`JSON backup share status missing: ${fileShareStatus}`);
     }
     await handoffPage.evaluate(() => {
@@ -1430,7 +1430,7 @@ async function main() {
       throw new Error(`Manual handoff payload invalid: ${JSON.stringify(sharedPayload)}`);
     }
     const senderStatus = ((await handoffPage.locator("#saveTransferStatus").textContent()) || "").trim();
-    if (!senderStatus.includes("共有しました") || !senderStatus.includes("端末117解答・正解99")) {
+    if (!senderStatus.includes("共有しました") || !senderStatus.includes("通常問題1問接触・117解答・正解99／実践ノック15問接触・15解答・正解12")) {
       throw new Error(`Manual handoff sender status missing: ${senderStatus}`);
     }
     await handoffPage.evaluate(() => {

@@ -1,6 +1,6 @@
 "use strict";
 
-const VERSION = "20260823-mastery-hardening-v34-1";
+const VERSION = "20260824-mobile-study-flow-v35-1";
 const CACHE_NAME = `takken-battle-${VERSION}`;
 const IMMUTABLE = [
   "styles.css", "exam-blueprint.js", "exam-question-core.js", "exam-questions-rights.js",
