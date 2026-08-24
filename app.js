@@ -1081,6 +1081,7 @@
     autoMarked: {},
     activeCutCheck: null,
     dailyFinishedDate: "",
+    questCompletion: null,
     daily: createDailyState(),
     mock: createMockState(),
     mockHistory: [],
@@ -2486,6 +2487,7 @@
       next.chapterModeId = "";
       next.adaptive = false;
       next.dailyFinishedDate = "";
+      next.questCompletion = null;
       next.daily = createDailyState();
       next.mock = createMockState("", next.examProfile);
     }
@@ -2493,6 +2495,16 @@
       ? { id: next.activeCutCheck.id, answers: next.activeCutCheck.answers || {} }
       : null;
     next.dailyFinishedDate = String(next.dailyFinishedDate || "");
+    const questCompletion = next.questCompletion;
+    next.questCompletion = questCompletion && ["daily", "unit"].includes(questCompletion.kind)
+      ? {
+          kind: questCompletion.kind,
+          date: /^\d{4}-\d{2}-\d{2}$/.test(String(questCompletion.date || ""))
+            ? String(questCompletion.date)
+            : "",
+          chapterId: String(questCompletion.chapterId || "")
+        }
+      : null;
     next.daily = normalizeDailyState(next.daily);
     next.sprint = normalizeSprintState(next.sprint);
     if (next.runMode === RUN_MODE_MOCK) {
@@ -3405,6 +3417,7 @@
     activeDayKey = currentDay;
     state.daily = createDailyState();
     state.dailyFinishedDate = "";
+    state.questCompletion = null;
     Object.assign(todayQuest, {
       status: "loading",
       date: currentDay,
@@ -7124,7 +7137,7 @@
   }
 
   function weakIds() {
-    return ORDER
+    return STUDY_ORDER
       .filter((id) => weaknessScore(id) > 0)
       .sort((a, b) => {
         const scoreDiff = weaknessScore(b) - weaknessScore(a);
@@ -7313,6 +7326,7 @@
     state.answered = null;
     state.activeCutCheck = null;
     state.finished = false;
+    state.questCompletion = null;
     saveState();
     render();
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -9354,6 +9368,22 @@
       showChapterFinished();
       return;
     }
+    const completion = activeQuestCompletion();
+    if (!isFirstPassMode() && state.finished && completion && dailyQuestIsComplete()) {
+      // Keep the surrounding study dashboard current when restoring a saved
+      // result view. The result replaces only the quiz card; the next-command
+      // panel must still reflect live mission data after reload/import.
+      render();
+      const unitChapter = completion.kind === "unit"
+        ? foundationUnitPlanChapter(completion.chapterId)
+        : null;
+      if (unitChapter) {
+        showChapterFinished(unitChapter, { persist: false });
+      } else {
+        showDailyQuestFinished({ persist: false });
+      }
+      return;
+    }
     render();
   }
 
@@ -9364,6 +9394,7 @@
     renderBusinessMastery();
     const question = currentQuestion();
     const answered = state.answered;
+    elements.quizCard.dataset.questionId = question.id;
     const isCorrect = answered?.correct === true;
     const isWrong = answered?.correct === false;
     const chapterText = question.chapter?.label || "宅建全分野";
@@ -9376,7 +9407,7 @@
     const sourceLocator = question.sourceLocator || question.sourceRef;
     elements.sourceLabel.textContent = sourceLocator
       ? `令和8年度 / ${sourceLocator} / ${chapterText} / 基準日 ${question.legalBaseline}`
-      : `旧問題 / 第1分冊 宅建業法 / ${chapterText} / ${question.level || "本試験寄せ"}`;
+      : `旧問題アーカイブ / 参考用・現行の定着判定外 / ${chapterText}`;
     elements.enemyStateLabel.textContent = isMockMode() && answered
       ? "ANSWER LOCKED"
       : answered
@@ -9495,8 +9526,7 @@
     elements.markButton.hidden = isMockMode();
     elements.markButton.classList.toggle("is-marked", Boolean(state.marked[question.id]));
     elements.markButton.textContent = state.marked[question.id] ? "復習中" : "要復習";
-    elements.questionText.textContent = question.text;
-
+    renderQuestionPrompt(question);
     renderCutCheck(question);
     renderChoices(question);
     renderFeedback(question);
@@ -9519,13 +9549,59 @@
     }
   }
 
+  function removeStructuredQuestionPrompt() {
+    elements.quizCard?.querySelector(".core-statement-prompt")?.remove();
+  }
+
+  function statementLineParts(line) {
+    return String(line || "").match(/^\s*([ア-ン]|[0-9０-９]+)\s+(.+)$/);
+  }
+
   function choiceStatements(question) {
     const statements = String(question.text || "")
       .split(/\r?\n/)
-      .map((line) => line.match(/^\s*([ア-ン]|[0-9０-９]+)\s+(.+)$/))
+      .map(statementLineParts)
       .filter(Boolean)
       .map((match) => ({ label: match[1], text: match[2].trim() }));
     return statements.length === 4 ? statements : [];
+  }
+
+  function renderQuestionPrompt(question) {
+    removeStructuredQuestionPrompt();
+    const statements = choiceStatements(question);
+    if (!statements.length) {
+      elements.questionText.textContent = question.text;
+      return;
+    }
+
+    const lead = String(question.text || "")
+      .split(/\r?\n/)
+      .filter((line) => !statementLineParts(line))
+      .join("\n")
+      .trim();
+    elements.questionText.textContent = lead || "次の4つの記述を判定してください。";
+    if (shouldCutCheck(question.id)) return;
+
+    const panel = document.createElement("section");
+    panel.className = "core-statement-prompt";
+    panel.setAttribute("aria-label", "判定する4つの記述");
+    const heading = document.createElement("strong");
+    heading.className = "core-statement-prompt-title";
+    heading.textContent = "4つの記述を1つずつ確認";
+    const list = document.createElement("div");
+    list.className = "core-statement-prompt-list";
+    statements.forEach((statement) => {
+      const item = document.createElement("article");
+      item.className = "core-statement-prompt-item";
+      const label = document.createElement("span");
+      label.textContent = statement.label;
+      const text = document.createElement("p");
+      text.textContent = statement.text;
+      item.append(label, text);
+      list.append(item);
+    });
+    panel.append(heading, list);
+    elements.quizCard?.insertBefore(panel, elements.choices);
   }
 
   function displayedChoiceStatements(question) {
@@ -10454,13 +10530,45 @@
       state.dailyFinishedDate === todayKey();
   }
 
+  function foundationUnitPlanChapter(chapterId = state.daily?.planUnitId) {
+    const id = String(chapterId || "");
+    return TEXTBOOK_CHAPTERS.find((chapter) => chapter.id === id) || null;
+  }
+
+  function activeQuestCompletion() {
+    const completion = state.questCompletion;
+    if (!completion || completion.date !== todayKey()) return null;
+    if (completion.kind === "unit" && !foundationUnitPlanChapter(completion.chapterId)) return null;
+    return completion;
+  }
+
   function finishDailyQuest() {
     if (!dailyQuestIsComplete() || isFirstPassMode() || isChapterMode()) return false;
+    const previousState = cloneStateForSync(state);
+    const unitChapter = state.daily?.planMode === "unit"
+      ? foundationUnitPlanChapter()
+      : null;
     state.dailyFinishedDate = todayKey();
-    saveState();
-    renderPassPlan();
-    renderAnswerDock(currentQuestion());
-    elements.todayCommandPanel?.scrollIntoView({ block: "start", behavior: "smooth" });
+    state.finished = true;
+    state.questCompletion = {
+      kind: unitChapter ? "unit" : "daily",
+      date: todayKey(),
+      chapterId: unitChapter?.id || ""
+    };
+    if (!saveState()) {
+      state = previousState;
+      render();
+      setTodayCommandStatus(
+        "完了状態を保存できませんでした。進捗はこの画面に加算していません。保存管理を確認して再試行してください。",
+        true
+      );
+      return false;
+    }
+    if (unitChapter) {
+      showChapterFinished(unitChapter, { persist: false });
+    } else {
+      showDailyQuestFinished({ persist: false });
+    }
     return true;
   }
 
@@ -10592,7 +10700,7 @@
       elements.chapterSelect.append(optionGroup);
     });
     const legacyGroup = document.createElement("optgroup");
-    legacyGroup.label = "以前の100問（解答履歴を保持）";
+    legacyGroup.label = "旧問題アーカイブ（現行の定着判定外）";
     LEGACY_CHAPTER_ENTRIES.forEach(({ chapter, chapterIndex }) => {
       const progress = legacyProgress(chapter.ids);
       const option = document.createElement("option");
@@ -10790,8 +10898,12 @@
         optional.className = "chapter-optional";
         optional.open = LEGACY_CHAPTER_ENTRIES.some(({ chapter }) => chapter.ids.includes(activeId));
         const optionalSummary = document.createElement("summary");
-        optionalSummary.innerHTML =
-          `<strong>以前の100問</strong><span>問題・履歴を保持　解答済 ${optionalProgress.contacted}/${optionalProgress.total}</span>`;
+        const optionalTitle = document.createElement("strong");
+        optionalTitle.textContent = "旧問題アーカイブ";
+        const optionalStatus = document.createElement("span");
+        optionalStatus.textContent =
+          `参考用・定着判定外　解答済 ${optionalProgress.contacted}/${optionalProgress.total}`;
+        optionalSummary.append(optionalTitle, optionalStatus);
         const optionalList = document.createElement("div");
         optionalList.className = "chapter-group-list";
         LEGACY_CHAPTER_ENTRIES.forEach(({ chapter, chapterIndex }) => {
@@ -11097,10 +11209,20 @@
     if (elements.streakText) elements.streakText.textContent = mockTimeText();
   }
 
+  function rollbackFailedAnswer(previousState) {
+    state = previousState;
+    render();
+    const message =
+      "解答を保存できませんでした。正誤・報酬・進捗は加算していません。保存管理を確認して再回答してください。";
+    setTodayCommandStatus(message, true);
+    if (elements.battleAnnouncement) elements.battleAnnouncement.textContent = message;
+  }
+
   function answerMock(index) {
     const question = currentQuestion();
     const ids = mockQuestionIds();
     if (!ids.length || question.id !== ids[state.mock.position]) return;
+    const previousState = cloneStateForSync(state);
     const result = {
       id: question.id,
       selected: index,
@@ -11120,7 +11242,10 @@
       at: new Date().toISOString()
     };
     state.activeCutCheck = null;
-    saveState();
+    if (!saveState()) {
+      rollbackFailedAnswer(previousState);
+      return;
+    }
     render();
   }
 
@@ -11142,6 +11267,7 @@
         ?.scrollIntoView({ block: "start", behavior: "smooth" });
       return;
     }
+    const previousState = cloneStateForSync(state);
     const isCorrect = index === question.answer;
     const cutCheckMissed = Boolean(cutCheck && !cutCheck.allCorrect);
     const wasMarked = Boolean(state.marked[question.id]);
@@ -11385,7 +11511,10 @@
     };
     state.questionStats[question.id] = nextStats;
     state.activeCutCheck = null;
-    saveState();
+    if (!saveState()) {
+      rollbackFailedAnswer(previousState);
+      return;
+    }
     if (navigator.vibrate) {
       navigator.vibrate(isCorrect
         ? (chestOpened || levelUp || milestone ? [28, 34, 42] : 24)
@@ -11819,6 +11948,7 @@
 
   function resetQuizCardView() {
     elements.quizCard?.querySelector("[data-quiz-result-view]")?.remove();
+    removeStructuredQuestionPrompt();
     [
       elements.roundLabel?.closest(".quiz-meta"),
       elements.questionText,
@@ -12025,11 +12155,11 @@
     });
   }
 
-  function showChapterFinished() {
-    const chapter = chapterModeChapter();
+  function showChapterFinished(chapterOverride = null, { persist = true } = {}) {
+    const chapter = chapterOverride || chapterModeChapter();
     if (!chapter) {
       showFinished();
-      return;
+      return false;
     }
     const question = currentQuestion();
     if (question) {
@@ -12043,12 +12173,23 @@
     const nextActionLabel = nextRoute?.kind === "unit"
       ? `次の単元「${nextDescriptor.title}」へ`
       : nextDescriptor?.button || "";
+    const previousFinished = state.finished;
     state.finished = true;
     if (elements.answerDock) {
       elements.answerDock.hidden = true;
       document.body.classList.remove("has-answer-dock");
     }
-    saveState();
+    if (persist && !saveState()) {
+      state.finished = previousFinished;
+      render();
+      setTodayCommandStatus(
+        "テーマ完了を保存できませんでした。進捗はこの画面に加算していません。保存管理を確認して再試行してください。",
+        true
+      );
+      return false;
+    }
+    const isUnitPlanResult = state.questCompletion?.kind === "unit" &&
+      state.questCompletion.chapterId === chapter.id;
     const answeredCount = chapter.ids.filter(answeredToday).length;
     const correctCount = chapter.ids.filter(correctToday).length;
     const retainedCount = chapter.ids.filter(isRetained).length;
@@ -12063,7 +12204,16 @@
         resultDefinition("本日正解", `${correctCount}問`),
         resultDefinition("定着", `${retainedCount}問`)
       );
-      feedback.append(resultElement("h3", { text: chapter.label }), resultElement("p", { className: "question-text", text: "選択テーマの問題だけを完了。固定10問は変更していません。" }), grid);
+      feedback.append(
+        resultElement("h3", { text: chapter.label }),
+        resultElement("p", {
+          className: "question-text",
+          text: isUnitPlanResult
+            ? "本文直後の読後問題を完了。次の未接触単元へ進めます。"
+            : "選択テーマの問題だけを完了。固定10問は変更していません。"
+        }),
+        grid
+      );
       if (nextDescriptor) {
         const nextText = resultElement("p", { className: "explain-text" });
         nextText.append(resultElement("strong", { text: `${nextDescriptor.stage}：` }), document.createTextNode(`${nextDescriptor.title}。${nextDescriptor.text}`));
@@ -12075,7 +12225,11 @@
         nextButton.type = "button";
         actions.append(nextButton);
       }
-      [["chapterRetryButton", nextDescriptor ? "ghost-button" : "next-button", "このテーマをもう一度"], ["chapterDailyButton", "ghost-button", "固定10問へ戻る"]].forEach(([id, className, text]) => {
+      const secondaryActions = [
+        ["chapterRetryButton", nextDescriptor ? "ghost-button" : "next-button", "このテーマをもう一度"],
+        ["chapterDailyButton", "ghost-button", isUnitPlanResult ? "学習トップへ" : "固定10問へ戻る"]
+      ];
+      secondaryActions.forEach(([id, className, text]) => {
         const button = resultElement("button", { id, className, text });
         button.type = "button";
         actions.append(button);
@@ -12100,12 +12254,111 @@
       state.finished = false;
       state.answered = null;
       state.activeCutCheck = null;
-      saveState();
-      startDailyQuest();
+      state.questCompletion = null;
+      if (!saveState()) return;
+      if (isUnitPlanResult) {
+        render();
+        elements.todayCommandPanel?.scrollIntoView({ block: "start", behavior: "smooth" });
+      } else {
+        startDailyQuest();
+      }
     });
+    return true;
+  }
+
+  function showDailyQuestFinished({ persist = true } = {}) {
+    const previousFinished = state.finished;
+    state.finished = true;
+    if (elements.answerDock) {
+      elements.answerDock.hidden = true;
+      document.body.classList.remove("has-answer-dock");
+    }
+    if (persist && !saveState()) {
+      state.finished = previousFinished;
+      render();
+      setTodayCommandStatus(
+        "日課完了を保存できませんでした。保存管理を確認して再試行してください。",
+        true
+      );
+      return false;
+    }
+
+    const ids = dailyQuestIds();
+    const answeredCount = dailyQuestDoneCount();
+    const correctCount = dailyQuestClearCount();
+    const reviewIds = ids.filter((id) => weaknessScore(id) > 0);
+    showQuizResult((view) => {
+      appendQuizMeta(view, `${answeredCount} / ${ids.length}`, "今日のクエスト完了");
+      const feedback = resultElement("section", { className: "feedback" });
+      feedback.dataset.dailyQuestResult = todayKey();
+      const grid = resultElement("dl", { className: "answer-grid" });
+      grid.append(
+        resultDefinition("出題", `${ids.length}問`),
+        resultDefinition("解答", `${answeredCount}問`),
+        resultDefinition("正解", `${correctCount}問`),
+        resultDefinition("要復習", `${reviewIds.length}問`)
+      );
+      const actions = resultElement("div", { className: "finish-actions daily-finish-actions" });
+      if (reviewIds.length) {
+        const reviewButton = resultElement("button", {
+          id: "dailyResultReviewButton",
+          className: "next-button",
+          text: "弱点を1問復習"
+        });
+        reviewButton.type = "button";
+        actions.append(reviewButton);
+      }
+      if (remainingFirstPassCount() > 0) {
+        const passButton = resultElement("button", {
+          id: "dailyResultPassButton",
+          className: reviewIds.length ? "ghost-button" : "next-button",
+          text: "未接触を続ける"
+        });
+        passButton.type = "button";
+        actions.append(passButton);
+      }
+      const homeButton = resultElement("button", {
+        id: "dailyResultHomeButton",
+        className: "ghost-button",
+        text: "学習トップへ"
+      });
+      homeButton.type = "button";
+      actions.append(homeButton);
+      feedback.append(
+        resultElement("h3", { text: "今日の学習を記録しました" }),
+        grid,
+        resultElement("p", {
+          className: "explain-text",
+          text: reviewIds.length
+            ? "誤答・迷いは弱点へ残しています。解説を確認し、次回は根拠まで言えるか再テストします。"
+            : "全問の解説確認まで完了。次は未接触を進めるか、学習トップへ戻れます。"
+        }),
+        actions
+      );
+      view.append(feedback);
+    });
+    $("#dailyResultReviewButton")?.addEventListener("click", () => {
+      state.questCompletion = null;
+      jumpToWeakPoint();
+    });
+    $("#dailyResultPassButton")?.addEventListener("click", () => {
+      state.questCompletion = null;
+      startFirstPass();
+    });
+    $("#dailyResultHomeButton")?.addEventListener("click", () => {
+      state.finished = false;
+      state.answered = null;
+      state.activeCutCheck = null;
+      state.questCompletion = null;
+      if (!saveState()) return;
+      render();
+      elements.todayCommandPanel?.scrollIntoView({ block: "start", behavior: "smooth" });
+    });
+    return true;
   }
 
   function showFinished() {
+    state.questCompletion = null;
     state.finished = true;
     if (elements.answerDock) {
       elements.answerDock.hidden = true;
@@ -12473,7 +12726,8 @@
   }, 1000);
   const hasMockResult = isMockMode() && state.mock.finalized;
   const hasChapterResult = isChapterMode() && state.finished;
-  if (state.finished && !hasMockResult && !hasChapterResult) {
+  const hasQuestResult = Boolean(activeQuestCompletion());
+  if (state.finished && !hasMockResult && !hasChapterResult && !hasQuestResult) {
     state.finished = false;
     saveState();
   }

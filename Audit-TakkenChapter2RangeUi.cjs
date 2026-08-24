@@ -61,10 +61,9 @@ async function gotoFresh(page, baseUrl, prefix) {
 
 async function currentQuestion(page) {
   return page.evaluate(() => {
-    const text = document.querySelector("#questionText")?.textContent || "";
-    const question = Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-      .find((candidate) => candidate.text === text);
-    if (!question) throw new Error(`question not found: ${text.slice(0, 80)}`);
+    const id = document.querySelector("#quizCard")?.dataset.questionId || "";
+    const question = window.TAKKEN_EXAM_QUESTIONS?.[id];
+    if (!question) throw new Error(`question not found: ${id || "missing id"}`);
     return { id: question.id, tag: question.tag, answer: question.answer };
   });
 }
@@ -134,11 +133,9 @@ async function runDesktop(browser, baseUrl) {
     /第2分冊・権利の合格ロード/
   );
   await page.locator("#dockNextButton").click();
-  await page.waitForFunction(() => {
-    const text = document.querySelector("#questionText")?.textContent || "";
-    return Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-      .find((question) => question.text === text)?.id === "r102";
-  });
+  await page.waitForFunction(
+    () => document.querySelector("#quizCard")?.dataset.questionId === "r102"
+  );
   const second = await currentQuestion(page);
   assert.equal(second.id, "r102");
 
@@ -175,11 +172,9 @@ async function runDesktop(browser, baseUrl) {
   assert.equal(contractFirst.id, "r111");
   await page.locator(`.choice-button[data-index="${contractFirst.answer}"]`).click();
   await page.locator("#dockNextButton").click();
-  await page.waitForFunction(() => {
-    const text = document.querySelector("#questionText")?.textContent || "";
-    return Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-      .find((question) => question.text === text)?.id === "r112";
-  });
+  await page.waitForFunction(
+    () => document.querySelector("#quizCard")?.dataset.questionId === "r112"
+  );
   assert.equal((await currentQuestion(page)).id, "r112");
   await selectTextbookUnit(page, "02-16 不法行為");
   assert.equal((await currentQuestion(page)).id, "r113");

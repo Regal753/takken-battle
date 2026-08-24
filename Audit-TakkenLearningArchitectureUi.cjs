@@ -93,10 +93,9 @@ async function savedState(page) {
 
 async function answerCurrentCorrect(page) {
   const answer = await page.evaluate(() => {
-    const text = document.querySelector("#questionText")?.textContent || "";
-    const question = Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-      .find((candidate) => candidate.text === text);
-    if (!question) throw new Error(`question not found: ${text.slice(0, 80)}`);
+    const id = document.querySelector("#quizCard")?.dataset.questionId || "";
+    const question = window.TAKKEN_EXAM_QUESTIONS?.[id];
+    if (!question) throw new Error(`question not found: ${id || "missing id"}`);
     return question.answer;
   });
   await page.locator(`.choice-button[data-index="${answer}"]`).click();
@@ -412,9 +411,7 @@ async function main() {
     assert.equal(largeUnitBatch.planUnitId, "business-book-01");
     assert.match(largeUnitBatch.routeText, /まず4問.*単元残り15問/);
     const activeQuestionId = await largeUnitPage.evaluate(() => {
-      const text = document.querySelector("#questionText")?.textContent || "";
-      return Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-        .find((question) => question.text === text)?.id || "";
+      return document.querySelector("#quizCard")?.dataset.questionId || "";
     });
     assert.equal(activeQuestionId, largeUnitBatch.chapterIds[0]);
     await largeUnitPage.close();

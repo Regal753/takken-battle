@@ -74,10 +74,9 @@ async function textbookChapter(page, id) {
 
 async function currentQuestion(page) {
   return page.evaluate(() => {
-    const text = document.querySelector("#questionText")?.textContent || "";
-    const question = Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-      .find((candidate) => candidate.text === text);
-    if (!question) throw new Error(`question not found: ${text.slice(0, 80)}`);
+    const id = document.querySelector("#quizCard")?.dataset.questionId || "";
+    const question = window.TAKKEN_EXAM_QUESTIONS?.[id];
+    if (!question) throw new Error(`question not found: ${id || "missing id"}`);
     return { id: question.id, answer: question.answer };
   });
 }
@@ -110,11 +109,10 @@ function dailyContract(state) {
 }
 
 async function waitForQuestion(page, id) {
-  await page.waitForFunction((questionId) => {
-    const text = document.querySelector("#questionText")?.textContent || "";
-    return Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-      .find((candidate) => candidate.text === text)?.id === questionId;
-  }, id);
+  await page.waitForFunction(
+    (questionId) => document.querySelector("#quizCard")?.dataset.questionId === questionId,
+    id
+  );
 }
 
 async function chapterUi(page) {

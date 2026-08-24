@@ -73,10 +73,9 @@ async function selectUnit(page, label) {
 
 async function currentQuestion(page) {
   return page.evaluate(() => {
-    const text = document.querySelector("#questionText")?.textContent || "";
-    const question = Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-      .find((candidate) => candidate.text === text);
-    if (!question) throw new Error(`current question not found: ${text.slice(0, 80)}`);
+    const id = document.querySelector("#quizCard")?.dataset.questionId || "";
+    const question = window.TAKKEN_EXAM_QUESTIONS?.[id];
+    if (!question) throw new Error(`current question not found: ${id || "missing id"}`);
     return { id: question.id, answer: question.answer };
   });
 }
@@ -93,11 +92,10 @@ async function savedState(page) {
 }
 
 async function waitForQuestion(page, id) {
-  await page.waitForFunction((targetId) => {
-    const text = document.querySelector("#questionText")?.textContent || "";
-    return Object.values(window.TAKKEN_EXAM_QUESTIONS || {})
-      .find((candidate) => candidate.text === text)?.id === targetId;
-  }, id);
+  await page.waitForFunction(
+    (targetId) => document.querySelector("#quizCard")?.dataset.questionId === targetId,
+    id
+  );
 }
 
 async function runDirectExplanationLoop(browser, baseUrl) {

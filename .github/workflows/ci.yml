@@ -91,6 +91,7 @@ jobs:
           node Audit-TakkenPwaUpgrade.cjs
           node Audit-TakkenFutureSaveUi.cjs
           node Audit-TakkenAccessibilityUi.cjs
+          node Audit-TakkenQuestCoreUi.cjs
 
   validate:
     if: ${{ always() }}
