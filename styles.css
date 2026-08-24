@@ -5936,7 +5936,9 @@ button.mission-step:disabled {
 
 .public-mode-note > summary > small {
   flex: 0 0 auto;
+  min-width: 44px;
   white-space: nowrap;
+  text-align: center;
   color: #e3bd58;
   font-weight: 900;
 }
