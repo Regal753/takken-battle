@@ -9310,6 +9310,7 @@
     renderPracticalDrill();
     renderBusinessMastery();
     renderPassPlan();
+    if (active) setTodayCommandStatus("セットを破棄しました。解答履歴は残しています。");
     return true;
   }
 

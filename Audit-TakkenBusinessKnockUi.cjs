@@ -129,6 +129,7 @@ async function cancelKnock(page) {
   await page.locator("#practicalDrillDiscardButton").click();
   assert.match(await accepted, /セットを破棄/);
   await page.locator("#practicalDrillSession").waitFor({ state: "hidden" });
+  assert.equal(await page.locator("#todayCommandStatus").textContent(), "セットを破棄しました。解答履歴は残しています。");
 }
 
 async function currentPresented(page) {
