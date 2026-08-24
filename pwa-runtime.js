@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20260824-mobile-study-flow-v35-1";
+  const VERSION = "20260824-mobile-study-flow-v35-2";
   const BANNER_ID = "pwaUpdateNotice";
   let reloadRequested = false;
 
