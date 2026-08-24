@@ -17,7 +17,7 @@
   // Answer/presentation compatibility version. Explanation-only releases keep
   // this value so an already-recorded currentAttempt survives an app update.
   const VERSION = 3;
-  const QUALITY_VERSION = 4;
+  const QUALITY_VERSION = 5;
   const kana = Object.freeze(["ア", "イ", "ウ", "エ"]);
   const countLabels = Object.freeze(["一つ", "二つ", "三つ", "四つ"]);
   const formatLabels = Object.freeze({
@@ -717,7 +717,7 @@
     ));
     const statementExplanations = sourceStatementExplanations(
       fields.sourceFacts,
-      ["ア・前半", "ア・後半", "イ・前半", "イ・後半"]
+      ["ア-1", "ア-2", "イ-1", "イ-2"]
     );
     const choiceDiagnosticTags = Object.freeze(displayedPatterns.map((pattern) =>
       Object.freeze(uniqueStrings([
@@ -725,16 +725,19 @@
         ...(pattern.b === right.truth ? [] : fields.sourceFacts.slice(2, 4).flatMap((fact) => fact.diagnosticTags))
       ]).filter((tag) => allowedDiagnosticTagSet.has(tag)))
     ));
-    const judgment = `${actual}。アは${left.reason}。イは${right.reason}。`;
-    const intro = "次のア・イを判定し、正しい組合せを選べ。";
+    const judgment = `アは${left.truth ? "○" : "×"}（ア-1 ${facts[0].truth ? "○" : "×"}・ア-2 ${facts[1].truth ? "○" : "×"}）。` +
+      `イは${right.truth ? "○" : "×"}（イ-1 ${facts[2].truth ? "○" : "×"}・イ-2 ${facts[3].truth ? "○" : "×"}）。よって${actual}。`;
+    const intro = "ア・イはそれぞれ2つの記述から成る。各組は2つとも正しい場合だけ○として、正しい組合せを選べ。";
     return Object.freeze({
       ...fields,
       variationKind: "fullscore-four-fact-combination",
       text: `${intro}\nア 【前提】${facts[0].context}／${facts[1].context} 【判断】${left.text}\nイ 【前提】${facts[2].context}／${facts[3].context} 【判断】${right.text}`,
       choices: Object.freeze(displayedPatterns.map((pattern) => pattern.label)),
       displayModel: displayModel(intro, [
-        displayBlock("ア", [facts[0], facts[1]], left.text),
-        displayBlock("イ", [facts[2], facts[3]], right.text)
+        displayBlock("ア-1", [facts[0]], facts[0].presentedStatement),
+        displayBlock("ア-2", [facts[1]], facts[1].presentedStatement),
+        displayBlock("イ-1", [facts[2]], facts[2].presentedStatement),
+        displayBlock("イ-2", [facts[3]], facts[3].presentedStatement)
       ], []),
       statementExplanations,
       choiceExplanations,
@@ -771,7 +774,7 @@
     const correctKana = facts.map((fact, index) => fact.truth ? kana[index] : "").filter(Boolean);
     const judgment = `正しいのは${correctKana.join("・")}の${correctCount}つ。`;
     const statementExplanations = sourceStatementExplanations(fields.sourceFacts);
-    const intro = "次の4場面について、正しい記述はいくつあるか。";
+    const intro = "次の4つの記述について、正しいものはいくつあるか。";
     return Object.freeze({
       ...fields,
       variationKind: "fullscore-source-fact-count",
@@ -1105,7 +1108,7 @@
 
   function validateDisplayModel(question) {
     const model = question.displayModel;
-    const expectedItemCount = question.formatKey === "combination" ? 2 :
+    const expectedItemCount = question.formatKey === "combination" ? 4 :
       (question.formatKey === "count" || question.formatKey === "case" ? 4 : 0);
     const expectedChoiceBlockCount = question.formatKey === "single" ? 4 : 0;
     if (!model || !Object.isFrozen(model) || !Object.isFrozen(model.items) ||

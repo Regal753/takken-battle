@@ -257,8 +257,8 @@ async function main() {
     assert.match(initial.foundationText, /p\.3/);
     assert.match(initial.source, /読後2問/);
     assert.match(initial.dailyTitle, /読後2問/);
-    assert.equal(initial.unitStatus.trim(), "0 / 20");
-    assert.match(initial.practicalStatus.trim(), /^0 \/ \d+$/);
+    assert.equal(initial.unitStatus.trim(), "解答済 0 / 20");
+    assert.match(initial.practicalStatus.trim(), /^解答済 0 \/ \d+$/);
     assert.equal(initial.gateStatus.trim(), "0分 / 最低75分");
     assert.equal(initial.mockLocked, false);
     assert.ok(initial.order.measurement < initial.order.theme);

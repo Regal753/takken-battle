@@ -20,6 +20,25 @@ assert.equal(knock.plan({ questions, history, mode: "untouched", size: 10, now }
 assert.equal(knock.plan({ questions, history, mode: "unit", unitId: "business-book-01", size: 100, now }).size, 6);
 assert.equal(knock.plan({ questions, history, mode: "unit", unitId: "business-book-01", size: 100, now }).ids.every((id) => Number(id.slice(1)) <= 6), true);
 assert.equal(knock.plan({ questions, history, mode: "all-random", size: 99, now }).requestedSize, 10, "unsupported size must fail closed to 10");
+const daily = knock.plan({ questions, history, mode: "all-random", size: 100, dailyRemainder: 9, now, seed: "daily" });
+assert.equal(daily.requestedSize, 9, "daily command must use its exact bounded remainder");
+assert.equal(daily.size, 9, "daily command must fill the visible remainder across all states");
+assert.deepEqual(new Set(daily.ids.slice(0, 2)), new Set(["q1", "q2"]), "daily command must put retry items first");
+assert.equal(daily.ids[2], "q3", "daily command must put due items before untouched items");
+assert.ok(daily.ids.slice(3).some((id) => !history[id]), "daily command must fill the set with untouched items");
+const dailyAfterAnswered = knock.plan({
+  questions,
+  history,
+  mode: "all-random",
+  size: 10,
+  dailyRemainder: 10,
+  answeredTodayIds: ["q1", "q2"],
+  now,
+  seed: "daily-after-answered"
+});
+assert.equal(dailyAfterAnswered.requestedSize, 10, "an allowed preset size must still be treated as a daily remainder when explicitly marked");
+assert.equal(dailyAfterAnswered.size, 10, "daily remainder must be filled with not-yet-answered ids");
+assert.equal(dailyAfterAnswered.ids.some((id) => ["q1", "q2"].includes(id)), false, "today's answered ids must not consume the visible remainder");
 const first = knock.plan({ questions, history, mode: "all-random", size: 10, now, seed: "fixed" });
 const second = knock.plan({ questions, history, mode: "all-random", size: 10, now, seed: "fixed" });
 assert.deepEqual(first, second, "same input must be deterministic");

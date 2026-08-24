@@ -50,6 +50,12 @@ async function outlineWidth(locator) {
     url.searchParams.set("review", "accessibility-v34");
     await page.goto(url.toString(), { waitUntil: "networkidle" });
 
+    await page.locator(".public-mode-note > summary").click();
+    const saveTransferButton = page.locator("#saveExportButton");
+    assert.ok(await outlineWidth(saveTransferButton) >= 3, "save transfer focus ring is too thin");
+    assert.ok(await saveTransferButton.evaluate((node) => node.getBoundingClientRect().height) >= 44, "save transfer target is below 44px");
+    assert.equal(await page.locator("#saveTransferStatus").evaluate((node) => getComputedStyle(node).wordBreak), "keep-all");
+
     const mainChoice = page.locator(".choice-button").first();
     assert.ok(await outlineWidth(mainChoice) >= 3, "main choice focus ring is too thin");
     await mainChoice.click();
@@ -101,12 +107,27 @@ async function outlineWidth(locator) {
     assert.equal(await page.locator('[data-practical-confidence="confident"]').getAttribute("aria-pressed"), "true");
     assert.equal(await page.locator("#answerDock").isHidden(), true);
     await page.setViewportSize({ width: 320, height: 700 });
-    const mobile = await page.evaluate(() => ({
-      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-      dockHidden: document.querySelector("#answerDock")?.hidden,
-      hasDockClass: document.body.classList.contains("has-answer-dock")
-    }));
-    assert.deepEqual(mobile, { overflow: 0, dockHidden: true, hasDockClass: false });
+    const mobile = await page.evaluate(() => {
+      const saveSummary = document.querySelector(".public-mode-note > summary > small");
+      const saveSummaryRange = document.createRange();
+      saveSummaryRange.selectNodeContents(saveSummary);
+      return {
+        overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        dockHidden: document.querySelector("#answerDock")?.hidden,
+        hasDockClass: document.body.classList.contains("has-answer-dock"),
+        missionColumns: getComputedStyle(document.querySelector(".today-command-panel .daily-mission")).gridTemplateColumns.split(" ").length,
+        missionTitleSize: parseFloat(getComputedStyle(document.querySelector(".today-command-panel .mission-step strong")).fontSize),
+        missionStatusSize: parseFloat(getComputedStyle(document.querySelector(".today-command-panel .mission-step small")).fontSize),
+        saveSummaryLineCount: saveSummaryRange.getClientRects().length,
+        saveSummaryWidth: Math.round(saveSummary.getBoundingClientRect().width),
+        saveSummaryWhiteSpace: getComputedStyle(saveSummary).whiteSpace
+      };
+    });
+    assert.deepEqual(
+      { ...mobile, saveSummaryWidth: undefined },
+      { overflow: 0, dockHidden: true, hasDockClass: false, missionColumns: 2, missionTitleSize: 12, missionStatusSize: 10, saveSummaryLineCount: 1, saveSummaryWidth: undefined, saveSummaryWhiteSpace: "nowrap" }
+    );
+    assert.ok(mobile.saveSummaryWidth >= 40, `save summary label is too narrow: ${mobile.saveSummaryWidth}px`);
 
     const calculationPage = await browser.newPage({ viewport: { width: 320, height: 700 }, timezoneId: "Asia/Tokyo" });
     calculationPage.on("pageerror", (error) => errors.push(error.message));
@@ -156,7 +177,7 @@ async function outlineWidth(locator) {
     assert.equal(await calculationPage.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0);
     await calculationPage.close();
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: "ok", mainFocus: 3, practicalFocus: 3, calculationFocus: 3, targetHeight: confidenceSize.height, calculationTargetHeight: calculationConfidenceHeight, overflow320: 0 }));
+    console.log(JSON.stringify({ status: "ok", mainFocus: 3, practicalFocus: 3, calculationFocus: 3, saveTransferFocus: 3, targetHeight: confidenceSize.height, calculationTargetHeight: calculationConfidenceHeight, saveTransferTargetHeight: 44, overflow320: 0 }));
   } finally {
     await browser.close();
     await local.close();

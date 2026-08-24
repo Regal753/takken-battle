@@ -120,7 +120,14 @@ async function startKnock(page, preset) {
 }
 
 async function cancelKnock(page) {
-  await page.locator("#practicalDrillCancelButton").click();
+  const accepted = new Promise((resolve, reject) => {
+    page.once("dialog", (dialog) => {
+      const message = dialog.message();
+      dialog.accept().then(() => resolve(message), reject);
+    });
+  });
+  await page.locator("#practicalDrillDiscardButton").click();
+  assert.match(await accepted, /セットを破棄/);
   await page.locator("#practicalDrillSession").waitFor({ state: "hidden" });
 }
 
@@ -247,6 +254,15 @@ async function presentedFixture(page) {
   const local = await startStaticServer(process.cwd());
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  await page.addInitScript(() => {
+    const NativeDate = Date;
+    const fixed = new NativeDate("2026-08-24T10:00:00+09:00").getTime();
+    class FixedDate extends NativeDate {
+      constructor(...args) { super(...(args.length ? args : [fixed])); }
+      static now() { return fixed; }
+    }
+    window.Date = FixedDate;
+  });
   const errors = [];
   page.on("pageerror", (error) => errors.push(`page: ${error.message}`));
   page.on("console", (message) => { if (message.type() === "error") errors.push(`console: ${message.text()}`); });
@@ -254,6 +270,15 @@ async function presentedFixture(page) {
   try {
     await page.goto(reviewUrl(local.baseUrl), { waitUntil: "networkidle", timeout: 20000 });
     await waitForApp(page);
+    assert.equal(await page.locator("#todayCommandTitle").textContent(), "今日の宅建業法 残り20問");
+    assert.equal(await page.locator("#todayCommandStartButton").textContent(), "残り20問をノック開始");
+    assert.equal(await page.locator("#todayCommandPracticalButton").isHidden(), true, "the next subject must stay hidden until the fixed business knock is done");
+    assert.equal(await page.locator("#missionBattleStatus").textContent(), "解答済 0 / 20");
+    assert.match(await page.locator("#missionOfficialStatus").textContent(), /^解答済 0 \/ 8$/);
+    assert.equal(
+      await page.locator("#passPlanPanel .pass-plan-summary > div:first-child span").textContent(),
+      "4 合格ロード・2026 PASS PLAN"
+    );
     assert.equal(await page.locator("#businessKnockPanel").isVisible(), true);
     assert.match(await page.locator("#businessKnockPanel").textContent(), /宅建業法ノック道場/);
     assert.equal(await page.locator("#businessKnockSize option").count(), 4);
@@ -268,6 +293,102 @@ async function presentedFixture(page) {
       .map((node) => Math.round(node.getBoundingClientRect().height)));
     assert.ok(targetHeights.every((height) => height >= 44), `touch target under 44px: ${targetHeights.join(", ")}`);
     assert.equal(await horizontalOverflow(page), 0);
+
+    // The top command must enter the required 20-question knock, label each
+    // progress number unambiguously, and include knock-only work in transfer
+    // summaries even when the core quiz counter is still zero.
+    await page.locator("#todayCommandStartButton").click();
+    await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
+    let commandSaved = await readSavedState(page);
+    assert.equal(commandSaved.practicalDrill.sessionSize, 20);
+    assert.equal(await page.locator("#practicalDrillProgress").textContent(), "第1問 / 全20問");
+    assert.match(await page.locator("#practicalDrillSummary").textContent(), /^業法ノック累計 接触 0 \/ 134/);
+    assert.equal(await page.locator("#practicalDrillCancelButton").textContent(), "一時停止して上へ");
+    assert.match(await page.locator("#practicalDrillCancelButton").getAttribute("aria-label"), /問題順、解答、再出題は保存/);
+    assert.equal(await page.locator("#practicalDrillDiscardButton").textContent(), "セットを破棄");
+    assert.equal(await page.evaluate(() => document.activeElement?.classList.contains("practical-drill-choice")), true);
+    const commandQuestion = await currentPresented(page);
+    await page.locator(".practical-drill-choice").nth(commandQuestion.answer).click();
+    await page.locator("#practicalDrillFeedback").waitFor({ state: "visible" });
+    assert.equal(await page.evaluate(() => document.activeElement?.id), "practicalDrillFeedback");
+    await page.reload({ waitUntil: "networkidle" });
+    await waitForApp(page);
+    commandSaved = await readSavedState(page);
+    assert.equal(commandSaved.attempts, 0, "a practical answer must not rewrite the core quiz counter");
+    assert.equal(commandSaved.practicalDrill.attempts, 1);
+    assert.equal(commandSaved.practicalDrill.correctAttempts, 1);
+    assert.equal(Object.keys(commandSaved.practicalDrill.history || {}).length, 1);
+    assert.equal(commandSaved.practicalDrill.currentAttempt?.id, commandQuestion.id, "reload must retain the single current attempt without duplicating it");
+    const todayAnsweredId = await page.evaluate(() => {
+      Object.defineProperty(navigator, "share", {
+        configurable: true,
+        value: async (payload) => { window.__takkenKnockShare = payload; }
+      });
+    });
+    await page.locator(".public-mode-note > summary").click();
+    await page.locator("#saveShareButton").click();
+    await page.waitForFunction(() => Boolean(window.__takkenKnockShare?.text));
+    const knockShare = await page.evaluate(async () => {
+      const token = new URLSearchParams(new URL(window.__takkenKnockShare.url).hash.slice(1)).get("savegz");
+      const savePackage = await window.TAKKEN_SAVE_TRANSFER.decodeCompressedPackage(token);
+      return {
+        text: window.__takkenKnockShare.text,
+        status: document.querySelector("#saveTransferStatus")?.textContent || "",
+        attempts: savePackage.state.practicalDrill.attempts,
+        correct: savePackage.state.practicalDrill.correctAttempts,
+        history: Object.keys(savePackage.state.practicalDrill.history || {}).length
+      };
+    });
+    assert.match(knockShare.text, /実践ノック1問接触・1解答・正解1/);
+    assert.match(knockShare.status, /実践ノック1問接触・1解答・正解1/);
+    assert.deepEqual(
+      { attempts: knockShare.attempts, correct: knockShare.correct, history: knockShare.history },
+      { attempts: 1, correct: 1, history: 1 }
+    );
+    await page.locator("#practicalDrillCancelButton").click();
+    await page.locator("#practicalDrillSession").waitFor({ state: "hidden" });
+    const paused = await readSavedState(page);
+    assert.equal(paused.practicalDrill.stage, "active", "pause must keep the active session");
+    assert.equal(paused.practicalDrill.position, 0, "pause must keep the current position");
+    assert.equal(paused.practicalDrill.currentAttempt.selected, commandQuestion.answer, "pause must keep the answered feedback state");
+    await page.locator("#todayCommandStartButton").click();
+    await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
+    await page.waitForFunction(() => document.activeElement?.id === "practicalDrillFeedback");
+    assert.equal(await page.evaluate(() => document.activeElement?.id), "practicalDrillFeedback", "resume must focus the saved feedback");
+    await cancelKnock(page);
+
+    // The visible remaining label must start exactly that many new questions,
+    // not silently restore the default 20-question selector value.
+    await resetKnockState(page);
+    await page.evaluate(() => {
+      const key = Object.keys(localStorage).find((candidate) =>
+        candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+        !candidate.includes("backup") && !candidate.includes("-before-") &&
+        !candidate.includes("previous") && !candidate.includes("corrupt") &&
+        !candidate.endsWith("event-outbox")
+      );
+      const saved = JSON.parse(localStorage.getItem(key));
+      const id = Object.keys(window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS_BY_ID)[0];
+      saved.practicalDrill.knockPreset = { mode: "unit", size: 100, unitId: "business-book-01", lastPresentationOffset: null };
+      saved.practicalDrill.history[id] = {
+        attempts: 1,
+        correct: 0,
+        wrong: 1,
+        lastConfidence: "wrong",
+        lastAnsweredAt: "2026-08-24T01:00:00.000Z"
+      };
+      localStorage.setItem(key, JSON.stringify(saved));
+      return id;
+    });
+    await page.reload({ waitUntil: "networkidle" });
+    await waitForApp(page);
+    assert.equal(await page.locator("#todayCommandStartButton").textContent(), "残り19問をノック開始");
+    await page.locator("#todayCommandStartButton").click();
+    const remainingSession = await readSavedState(page);
+    assert.equal(remainingSession.practicalDrill.sessionSize, 19, "daily remaining CTA must start only the displayed remainder");
+    assert.equal(remainingSession.practicalDrill.sessionIds.length, 19, "daily route must ignore a stale unit/100 preset");
+    assert.equal(remainingSession.practicalDrill.sessionIds.includes(todayAnsweredId), false, "today's answered id must not consume one of the visible remaining questions");
+    await cancelKnock(page);
 
     // Fresh, untouched starts must select precisely the requested unique count.
     for (const size of [10, 20, 50, 100]) {
@@ -575,7 +696,7 @@ async function presentedFixture(page) {
     await fallbackPage.close();
 
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: "ok", plannerSizes: [10, 20, 50, 100], unitFiltered: true, weakDuePrioritized: true, random100Unique: true, randomOrderPreserved: true, reloadPreserved: true, retryLoop: true, retryAnswerPositionsRotated: true, sameDayLevelCapped: true, structuredPromptFormats: ["combination", "count", "case"], singleChoiceBlocks: 4, legacyRawFallback: true, coreFallbackWithoutKnock: true, overflow390: 0, overflow320: 0, errors: 0 }));
+    console.log(JSON.stringify({ status: "ok", sequentialTopCommand: true, explicitProgressLabels: true, knockOnlyTransferSummary: true, plannerSizes: [10, 20, 50, 100], unitFiltered: true, weakDuePrioritized: true, random100Unique: true, randomOrderPreserved: true, reloadPreserved: true, retryLoop: true, retryAnswerPositionsRotated: true, sameDayLevelCapped: true, structuredPromptFormats: ["combination", "count", "case"], singleChoiceBlocks: 4, legacyRawFallback: true, coreFallbackWithoutKnock: true, overflow390: 0, overflow320: 0, errors: 0 }));
   } finally {
     await browser.close();
     await local.close();
