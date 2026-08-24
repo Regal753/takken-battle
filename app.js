@@ -3418,6 +3418,9 @@
     state.daily = createDailyState();
     state.dailyFinishedDate = "";
     state.questCompletion = null;
+    state.finished = false;
+    state.answered = null;
+    state.activeCutCheck = null;
     Object.assign(todayQuest, {
       status: "loading",
       date: currentDay,
@@ -3427,9 +3430,8 @@
       message: "固定10問: 更新中"
     });
     saveState();
-    renderQuestPanel();
-    renderPassPlan();
-    void loadTodayQuest();
+    renderCurrentView();
+    void loadTodayQuest().then(() => renderCurrentView());
   }
 
   function backupAgeLabel(value) {
@@ -12166,11 +12168,20 @@
       renderChapters(question.id);
       renderThemeControls(question);
     }
+    const isUnitPlanResult = state.questCompletion?.kind === "unit" &&
+      state.questCompletion.chapterId === chapter.id;
+    const resultIds = isUnitPlanResult
+      ? dailyQuestIds().filter((id) => chapter.ids.includes(id))
+      : chapter.ids;
     const nextRoute = chapter.textbookPart
       ? foundationLearningRoute(studyScopeIdForChapter(chapter))
       : null;
     const nextDescriptor = nextRoute ? foundationRouteDescriptor(nextRoute) : null;
-    const nextActionLabel = nextRoute?.kind === "unit"
+    const continuesSameUnit = nextRoute?.kind === "unit" &&
+      nextRoute.snapshot?.chapter?.id === chapter.id;
+    const nextActionLabel = continuesSameUnit
+      ? nextDescriptor.button
+      : nextRoute?.kind === "unit"
       ? `次の単元「${nextDescriptor.title}」へ`
       : nextDescriptor?.button || "";
     const previousFinished = state.finished;
@@ -12188,28 +12199,43 @@
       );
       return false;
     }
-    const isUnitPlanResult = state.questCompletion?.kind === "unit" &&
-      state.questCompletion.chapterId === chapter.id;
-    const answeredCount = chapter.ids.filter(answeredToday).length;
-    const correctCount = chapter.ids.filter(correctToday).length;
-    const retainedCount = chapter.ids.filter(isRetained).length;
+    const answeredCount = resultIds.filter(answeredToday).length;
+    const correctCount = resultIds.filter(correctToday).length;
+    const retainedForResult = resultIds.filter(isRetained).length;
+    const chapterContactedCount = chapter.ids.filter(isContacted).length;
+    const chapterRemainingCount = Math.max(0, chapter.ids.length - chapterContactedCount);
     showQuizResult((view) => {
-      appendQuizMeta(view, `${chapter.ids.length} / ${chapter.ids.length}`, "テーマ完了");
+      appendQuizMeta(
+        view,
+        `${answeredCount} / ${resultIds.length}`,
+        isUnitPlanResult ? "読後セット完了" : "テーマ完了"
+      );
       const feedback = resultElement("section", { className: "feedback" });
       feedback.dataset.chapterResult = chapter.id;
       const grid = resultElement("dl", { className: "answer-grid" });
-      grid.append(
-        resultDefinition("テーマ問題", `${chapter.ids.length}問`),
-        resultDefinition("本日解答", `${answeredCount}問`),
-        resultDefinition("本日正解", `${correctCount}問`),
-        resultDefinition("定着", `${retainedCount}問`)
-      );
+      if (isUnitPlanResult) {
+        grid.append(
+          resultDefinition("今回の読後", `${resultIds.length}問`),
+          resultDefinition("今回解答", `${answeredCount}問`),
+          resultDefinition("今回正解", `${correctCount}問`),
+          resultDefinition("単元接触", `${chapterContactedCount} / ${chapter.ids.length}問`)
+        );
+      } else {
+        grid.append(
+          resultDefinition("テーマ問題", `${chapter.ids.length}問`),
+          resultDefinition("本日解答", `${answeredCount}問`),
+          resultDefinition("本日正解", `${correctCount}問`),
+          resultDefinition("定着", `${retainedForResult}問`)
+        );
+      }
       feedback.append(
         resultElement("h3", { text: chapter.label }),
         resultElement("p", {
           className: "question-text",
           text: isUnitPlanResult
-            ? "本文直後の読後問題を完了。次の未接触単元へ進めます。"
+            ? chapterRemainingCount
+              ? `今回の読後${resultIds.length}問を完了。この単元は残り${chapterRemainingCount}問です。`
+              : "この単元の読後問題へすべて接触しました。次の未接触単元へ進めます。"
             : "選択テーマの問題だけを完了。固定10問は変更していません。"
         }),
         grid

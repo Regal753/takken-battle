@@ -51,12 +51,7 @@ async function save(page) {
 
 async function currentAnswer(page) {
   return page.evaluate(() => {
-    const namespace = String(new URL(location.href).searchParams.get("review") || "default")
-      .replace(/[^a-z0-9-]/gi, "").slice(0, 24);
-    const key = `takken-battle-study-clean-v2-hard-review-${namespace}`;
-    const state = JSON.parse(localStorage.getItem(key));
-    const id = state.daily?.planIds?.find((candidate) => !state.questionStats?.[candidate]?.lastAnsweredAt) ||
-      state.daily?.planIds?.[0];
+    const id = document.querySelector("#quizCard")?.dataset.questionId || "";
     const question = window.TAKKEN_EXAM_QUESTIONS?.[id];
     if (!question) throw new Error(`normal Quest question unavailable: ${id || "none"}`);
     return { id, answer: question.answer };
@@ -109,6 +104,94 @@ async function outlineWidth(locator) {
     await completion.locator("#chapterNextButton").click();
     await completion.waitForFunction(() => (document.querySelector("#foundationRouteTitle")?.textContent || "").includes("01-02 免許"));
     await completion.close();
+
+    // A bounded batch from a large unit must report only the questions just
+    // completed and keep the learner in that unit while untouched items remain.
+    const batch = await browser.newPage({ viewport: { width: 1280, height: 900 }, timezoneId: "Asia/Tokyo" });
+    wireErrors(batch);
+    await batch.goto(reviewUrl(baseUrl, "large-batch"), { waitUntil: "networkidle" });
+    await batch.evaluate(() => {
+      const namespace = String(new URL(location.href).searchParams.get("review") || "default")
+        .replace(/[^a-z0-9-]/gi, "").slice(0, 24);
+      const key = `takken-battle-study-clean-v2-hard-review-${namespace}`;
+      const saved = JSON.parse(localStorage.getItem(key));
+      const chapters = Object.values(window.TAKKEN_EXAM_BLUEPRINT.textbookRanges)
+        .flatMap((range) => range.chapters);
+      const targetIndex = chapters.findIndex((chapter) => chapter.id === "business-book-07");
+      if (targetIndex < 0) throw new Error("large foundation unit is unavailable");
+      const stamp = new Date().toISOString();
+      chapters.slice(0, targetIndex).flatMap((chapter) => chapter.ids).forEach((id) => {
+        saved.questionStats[id] = {
+          ...(saved.questionStats[id] || {}),
+          attempts: 1,
+          correct: 1,
+          wrong: 0,
+          lastAnsweredAt: stamp,
+          lastCorrectAt: stamp
+        };
+      });
+      saved.daily = {
+        ...saved.daily,
+        planIds: [],
+        planMode: "",
+        planUnitId: "",
+        answers: 0,
+        target: 10
+      };
+      saved.answered = null;
+      saved.finished = false;
+      localStorage.setItem(key, JSON.stringify(saved));
+    });
+    await batch.reload({ waitUntil: "networkidle" });
+    await batch.waitForFunction(() =>
+      (document.querySelector("#dailyQuestSource")?.textContent || "").includes("読後4問")
+    );
+    const largePlan = (await save(batch)).state.daily;
+    assert.equal(largePlan.planUnitId, "business-book-07");
+    assert.equal(largePlan.planIds.length, 4);
+    await batch.locator(".quest-card > .quest-compact-summary").click();
+    await batch.locator("#dailyQuestButton").click();
+    await batch.waitForFunction((id) =>
+      document.querySelector("#quizCard")?.dataset.questionId === id,
+    largePlan.planIds[0]);
+    for (let index = 0; index < 4; index += 1) {
+      await answerCorrect(batch);
+      await batch.locator("#feedbackBox").waitFor({ state: "visible" });
+      await batch.locator("#dockNextButton").click();
+      if (index < 3) {
+        await batch.waitForFunction((position) =>
+          (document.querySelector("#roundLabel")?.textContent || "").includes(`${position} / 4`),
+        index + 2);
+      }
+    }
+    await batch.locator("[data-chapter-result='business-book-07']").waitFor({ state: "visible" });
+    const batchResult = await batch.locator("[data-chapter-result='business-book-07']").textContent();
+    assert.match(batchResult, /今回の読後\s*4問/, batchResult);
+    assert.match(batchResult, /単元接触\s*4\s*\/\s*15問/, batchResult);
+    assert.match(batchResult, /残り11問/, batchResult);
+    assert.doesNotMatch(batchResult, /15\s*\/\s*15/, batchResult);
+    assert.match(await batch.locator("#chapterNextButton").textContent(), /読後4問を始める/);
+    await batch.close();
+
+    // Crossing JST midnight while a result is open must exit yesterday's
+    // completion view and initialize the new day's normal Quest state.
+    const rollover = await browser.newPage({ viewport: { width: 390, height: 844 }, timezoneId: "Asia/Tokyo" });
+    wireErrors(rollover);
+    await rollover.clock.install({ time: new Date("2026-08-25T14:59:45.000Z") });
+    await rollover.goto(reviewUrl(baseUrl, "rollover"), { waitUntil: "networkidle" });
+    await rollover.waitForFunction(() => (document.querySelector("#dailyQuestSource")?.textContent || "").includes("読後2問"));
+    await answerCorrect(rollover);
+    await rollover.locator("#dockNextButton").click();
+    await answerCorrect(rollover);
+    await rollover.locator("#dockNextButton").click();
+    await rollover.locator("[data-chapter-result]").waitFor({ state: "visible" });
+    await rollover.clock.fastForward("00:00:20");
+    await rollover.waitForFunction(() => !document.querySelector("[data-chapter-result]"));
+    const rolledState = (await save(rollover)).state;
+    assert.equal(rolledState.finished, false, "day rollover left the Quest finished");
+    assert.equal(rolledState.questCompletion, null, "day rollover kept yesterday's result");
+    assert.ok(await rollover.locator("#quizCard").getAttribute("data-question-id"), "new-day quiz did not render");
+    await rollover.close();
 
     // A write failure may not award points or reveal a false answer receipt.
     const persistence = await browser.newPage({ viewport: { width: 390, height: 844 }, timezoneId: "Asia/Tokyo" });
@@ -189,7 +272,7 @@ async function outlineWidth(locator) {
     await mobile.close();
 
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: "ok", coverage: ["unit-completion", "save-rollback", "structured-statements", "mobile-targets", "archive-label"] }));
+    console.log(JSON.stringify({ status: "ok", coverage: ["unit-completion", "unit-batch-totals", "day-rollover", "save-rollback", "structured-statements", "mobile-targets", "archive-label"] }));
   } finally {
     await browser.close();
     if (local) await local.close();
