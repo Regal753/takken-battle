@@ -407,7 +407,7 @@ async function main() {
     const migratedOnLoad = await legacyPage.evaluate((key) =>
       JSON.parse(localStorage.getItem(key) || "{}").stateSchemaVersion, legacyKey
     );
-    assert.equal(migratedOnLoad, 11, "schema migration must persist during initial load");
+    assert.equal(migratedOnLoad, 12, "schema migration must persist during initial load");
     // Normalization is persisted on the first ordinary state-changing action.
     await openPassPanel(legacyPage);
     await legacyPage.locator("#passMockAction").click();
