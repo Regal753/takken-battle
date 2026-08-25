@@ -107,21 +107,46 @@ async function horizontalOverflow(page) {
     assert.ok(startTargets.every((height) => height >= 44), `guarantee CTA under 44px: ${startTargets.join(", ")}`);
 
     const priorityWeakId = ids.at(-1);
+    const currentHistoryId = ids.at(-2);
     const priorityFixture = await readSavedState(page);
-    await page.evaluate(({ key, id }) => {
+    await page.evaluate(({ key, weakId, currentId }) => {
       const saved = JSON.parse(localStorage.getItem(key));
-      saved.practicalDrill.history[id] = {
+      saved.practicalDrill.history[weakId] = {
         attempts: 1,
         correct: 0,
         wrong: 1,
         uncertain: 0,
         lastConfidence: "wrong"
       };
+      saved.practicalDrill.history[currentId] = {
+        attempts: 2,
+        correct: 1,
+        wrong: 1,
+        uncertain: 0,
+        lastConfidence: "confident"
+      };
+      saved.guaranteeAssociationRecovery = {
+        version: 1,
+        history: {
+          [currentId]: {
+            attempts: 1,
+            correct: 0,
+            wrong: 1,
+            uncertain: 0,
+            lastConfidence: "wrong"
+          }
+        },
+        activeSession: null
+      };
       localStorage.setItem(key, JSON.stringify(saved));
-    }, { key: priorityFixture.key, id: priorityWeakId });
+    }, { key: priorityFixture.key, weakId: priorityWeakId, currentId: currentHistoryId });
     await page.reload({ waitUntil: "networkidle", timeout: 20000 });
     await waitForApp(page);
     assert.equal(await page.locator("#guaranteeSpecialRetry").textContent(), "1", "an existing weak question must be visible before launch");
+    assert.equal(await page.locator("#guaranteeSpecialGrounded").textContent(), "1 / 20", "live v11 history must override an older recovery snapshot");
+    const currentAfterReload = await readSavedState(page);
+    assert.equal(currentAfterReload.state.practicalDrill.history[currentHistoryId].attempts, 2, "recovery must not roll back current v11 attempts");
+    assert.equal(currentAfterReload.state.practicalDrill.history[currentHistoryId].lastConfidence, "confident", "recovery must not revive an obsolete wrong outcome");
 
     await page.locator("#guaranteeSpecialStart").click();
     await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
@@ -133,7 +158,7 @@ async function horizontalOverflow(page) {
     assert.ok(saved.state.practicalDrill.queue.every((id) => /^ga\d{3}$/.test(id)));
     assert.equal(new Set(saved.state.practicalDrill.queue).size, 20, "session must contain 20 unique ga IDs");
     assert.equal(saved.state.practicalDrill.queue[0], priorityWeakId, "an existing wrong answer must lead the next 20-question round");
-    assert.match(await page.locator("#practicalDrillSummary").textContent(), /保証協会特訓累計 接触 1 \/ 20/);
+    assert.match(await page.locator("#practicalDrillSummary").textContent(), /保証協会特訓累計 接触 2 \/ 20/);
 
     const wrong = await presented(page);
     await page.locator(".practical-drill-choice").nth((wrong.answer + 1) % 4).click();

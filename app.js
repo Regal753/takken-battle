@@ -2367,12 +2367,16 @@
 
   function practicalInputWithGuaranteeRecovery(input, recovery, restoreActiveSession = false) {
     const practical = input && typeof input === "object" && !Array.isArray(input) ? input : {};
-    const mergedHistory = {
-      ...(practical.history && typeof practical.history === "object" && !Array.isArray(practical.history)
-        ? practical.history
-        : {}),
-      ...(recovery?.history || {})
-    };
+    const practicalHistory = practical.history && typeof practical.history === "object" && !Array.isArray(practical.history)
+      ? practical.history
+      : {};
+    // Recovery is authoritative only when returning from a pre-v11 runtime
+    // that could not retain ga IDs. In normal v11 saves, the live practical
+    // history contains the answer just recorded and must win over the older
+    // redundant snapshot.
+    const mergedHistory = restoreActiveSession
+      ? { ...practicalHistory, ...(recovery?.history || {}) }
+      : { ...(recovery?.history || {}), ...practicalHistory };
     const hasActiveSession = ["active", "retry"].includes(practical.stage) &&
       Array.isArray(practical.queue) && practical.queue.length > 0;
     if (restoreActiveSession && !hasActiveSession && recovery?.activeSession) {
