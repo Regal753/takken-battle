@@ -26,6 +26,7 @@
   const BUSINESS_KNOCK = window.TAKKEN_BUSINESS_KNOCK;
   const BUSINESS_PACE = window.TAKKEN_BUSINESS_PACE;
   const BUSINESS_FULLSCORE_BANK = window.TAKKEN_BUSINESS_FULLSCORE_BANK;
+  const GUARANTEE_ASSOCIATION_DRILL = window.TAKKEN_GUARANTEE_ASSOCIATION_DRILL;
   const SUBJECT_SPRINT_BANK = window.TAKKEN_SUBJECT_SPRINT_BANK;
   const PASS_READINESS = window.TAKKEN_PASS_READINESS;
   const EXAM_CURRENT_YEAR = window.TAKKEN_EXAM_CURRENT_YEAR_2026;
@@ -35,9 +36,11 @@
   );
   const PRACTICAL_QUESTION_IDS = Object.freeze(PRACTICAL_QUESTIONS.map((item) => item.id));
   const BUSINESS_FULLSCORE_BANK_ID = "business-fullscore";
+  const GUARANTEE_SPECIAL_BANK_ID = "guarantee-association-special";
   const SUBJECT_SPRINT_BANK_ID = "subject-sprint";
   const LEGACY_PRACTICAL_BANK_ID = "legacy-practical";
   const BUSINESS_FULLSCORE_EXPECTED_QUESTIONS = 134;
+  const GUARANTEE_SPECIAL_EXPECTED_QUESTIONS = 20;
   const SUBJECT_SPRINT_EXPECTED_QUESTIONS = 80;
   const EXAM_PROFILE_GENERAL = "general";
   const EXAM_PROFILE_FIVE_EXEMPT = "fiveExempt";
@@ -152,6 +155,35 @@
       BUSINESS_FULLSCORE_UNITS.some((unit) => unit.id === question.unitId)
     )
   );
+  const GUARANTEE_SPECIAL_QUESTIONS = Object.freeze(
+    (Array.isArray(GUARANTEE_ASSOCIATION_DRILL?.QUESTIONS) ? GUARANTEE_ASSOCIATION_DRILL.QUESTIONS : [])
+      .map(normalizeFullScoreQuestion)
+      .filter(Boolean)
+  );
+  const GUARANTEE_SPECIAL_QUESTION_BY_ID = Object.freeze(Object.fromEntries(
+    GUARANTEE_SPECIAL_QUESTIONS.map((item) => [item.id, item])
+  ));
+  const GUARANTEE_SPECIAL_QUESTION_IDS = Object.freeze(GUARANTEE_SPECIAL_QUESTIONS.map((item) => item.id));
+  const GUARANTEE_SPECIAL_UNITS = Object.freeze(
+    (Array.isArray(GUARANTEE_ASSOCIATION_DRILL?.UNITS) ? GUARANTEE_ASSOCIATION_DRILL.UNITS : [])
+      .filter((unit) => unit && String(unit.id || ""))
+      .map((unit) => Object.freeze({
+        ...unit,
+        id: String(unit.id),
+        label: String(unit.label || unit.id),
+        page: Math.max(0, Number(unit.page) || 0),
+        part: Math.max(1, Number(unit.part) || 1)
+      }))
+  );
+  const GUARANTEE_SPECIAL_READY = Boolean(
+    BUSINESS_MASTERY &&
+    GUARANTEE_ASSOCIATION_DRILL?.LEGAL_BASELINE === "2026-04-01" &&
+    GUARANTEE_SPECIAL_QUESTIONS.length === GUARANTEE_SPECIAL_EXPECTED_QUESTIONS &&
+    new Set(GUARANTEE_SPECIAL_QUESTION_IDS).size === GUARANTEE_SPECIAL_EXPECTED_QUESTIONS &&
+    GUARANTEE_SPECIAL_UNITS.length === 1 &&
+    typeof GUARANTEE_ASSOCIATION_DRILL?.presentQuestion === "function" &&
+    GUARANTEE_SPECIAL_QUESTIONS.every((question) => question.unitId === GUARANTEE_SPECIAL_UNITS[0].id)
+  );
   const BUSINESS_KNOCK_READY = BUSINESS_FULLSCORE_BANK_READY &&
     Boolean(BUSINESS_KNOCK?.plan && typeof BUSINESS_FULLSCORE_BANK?.presentQuestion === "function");
   const SUBJECT_SPRINT_UNIT_DEFINITIONS = Object.freeze([
@@ -206,6 +238,7 @@
   const ALL_PRACTICAL_QUESTION_BY_ID = Object.freeze({
     ...PRACTICAL_QUESTION_BY_ID,
     ...BUSINESS_FULLSCORE_QUESTION_BY_ID,
+    ...GUARANTEE_SPECIAL_QUESTION_BY_ID,
     ...SUBJECT_SPRINT_QUESTION_BY_ID
   });
   const PRACTICAL_SCOPES = Object.freeze(["all", "business", "rights", "lawOther", "restrictions", "taxOther", "other"]);
@@ -219,7 +252,10 @@
     other: "その他"
   });
   const PRACTICAL_SESSION_SIZES = Object.freeze([4, 10, 20, 45]);
-  const STATE_SCHEMA_VERSION = 10;
+  // v11 adds the guarantee-association bank IDs to practicalDrill.history.
+  // Keep this separate from v10 so an offline v36 client fails closed instead
+  // of normalizing away ga001..ga020 and saving that loss back to storage.
+  const STATE_SCHEMA_VERSION = 11;
   const DAILY_TARGET = 10;
   const FOUNDATION_UNIT_BATCH_MAX = 4;
   const SPRINT_MINUTES = 25;
@@ -970,7 +1006,13 @@
     businessKnockUnit: $("#businessKnockUnit"),
     businessKnockSize: $("#businessKnockSize"),
     businessKnockStart: $("#businessKnockStart"),
-    businessKnockStatus: $("#businessKnockStatus")
+    businessKnockStatus: $("#businessKnockStatus"),
+    guaranteeSpecialCard: $("#guaranteeSpecialCard"),
+    guaranteeSpecialContacted: $("#guaranteeSpecialContacted"),
+    guaranteeSpecialGrounded: $("#guaranteeSpecialGrounded"),
+    guaranteeSpecialRetry: $("#guaranteeSpecialRetry"),
+    guaranteeSpecialStart: $("#guaranteeSpecialStart"),
+    guaranteeSpecialStatus: $("#guaranteeSpecialStatus")
   };
 
   let fallbackIdSequence = 0;
@@ -1992,12 +2034,14 @@
 
   function practicalQuestionSet(bankId = LEGACY_PRACTICAL_BANK_ID) {
     if (bankId === BUSINESS_FULLSCORE_BANK_ID) return new Set(BUSINESS_FULLSCORE_QUESTION_IDS);
+    if (bankId === GUARANTEE_SPECIAL_BANK_ID) return new Set(GUARANTEE_SPECIAL_QUESTION_IDS);
     if (bankId === SUBJECT_SPRINT_BANK_ID) return new Set(SUBJECT_SPRINT_QUESTION_IDS);
     return new Set(PRACTICAL_QUESTION_IDS);
   }
 
   function practicalQuestionFor(id, bankId = state?.practicalDrill?.bankId) {
     if (bankId === BUSINESS_FULLSCORE_BANK_ID) return BUSINESS_FULLSCORE_QUESTION_BY_ID[id] || null;
+    if (bankId === GUARANTEE_SPECIAL_BANK_ID) return GUARANTEE_SPECIAL_QUESTION_BY_ID[id] || null;
     if (bankId === SUBJECT_SPRINT_BANK_ID) return SUBJECT_SPRINT_QUESTION_BY_ID[id] || null;
     return PRACTICAL_QUESTION_BY_ID[id] || null;
   }
@@ -2121,17 +2165,22 @@
     const fresh = createPracticalDrillState();
     if (!PRACTICAL_QUESTION_IDS.length) return fresh;
     const requestedFullScoreBank = input?.bankId === BUSINESS_FULLSCORE_BANK_ID;
+    const requestedGuaranteeSpecialBank = input?.bankId === GUARANTEE_SPECIAL_BANK_ID;
     const requestedSubjectSprintBank = input?.bankId === SUBJECT_SPRINT_BANK_ID;
     const bankId = requestedFullScoreBank
       ? BUSINESS_FULLSCORE_BANK_ID
-      : requestedSubjectSprintBank && SUBJECT_SPRINT_READY
-        ? SUBJECT_SPRINT_BANK_ID
-        : LEGACY_PRACTICAL_BANK_ID;
+      : requestedGuaranteeSpecialBank && GUARANTEE_SPECIAL_READY
+        ? GUARANTEE_SPECIAL_BANK_ID
+        : requestedSubjectSprintBank && SUBJECT_SPRINT_READY
+          ? SUBJECT_SPRINT_BANK_ID
+          : LEGACY_PRACTICAL_BANK_ID;
     const currentBankVersion = bankId === BUSINESS_FULLSCORE_BANK_ID
       ? Number(BUSINESS_FULLSCORE_BANK?.VERSION) || Number(input?.bankVersion) || 1
-      : bankId === SUBJECT_SPRINT_BANK_ID
-        ? Number(SUBJECT_SPRINT_BANK?.VERSION) || Number(input?.bankVersion) || 1
-        : PRACTICAL_VARIATIONS?.VERSION || 1;
+      : bankId === GUARANTEE_SPECIAL_BANK_ID
+        ? Number(GUARANTEE_ASSOCIATION_DRILL?.VERSION) || Number(input?.bankVersion) || 1
+        : bankId === SUBJECT_SPRINT_BANK_ID
+          ? Number(SUBJECT_SPRINT_BANK?.VERSION) || Number(input?.bankVersion) || 1
+          : PRACTICAL_VARIATIONS?.VERSION || 1;
     const savedBankVersion = Number(input?.bankVersion || input?.version || 1);
     const bankChanged = savedBankVersion !== currentBankVersion;
     const preserveUnknownIds = [
@@ -2140,6 +2189,9 @@
         : []),
       ...(!SUBJECT_SPRINT_READY
         ? Object.keys(input?.history || {}).filter((id) => /^sprint-(?:tax|law|rights|other)-/.test(id))
+        : []),
+      ...(!GUARANTEE_SPECIAL_READY
+        ? Object.keys(input?.history || {}).filter((id) => /^ga\d{3}$/.test(id))
         : [])
     ];
     const legacyIdleDefaults = (input?.stage || "idle") === "idle" &&
@@ -2152,16 +2204,19 @@
       : PRACTICAL_SCOPES.includes(input?.scope) ? input.scope : fresh.scope;
     const validUnits = bankId === BUSINESS_FULLSCORE_BANK_ID
       ? BUSINESS_FULLSCORE_UNITS
-      : bankId === SUBJECT_SPRINT_BANK_ID
-        ? SUBJECT_SPRINT_UNIT_DEFINITIONS
-        : (PRACTICAL_VARIATIONS?.UNITS || []);
+      : bankId === GUARANTEE_SPECIAL_BANK_ID
+        ? GUARANTEE_SPECIAL_UNITS
+        : bankId === SUBJECT_SPRINT_BANK_ID
+          ? SUBJECT_SPRINT_UNIT_DEFINITIONS
+          : (PRACTICAL_VARIATIONS?.UNITS || []);
     const unitId = validUnits.some((unit) => unit.id === input?.unitId)
       ? String(input.unitId)
       : "";
-    const planMode = ["mastery", "knock", "sprint", "legacy"].includes(input?.planMode)
+    const planMode = ["mastery", "knock", "guarantee", "sprint", "legacy"].includes(input?.planMode)
       ? String(input.planMode)
       : bankId === BUSINESS_FULLSCORE_BANK_ID ? "mastery"
-        : bankId === SUBJECT_SPRINT_BANK_ID ? "sprint" : "legacy";
+        : bankId === GUARANTEE_SPECIAL_BANK_ID ? "guarantee"
+          : bankId === SUBJECT_SPRINT_BANK_ID ? "sprint" : "legacy";
     const rawKnockPreset = input?.knockPreset && typeof input.knockPreset === "object"
       ? input.knockPreset
       : fresh.knockPreset;
@@ -2185,11 +2240,15 @@
         ? Number.isInteger(requestedSize) && requestedSize >= 1 && requestedSize <= BUSINESS_FULLSCORE_EXPECTED_QUESTIONS
           ? requestedSize
           : fresh.sessionSize
-        : bankId === SUBJECT_SPRINT_BANK_ID
-          ? Number.isInteger(requestedSize) && requestedSize >= 1 && requestedSize <= SUBJECT_SPRINT_EXPECTED_QUESTIONS
+        : bankId === GUARANTEE_SPECIAL_BANK_ID
+          ? Number.isInteger(requestedSize) && requestedSize >= 1 && requestedSize <= GUARANTEE_SPECIAL_EXPECTED_QUESTIONS
             ? requestedSize
-            : fresh.sessionSize
-          : PRACTICAL_SESSION_SIZES.includes(requestedSize) ? requestedSize : fresh.sessionSize;
+            : GUARANTEE_SPECIAL_EXPECTED_QUESTIONS
+          : bankId === SUBJECT_SPRINT_BANK_ID
+            ? Number.isInteger(requestedSize) && requestedSize >= 1 && requestedSize <= SUBJECT_SPRINT_EXPECTED_QUESTIONS
+              ? requestedSize
+              : fresh.sessionSize
+            : PRACTICAL_SESSION_SIZES.includes(requestedSize) ? requestedSize : fresh.sessionSize;
     const retryIds = practicalIds(input?.retryIds, bankId);
     const sessionIds = practicalIds(input?.sessionIds, bankId);
     let stage = ["idle", "active", "retry", "complete"].includes(input?.stage)
@@ -2208,11 +2267,11 @@
     const rawAttempt = input?.currentAttempt;
     const selected = Number(rawAttempt?.selected);
     const currentQuestion = practicalQuestionFor(currentId, bankId);
-    const presentationKey = [BUSINESS_FULLSCORE_BANK_ID, SUBJECT_SPRINT_BANK_ID].includes(bankId)
+    const presentationKey = [BUSINESS_FULLSCORE_BANK_ID, GUARANTEE_SPECIAL_BANK_ID, SUBJECT_SPRINT_BANK_ID].includes(bankId)
       ? String(input?.presentationKey || "").replace(/[^0-9a-z:_-]/gi, "").slice(0, 80)
       : "";
     const presentationOverrides = {};
-    if ([BUSINESS_FULLSCORE_BANK_ID, SUBJECT_SPRINT_BANK_ID].includes(bankId) &&
+    if ([BUSINESS_FULLSCORE_BANK_ID, GUARANTEE_SPECIAL_BANK_ID, SUBJECT_SPRINT_BANK_ID].includes(bankId) &&
         input?.presentationOverrides && typeof input.presentationOverrides === "object" &&
         !Array.isArray(input.presentationOverrides)) {
       Object.entries(input.presentationOverrides).forEach(([id, key]) => {
@@ -2274,6 +2333,70 @@
         ? String(input.completedAt).slice(0, 64)
         : ""
     };
+  }
+
+  // v36 does not know the guarantee-association bank and normalizes its IDs
+  // out of practicalDrill before saving schema v10. Keep the v37-only portion
+  // in an unknown top-level field as well: older runtimes preserve unknown
+  // top-level fields through `{ ...input }`, so v37 can recover it on return.
+  function guaranteeRecoveryHistory(input) {
+    const normalized = normalizePracticalHistory(input);
+    return Object.fromEntries(GUARANTEE_SPECIAL_QUESTION_IDS
+      .filter((id) => normalized[id])
+      .map((id) => [id, normalized[id]]));
+  }
+
+  function normalizeGuaranteeAssociationRecovery(input) {
+    const raw = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+    const history = guaranteeRecoveryHistory(raw.history);
+    const activeRaw = raw.activeSession && typeof raw.activeSession === "object" && !Array.isArray(raw.activeSession)
+      ? raw.activeSession
+      : null;
+    let activeSession = null;
+    if (activeRaw?.bankId === GUARANTEE_SPECIAL_BANK_ID && GUARANTEE_SPECIAL_READY) {
+      const normalized = normalizePracticalDrillState({
+        ...activeRaw,
+        history: { ...history, ...(activeRaw.history || {}) }
+      });
+      if (normalized.bankId === GUARANTEE_SPECIAL_BANK_ID && ["active", "retry"].includes(normalized.stage)) {
+        activeSession = normalized;
+      }
+    }
+    return { version: 1, history, activeSession };
+  }
+
+  function practicalInputWithGuaranteeRecovery(input, recovery, restoreActiveSession = false) {
+    const practical = input && typeof input === "object" && !Array.isArray(input) ? input : {};
+    const practicalHistory = practical.history && typeof practical.history === "object" && !Array.isArray(practical.history)
+      ? practical.history
+      : {};
+    // Recovery is authoritative only when returning from a pre-v11 runtime
+    // that could not retain ga IDs. In normal v11 saves, the live practical
+    // history contains the answer just recorded and must win over the older
+    // redundant snapshot.
+    const mergedHistory = restoreActiveSession
+      ? { ...practicalHistory, ...(recovery?.history || {}) }
+      : { ...(recovery?.history || {}), ...practicalHistory };
+    const hasActiveSession = ["active", "retry"].includes(practical.stage) &&
+      Array.isArray(practical.queue) && practical.queue.length > 0;
+    if (restoreActiveSession && !hasActiveSession && recovery?.activeSession) {
+      return {
+        ...practical,
+        ...recovery.activeSession,
+        history: { ...mergedHistory, ...(recovery.activeSession.history || {}) }
+      };
+    }
+    return { ...practical, history: mergedHistory };
+  }
+
+  function createGuaranteeAssociationRecovery(practical) {
+    const normalized = normalizePracticalDrillState(practical);
+    const history = guaranteeRecoveryHistory(normalized.history);
+    const activeSession = normalized.bankId === GUARANTEE_SPECIAL_BANK_ID &&
+      ["active", "retry"].includes(normalized.stage)
+      ? { ...normalized, history }
+      : null;
+    return { version: 1, history, activeSession };
   }
 
   function inferredMistakeCause(answered) {
@@ -2345,7 +2468,15 @@
       );
     });
     next.calculationDrill = normalizeCalculationDrillState(input?.calculationDrill);
-    next.practicalDrill = normalizePracticalDrillState(input?.practicalDrill);
+    const guaranteeRecovery = normalizeGuaranteeAssociationRecovery(input?.guaranteeAssociationRecovery);
+    next.practicalDrill = normalizePracticalDrillState(
+      practicalInputWithGuaranteeRecovery(
+        input?.practicalDrill,
+        guaranteeRecovery,
+        schemaVersionOfState(input) < STATE_SCHEMA_VERSION
+      )
+    );
+    next.guaranteeAssociationRecovery = createGuaranteeAssociationRecovery(next.practicalDrill);
     next.saveMeta = {
       lastExportedAt: Number.isFinite(Date.parse(input?.saveMeta?.lastExportedAt))
         ? String(input.saveMeta.lastExportedAt).slice(0, 64)
@@ -2540,6 +2671,31 @@
       : JSON.parse(JSON.stringify(value));
   }
 
+  function schemaVersionOfState(value) {
+    return Math.max(0, Math.trunc(Number(value?.stateSchemaVersion) || 0));
+  }
+
+  function protectNewerSchemaInOpenTab(value) {
+    const schemaVersion = schemaVersionOfState(value);
+    if (schemaVersion <= STATE_SCHEMA_VERSION) return false;
+    const notice =
+      `別タブで新しい保存形式v${schemaVersion}を検出しました。` +
+      "アプリを更新して再読み込みするまで、このタブは現在の画面を保存せず読み取り専用です。";
+    saveStoreSession = {
+      ...saveStoreSession,
+      source: "future-stale-tab",
+      notice,
+      isError: true,
+      writeBlocked: true,
+      skipPreviousRotation: true
+    };
+    lastSaveError = notice;
+    setSaveTransferStatus(notice, true);
+    renderSaveProtectionStatus();
+    applySaveWriteProtection();
+    return true;
+  }
+
   function persistedStateForSync() {
     const raw = localStorage.getItem(STORAGE_ID);
     if (!raw) return null;
@@ -2553,6 +2709,7 @@
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
       throw new Error("別タブのセーブ形式を確認できませんでした。");
     }
+    if (protectNewerSchemaInOpenTab(parsed)) return null;
     return normalizeState(parsed);
   }
 
@@ -2592,6 +2749,13 @@
       if (saveStoreSession.writeBlocked) {
         throw new Error("新しい保存形式を保護中です。アプリを更新するまで端末セーブは変更しません。");
       }
+      // A tab can stay open while another tab upgrades the save. Check the
+      // raw stored schema before taking a lease or normalizing it, otherwise
+      // normalizeState would downcast the newer state to this runtime's schema.
+      const persisted = persistedStateForSync();
+      if (saveStoreSession.writeBlocked) {
+        throw new Error("新しい保存形式を保護中です。アプリを更新するまで端末セーブは変更しません。");
+      }
       releaseLease = acquireStateSaveLease();
       if (!releaseLease) {
         throw new Error("別タブが保存中です。数秒後にもう一度お試しください。");
@@ -2600,7 +2764,6 @@
       const replace = Boolean(options.replace);
       const preserveExposure = Boolean(options.preserveExposure);
       let candidate = state;
-      const persisted = persistedStateForSync();
       const remote = persisted || syncBaseState || state;
       const requiredUnexposedExamId = String(options.requireUnexposedExamId || "");
       const requiredNoActiveOfficialExamId = String(options.requireNoActiveOfficialExamId || "");
@@ -2668,6 +2831,7 @@
           }
         });
       }
+      candidate.guaranteeAssociationRecovery = createGuaranteeAssociationRecovery(candidate.practicalDrill);
       if (!SAVE_STORE) {
         localStorage.setItem(STORAGE_ID, JSON.stringify(candidate));
       } else {
@@ -4150,6 +4314,8 @@
           ? state.practicalDrill.planMode === "knock"
             ? "進行中の業法ノック"
             : "進行中の満点変形セット"
+          : state.practicalDrill.bankId === GUARANTEE_SPECIAL_BANK_ID
+            ? "進行中の保証協会特訓"
           : state.practicalDrill.bankId === SUBJECT_SPRINT_BANK_ID
             ? "進行中の科目補強セット"
           : "進行中の実践セット"
@@ -7593,9 +7759,11 @@
   function practicalRetryIdsForBank(bankId) {
     const ids = bankId === BUSINESS_FULLSCORE_BANK_ID
       ? BUSINESS_FULLSCORE_QUESTION_IDS
-      : bankId === SUBJECT_SPRINT_BANK_ID
-        ? SUBJECT_SPRINT_QUESTION_IDS
-        : PRACTICAL_QUESTION_IDS;
+      : bankId === GUARANTEE_SPECIAL_BANK_ID
+        ? GUARANTEE_SPECIAL_QUESTION_IDS
+        : bankId === SUBJECT_SPRINT_BANK_ID
+          ? SUBJECT_SPRINT_QUESTION_IDS
+          : PRACTICAL_QUESTION_IDS;
     return ids.filter((id) =>
       ["wrong", "uncertain"].includes(state.practicalDrill?.history?.[id]?.lastConfidence)
     );
@@ -7605,6 +7773,18 @@
     if (!question) return [];
     if (state.practicalDrill?.bankId === SUBJECT_SPRINT_BANK_ID) {
       return normalizePracticalTagList(question.diagnosticTags, question.id);
+    }
+    if (state.practicalDrill?.bankId === GUARANTEE_SPECIAL_BANK_ID) {
+      if (!uncertain && typeof GUARANTEE_ASSOCIATION_DRILL?.diagnosticsForSelection === "function") {
+        try {
+          return normalizeBusinessTagList(
+            GUARANTEE_ASSOCIATION_DRILL.diagnosticsForSelection(question, selected)
+          );
+        } catch {
+          // Fall back to the verified question-level tags.
+        }
+      }
+      return normalizeBusinessTagList(question.diagnosticTags);
     }
     if (state.practicalDrill?.bankId !== BUSINESS_FULLSCORE_BANK_ID) return [];
     if (!uncertain && typeof BUSINESS_FULLSCORE_BANK?.diagnosticsForSelection === "function") {
@@ -7631,7 +7811,7 @@
 
   function recordPracticalDiagnostic(history, question, tags) {
     if (!question || !history) return false;
-    if (state.practicalDrill?.bankId === BUSINESS_FULLSCORE_BANK_ID) {
+    if ([BUSINESS_FULLSCORE_BANK_ID, GUARANTEE_SPECIAL_BANK_ID].includes(state.practicalDrill?.bankId)) {
       return recordBusinessDiagnostic(history, tags);
     }
     const valid = normalizePracticalTagList(tags, question.id);
@@ -7668,18 +7848,30 @@
 
   function activePracticalQuestions(drill = state.practicalDrill) {
     if (drill?.bankId === BUSINESS_FULLSCORE_BANK_ID) return BUSINESS_FULLSCORE_QUESTIONS;
+    if (drill?.bankId === GUARANTEE_SPECIAL_BANK_ID) return GUARANTEE_SPECIAL_QUESTIONS;
     if (drill?.bankId === SUBJECT_SPRINT_BANK_ID) return SUBJECT_SPRINT_QUESTIONS;
     return PRACTICAL_QUESTIONS;
   }
 
   function activePracticalUnits(drill = state.practicalDrill) {
     if (drill?.bankId === BUSINESS_FULLSCORE_BANK_ID) return BUSINESS_FULLSCORE_UNITS;
+    if (drill?.bankId === GUARANTEE_SPECIAL_BANK_ID) return GUARANTEE_SPECIAL_UNITS;
     if (drill?.bankId === SUBJECT_SPRINT_BANK_ID) return SUBJECT_SPRINT_UNIT_DEFINITIONS;
     return PRACTICAL_VARIATIONS?.UNITS || [];
   }
 
   function presentPracticalQuestion(question, bankId, presentationKey) {
     if (!question) return null;
+    if (bankId === GUARANTEE_SPECIAL_BANK_ID && typeof GUARANTEE_ASSOCIATION_DRILL?.presentQuestion === "function") {
+      try {
+        const presented = normalizeFullScoreQuestion(
+          GUARANTEE_ASSOCIATION_DRILL.presentQuestion(question, presentationKey)
+        );
+        if (presented?.id === question.id && presented.choices.length === 4) return presented;
+      } catch {
+        return question;
+      }
+    }
     if (bankId === SUBJECT_SPRINT_BANK_ID && typeof SUBJECT_SPRINT_BANK?.presentQuestion === "function") {
       try {
         const presented = SUBJECT_SPRINT_BANK.presentQuestion(question.id, presentationKey);
@@ -7728,7 +7920,7 @@
   }
 
   function nextPracticalRetryPresentationKey(question, bankId, baseKey, previousKey, sequence) {
-    if (!question || ![BUSINESS_FULLSCORE_BANK_ID, SUBJECT_SPRINT_BANK_ID].includes(bankId)) {
+    if (!question || ![BUSINESS_FULLSCORE_BANK_ID, GUARANTEE_SPECIAL_BANK_ID, SUBJECT_SPRINT_BANK_ID].includes(bankId)) {
       return "";
     }
     const previous = presentPracticalQuestion(question, bankId, previousKey || baseKey);
@@ -8214,10 +8406,12 @@
     const contacted = activeIds.filter((id) => (drill.history[id]?.attempts || 0) > 0).length;
     const grounded = activeIds.filter((id) => drill.history[id]?.lastConfidence === "confident").length;
     const knockSession = drill.bankId === BUSINESS_FULLSCORE_BANK_ID && drill.planMode === "knock";
+    const guaranteeSpecialSession = drill.bankId === GUARANTEE_SPECIAL_BANK_ID;
     const subjectSprintSession = drill.bankId === SUBJECT_SPRINT_BANK_ID;
     const bankLabel = knockSession ? "業法ノック"
       : drill.bankId === BUSINESS_FULLSCORE_BANK_ID ? "満点変形"
-      : subjectSprintSession ? "科目補強" : "実践";
+      : guaranteeSpecialSession ? "保証協会特訓"
+        : subjectSprintSession ? "科目補強" : "実践";
     const summaryPrefix = drill.bankId === LEGACY_PRACTICAL_BANK_ID ? "" : `${bankLabel}累計 `;
     elements.practicalDrillSummary.textContent =
       `${summaryPrefix}接触 ${contacted} / ${activeIds.length}・根拠クリア ${grounded}・再出題 ${drill.retryIds.length}`;
@@ -8246,7 +8440,8 @@
       const nextKnockPlan = knockSession ? businessKnockPlan(knockPreset) : null;
       const completionLabel = knockSession
         ? businessKnockModeLabel(knockPreset.mode)
-        : subjectSprintSession ? `${practicalScopeLabel(drill.scope)}・高速補強`
+        : guaranteeSpecialSession ? "保証協会・営業保証金"
+          : subjectSprintSession ? `${practicalScopeLabel(drill.scope)}・高速補強`
         : unitSession ? unitSession.label : scopeLabel;
       elements.practicalDrillCompleteText.textContent = knockSession
         ? `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計${drill.attempts}解答です。${nextKnockPlan?.size ? `同じ条件の次セットは${nextKnockPlan.size}問。` : "この条件の対象はすべて回収しました。"}同日正答だけでは長期定着レベルは進みません。`
@@ -8255,6 +8450,8 @@
         ? nextKnockPlan?.size
           ? `同じ条件でさらに${nextKnockPlan.size}問`
           : "この条件は完了"
+        : guaranteeSpecialSession
+          ? "保証協会20問をもう一周"
         : subjectSprintSession
           ? `${practicalScopeLabel(drill.scope)}をもう一周`
         : unitSession
@@ -8659,6 +8856,65 @@
       .map((id) => [id, state.practicalDrill.history[id]]));
   }
 
+  function guaranteeSpecialHistory() {
+    return Object.fromEntries(GUARANTEE_SPECIAL_QUESTION_IDS
+      .filter((id) => state.practicalDrill?.history?.[id])
+      .map((id) => [id, state.practicalDrill.history[id]]));
+  }
+
+  function guaranteeSpecialPlan(seed = "preview") {
+    if (!GUARANTEE_SPECIAL_READY || !BUSINESS_KNOCK?.plan) return null;
+    return BUSINESS_KNOCK.plan({
+      questions: GUARANTEE_SPECIAL_QUESTIONS,
+      history: guaranteeSpecialHistory(),
+      mode: "unit",
+      unitId: GUARANTEE_SPECIAL_UNITS[0]?.id || "",
+      size: GUARANTEE_SPECIAL_EXPECTED_QUESTIONS,
+      now: new Date(),
+      seed,
+      presentationKey: `${todayKey()}:guarantee:${seed}`
+    });
+  }
+
+  function renderGuaranteeSpecial(active = activeLearningSession()) {
+    if (!elements.guaranteeSpecialCard) return;
+    const history = guaranteeSpecialHistory();
+    const contacted = GUARANTEE_SPECIAL_QUESTION_IDS.filter((id) => (history[id]?.attempts || 0) > 0).length;
+    const grounded = GUARANTEE_SPECIAL_QUESTION_IDS.filter((id) => history[id]?.lastConfidence === "confident").length;
+    const retry = GUARANTEE_SPECIAL_QUESTION_IDS.filter((id) =>
+      ["wrong", "uncertain"].includes(history[id]?.lastConfidence)
+    ).length;
+    if (elements.guaranteeSpecialContacted) {
+      elements.guaranteeSpecialContacted.textContent = `${contacted} / ${GUARANTEE_SPECIAL_EXPECTED_QUESTIONS}`;
+    }
+    if (elements.guaranteeSpecialGrounded) {
+      elements.guaranteeSpecialGrounded.textContent = `${grounded} / ${GUARANTEE_SPECIAL_EXPECTED_QUESTIONS}`;
+    }
+    if (elements.guaranteeSpecialRetry) elements.guaranteeSpecialRetry.textContent = String(retry);
+    if (!elements.guaranteeSpecialStart || !elements.guaranteeSpecialStatus) return;
+    if (active) {
+      elements.guaranteeSpecialStart.disabled = false;
+      elements.guaranteeSpecialStart.textContent = `${active.label}を再開`;
+      elements.guaranteeSpecialStatus.textContent = `${active.label}があります。先に保存位置から完了させます。`;
+      return;
+    }
+    if (!GUARANTEE_SPECIAL_READY) {
+      elements.guaranteeSpecialStart.disabled = true;
+      elements.guaranteeSpecialStart.textContent = "保証協会特訓を読み込めません";
+      elements.guaranteeSpecialStatus.textContent = "特訓20問の読込を確認してください。通常の業法ノックは利用できます。";
+      return;
+    }
+    elements.guaranteeSpecialStart.disabled = false;
+    elements.guaranteeSpecialStart.textContent = contacted
+      ? "保証協会20問をもう一周"
+      : "保証協会20問を特訓開始";
+    elements.guaranteeSpecialStatus.textContent = retry
+      ? `要再挑戦${retry}問を先頭に、20問すべてを回します。迷い・誤答は同じセット内でも再出題します。`
+      : contacted < GUARANTEE_SPECIAL_EXPECTED_QUESTIONS
+        ? `未接触${GUARANTEE_SPECIAL_EXPECTED_QUESTIONS - contacted}問。金額・期限・認証・還付・資格喪失を一周します。`
+        : `20問接触済み・根拠クリア${grounded}問。期限前の正答だけで定着扱いにせず、何周でも再現します。`;
+  }
+
   function businessKnockPlan(preset, seed = "preview") {
     if (!BUSINESS_KNOCK_READY) return null;
     const normalized = normalizeBusinessKnockPreset(preset);
@@ -8707,6 +8963,7 @@
     elements.businessKnockUntouched.textContent = String(transfer.untouched || 0);
 
     const active = activeLearningSession();
+    renderGuaranteeSpecial(active);
     const plan = businessKnockPlan(preset);
     const controlsDisabled = Boolean(active) || !BUSINESS_KNOCK_READY;
     [elements.businessKnockMode, elements.businessKnockUnit, elements.businessKnockSize]
@@ -8971,6 +9228,68 @@
     });
   }
 
+  function nextGuaranteeSpecialPresentation(cycleId) {
+    const base = `${todayKey()}:guarantee:${cycleId}`
+      .replace(/[^0-9a-z:_-]/gi, "")
+      .slice(0, 72);
+    const firstId = GUARANTEE_SPECIAL_QUESTION_IDS[0];
+    const previousKey = state.practicalDrill?.bankId === GUARANTEE_SPECIAL_BANK_ID
+      ? state.practicalDrill.presentationKey
+      : "";
+    const previousOffset = previousKey
+      ? GUARANTEE_ASSOCIATION_DRILL.presentQuestion(firstId, previousKey).presentationOffset
+      : null;
+    for (const suffix of ["a", "b", "c", "d"]) {
+      const key = `${base}:${suffix}`;
+      const offset = GUARANTEE_ASSOCIATION_DRILL.presentQuestion(firstId, key).presentationOffset;
+      if (!Number.isInteger(previousOffset) || offset !== previousOffset) return key;
+    }
+    return `${base}:fallback`;
+  }
+
+  function startGuaranteeSpecialSession() {
+    if (resumeActiveLearningSession() || !GUARANTEE_SPECIAL_READY) return;
+    const previousState = cloneStateForSync(state);
+    const cycleId = createOpaqueId("cycle");
+    const plan = guaranteeSpecialPlan(cycleId);
+    if (!plan?.ids?.length) {
+      renderGuaranteeSpecial();
+      return;
+    }
+    const presentationKey = nextGuaranteeSpecialPresentation(cycleId);
+    state.practicalDrill = {
+      ...state.practicalDrill,
+      version: PRACTICAL_VARIATIONS?.VERSION || 1,
+      bankId: GUARANTEE_SPECIAL_BANK_ID,
+      bankVersion: GUARANTEE_ASSOCIATION_DRILL.VERSION,
+      presentationKey,
+      presentationOverrides: {},
+      planMode: "guarantee",
+      stage: "active",
+      scope: "business",
+      unitId: GUARANTEE_SPECIAL_UNITS[0]?.id || "",
+      sessionSize: plan.ids.length,
+      sessionIds: [...plan.ids],
+      queue: [...plan.ids],
+      position: 0,
+      currentAttempt: null,
+      retryIds: practicalRetryIdsForBank(GUARANTEE_SPECIAL_BANK_ID),
+      sessionStartedAt: new Date().toISOString(),
+      completedAt: ""
+    };
+    if (elements.practicalDrillPanel) elements.practicalDrillPanel.open = true;
+    if (!saveState()) {
+      state = previousState;
+      renderCurrentView();
+      setTodayCommandStatus("保証協会特訓の開始状態を保存できませんでした。もう一度試してください。", true);
+      return;
+    }
+    renderPracticalDrill();
+    renderBusinessMastery();
+    renderPassPlan();
+    focusCurrentPracticalContext({ force: true });
+  }
+
   function startBusinessMasterySession() {
     const summary = businessFullScoreSummary();
     const action = businessPrimaryAction(summary);
@@ -9136,6 +9455,10 @@
   }
 
   function restartPracticalDrill() {
+    if (state.practicalDrill?.bankId === GUARANTEE_SPECIAL_BANK_ID) {
+      startGuaranteeSpecialSession();
+      return;
+    }
     if (state.practicalDrill?.bankId === SUBJECT_SPRINT_BANK_ID) {
       startSubjectSprint(state.practicalDrill.scope, state.practicalDrill.sessionSize);
       return;
@@ -9341,11 +9664,16 @@
   function changePracticalDrillSettings() {
     const wasBusinessKnock = state.practicalDrill?.bankId === BUSINESS_FULLSCORE_BANK_ID &&
       state.practicalDrill?.planMode === "knock";
+    const wasGuaranteeSpecial = state.practicalDrill?.bankId === GUARANTEE_SPECIAL_BANK_ID;
     const wasSubjectSprint = state.practicalDrill?.bankId === SUBJECT_SPRINT_BANK_ID;
     if (!cancelPracticalDrill()) return;
     if (wasBusinessKnock) {
       window.requestAnimationFrame(() =>
         elements.businessKnockPanel?.scrollIntoView({ block: "center", behavior: "smooth" })
+      );
+    } else if (wasGuaranteeSpecial) {
+      window.requestAnimationFrame(() =>
+        elements.guaranteeSpecialCard?.scrollIntoView({ block: "center", behavior: "smooth" })
       );
     } else if (wasSubjectSprint) {
       if (elements.passPlanPanel) elements.passPlanPanel.open = true;
@@ -12473,7 +12801,12 @@
   function handleStorageSync(event) {
     if (event.storageArea !== localStorage || event.key !== STORAGE_ID || !event.newValue) return;
     try {
-      const remote = normalizeState(JSON.parse(event.newValue));
+      const rawRemote = JSON.parse(event.newValue);
+      if (!rawRemote || typeof rawRemote !== "object" || Array.isArray(rawRemote)) {
+        throw new Error("別タブのセーブ形式を確認できませんでした。");
+      }
+      if (protectNewerSchemaInOpenTab(rawRemote)) return;
+      const remote = normalizeState(rawRemote);
       if (!STATE_SYNC?.mergeStatesDetailed) {
         syncBaseState = cloneStateForSync(remote);
         return;
@@ -12623,6 +12956,7 @@
     elements.practicalDrillNextButton?.addEventListener("click", advancePracticalDrill);
     elements.practicalDrillCancelButton?.addEventListener("click", pausePracticalDrill);
     elements.practicalDrillDiscardButton?.addEventListener("click", cancelPracticalDrill);
+    elements.guaranteeSpecialStart?.addEventListener("click", startGuaranteeSpecialSession);
     elements.businessKnockStart?.addEventListener("click", startBusinessKnockSession);
     [elements.businessKnockMode, elements.businessKnockUnit, elements.businessKnockSize]
       .filter(Boolean)

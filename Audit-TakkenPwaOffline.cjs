@@ -15,7 +15,7 @@ const chromePath = process.env.TAKKEN_CHROME_PATH || undefined;
   await page.goto(baseUrl, { waitUntil: "networkidle" });
   const saveKey = "takken-battle-study-clean-v2-hard";
   const onlineSave = JSON.parse(await page.evaluate((key) => localStorage.getItem(key), saveKey));
-  assert.equal(onlineSave.stateSchemaVersion, 10, "application did not initialize its canonical local save");
+  assert.equal(onlineSave.stateSchemaVersion, 11, "application did not initialize its canonical local save");
   await page.waitForFunction(() => navigator.serviceWorker?.ready);
   const precache = await page.evaluate(async () => {
     const names = await caches.keys();

@@ -153,7 +153,7 @@ async function completeDesktopSet(page) {
   }));
   assert.match(feedback.verdict, /再出題/);
   assert.deepEqual(feedback.labels, [
-    "判断軸",
+    "判定のまとめ",
     "各記述を1つずつ判定",
     "間違いやすい境界",
     "次に再現する一文"
@@ -262,7 +262,7 @@ async function runDesktop(browser, baseUrl) {
   });
   assert.ok(missionLabel.length > 0, "daily mission label is empty");
   assert.ok(quickAction.length > 0, "daily quick action label is empty");
-  assert.equal(quickActionHidden, false);
+  assert.equal(quickActionHidden, true, "pass-readiness keeps the generic practical lane secondary to today's fixed command");
   assert.equal(missionTag, "BUTTON");
   assert.ok(["", "practical", "subject-sprint", "foundation-theme", "mock"].includes(missionAction));
   if (screenshotDir) {
@@ -300,7 +300,7 @@ async function runDesktop(browser, baseUrl) {
   await page.locator("#practicalDrillStartButton").click();
   assert.equal(await page.locator("#practicalDrillPanel").evaluate((node) => node.open), true);
   const started = await savedPracticalState(page);
-  assert.equal(started.stateSchemaVersion, 10);
+  assert.equal(started.stateSchemaVersion, 11);
   assert.equal(started.practicalDrill.stage, "active");
   assert.equal(started.practicalDrill.version, 2);
   assert.equal(started.practicalDrill.scope, "business");

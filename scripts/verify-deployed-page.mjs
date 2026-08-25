@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260825-quest-core-v36-1";
+const expectedVersion = process.argv[3] || "20260825-guarantee-v37-1";
 const attempts = Math.max(1, Number(process.env.TAKKEN_DEPLOY_VERIFY_ATTEMPTS) || 12);
 const intervalMs = Math.max(0, Number(process.env.TAKKEN_DEPLOY_VERIFY_INTERVAL_MS) || 10000);
 assert.ok(pageUrl, "usage: node scripts/verify-deployed-page.mjs <page-url> [expected-version]");
@@ -54,7 +54,7 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     }
     const appReference = references.find((reference) => /(?:^|\/)app\.js\?/.test(reference));
     const appCode = await fetchAsset(appReference, response.url, "app");
-    assert.match(appCode, /const STATE_SCHEMA_VERSION = 10/, "save schema v10 missing");
+    assert.match(appCode, /const STATE_SCHEMA_VERSION = 11/, "save schema v11 missing");
     assert.match(appCode, /function renderPassReadinessCard/, "readiness renderer missing");
     console.log(JSON.stringify({ status: "ok", pageUrl: response.url, expectedVersion, attempt, references: references.length, htmlLength: html.length }));
     process.exit(0);

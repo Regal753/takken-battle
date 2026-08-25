@@ -141,7 +141,7 @@ async function runDirectExplanationLoop(browser, baseUrl) {
   assert.equal(direct.overflow, 0);
 
   const firstSave = await savedState(page);
-  assert.equal(firstSave.state.stateSchemaVersion, 10);
+  assert.equal(firstSave.state.stateSchemaVersion, 11);
   assert.equal(firstSave.state.questionStats.b029.attempts, 1);
   assert.equal(firstSave.state.questionStats.b029.correct, 1);
   assert.equal(firstSave.state.questionStats.b029.clearDayKeys.length, 1);
@@ -241,10 +241,10 @@ async function runV7Migration(browser, baseUrl) {
   await page.reload({ waitUntil: "networkidle" });
   const after = await savedState(page);
   const migration = await page.evaluate((key) => ({
-    backupExists: Boolean(localStorage.getItem(`${key}-before-upgrade-v7-to-v10`)),
+    backupExists: Boolean(localStorage.getItem(`${key}-before-upgrade-v7-to-v11`)),
     notice: document.querySelector("#saveTransferStatus")?.textContent || ""
   }), after.key);
-  assert.equal(after.state.stateSchemaVersion, 10);
+  assert.equal(after.state.stateSchemaVersion, 11);
   assert.deepEqual(after.state.questionStats.b029.correctDayKeys, ["2026-07-30", "2026-07-31"]);
   assert.deepEqual(after.state.questionStats.b029.clearDayKeys, ["2026-07-30", "2026-07-31"]);
   assert.equal(migration.backupExists, true);

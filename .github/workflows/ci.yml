@@ -35,6 +35,7 @@ jobs:
       - run: node Audit-TakkenLearningArchitecture.js
       - run: node Audit-TakkenBusinessFullScoreSupplement.js
       - run: node Audit-TakkenBusinessFullScoreBank.js
+      - run: node Audit-TakkenGuaranteeAssociationDrill.js
       - run: node Audit-TakkenBusinessMastery.js
       - run: node Audit-TakkenBusinessKnock.js
       - run: node Audit-TakkenBusinessPace.js
@@ -82,6 +83,7 @@ jobs:
           node Audit-TakkenStatementReviewUi.cjs
           node Audit-TakkenBalancedExplanationUi.cjs
           node Audit-TakkenBusinessKnockUi.cjs
+          node Audit-TakkenGuaranteeAssociationDrillUi.cjs
           node Audit-TakkenFullExamUi.cjs
           node Audit-TakkenPassReadinessUi.cjs
           node Audit-TakkenCalculationDrillUi.cjs

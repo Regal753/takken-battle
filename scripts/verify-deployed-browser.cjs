@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const { chromium } = require("playwright");
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260825-quest-core-v36-1";
+const expectedVersion = process.argv[3] || "20260825-guarantee-v37-1";
 const chromePath = process.env.TAKKEN_CHROME_PATH || undefined;
 
 assert.ok(pageUrl, "usage: node scripts/verify-deployed-browser.cjs <page-url> [expected-version]");
@@ -55,9 +55,9 @@ assert.ok(pageUrl, "usage: node scripts/verify-deployed-browser.cjs <page-url> [
     const mobile320 = await inspect();
     for (const result of [mobile390, mobile320]) {
       assert.equal(result.overflow, 0, "deployed page has horizontal overflow");
-      assert.equal(result.schema, 10, "deployed page did not initialize save schema v10");
+      assert.equal(result.schema, 11, "deployed page did not initialize save schema v11");
       assert.equal(result.manifestVersion, expectedVersion, "deployed manifest version mismatch");
-      assert.equal(result.scriptVersions.length, 27, "deployed runtime script count mismatch");
+      assert.equal(result.scriptVersions.length, 28, "deployed runtime script count mismatch");
       assert.ok(result.scriptVersions.every((version) => version === expectedVersion), "deployed runtime versions are mixed");
     }
     assert.equal(mobile320.controlled, true, "deployed page is not controlled by its service worker after first load");
