@@ -255,7 +255,9 @@
   // v11 adds the guarantee-association bank IDs to practicalDrill.history.
   // Keep this separate from v10 so an offline v36 client fails closed instead
   // of normalizing away ga001..ga020 and saving that loss back to storage.
-  const STATE_SCHEMA_VERSION = 11;
+  // v12 adds lastConfidenceAt. Keep this separate from v11 so a still-open
+  // v37 tab cannot normalize away the ordering timestamp and save that loss.
+  const STATE_SCHEMA_VERSION = 12;
   const DAILY_TARGET = 10;
   const FOUNDATION_UNIT_BATCH_MAX = 4;
   const SPRINT_MINUTES = 25;

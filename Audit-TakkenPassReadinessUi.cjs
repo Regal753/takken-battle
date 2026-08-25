@@ -416,7 +416,7 @@ async function main() {
       key,
       state: JSON.parse(localStorage.getItem(key) || "{}")
     }), legacyKey);
-    assert.equal(legacy.state.stateSchemaVersion, 11);
+    assert.equal(legacy.state.stateSchemaVersion, 12);
     // Schema-8 records predate the sprint presentation key; normalization must
     // fail closed to an idle launch state instead of reviving a corrupt session.
     assert.equal(legacy.state.practicalDrill.stage, "idle");

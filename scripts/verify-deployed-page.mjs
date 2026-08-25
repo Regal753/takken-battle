@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { extname } from "node:path";
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260826-quality-v38-1-59a5bf558dc3";
+const expectedVersion = process.argv[3] || "20260826-quality-v38-1-87b6c40b9cf8";
 const attempts = Math.max(1, Number(process.env.TAKKEN_DEPLOY_VERIFY_ATTEMPTS) || 12);
 const intervalMs = Math.max(0, Number(process.env.TAKKEN_DEPLOY_VERIFY_INTERVAL_MS) || 10000);
 assert.ok(pageUrl, "usage: node scripts/verify-deployed-page.mjs <page-url> [expected-version]");
@@ -78,7 +78,7 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.equal(`sha256:${sha256(Buffer.from(aggregate, "utf8"))}`, integrity.digest, "deployed aggregate release digest mismatch");
     const appReference = references.find((reference) => /(?:^|\/)app\.js\?/.test(reference));
     const appCode = await fetchAsset(appReference, response.url, "app");
-    assert.match(appCode, /const STATE_SCHEMA_VERSION = 11/, "save schema v11 missing");
+    assert.match(appCode, /const STATE_SCHEMA_VERSION = 12/, "save schema v12 missing");
     assert.match(appCode, /function renderPassReadinessCard/, "readiness renderer missing");
     console.log(JSON.stringify({ status: "ok", pageUrl: response.url, expectedVersion, attempt, references: references.length, htmlLength: html.length }));
     process.exit(0);

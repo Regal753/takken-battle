@@ -136,7 +136,7 @@ requiredSourceKeys.forEach((key) => {
 
 const app = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
-if (!app.includes("const STATE_SCHEMA_VERSION = 11;")) issues.push("State schema version must protect guarantee-association practical history from v36 clients while retaining objective understanding, calculation, practical drill, unit-route, full-score evidence, and multi-tab sync data.");
+if (!app.includes("const STATE_SCHEMA_VERSION = 12;")) issues.push("State schema version must protect guarantee-association history and confidence ordering from older clients while retaining objective understanding, calculation, practical drill, unit-route, full-score evidence, and multi-tab sync data.");
 if (!app.includes("normalizeCalculationDrillState")) issues.push("Calculation save normalization is missing.");
 if (!app.includes("drill.retryIds = addCalculationId")) issues.push("Wrong/uncertain retry queue is missing.");
 if (!app.includes("function startCalculationDrill()")) issues.push("Calculation session restart must preserve history.");
@@ -144,7 +144,7 @@ if (!app.includes("function exitCalculationDrill()")) issues.push("Calculation c
 if (!html.includes("id=\"calculationDrillPanel\"")) issues.push("Calculation drill panel is missing.");
 if (!html.includes("id=\"todayCommandCalculationButton\"")) issues.push("Calculation drill quick entry is missing.");
 if (!html.includes("id=\"calculationDrillExitButton\"")) issues.push("Calculation drill completion exit button is missing.");
-if (!html.includes("calculation-drill.js?v=20260826-quality-v38-1-59a5bf558dc3")) issues.push("Calculation data script is not loaded.");
+if (!html.includes("calculation-drill.js?v=20260826-quality-v38-1-87b6c40b9cf8")) issues.push("Calculation data script is not loaded.");
 
 const report = {
   status: issues.length ? "error" : "ok",

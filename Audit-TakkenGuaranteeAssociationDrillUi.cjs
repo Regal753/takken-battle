@@ -181,9 +181,9 @@ async function horizontalOverflow(page) {
     await page.reload({ waitUntil: "networkidle", timeout: 20000 });
     await waitForApp(page);
     assert.equal(await page.locator("#guaranteeSpecialRetry").textContent(), "1", "an existing weak question must be visible before launch");
-    assert.equal(await page.locator("#guaranteeSpecialGrounded").textContent(), "1 / 20", "live v11 history must override an older recovery snapshot");
+    assert.equal(await page.locator("#guaranteeSpecialGrounded").textContent(), "1 / 20", "current-schema history must override an older recovery snapshot");
     const currentAfterReload = await readSavedState(page);
-    assert.equal(currentAfterReload.state.practicalDrill.history[currentHistoryId].attempts, 2, "recovery must not roll back current v11 attempts");
+    assert.equal(currentAfterReload.state.practicalDrill.history[currentHistoryId].attempts, 2, "recovery must not roll back current-schema attempts");
     assert.equal(currentAfterReload.state.practicalDrill.history[currentHistoryId].lastConfidence, "confident", "recovery must not revive an obsolete wrong outcome");
 
     await page.locator("#guaranteeSpecialStart").click();

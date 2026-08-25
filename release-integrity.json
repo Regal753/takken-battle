@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20260826-quality-v38-1-59a5bf558dc3",
-  "digest": "sha256:59a5bf558dc3d6311b4e6539f836ddd543a5f15a01ff33d8336f7cbd3f6a20b3",
+  "version": "20260826-quality-v38-1-87b6c40b9cf8",
+  "digest": "sha256:87b6c40b9cf807abe5f793b348e4d550f4c3702e2c55c83942c09caffdb3f78a",
   "assetCount": 43,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "27be80aab64ce283ff2ed0afe8f4b873f28b5ed00c9388549eda71147c9361fc"
+      "sha256": "6153cd068209d358aa793ef1036d74554ea311ad57d96011132819185a6fad5d"
     },
     {
       "path": "assets/battle/grassland-route.webp",
