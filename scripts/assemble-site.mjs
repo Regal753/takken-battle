@@ -7,7 +7,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const destination = resolve(root, "_site");
 const index = readFileSync(resolve(root, "index.html"), "utf8");
 const references = [...index.matchAll(/\b(?:src|href)="([^"#]+)"/g)].map((match) => match[1]);
-const releaseEntrypoints = ["index.html", ...references, "service-worker.js"];
+const releaseEntrypoints = ["index.html", ...references, "service-worker.js", "release-integrity.json"];
 rmSync(destination, { recursive: true, force: true });
 mkdirSync(destination, { recursive: true });
 for (const reference of releaseEntrypoints) {
@@ -23,7 +23,7 @@ for (const reference of releaseEntrypoints) {
 }
 cpSync(resolve(root, "assets"), resolve(destination, "assets"), { recursive: true });
 writeFileSync(resolve(destination, ".nojekyll"), "");
-for (const required of ["index.html", "service-worker.js", "manifest.webmanifest"]) {
+for (const required of ["index.html", "service-worker.js", "manifest.webmanifest", "release-integrity.json"]) {
   assert.ok(existsSync(resolve(destination, required)), `assembled site missing ${required}`);
 }
 console.log(`assemble-site: OK (${references.length} HTML references + service worker)`);

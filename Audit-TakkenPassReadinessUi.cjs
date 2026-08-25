@@ -407,7 +407,7 @@ async function main() {
     const migratedOnLoad = await legacyPage.evaluate((key) =>
       JSON.parse(localStorage.getItem(key) || "{}").stateSchemaVersion, legacyKey
     );
-    assert.equal(migratedOnLoad, 11, "schema migration must persist during initial load");
+    assert.equal(migratedOnLoad, 12, "schema migration must persist during initial load");
     // Normalization is persisted on the first ordinary state-changing action.
     await openPassPanel(legacyPage);
     await legacyPage.locator("#passMockAction").click();
@@ -416,7 +416,7 @@ async function main() {
       key,
       state: JSON.parse(localStorage.getItem(key) || "{}")
     }), legacyKey);
-    assert.equal(legacy.state.stateSchemaVersion, 11);
+    assert.equal(legacy.state.stateSchemaVersion, 12);
     // Schema-8 records predate the sprint presentation key; normalization must
     // fail closed to an idle launch state instead of reviving a corrupt session.
     assert.equal(legacy.state.practicalDrill.stage, "idle");

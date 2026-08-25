@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
+import { extname } from "node:path";
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260825-guarantee-v37-1";
+const expectedVersion = process.argv[3] || "20260826-quality-v38-1-87b6c40b9cf8";
 const attempts = Math.max(1, Number(process.env.TAKKEN_DEPLOY_VERIFY_ATTEMPTS) || 12);
 const intervalMs = Math.max(0, Number(process.env.TAKKEN_DEPLOY_VERIFY_INTERVAL_MS) || 10000);
 assert.ok(pageUrl, "usage: node scripts/verify-deployed-page.mjs <page-url> [expected-version]");
@@ -15,6 +17,17 @@ const fetchAsset = async (reference, base, label) => {
   assert.equal(response.status, 200, `${label} HTTP ${response.status}`);
   return response.text();
 };
+const fetchBytes = async (reference, base, label) => {
+  const response = await fetch(new URL(reference, base), { cache: "no-store" });
+  assert.equal(response.status, 200, `${label} HTTP ${response.status}`);
+  return Buffer.from(await response.arrayBuffer());
+};
+const textExtensions = new Set([".css", ".html", ".js", ".json", ".svg", ".webmanifest"]);
+const normalizedAssetBytes = (relativePath, bytes) => {
+  if (!textExtensions.has(extname(relativePath).toLowerCase())) return bytes;
+  return Buffer.from(bytes.toString("utf8").replace(/\r\n?/g, "\n").replaceAll(expectedVersion, "__TAKKEN_RELEASE_VERSION__"), "utf8");
+};
+const sha256 = (bytes) => createHash("sha256").update(bytes).digest("hex");
 
 let lastFailure = "";
 for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -52,9 +65,20 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
       const pathname = new URL(reference, response.url).pathname.split("/").pop();
       assert.match(serviceWorker, new RegExp(pathname.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), `service worker does not precache ${reference}`);
     }
+    const integrity = JSON.parse(await fetchAsset(`release-integrity.json?v=${expectedVersion}`, response.url, "release integrity"));
+    assert.equal(integrity.version, expectedVersion, "deployed release-integrity version mismatch");
+    assert.match(integrity.digest, /^sha256:[0-9a-f]{64}$/, "deployed release-integrity digest is invalid");
+    assert.equal(expectedVersion.slice(-12), integrity.digest.slice(7, 19), "deployed release version digest suffix is stale");
+    assert.equal(integrity.assetCount, integrity.assets.length, "deployed release-integrity asset count mismatch");
+    for (const asset of integrity.assets) {
+      const bytes = await fetchBytes(`${asset.path}?v=${expectedVersion}`, response.url, `integrity asset ${asset.path}`);
+      assert.equal(sha256(normalizedAssetBytes(asset.path, bytes)), asset.sha256, `deployed asset digest mismatch: ${asset.path}`);
+    }
+    const aggregate = integrity.assets.map((asset) => `${asset.path}\0${asset.sha256}\n`).join("");
+    assert.equal(`sha256:${sha256(Buffer.from(aggregate, "utf8"))}`, integrity.digest, "deployed aggregate release digest mismatch");
     const appReference = references.find((reference) => /(?:^|\/)app\.js\?/.test(reference));
     const appCode = await fetchAsset(appReference, response.url, "app");
-    assert.match(appCode, /const STATE_SCHEMA_VERSION = 11/, "save schema v11 missing");
+    assert.match(appCode, /const STATE_SCHEMA_VERSION = 12/, "save schema v12 missing");
     assert.match(appCode, /function renderPassReadinessCard/, "readiness renderer missing");
     console.log(JSON.stringify({ status: "ok", pageUrl: response.url, expectedVersion, attempt, references: references.length, htmlLength: html.length }));
     process.exit(0);

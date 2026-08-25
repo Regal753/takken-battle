@@ -1,6 +1,6 @@
 "use strict";
 
-const VERSION = "20260825-guarantee-v37-1";
+const VERSION = "20260826-quality-v38-1-87b6c40b9cf8";
 const CACHE_NAME = `takken-battle-${VERSION}`;
 const IMMUTABLE = [
   "styles.css", "exam-blueprint.js", "exam-question-core.js", "exam-questions-rights.js",
@@ -11,7 +11,7 @@ const IMMUTABLE = [
   "official-exam-data.js", "official-law-baseline.js", "official-topic-map.js", "calculation-drill.js",
   "save-store.js", "save-transfer.js", "state-sync.js", "business-mastery.js", "business-knock.js",
   "business-pace.js", "pass-readiness.js", "exam-current-year-2026.js", "pwa-runtime.js", "app.js",
-  "manifest.webmanifest", "assets/pwa-icon-192.svg", "assets/pwa-icon-512.svg",
+  "manifest.webmanifest", "release-integrity.json", "assets/pwa-icon-192.svg", "assets/pwa-icon-512.svg",
   "assets/battle/grassland-route.webp", "assets/characters/contract-mimic.webp",
   "assets/characters/deadline-warden.webp", "assets/characters/law-citadel-boss.webp",
   "assets/characters/license-sentinel.webp", "assets/characters/notice-gargoyle.webp",

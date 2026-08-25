@@ -212,7 +212,7 @@ async function answerCurrentCorrectly(page) {
         attempts: saved.calculationDrill?.attempts
       };
     }, storageIdFor("calc-desktop"));
-    assert.equal(persistedBeforeReload.schema, 11);
+    assert.equal(persistedBeforeReload.schema, 12);
     assert.equal(persistedBeforeReload.currentAttempt?.confidence, "uncertain");
     assert.deepEqual(persistedBeforeReload.retryIds, ["calc-sale-200", "calc-sale-300"]);
     assert.equal(persistedBeforeReload.attempts, 2);
@@ -319,7 +319,7 @@ async function answerCurrentCorrectly(page) {
       };
     }, storageIdFor("calc-legacy"));
     assert.deepEqual(migrated, {
-      schema: 11,
+      schema: 12,
       attempts: 37,
       correct: 25,
       q1Correct: 2,

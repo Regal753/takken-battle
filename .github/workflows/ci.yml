@@ -46,6 +46,7 @@ jobs:
       - run: node Audit-TakkenExamCurrentYear2026.js
       - run: node Audit-TakkenOfficialTopicMap.js
       - run: node Audit-TakkenPublicPerformance.js
+      - run: node Audit-TakkenReleaseIntegrity.js
       - run: node scripts/validate-public.mjs
 
   browser:
