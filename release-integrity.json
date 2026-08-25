@@ -1,0 +1,180 @@
+{
+  "schemaVersion": 1,
+  "version": "20260826-quality-v38-1-59a5bf558dc3",
+  "digest": "sha256:59a5bf558dc3d6311b4e6539f836ddd543a5f15a01ff33d8336f7cbd3f6a20b3",
+  "assetCount": 43,
+  "assets": [
+    {
+      "path": "app.js",
+      "sha256": "27be80aab64ce283ff2ed0afe8f4b873f28b5ed00c9388549eda71147c9361fc"
+    },
+    {
+      "path": "assets/battle/grassland-route.webp",
+      "sha256": "4bc3b188f9d480ec33ff397c94fe6b466879a65f521ac1ba4f7add7a933dee81"
+    },
+    {
+      "path": "assets/characters/contract-mimic.webp",
+      "sha256": "db1ed5b0121efdb017c97e54cb8635c6b8a82c7ccbcf695df53a39e7cf8f2ed1"
+    },
+    {
+      "path": "assets/characters/deadline-warden.webp",
+      "sha256": "cd4feb2fbe01f594c9bbaa811a76d5d96d45cab3029f964863cee50a9670e041"
+    },
+    {
+      "path": "assets/characters/law-citadel-boss.webp",
+      "sha256": "2159982b081f29c6be40a7da1b418975ec0253cb099ccdf6ef8808f29339ca83"
+    },
+    {
+      "path": "assets/characters/license-sentinel.webp",
+      "sha256": "3670bab321ddbc6cea8e55e744f90b2f7d61435682f99ca794a6b1daafd66eeb"
+    },
+    {
+      "path": "assets/characters/notice-gargoyle.webp",
+      "sha256": "d8beb034824b424c273929b173576b7e9d0a076fe29b322e82e86d5990625404"
+    },
+    {
+      "path": "assets/characters/registry-sphinx.webp",
+      "sha256": "a82fa71d5ffcfc26a4f2cc911f97de7f5a9a33e5b372ce5dc89c26f34e41992a"
+    },
+    {
+      "path": "assets/characters/study-knight.webp",
+      "sha256": "b9d15e5847a39d5100ffd9bdacee61a64d98079b9b139a72d3d55ce1f941ebed"
+    },
+    {
+      "path": "assets/characters/vault-tortoise.webp",
+      "sha256": "e3b6c88ce36ae5bb2e297edb441c84bbd91fe2dd824724438d28c4b3262d2cba"
+    },
+    {
+      "path": "assets/pwa-icon-192.svg",
+      "sha256": "9074015cbf1fcd888ff8803d88ac2d2720aa612fcb5cfa8cf72e247c1812fab8"
+    },
+    {
+      "path": "assets/pwa-icon-512.svg",
+      "sha256": "f5f9041dff0f3ebd4c1bd9a25874ab32ef239a479cce66a8a6ed75d968258e15"
+    },
+    {
+      "path": "business-fullscore-bank.js",
+      "sha256": "7b12254fbd4d8a0e3479d4ba7525d58ddc4cbd21df9f9fc829df7d49f373ba81"
+    },
+    {
+      "path": "business-fullscore-supplement.js",
+      "sha256": "7b292dcf6151b0d25a03b37f350bf3fc24ed5856ba496db62c65eac1de48e396"
+    },
+    {
+      "path": "business-knock.js",
+      "sha256": "5b98dc69fc60896bc9003aa56e80bdeec9b97badb35afa1cc70f26cb76b35d5e"
+    },
+    {
+      "path": "business-mastery.js",
+      "sha256": "5ae9e010f4b6a2d5b22dd7714daf404bf29e17aed4d055ec3fbcb774467990dc"
+    },
+    {
+      "path": "business-pace.js",
+      "sha256": "c1dc6c302d034f15365736ab1e745c1a84fc5fe80c8567dc2064d48f8c57e907"
+    },
+    {
+      "path": "calculation-drill.js",
+      "sha256": "0e712de144f352fbca547744c8db45a4c3d75074a029468cb0d73b2fc1d7136b"
+    },
+    {
+      "path": "exam-blueprint.js",
+      "sha256": "8e54ec5e574d02a901e6868618f85a021c4e38b951e1c9367f0bdb6b90ff52c5"
+    },
+    {
+      "path": "exam-current-year-2026.js",
+      "sha256": "716d85d82e9eda33ababc054371b2c57e46a24d24460073f36b360850ca081a1"
+    },
+    {
+      "path": "exam-question-core.js",
+      "sha256": "5f809b62e8e69fe565ad76a729b1d9b84deaf506f2e9ba87396061f8be97cfe9"
+    },
+    {
+      "path": "exam-questions-business.js",
+      "sha256": "5afb1f0e7ad2da84655241e9cc3b1272a63426eef1533c5fed122540a9a066e4"
+    },
+    {
+      "path": "exam-questions-restrictions.js",
+      "sha256": "8dab404420a0ea8832ce2c4af828ce253f1372b34ec8b4a7f51bcde949515e9a"
+    },
+    {
+      "path": "exam-questions-rights.js",
+      "sha256": "3c8c8f4c70f7ee632d805e85564e82afaa15cd5ac43a14e892f7d7151e80dca2"
+    },
+    {
+      "path": "exam-questions-tax-other.js",
+      "sha256": "4c24db8289997c58ac129dae8bfb9470ef66a1eaa88cb5cc77a50f826855c68c"
+    },
+    {
+      "path": "guarantee-association-drill.js",
+      "sha256": "e027b7df3b044550fa767c98a0eb743465f869539a35b942c82c77b0af949fff"
+    },
+    {
+      "path": "index.html",
+      "sha256": "98507153d6c9df4ff11464ee481ca31e54a2b97a10a4d055152677e355ae2fe2"
+    },
+    {
+      "path": "manifest.webmanifest",
+      "sha256": "782762b628379c180c9480248bdc7835909ee3a76ab818e378b6d531b1b9adf7"
+    },
+    {
+      "path": "official-exam-data.js",
+      "sha256": "46b3667bc3c26b977d0c3bca46c22ee77272eef2eeaf0570a727f13da76a02ff"
+    },
+    {
+      "path": "official-law-baseline.js",
+      "sha256": "a4c4b4cc5f3e6050140fbfceef7d605b349cb4a672213a27849bf6c6143e1712"
+    },
+    {
+      "path": "official-topic-map.js",
+      "sha256": "63f0ebe55f4955bbe926c514a9a1d28c319beb94f82f943e94d80354f89c3708"
+    },
+    {
+      "path": "pass-readiness.js",
+      "sha256": "c5b110b9b5d790c14257e7fb40221eda5d004b311115ebab00cfb592875aa796"
+    },
+    {
+      "path": "practical-question-bank.js",
+      "sha256": "de3c27ae0550cfd3098128da0c57b8a608923c354eff658cd02a356276039dd1"
+    },
+    {
+      "path": "pwa-runtime.js",
+      "sha256": "e5647d9e4360d21ce982a4fa4796b20f7dafc319cb6abfbc63c86643d2ca1391"
+    },
+    {
+      "path": "question-balance.js",
+      "sha256": "adb4eecc41412d85f63331cc5d4b7ee214b33ff2c70ad7c72b95f39d9719c1d4"
+    },
+    {
+      "path": "question-bank.js",
+      "sha256": "da57d919f0082bc38751fec7d22f353ec85f48b9f1d533943e5c77a999dd4efb"
+    },
+    {
+      "path": "reward-system.js",
+      "sha256": "bf8b3a1a40209275cf3a15c919ecc641d783f1ed5fccc9555971d3519e001db3"
+    },
+    {
+      "path": "save-store.js",
+      "sha256": "aaa1bf133f898fcd5e498060aafaa6d9ff0f6fca744eb62fb752547fdb9f692c"
+    },
+    {
+      "path": "save-transfer.js",
+      "sha256": "57499edcb41477a2f808b75a29960d77b72a5b182366431576ab4e62bdcb6456"
+    },
+    {
+      "path": "service-worker.js",
+      "sha256": "40361d0bd0d4b11708199a667aae8875aba3f958406a91ceeb4cc1e8709f20c8"
+    },
+    {
+      "path": "state-sync.js",
+      "sha256": "f054720f53442a31e1e0126ff15de241f7c4f9de8d6fee9dff68508e7121784c"
+    },
+    {
+      "path": "styles.css",
+      "sha256": "6cf3035d05f40387a7105ad12c59218cee194da9e00d1516dbfe8c10ec26ef9e"
+    },
+    {
+      "path": "subject-sprint-bank.js",
+      "sha256": "b9a8456976177a0a3421d5a58d1262b2687df0da4c42bf9bf426edf5824d4186"
+    }
+  ]
+}

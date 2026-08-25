@@ -60,6 +60,44 @@ async function readSavedState(page) {
   });
 }
 
+async function failPrimarySaveWrites(page, primaryKey) {
+  await page.evaluate((exactPrimaryKey) => {
+    if (window.__guaranteeNativeSetItem) return;
+    window.__guaranteeNativeSetItem = Storage.prototype.setItem;
+    window.__guaranteePrimarySaveKey = exactPrimaryKey;
+    Storage.prototype.setItem = function patchedSetItem(key, value) {
+      if (String(key) === window.__guaranteePrimarySaveKey) {
+        throw new DOMException("storage unavailable", "QuotaExceededError");
+      }
+      return window.__guaranteeNativeSetItem.call(this, key, value);
+    };
+  }, primaryKey);
+}
+
+async function restorePrimarySaveWrites(page) {
+  await page.evaluate(() => {
+    if (!window.__guaranteeNativeSetItem) return;
+    Storage.prototype.setItem = window.__guaranteeNativeSetItem;
+    delete window.__guaranteeNativeSetItem;
+    delete window.__guaranteePrimarySaveKey;
+  });
+}
+
+async function assertVisiblePracticalSaveError(page, expected) {
+  const status = page.locator("#practicalDrillSaveError");
+  await status.waitFor({ state: "visible" });
+  assert.match(await status.textContent(), expected);
+  assert.equal(await status.getAttribute("role"), "status");
+  assert.equal(await status.getAttribute("aria-live"), "polite");
+  await page.waitForFunction(() => document.activeElement?.id === "practicalDrillSaveError");
+  await page.waitForFunction(() => {
+    const node = document.querySelector("#practicalDrillSaveError");
+    if (!node) return false;
+    const rect = node.getBoundingClientRect();
+    return rect.bottom > 0 && rect.top < window.innerHeight;
+  });
+}
+
 async function presented(page) {
   return page.evaluate(() => {
     const key = Object.keys(localStorage).find((candidate) => candidate.startsWith("takken-battle-study-clean-v2-hard-review-") && !candidate.includes("backup") && !candidate.includes("-before-") && !candidate.includes("previous") && !candidate.includes("corrupt") && !candidate.endsWith("event-outbox"));
@@ -205,38 +243,74 @@ async function horizontalOverflow(page) {
 
     // A failed first write must roll the in-memory launch back to idle rather
     // than showing a session that cannot be resumed after reload.
-    const failureContext = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: "Asia/Tokyo" });
+    const failureContext = await browser.newContext({ viewport: { width: 320, height: 700 }, timezoneId: "Asia/Tokyo" });
     const failurePage = await failureContext.newPage();
     try {
       await failurePage.goto(reviewUrl(local.baseUrl), { waitUntil: "networkidle", timeout: 20000 });
       await waitForApp(failurePage);
       let failedStart = await readSavedState(failurePage);
       assert.equal(failedStart.state.practicalDrill.stage, "idle", "failure fixture must begin idle");
-      await failurePage.evaluate(() => {
-        window.__guaranteeNativeSetItem = Storage.prototype.setItem;
-        Storage.prototype.setItem = function patchedSetItem(key, value) {
-          if (String(key).startsWith("takken-battle-study-clean-v2-hard-review-")) {
-            throw new DOMException("storage unavailable", "QuotaExceededError");
-          }
-          return window.__guaranteeNativeSetItem.call(this, key, value);
-        };
-      });
+      await failPrimarySaveWrites(failurePage, failedStart.key);
       await failurePage.locator("#guaranteeSpecialStart").click();
       assert.equal(await failurePage.locator("#practicalDrillSession").isHidden(), true, "failed start must not leave a visible session");
       assert.match(
         await failurePage.locator("#todayCommandStatus").textContent(),
         /保証協会特訓の開始状態を保存できませんでした。もう一度試してください。/
       );
-      await failurePage.evaluate(() => {
-        Storage.prototype.setItem = window.__guaranteeNativeSetItem;
-        delete window.__guaranteeNativeSetItem;
-      });
+      await restorePrimarySaveWrites(failurePage);
       failedStart = await readSavedState(failurePage);
       assert.equal(failedStart.state.practicalDrill.stage, "idle", "failed start must retain the persisted idle state");
       await failurePage.locator("#guaranteeSpecialStart").click();
       await failurePage.locator("#practicalDrillSession").waitFor({ state: "visible" });
       const retriedStart = await readSavedState(failurePage);
       assert.equal(retriedStart.state.practicalDrill.bankId, "guarantee-association-special", "launch must remain retryable after storage recovers");
+
+      const failureQuestion = await presented(failurePage);
+      const beforeFailedAnswer = await readSavedState(failurePage);
+      await failPrimarySaveWrites(failurePage, beforeFailedAnswer.key);
+      await failurePage.locator(".practical-drill-choice").nth(failureQuestion.answer).click();
+      assert.equal(await failurePage.locator("#practicalDrillFeedback").isHidden(), true, "failed answer must return to the unanswered question");
+      assert.match(await failurePage.locator("#todayCommandStatus").textContent(), /解答を保存できませんでした。進捗は加算していません。/);
+      await assertVisiblePracticalSaveError(failurePage, /解答を保存できませんでした。進捗は加算していません。/);
+      assert.equal(await horizontalOverflow(failurePage), 0, "the inline save error must not overflow a 320px viewport");
+      let failedMutation = await readSavedState(failurePage);
+      assert.deepEqual(failedMutation.state.practicalDrill, beforeFailedAnswer.state.practicalDrill, "failed answer must not change persisted practical state");
+      assert.ok(await failurePage.evaluate((key) => localStorage.getItem(`${key}-previous`) !== null, beforeFailedAnswer.key), "the exact primary-write failure must occur after the recoverable previous-save rotation");
+      await restorePrimarySaveWrites(failurePage);
+
+      await failurePage.locator(".practical-drill-choice").nth(failureQuestion.answer).click();
+      await failurePage.locator("#practicalDrillFeedback").waitFor({ state: "visible" });
+      assert.equal(await failurePage.locator("#practicalDrillSaveError").isHidden(), true, "a recovered answer must clear the inline save error");
+      const beforeFailedConfidence = await readSavedState(failurePage);
+      assert.equal(beforeFailedConfidence.state.practicalDrill.currentAttempt?.confidence, "");
+      await failPrimarySaveWrites(failurePage, beforeFailedConfidence.key);
+      await failurePage.locator('[data-practical-confidence="uncertain"]').click();
+      assert.equal(await failurePage.locator("#practicalDrillNextButton").isDisabled(), true, "failed confidence must remain unselected");
+      assert.match(await failurePage.locator("#todayCommandStatus").textContent(), /手応えを保存できませんでした。再出題判定は変更していません。/);
+      await assertVisiblePracticalSaveError(failurePage, /手応えを保存できませんでした。再出題判定は変更していません。/);
+      failedMutation = await readSavedState(failurePage);
+      assert.deepEqual(failedMutation.state.practicalDrill, beforeFailedConfidence.state.practicalDrill, "failed confidence must not change persisted practical state");
+      await restorePrimarySaveWrites(failurePage);
+
+      await failurePage.locator('[data-practical-confidence="uncertain"]').click();
+      assert.equal(await failurePage.locator("#practicalDrillNextButton").isDisabled(), false);
+      assert.equal(await failurePage.locator("#practicalDrillSaveError").isHidden(), true, "a recovered confidence choice must clear the inline save error");
+      const beforeFailedAdvance = await readSavedState(failurePage);
+      assert.equal(beforeFailedAdvance.state.practicalDrill.history[failureQuestion.id].lastConfidence, "uncertain");
+      assert.ok(Number.isFinite(Date.parse(beforeFailedAdvance.state.practicalDrill.history[failureQuestion.id].lastConfidenceAt)), "confidence update must persist an ordering timestamp");
+      await failPrimarySaveWrites(failurePage, beforeFailedAdvance.key);
+      await failurePage.locator("#practicalDrillNextButton").click();
+      assert.equal(await failurePage.locator("#practicalDrillFeedback").isVisible(), true, "failed advance must retain the answered question");
+      assert.match(await failurePage.locator("#todayCommandStatus").textContent(), /次の問題へ進めませんでした。現在の解答位置を保持しています。/);
+      await assertVisiblePracticalSaveError(failurePage, /次の問題へ進めませんでした。現在の解答位置を保持しています。/);
+      failedMutation = await readSavedState(failurePage);
+      assert.deepEqual(failedMutation.state.practicalDrill, beforeFailedAdvance.state.practicalDrill, "failed advance must not change persisted practical state");
+      await restorePrimarySaveWrites(failurePage);
+      await failurePage.locator("#practicalDrillNextButton").click();
+      assert.equal(await failurePage.locator("#practicalDrillSaveError").isHidden(), true, "a recovered advance must clear the inline save error");
+      const afterRecoveredAdvance = await readSavedState(failurePage);
+      assert.equal(afterRecoveredAdvance.state.practicalDrill.position, beforeFailedAdvance.state.practicalDrill.position + 1, "advance must remain retryable after storage recovers");
+
       const discardAccepted = new Promise((resolve, reject) => {
         failurePage.once("dialog", (dialog) => dialog.accept().then(resolve, reject));
       });

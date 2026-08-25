@@ -7617,6 +7617,28 @@ button.mission-step:disabled {
   background: rgba(110, 35, 30, 0.38);
 }
 
+.practical-drill-save-error {
+  margin: 10px 0 0;
+  padding: 11px 12px;
+  border: 1px solid rgba(255, 150, 128, 0.72);
+  border-left: 4px solid #ff967f;
+  border-radius: 7px;
+  color: #ffe3dc;
+  background: rgba(126, 38, 27, 0.42);
+  font-size: 13px;
+  font-weight: 850;
+  line-height: 1.55;
+}
+
+.practical-drill-save-error:focus-visible {
+  outline: 3px solid #ffe08a;
+  outline-offset: 3px;
+}
+
+.practical-drill-save-error[hidden] {
+  display: none;
+}
+
 .practical-drill-feedback {
   display: grid;
   gap: 11px;

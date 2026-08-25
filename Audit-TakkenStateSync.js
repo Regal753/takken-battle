@@ -211,6 +211,51 @@ assert.deepEqual(
 const repeatedMerge = sync.mergeStates(base, practicalMerged, practicalRemote);
 assert.equal(repeatedMerge.practicalDrill.history.q1.attempts, 5, "re-merging must not double count");
 
+const practicalConfidenceBase = sync.clone(base);
+practicalConfidenceBase.practicalDrill.history.q1 = {
+  ...practicalConfidenceBase.practicalDrill.history.q1,
+  lastAnsweredAt: timestamp("2026-08-15", "09:30:00"),
+  lastConfidence: "confident",
+  lastConfidenceAt: timestamp("2026-08-15", "09:31:00"),
+  uncertain: 0
+};
+Object.assign(practicalConfidenceBase.practicalDrill, {
+  stage: "active",
+  sessionIds: ["q1"],
+  queue: ["q1"],
+  position: 0,
+  currentAttempt: {
+    id: "q1",
+    selected: 0,
+    correct: true,
+    confidence: "confident",
+    diagnosticRecorded: false
+  },
+  retryIds: [],
+  sessionStartedAt: timestamp("2026-08-15", "09:29:00")
+});
+const practicalConfidenceLocal = sync.clone(practicalConfidenceBase);
+practicalConfidenceLocal.practicalDrill.history.q1 = {
+  ...practicalConfidenceLocal.practicalDrill.history.q1,
+  lastConfidence: "uncertain",
+  lastConfidenceAt: timestamp("2026-08-15", "09:35:00"),
+  uncertain: 1
+};
+practicalConfidenceLocal.practicalDrill.currentAttempt.confidence = "uncertain";
+const practicalConfidenceRemote = sync.clone(practicalConfidenceBase);
+practicalConfidenceRemote.syncMeta.revision = 9;
+practicalConfidenceRemote.practicalDrill.currentAttempt.diagnosticRecorded = true;
+const practicalConfidenceMerged = sync.mergeStates(
+  practicalConfidenceBase,
+  practicalConfidenceLocal,
+  practicalConfidenceRemote
+);
+assert.equal(practicalConfidenceMerged.practicalDrill.history.q1.lastConfidence, "uncertain", "newer practical confidence must beat a stale higher-revision tab");
+assert.equal(practicalConfidenceMerged.practicalDrill.history.q1.lastConfidenceAt, timestamp("2026-08-15", "09:35:00"));
+assert.equal(practicalConfidenceMerged.practicalDrill.history.q1.uncertain, 1, "newer uncertainty must remain eligible for retry");
+assert.equal(practicalConfidenceMerged.practicalDrill.currentAttempt.confidence, "uncertain", "the active answer must use the confidence selected by the merged history");
+assert.equal(practicalConfidenceMerged.practicalDrill.currentAttempt.diagnosticRecorded, true, "independent active-session fields from the preferred tab must survive");
+
 const independentBase = sync.clone(base);
 independentBase.attempts = 10;
 independentBase.correct = 8;

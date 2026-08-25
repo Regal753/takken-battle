@@ -972,6 +972,7 @@
     practicalDrillRetryStatus: $("#practicalDrillRetryStatus"),
     practicalDrillPrompt: $("#practicalDrillPrompt"),
     practicalDrillChoices: $("#practicalDrillChoices"),
+    practicalDrillSaveError: $("#practicalDrillSaveError"),
     practicalDrillFeedback: $("#practicalDrillFeedback"),
     practicalDrillVerdict: $("#practicalDrillVerdict"),
     practicalDrillReasoning: $("#practicalDrillReasoning"),
@@ -2147,6 +2148,9 @@
             lastCorrect: Boolean(item?.lastCorrect),
             lastConfidence: ["confident", "uncertain", "wrong"].includes(item?.lastConfidence)
               ? item.lastConfidence
+              : "",
+            lastConfidenceAt: Number.isFinite(Date.parse(item?.lastConfidenceAt))
+              ? String(item.lastConfidenceAt).slice(0, 64)
               : "",
             lastAnsweredAt: Number.isFinite(Date.parse(item?.lastAnsweredAt))
               ? String(item.lastAnsweredAt).slice(0, 64)
@@ -9485,10 +9489,36 @@
     startPracticalDrill();
   }
 
+  function clearPracticalDrillSaveError() {
+    if (!elements.practicalDrillSaveError) return;
+    elements.practicalDrillSaveError.textContent = "";
+    elements.practicalDrillSaveError.hidden = true;
+  }
+
+  function showPracticalDrillSaveError(message) {
+    if (!elements.practicalDrillSaveError) return;
+    elements.practicalDrillSaveError.textContent = message;
+    elements.practicalDrillSaveError.hidden = false;
+    window.requestAnimationFrame(() => {
+      elements.practicalDrillSaveError?.focus({ preventScroll: true });
+      elements.practicalDrillSaveError?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
+  }
+
+  function rollbackFailedPracticalDrillMutation(previousState, message) {
+    state = previousState;
+    renderPracticalDrill();
+    renderBusinessMastery();
+    renderPassPlan();
+    showPracticalDrillSaveError(message);
+    setTodayCommandStatus(message, true);
+  }
+
   function answerPracticalDrill(selected) {
     const drill = state.practicalDrill;
     const question = currentPresentedPracticalQuestion();
     if (!question || drill.currentAttempt || !Number.isInteger(selected) || selected < 0 || selected > 3) return;
+    const previousState = cloneStateForSync(state);
     const correct = selected === question.answer;
     const answeredAt = new Date().toISOString();
     const previous = drill.history[question.id] || {
@@ -9521,7 +9551,14 @@
       )
     };
     if (!correct) drill.retryIds = addPracticalId(drill.retryIds, question.id);
-    saveState();
+    if (!saveState()) {
+      rollbackFailedPracticalDrillMutation(
+        previousState,
+        "解答を保存できませんでした。進捗は加算していません。保存管理を確認して再回答してください。"
+      );
+      return;
+    }
+    clearPracticalDrillSaveError();
     renderPracticalDrill();
     renderBusinessMastery();
     renderPassPlan();
@@ -9536,6 +9573,8 @@
     const attempt = drill.currentAttempt;
     const question = currentPracticalQuestion();
     if (!question || !attempt?.correct || !["confident", "uncertain"].includes(confidence)) return;
+    const previousState = cloneStateForSync(state);
+    const confidenceAt = new Date().toISOString();
     const history = drill.history[question.id];
     if (attempt.confidence === "uncertain" && history) {
       history.uncertain = Math.max(0, (history.uncertain || 0) - 1);
@@ -9544,6 +9583,7 @@
     if (history) {
       history.uncertain = (history.uncertain || 0) + (confidence === "uncertain" ? 1 : 0);
       history.lastConfidence = confidence;
+      history.lastConfidenceAt = confidenceAt;
     }
     if (confidence === "uncertain" && !attempt.diagnosticRecorded) {
       attempt.diagnosticRecorded = recordPracticalDiagnostic(
@@ -9555,7 +9595,14 @@
     drill.retryIds = confidence === "uncertain"
       ? addPracticalId(drill.retryIds, question.id)
       : removePracticalId(drill.retryIds, question.id);
-    saveState();
+    if (!saveState()) {
+      rollbackFailedPracticalDrillMutation(
+        previousState,
+        "手応えを保存できませんでした。再出題判定は変更していません。保存管理を確認して再選択してください。"
+      );
+      return;
+    }
+    clearPracticalDrillSaveError();
     renderPracticalDrill();
     renderBusinessMastery();
     renderPassPlan();
@@ -9564,6 +9611,7 @@
   function advancePracticalDrill() {
     const drill = state.practicalDrill;
     if (!drill.currentAttempt || (drill.currentAttempt.correct && !drill.currentAttempt.confidence)) return;
+    const previousState = cloneStateForSync(state);
     const answeredQuestion = currentPracticalQuestion();
     const history = answeredQuestion && drill.history[answeredQuestion.id];
     if (answeredQuestion && history && !drill.currentAttempt.masteryRecorded) {
@@ -9605,7 +9653,14 @@
         drill.completedAt = new Date().toISOString();
       }
     }
-    saveState();
+    if (!saveState()) {
+      rollbackFailedPracticalDrillMutation(
+        previousState,
+        "次の問題へ進めませんでした。現在の解答位置を保持しています。保存管理を確認して再試行してください。"
+      );
+      return;
+    }
+    clearPracticalDrillSaveError();
     renderPracticalDrill();
     renderBusinessMastery();
     renderPassPlan();
@@ -9651,9 +9706,12 @@
       renderPracticalDrill();
       renderBusinessMastery();
       renderPassPlan();
-      setTodayCommandStatus("セットを破棄できませんでした。保存管理を確認して再試行してください。", true);
+      const message = "セットを破棄できませんでした。保存管理を確認して再試行してください。";
+      showPracticalDrillSaveError(message);
+      setTodayCommandStatus(message, true);
       return false;
     }
+    clearPracticalDrillSaveError();
     renderPracticalDrill();
     renderBusinessMastery();
     renderPassPlan();

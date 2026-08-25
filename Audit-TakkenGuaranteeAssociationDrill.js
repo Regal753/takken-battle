@@ -5,7 +5,7 @@ const drill = require("./guarantee-association-drill.js");
 const required = ["1,000万円", "500万円", "60万円", "30万円", "保証協会", "供託所", "社員となろうとする日まで", "新設の日から2週間", "受領日から1週間", "二以上", "宅建業者以外", "社員となる前", "2,000万円", "認証", "3通", "通知書の送付を受けた日", "通知を受けた日から2週間", "社員資格を失う", "資格喪失から1週間", "公示の日から2週間", "6か月", "特別弁済業務保証金分担金", "加入前／新設2週／協会1週／喪失1週"];
 const corpus = drill.QUESTIONS.map((q) => JSON.stringify(q).toLowerCase()).join("\n");
 assert.equal(drill.LEGAL_BASELINE, "2026-04-01");
-assert.equal(drill.VERIFIED_AT, "2026-08-25");
+assert.equal(drill.VERIFIED_AT, "2026-08-26");
 assert.equal(drill.QUESTIONS.length, 20);
 assert.deepEqual(drill.QUESTIONS.map((q) => q.id), Array.from({ length: 20 }, (_, i) => `ga${String(i + 1).padStart(3, "0")}`));
 assert.ok(Object.isFrozen(drill.QUESTIONS));
@@ -45,6 +45,7 @@ for (const question of drill.QUESTIONS) {
   });
 }
 assert.match(drill.QUESTIONS_BY_ID.ga008.choices[3], /保証協会が加入又は地位喪失を直ちに免許権者へ報告する/, "ga008 association is reporter");
+assert.match(drill.QUESTIONS_BY_ID.ga005.text, /^保証協会の社員となろうとする宅建業者が/, "ga005 must ask the pre-membership deadline from the correct legal time point");
 for (const index of [0, 1, 2]) {
   const fact = drill.QUESTIONS_BY_ID.ga010.sourceFacts[index];
   assert.match(fact.sourceLocator, /64条の8.*施行令 2条の4/, `ga010/${index}: cap and amount sources`);

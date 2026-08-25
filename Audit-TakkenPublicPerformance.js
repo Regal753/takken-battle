@@ -3,11 +3,14 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const releaseIntegrityTools = require("./scripts/release-integrity.cjs");
+const releaseIntegrity = require("./release-integrity.json");
 
 const ROOT = __dirname;
-const EXPECTED_CACHE_VERSION = "20260825-guarantee-v37-1";
-// v37 adds the dedicated guarantee-association bank and stale-v36 save
-// recovery while retaining a small regression guard above the shipped bundle.
+const EXPECTED_CACHE_VERSION = releaseIntegrity.version;
+releaseIntegrityTools.assertVersionMatchesDigest(releaseIntegrity.version, releaseIntegrity.digest);
+// v38 hardens practical-save rollback and release-integrity enforcement while
+// retaining a small regression guard above the shipped bundle.
 const MAX_PUBLIC_JS_BYTES = 1_335_000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
@@ -16,7 +19,8 @@ const RELEASE_CONTRACT_PATHS = [
   "scripts/validate-public.mjs",
   "scripts/verify-deployed-page.mjs",
   "scripts/verify-deployed-browser.cjs",
-  ".github/workflows/pages.yml"
+  ".github/workflows/pages.yml",
+  "release-integrity.json"
 ];
 
 const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), "utf8");

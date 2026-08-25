@@ -233,6 +233,15 @@ for (const [anchorId, terms] of Object.entries(requiredNumericTerms)) {
   terms.forEach((term) => assert.ok(blob.includes(term), `${anchorId}: required numeric term ${term}`));
 }
 
+const guaranteeAssociation = supplement.ANCHORS_BY_ID.bs006;
+assert.match(
+  guaranteeAssociation.statements[2],
+  /保証協会は還付に係る通知書の送付を受けた日から2週間以内.*社員は保証協会の通知を受けた日から2週間以内/,
+  "guarantee-association replenishment and member reimbursement must name their distinct notice recipients"
+);
+assert.match(guaranteeAssociation.reasons[2], /保証協会弁済業務保証金規則1条/, "association replenishment trigger must cite the joint rule");
+assert.match(guaranteeAssociation.sourceLocator, /保証協会弁済業務保証金規則1条/, "bs006 source locator must include the exact replenishment trigger rule");
+
 const amendment = supplement.ANCHORS_BY_ID.bs003;
 assert.deepEqual(amendment.truths, [true, false, true, false], "2024/2025 amendment truth pattern");
 assert.match(amendment.statements[0], /都道府県知事を経由せず.*地方整備局等へ直接申請/, "direct minister-license application");

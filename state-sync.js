@@ -351,7 +351,7 @@
     );
     const merged = mergeValue(safeBase, safeLocal, safeRemote, ["practicalDrill", "history", "item"], context);
     const outcomeFields = [
-      "lastSelected", "lastCorrect", "lastConfidence", "lastAnsweredAt",
+      "lastSelected", "lastCorrect", "lastConfidence", "lastConfidenceAt", "lastAnsweredAt",
       "reviewLevel", "masteryDueKey"
     ];
     outcomeFields.forEach((key) => {
@@ -641,6 +641,20 @@
       if (own(sessionWinner, key)) merged[key] = clone(sessionWinner[key]);
       else delete merged[key];
     });
+    const currentAttemptId = String(merged.currentAttempt?.id || "");
+    const currentHistory = currentAttemptId && isObject(merged.history?.[currentAttemptId])
+      ? merged.history[currentAttemptId]
+      : null;
+    if (
+      isObject(merged.currentAttempt) &&
+      merged.currentAttempt.correct === true &&
+      ["confident", "uncertain"].includes(currentHistory?.lastConfidence)
+    ) {
+      merged.currentAttempt = {
+        ...merged.currentAttempt,
+        confidence: currentHistory.lastConfidence
+      };
+    }
     return merged;
   }
 
