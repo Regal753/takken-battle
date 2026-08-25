@@ -1,11 +1,12 @@
 "use strict";
 
-const VERSION = "20260825-quest-core-v36-1";
+const VERSION = "20260825-guarantee-v37-1";
 const CACHE_NAME = `takken-battle-${VERSION}`;
 const IMMUTABLE = [
   "styles.css", "exam-blueprint.js", "exam-question-core.js", "exam-questions-rights.js",
   "exam-questions-restrictions.js", "exam-questions-tax-other.js", "exam-questions-business.js",
   "subject-sprint-bank.js", "business-fullscore-supplement.js", "business-fullscore-bank.js",
+  "guarantee-association-drill.js",
   "practical-question-bank.js", "question-bank.js", "question-balance.js", "reward-system.js",
   "official-exam-data.js", "official-law-baseline.js", "official-topic-map.js", "calculation-drill.js",
   "save-store.js", "save-transfer.js", "state-sync.js", "business-mastery.js", "business-knock.js",

@@ -41,6 +41,7 @@ jobs:
       - run: node Audit-TakkenLearningArchitecture.js
       - run: node Audit-TakkenBusinessFullScoreSupplement.js
       - run: node Audit-TakkenBusinessFullScoreBank.js
+      - run: node Audit-TakkenGuaranteeAssociationDrill.js
       - run: node Audit-TakkenBusinessMastery.js
       - run: node Audit-TakkenBusinessKnock.js
       - run: node Audit-TakkenBusinessPace.js
@@ -83,10 +84,10 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
       - name: Verify deployed page
-        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260825-quest-core-v36-1"
+        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260825-guarantee-v37-1"
       - name: Verify deployed browser boot
         env:
           TAKKEN_CHROME_PATH: /usr/bin/google-chrome
         run: |
           google-chrome --version
-          node scripts/verify-deployed-browser.cjs "${{ steps.deployment.outputs.page_url }}" "20260825-quest-core-v36-1"
+          node scripts/verify-deployed-browser.cjs "${{ steps.deployment.outputs.page_url }}" "20260825-guarantee-v37-1"

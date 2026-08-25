@@ -28,6 +28,7 @@ const required = [
   "business-pace.js",
   "business-fullscore-supplement.js",
   "business-fullscore-bank.js",
+  "guarantee-association-drill.js",
   "practical-question-bank.js",
   "calculation-drill.js",
   "official-exam-data.js",
@@ -72,6 +73,8 @@ const required = [
   "Audit-TakkenBusinessPace.js",
   "Audit-TakkenBusinessFullScoreSupplement.js",
   "Audit-TakkenBusinessFullScoreBank.js",
+  "Audit-TakkenGuaranteeAssociationDrill.js",
+  "Audit-TakkenGuaranteeAssociationDrillUi.cjs",
   "Audit-TakkenOfficialLawBaseline.js",
   "Audit-TakkenStateSync.js",
   "Audit-TakkenSubjectSprintBank.js",
@@ -95,11 +98,11 @@ const pagesWorkflow = text(".github/workflows/pages.yml");
 const ciWorkflow = text(".github/workflows/ci.yml");
 
 assert.match(index, /name="takken-runtime" content="public-static"/);
-assert.match(index, /manifest\.webmanifest\?v=20260825-quest-core-v36-1/);
-assert.match(index, /pwa-runtime\.js\?v=20260825-quest-core-v36-1/);
-assert.match(text("service-worker.js"), /const VERSION = "20260825-quest-core-v36-1"/);
-assert.match(manifest, /pwa-icon-192\.svg\?v=20260825-quest-core-v36-1/);
-assert.match(manifest, /pwa-icon-512\.svg\?v=20260825-quest-core-v36-1/);
+assert.match(index, /manifest\.webmanifest\?v=20260825-guarantee-v37-1/);
+assert.match(index, /pwa-runtime\.js\?v=20260825-guarantee-v37-1/);
+assert.match(text("service-worker.js"), /const VERSION = "20260825-guarantee-v37-1"/);
+assert.match(manifest, /pwa-icon-192\.svg\?v=20260825-guarantee-v37-1/);
+assert.match(manifest, /pwa-icon-512\.svg\?v=20260825-guarantee-v37-1/);
 assert.match(app, /const PUBLIC_STATIC_MODE/);
 assert.match(app, /function publicTodayQuest/);
 assert.match(app, /const DEFAULT_STUDY_SCOPE = "business"/);
@@ -136,7 +139,7 @@ assert.match(app, /各記述を1つずつ判定/);
 assert.match(text("styles.css"), /\.practical-statement-review-card/);
 assert.match(text("business-fullscore-bank.js"), /function sourceStatementExplanations/);
 assert.match(app, /const PRACTICAL_SESSION_SIZES = Object\.freeze\(\[4, 10, 20, 45\]\)/);
-assert.match(app, /const STATE_SCHEMA_VERSION = 10/);
+assert.match(app, /const STATE_SCHEMA_VERSION = 11/);
 assert.match(app, /const BUSINESS_FULLSCORE_EXPECTED_QUESTIONS = 134/);
 assert.match(app, /const OFFICIAL_EXAM_EVIDENCE_VERSION = 3/);
 assert.match(app, /const OFFICIAL_DAILY_DRILL_DEFINITIONS/);
@@ -213,29 +216,32 @@ assert.match(index, /id="businessMasteryPrimary"/);
 assert.match(index, /id="businessMasteryFull"/);
 assert.match(index, /id="businessKnockPanel"/);
 assert.match(index, /id="businessKnockStart"/);
+assert.match(index, /id="guaranteeSpecialCard"/);
+assert.match(index, /id="guaranteeSpecialStart"/);
 assert.match(index, /満点圏（アプリ内判定）/);
 assert.match(index, /公式20問シートを開く/);
 assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 第2分冊・権利関係を固める/);
 assert.match(index, /③ 法令・税その他へ進む/);
 assert.match(index, /④ 全分野を混ぜる/);
-assert.match(index, /styles\.css\?v=20260825-quest-core-v36-1/);
-assert.match(index, /subject-sprint-bank\.js\?v=20260825-quest-core-v36-1/);
-assert.match(index, /pass-readiness\.js\?v=20260825-quest-core-v36-1/);
-assert.match(index, /exam-current-year-2026\.js\?v=20260825-quest-core-v36-1/);
-assert.match(index, /official-topic-map\.js\?v=20260825-quest-core-v36-1/);
-assert.match(index, /business-mastery\.js\?v=20260825-quest-core-v36-1/);
-assert.match(index, /business-knock\.js\?v=20260825-quest-core-v36-1/);
-assert.match(index, /business-pace\.js\?v=20260825-quest-core-v36-1/);
-assert.match(index, /business-fullscore-supplement\.js\?v=20260825-quest-core-v36-1/);
-assert.match(index, /business-fullscore-bank\.js\?v=20260825-quest-core-v36-1/);
-assert.match(index, /practical-question-bank\.js\?v=20260825-quest-core-v36-1/);
-assert.match(index, /calculation-drill\.js\?v=20260825-quest-core-v36-1/);
-assert.match(index, /app\.js\?v=20260825-quest-core-v36-1/);
-assert.match(index, /save-store\.js\?v=20260825-quest-core-v36-1/);
-assert.match(index, /official-exam-data\.js\?v=20260825-quest-core-v36-1/);
-assert.match(index, /official-law-baseline\.js\?v=20260825-quest-core-v36-1/);
-assert.match(index, /state-sync\.js\?v=20260825-quest-core-v36-1/);
+assert.match(index, /styles\.css\?v=20260825-guarantee-v37-1/);
+assert.match(index, /subject-sprint-bank\.js\?v=20260825-guarantee-v37-1/);
+assert.match(index, /pass-readiness\.js\?v=20260825-guarantee-v37-1/);
+assert.match(index, /exam-current-year-2026\.js\?v=20260825-guarantee-v37-1/);
+assert.match(index, /official-topic-map\.js\?v=20260825-guarantee-v37-1/);
+assert.match(index, /business-mastery\.js\?v=20260825-guarantee-v37-1/);
+assert.match(index, /business-knock\.js\?v=20260825-guarantee-v37-1/);
+assert.match(index, /business-pace\.js\?v=20260825-guarantee-v37-1/);
+assert.match(index, /business-fullscore-supplement\.js\?v=20260825-guarantee-v37-1/);
+assert.match(index, /business-fullscore-bank\.js\?v=20260825-guarantee-v37-1/);
+assert.match(index, /guarantee-association-drill\.js\?v=20260825-guarantee-v37-1/);
+assert.match(index, /practical-question-bank\.js\?v=20260825-guarantee-v37-1/);
+assert.match(index, /calculation-drill\.js\?v=20260825-guarantee-v37-1/);
+assert.match(index, /app\.js\?v=20260825-guarantee-v37-1/);
+assert.match(index, /save-store\.js\?v=20260825-guarantee-v37-1/);
+assert.match(index, /official-exam-data\.js\?v=20260825-guarantee-v37-1/);
+assert.match(index, /official-law-baseline\.js\?v=20260825-guarantee-v37-1/);
+assert.match(index, /state-sync\.js\?v=20260825-guarantee-v37-1/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
 assert.doesNotMatch(index, /understanding-system\.js/);
@@ -293,7 +299,7 @@ assert.match(pagesWorkflow, /node Audit-TakkenOfficialTopicMap\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-browser\.cjs/);
 assert.match(pagesWorkflow, /playwright@1\.62\.1/);
-assert.match(pagesWorkflow, /20260825-quest-core-v36-1/);
+assert.match(pagesWorkflow, /20260825-guarantee-v37-1/);
 assert.match(pagesWorkflow, /node scripts\/assemble-site\.mjs/);
 assert.match(ciWorkflow, /node Audit-TakkenPwaOffline\.cjs/);
 assert.match(ciWorkflow, /node Audit-TakkenPwaUpgrade\.cjs/);

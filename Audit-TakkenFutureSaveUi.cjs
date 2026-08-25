@@ -54,7 +54,7 @@ function startStaticServer(root) {
       const current = JSON.parse(localStorage.getItem(key));
       const future = {
         ...current,
-        stateSchemaVersion: 11,
+        stateSchemaVersion: 12,
         futureSchemaSentinel: { retained: true, bytes: "do-not-downgrade" }
       };
       const raw = JSON.stringify(future);
@@ -81,10 +81,10 @@ function startStaticServer(root) {
       };
     }, fixture);
     assert.equal(result.rawUnchanged, true);
-    assert.equal(result.storedSchema, 11);
+    assert.equal(result.storedSchema, 12);
     assert.deepEqual(result.sentinel, { retained: true, bytes: "do-not-downgrade" });
     assert.equal(result.bodyReadOnly, true);
-    assert.match(`${result.protection} ${result.transfer}`, /新しい保存形式v11|読み取り専用/);
+    assert.match(`${result.protection} ${result.transfer}`, /新しい保存形式v12|読み取り専用/);
     assert.ok(result.controls > 20);
     assert.deepEqual(result.enabledControlIds, [], `enabled read-only controls: ${result.enabledControlIds.join(", ")}`);
     assert.equal(result.exportDisabled, true);
@@ -93,6 +93,122 @@ function startStaticServer(root) {
     await page.keyboard.press("1");
     await page.waitForTimeout(50);
     assert.equal(await page.evaluate((key) => localStorage.getItem(key), fixture.key), fixture.raw);
+
+    // Keep this runtime open, then emulate a newer tab writing a future
+    // schema. The same page receives no storage event for its own write, so
+    // the next normal save action must fail closed before it can downcast.
+    const stalePage = await context.newPage();
+    stalePage.on("pageerror", (error) => errors.push(error.message));
+    stalePage.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+    const staleUrl = new URL(local.baseUrl);
+    staleUrl.searchParams.set("review", "future-save-stale-open-tab");
+    await stalePage.goto(staleUrl.toString(), { waitUntil: "networkidle" });
+    const staleFixture = await stalePage.evaluate(() => {
+      const key = Object.keys(localStorage).find((candidate) =>
+        candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+        candidate.includes("future-save-stale-open") &&
+        !candidate.includes("backup") && !candidate.includes("previous") &&
+        !candidate.includes("corrupt") && !candidate.endsWith("event-outbox")
+      );
+      const future = {
+        ...JSON.parse(localStorage.getItem(key)),
+        stateSchemaVersion: 12,
+        futureSchemaSentinel: { retained: true, bytes: "stale-open-tab-must-not-downcast" }
+      };
+      const raw = JSON.stringify(future);
+      localStorage.setItem(key, raw);
+      return { key, raw };
+    });
+    await stalePage.locator("#markButton").click();
+    await stalePage.waitForTimeout(50);
+    const stale = await stalePage.evaluate(({ key, raw }) => ({
+      rawUnchanged: localStorage.getItem(key) === raw,
+      storedSchema: JSON.parse(localStorage.getItem(key)).stateSchemaVersion,
+      sentinel: JSON.parse(localStorage.getItem(key)).futureSchemaSentinel,
+      readOnly: document.body.classList.contains("is-save-read-only"),
+      notice: `${document.querySelector("#saveProtectionStatus")?.textContent || ""} ${document.querySelector("#saveTransferStatus")?.textContent || ""}`,
+      enabledControls: [...document.querySelectorAll("button, input, select, textarea")]
+        .filter((control) => !control.closest("#pwaUpdateNotice") && !control.disabled)
+        .map((control) => control.id || control.outerHTML.slice(0, 80))
+    }), staleFixture);
+    assert.equal(stale.rawUnchanged, true, "stale tab must not rewrite the future-schema primary raw");
+    assert.equal(stale.storedSchema, 12);
+    assert.deepEqual(stale.sentinel, { retained: true, bytes: "stale-open-tab-must-not-downcast" });
+    assert.equal(stale.readOnly, true);
+    assert.match(stale.notice, /別タブで新しい保存形式v12|読み取り専用/);
+    assert.deepEqual(stale.enabledControls, []);
+    await stalePage.close();
+
+    const recoveryFromV36Page = await context.newPage();
+    recoveryFromV36Page.on("pageerror", (error) => errors.push(error.message));
+    recoveryFromV36Page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+    const recoveryFromV36Url = new URL(local.baseUrl);
+    recoveryFromV36Url.searchParams.set("review", "v36-guarantee-recovery");
+    await recoveryFromV36Page.goto(recoveryFromV36Url.toString(), { waitUntil: "networkidle" });
+    await recoveryFromV36Page.locator("#guaranteeSpecialStart").click();
+    await recoveryFromV36Page.locator(".practical-drill-choice").first().click();
+    const v36DowncastFixture = await recoveryFromV36Page.evaluate(() => {
+      const key = Object.keys(localStorage).find((candidate) =>
+        candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+        candidate.includes("v36-guarantee-recovery")
+      );
+      const current = JSON.parse(localStorage.getItem(key));
+      const practical = current.practicalDrill;
+      const downcast = {
+        ...current,
+        stateSchemaVersion: 10,
+        // This mirrors the v36 practical-drill normalizer: it does not know
+        // ga001..ga020 or the special bank/session, but preserves unknown
+        // top-level fields through its state spread.
+        practicalDrill: {
+          ...practical,
+          bankId: "legacy-practical",
+          bankVersion: 1,
+          planMode: "legacy",
+          stage: "idle",
+          scope: "all",
+          unitId: "",
+          sessionIds: [],
+          queue: [],
+          position: 0,
+          currentAttempt: null,
+          retryIds: [],
+          history: Object.fromEntries(Object.entries(practical.history || {})
+            .filter(([id]) => !/^ga\d{3}$/.test(id)))
+        }
+      };
+      const raw = JSON.stringify(downcast);
+      localStorage.setItem(key, raw);
+      return {
+        key,
+        raw,
+        recovery: current.guaranteeAssociationRecovery,
+        session: practical,
+        history: Object.fromEntries(Object.entries(practical.history || {})
+          .filter(([id]) => /^ga\d{3}$/.test(id)))
+      };
+    });
+    await recoveryFromV36Page.reload({ waitUntil: "networkidle" });
+    const recoveredFromV36 = await recoveryFromV36Page.evaluate(({ key }) => {
+      const state = JSON.parse(localStorage.getItem(key));
+      return {
+        schema: state.stateSchemaVersion,
+        recovery: state.guaranteeAssociationRecovery,
+        practical: state.practicalDrill
+      };
+    }, v36DowncastFixture);
+    assert.equal(recoveredFromV36.schema, 11);
+    assert.equal(recoveredFromV36.practical.bankId, v36DowncastFixture.session.bankId);
+    assert.equal(recoveredFromV36.practical.stage, v36DowncastFixture.session.stage);
+    assert.deepEqual(recoveredFromV36.practical.queue, v36DowncastFixture.session.queue);
+    assert.equal(recoveredFromV36.practical.position, v36DowncastFixture.session.position);
+    assert.deepEqual(recoveredFromV36.practical.currentAttempt, v36DowncastFixture.session.currentAttempt);
+    assert.deepEqual(
+      Object.fromEntries(Object.entries(recoveredFromV36.practical.history || {}).filter(([id]) => /^ga\d{3}$/.test(id))),
+      v36DowncastFixture.history
+    );
+    assert.deepEqual(recoveredFromV36.recovery.history, v36DowncastFixture.history);
+    await recoveryFromV36Page.close();
 
     const recoveryPage = await context.newPage();
     recoveryPage.on("pageerror", (error) => errors.push(error.message));
@@ -105,7 +221,7 @@ function startStaticServer(root) {
       const current = JSON.parse(localStorage.getItem(key));
       const previous = {
         ...current,
-        stateSchemaVersion: 11,
+        stateSchemaVersion: 12,
         futureSchemaSentinel: { retained: true, bytes: "future-previous-must-survive" }
       };
       const previousRaw = JSON.stringify(previous);
@@ -135,10 +251,75 @@ function startStaticServer(root) {
     assert.equal(recovery.previousUnchanged, true);
     assert.equal(recovery.corruptCopyRetained, true);
     assert.equal(recovery.readOnly, true);
-    assert.match(recovery.notice, /直前セーブは新しい保存形式v11|読み取り専用/);
+    assert.match(recovery.notice, /直前セーブは新しい保存形式v12|読み取り専用/);
     assert.deepEqual(recovery.enabledControls, []);
     assert.equal(recovery.overflow, 0);
     await recoveryPage.close();
+
+    const migrationPage = await context.newPage();
+    migrationPage.on("pageerror", (error) => errors.push(error.message));
+    migrationPage.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+    const migrationUrl = new URL(local.baseUrl);
+    migrationUrl.searchParams.set("review", "v36-to-v37-save-upgrade");
+    await migrationPage.goto(migrationUrl.toString(), { waitUntil: "networkidle" });
+    const migrationFixture = await migrationPage.evaluate(() => {
+      const key = "takken-battle-study-clean-v2-hard-review-v36-to-v37-save-upgrade";
+      const current = JSON.parse(localStorage.getItem(key));
+      const questionId = window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS[0].id;
+      const legacy = {
+        ...current,
+        stateSchemaVersion: 10,
+        practicalDrill: {
+          ...current.practicalDrill,
+          bankId: "business-fullscore",
+          bankVersion: 1,
+          history: {
+            ...(current.practicalDrill?.history || {}),
+            [questionId]: {
+              attempts: 3, correct: 2, wrong: 1, uncertain: 1,
+              lastSelected: 2, lastCorrect: false, lastConfidence: "wrong",
+              lastAnsweredAt: "2026-08-25T10:00:00+09:00",
+              mistakeTags: { timing: 1 }, lastMistakeTags: ["timing"]
+            }
+          }
+        }
+      };
+      const raw = JSON.stringify(legacy);
+      localStorage.setItem(key, raw);
+      return { key, raw, questionId };
+    });
+    await migrationPage.reload({ waitUntil: "networkidle" });
+    const migration = await migrationPage.evaluate(({ key, questionId }) => {
+      const state = JSON.parse(localStorage.getItem(key));
+      const backup = localStorage.getItem(`${key}-before-upgrade-v10-to-v11`);
+      return {
+        schema: state.stateSchemaVersion,
+        migratedHistory: state.practicalDrill?.history?.[questionId],
+        backup,
+        notice: document.querySelector("#saveTransferStatus")?.textContent || ""
+      };
+    }, migrationFixture);
+    assert.equal(migration.schema, 11);
+    assert.deepEqual(migration.migratedHistory && {
+      attempts: migration.migratedHistory.attempts,
+      correct: migration.migratedHistory.correct,
+      wrong: migration.migratedHistory.wrong,
+      uncertain: migration.migratedHistory.uncertain,
+      lastSelected: migration.migratedHistory.lastSelected,
+      lastCorrect: migration.migratedHistory.lastCorrect,
+      lastConfidence: migration.migratedHistory.lastConfidence,
+      lastAnsweredAt: migration.migratedHistory.lastAnsweredAt,
+      mistakeTags: migration.migratedHistory.mistakeTags,
+      lastMistakeTags: migration.migratedHistory.lastMistakeTags
+    }, {
+      attempts: 3, correct: 2, wrong: 1, uncertain: 1,
+      lastSelected: 2, lastCorrect: false, lastConfidence: "wrong",
+      lastAnsweredAt: "2026-08-25T10:00:00+09:00",
+      mistakeTags: { timing: 1 }, lastMistakeTags: ["timing"]
+    });
+    assert.equal(migration.backup, migrationFixture.raw, "v36 state must be retained before the v37 schema upgrade");
+    assert.match(migration.notice, /更新前のセーブを自動退避してから引き継ぎました/);
+    await migrationPage.close();
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({
       status: "ok",
@@ -146,6 +327,7 @@ function startStaticServer(root) {
       rawUnchanged: true,
       controlsDisabled: result.controls,
       corruptPrimaryFuturePreviousReadOnly: true,
+      v36ToV37HistoryRetained: true,
       overflow: 0
     }));
   } finally {

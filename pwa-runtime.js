@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20260825-quest-core-v36-1";
+  const VERSION = "20260825-guarantee-v37-1";
   const BANNER_ID = "pwaUpdateNotice";
   let reloadRequested = false;
 
