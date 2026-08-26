@@ -694,14 +694,14 @@ const HARD_QUESTIONS = [
     format: "個数問題",
     text: "建物の貸借の媒介における重要事項説明事項に関する次の記述のうち、正しいものはいくつあるか。\nア 台所、浴室、便所その他設備の整備状況は、説明事項となる。\nイ 敷金その他いかなる名義をもって授受されるかを問わず、金銭の額及び目的は説明事項となる。\nウ 契約期間及び契約の更新に関する事項は、説明事項となる。\nエ 契約終了時における建物の明渡しに関する事項は、説明事項となる。",
     choices: ["一つ", "二つ", "三つ", "四つ"],
-    answer: 3,
-    explain: "貸借では設備、金銭、期間・更新、契約終了時の明渡しを押さえる。売買の登記論点とは分ける。",
-    trap: "売買の37条論点を貸借35条へ持ち込まず、貸借固有の説明事項を拾う。",
+    answer: 2,
+    explain: "建物貸借では設備、授受金銭の額・目的、契約期間・更新を説明する。契約終了時の明渡し一般が当然に35条の列挙事項となるわけではない。",
+    trap: "敷金精算や宅地上の建物取壊しと、建物貸借の明渡し一般を混同しない。",
     choiceExplanations: [
       "ア ○ 建物貸借の設備状況は説明事項。",
       "イ ○ 敷金等の金銭は額と目的を見る。",
       "ウ ○ 契約期間・更新も説明事項。",
-      "エ ○ 契約終了時の明渡しに関する事項も貸借の説明事項。"
+      "エ × 明渡し一般は、施行規則16条の4の3が列挙する建物貸借の法定説明事項ではない。"
     ]
   },
   {
@@ -981,7 +981,7 @@ const HARD_QUESTIONS = [
     id: "q16",
     tag: "報酬",
     format: "単一選択",
-    text: "売買代金が400万円を超える宅地建物の売買を媒介した場合、媒介報酬の税抜上限を求める速算式として最も適切なものはどれか。",
+    text: "低廉な空家等の特例を適用しない通常の売買媒介で、売買代金が400万円を超える宅地建物を扱った場合、媒介報酬の税抜上限を求める速算式として最も適切なものはどれか。",
     choices: [
       "代金額 × 3% + 6万円",
       "代金額 × 4% + 2万円",
@@ -989,10 +989,10 @@ const HARD_QUESTIONS = [
       "代金額 × 10% + 6万円"
     ],
     answer: 0,
-    explain: "400万円超の売買媒介は、税抜上限を3%+6万円で速算できる。",
-    trap: "200万円以下、200万円超400万円以下、400万円超の段階計算が速算式の根拠。",
+    explain: "通常の売買媒介では、400万円超の税抜上限を3%+6万円で速算できる。800万円以下の低廉な空家等には別の特例があるため、本問は特例を適用しない前提。",
+    trap: "通常報酬の段階計算と、800万円以下の低廉な空家等に使える特例を混同しない。",
     choiceExplanations: [
-      "1 ○ 400万円超の速算式。",
+      "1 ○ 特例を適用しない通常報酬における400万円超の速算式。",
       "2 × 4%+2万円ではない。",
       "3 × 5%は低額部分の率。",
       "4 × 10%は上限を大きく超える。"
@@ -1002,15 +1002,15 @@ const HARD_QUESTIONS = [
     id: "q66",
     tag: "報酬",
     format: "単一選択",
-    text: "売買代金300万円の宅地を媒介した場合、一方の依頼者から受けることができる媒介報酬の税抜上限として最も適切なものはどれか。",
+    text: "低廉な空家等の特例を適用しない通常の売買媒介で、売買代金300万円の宅地を扱った場合、一方の依頼者から受ける媒介報酬の税抜上限として最も適切なものはどれか。",
     choices: ["10万円", "12万円", "14万円", "15万円"],
     answer: 2,
-    explain: "200万円以下部分5%で10万円、200万円超400万円以下部分100万円の4%で4万円。合計14万円。",
-    trap: "300万円に3%+6万円を機械的に当てない。400万円以下は段階計算。",
+    explain: "特例を適用しない通常報酬は、200万円以下部分5%で10万円、200万円超400万円以下部分100万円の4%で4万円、合計14万円。",
+    trap: "通常報酬の段階計算と、800万円以下の低廉な空家等に使える税抜30万円の特例上限を混同しない。",
     choiceExplanations: [
       "1 × 200万円以下部分だけで止まっている。",
       "2 × 300万円全体に4%をかけた誤り。",
-      "3 ○ 10万円+4万円で14万円。",
+      "3 ○ 特例を適用しない通常報酬は10万円+4万円で14万円。",
       "4 × 300万円全体に5%をかけた誤り。"
     ]
   },
@@ -1034,15 +1034,15 @@ const HARD_QUESTIONS = [
     id: "q68",
     tag: "報酬",
     format: "個数問題",
-    text: "居住用建物の貸借の媒介報酬に関する次の記述のうち、正しいものはいくつあるか。\nア 依頼者双方から受ける報酬の合計額は、原則として借賃1か月分以内である。\nイ 一方の依頼者から受ける報酬は、承諾の有無にかかわらず常に借賃1か月分以内であればよい。\nウ 依頼者の承諾がある場合でも、一方から借賃1か月分相当額を受けることは一切できない。\nエ 売買の媒介報酬の速算式を、そのまま居住用建物の貸借にも用いる。",
+    text: "課税事業者である宅建業者の、居住用建物の貸借の媒介報酬に関する次の記述のうち、正しいものはいくつあるか。\nア 依頼者双方から受ける税込報酬の合計額は、借賃（税抜）1か月分の1.1倍以内である。\nイ 一方の依頼者から受ける税込報酬は、承諾の有無にかかわらず常に借賃1か月分の1.1倍以内であればよい。\nウ 依頼を受ける際に依頼者の承諾を得た場合でも、一方から借賃1か月分の1.1倍相当額を受けることは一切できない。\nエ 売買の媒介報酬の速算式を、そのまま居住用建物の貸借にも用いる。",
     choices: ["一つ", "二つ", "三つ", "四つ"],
     answer: 0,
-    explain: "居住用貸借は合計1か月、原則各2分の1。承諾がある場合の例外も意識する。",
-    trap: "売買報酬式を貸借へ流用しない。",
+    explain: "課税事業者の居住用貸借は、税込合計で借賃（税抜）1か月分の1.1倍以内。原則として一方からは0.55倍以内だが、依頼を受ける際の承諾があれば例外がある。",
+    trap: "税込1.1倍と原則各0.55倍を区別し、売買報酬式を貸借へ流用しない。",
     choiceExplanations: [
-      "ア ○ 合計1か月分以内。",
-      "イ × 原則は各2分の1か月分以内で、承諾の扱いも確認する。",
-      "ウ × 承諾がある場合の例外がある。",
+      "ア ○ 課税事業者の税込合計上限は借賃（税抜）1か月分の1.1倍。",
+      "イ × 承諾がなければ、一方から受ける税込報酬は原則0.55倍以内。",
+      "ウ × 依頼を受ける際の承諾があれば、一方から1.1倍まで受けられる。",
       "エ × 売買の速算式は使わない。"
     ]
   },
@@ -1609,15 +1609,15 @@ const HARD_QUESTIONS = [
     id: "q111",
     tag: "報酬",
     format: "単一選択",
-    text: "売買代金200万円の宅地を媒介した場合、一方の依頼者から受けることができる媒介報酬の税抜上限として最も適切なものはどれか。",
+    text: "低廉な空家等の特例を適用しない通常の売買媒介で、売買代金200万円の宅地を扱った場合、一方の依頼者から受ける媒介報酬の税抜上限として最も適切なものはどれか。",
     choices: ["6万円", "8万円", "10万円", "12万円"],
     answer: 2,
-    explain: "200万円以下部分は5%。200万円×5%=10万円。400万円超の3%+6万円を機械的に使わない。",
-    trap: "200万円以下、200万円超400万円以下、400万円超で計算帯を分ける。",
+    explain: "特例を適用しない通常報酬では、200万円以下部分は5%。200万円×5%=10万円。",
+    trap: "通常報酬の計算帯と、800万円以下の低廉な空家等に使える税抜30万円の特例上限を混同しない。",
     choiceExplanations: [
       "1 × 3%だけで計算している。",
       "2 × 4%で計算している。",
-      "3 ○ 200万円×5%=10万円。",
+      "3 ○ 特例を適用しない通常報酬は200万円×5%=10万円。",
       "4 × 3%+6万円を誤用している。"
     ]
   },
@@ -2039,6 +2039,8 @@ const HARD_QUESTIONS = [
 ];
 
 const LEGACY_BUSINESS_SOURCE_URL = "https://laws.e-gov.go.jp/law/327AC1000000176?occasion_date=20260401";
+const LEGACY_BUSINESS_REGULATION_URL = "https://laws.e-gov.go.jp/law/332M50004000012?occasion_date=20260401";
+const LEGACY_BUSINESS_DECREE_URL = "https://laws.e-gov.go.jp/law/339CO0000000383?occasion_date=20260401";
 const LEGACY_REMUNERATION_NOTICE_URL = "https://www.mlit.go.jp/totikensangyo/const/content/001750229.pdf";
 const LEGACY_BUSINESS_SOURCE_LOCATOR_BY_TAG = Object.freeze({
   "免許": "宅地建物取引業法2条〜12条（免許・届出・免許換え）",
@@ -2059,21 +2061,107 @@ const LEGACY_BUSINESS_SOURCE_LOCATOR_BY_TAG = Object.freeze({
   "監督処分": "宅地建物取引業法65条〜72条（監督・罰則等）"
 });
 
+const legacySourceOverride = (sourceRef, sourceLocator, sourceUrls) => Object.freeze({
+  sourceRef,
+  sourceLocator,
+  sourceUrls: Object.freeze(sourceUrls)
+});
+const LEGACY_BUSINESS_SOURCE_OVERRIDE_BY_ID = Object.freeze(Object.fromEntries([
+  ...["q37", "q85", "q122", "q136"].map((id) => [id, legacySourceOverride(
+    "宅地建物取引業法／宅地建物取引業法施行規則",
+    "宅地建物取引業法3条／同法施行規則3条（更新申請は満了90日前から30日前）",
+    [LEGACY_BUSINESS_SOURCE_URL, LEGACY_BUSINESS_REGULATION_URL]
+  )]),
+  ...["q6", "q41", "q91"].map((id) => [id, legacySourceOverride(
+    "宅地建物取引業法／宅地建物取引業法施行規則",
+    "宅地建物取引業法31条の3／同法施行規則15条の5の2・15条の5の3（設置場所・5分の1・1名以上）",
+    [LEGACY_BUSINESS_SOURCE_URL, LEGACY_BUSINESS_REGULATION_URL]
+  )]),
+  ...["q10", "q94"].map((id) => [id, legacySourceOverride(
+    "宅地建物取引業法／宅地建物取引業法施行規則",
+    "宅地建物取引業法50条／同法施行規則19条1項・2項（標識の掲示場所・様式）",
+    [LEGACY_BUSINESS_SOURCE_URL, LEGACY_BUSINESS_REGULATION_URL]
+  )]),
+  ...["q46", "q95"].map((id) => [id, legacySourceOverride(
+    "宅地建物取引業法／宅地建物取引業法施行規則",
+    "宅地建物取引業法31条の3・50条／同法施行規則15条の5の2・15条の5の3・19条（案内所等）",
+    [LEGACY_BUSINESS_SOURCE_URL, LEGACY_BUSINESS_REGULATION_URL]
+  )]),
+  ["q47", legacySourceOverride(
+    "宅地建物取引業法／宅地建物取引業法施行規則",
+    "宅地建物取引業法50条2項／同法施行規則19条3項（業務開始10日前までの届出）",
+    [LEGACY_BUSINESS_SOURCE_URL, LEGACY_BUSINESS_REGULATION_URL]
+  )],
+  ...["q9", "q88"].map((id) => [id, legacySourceOverride(
+    "宅地建物取引業法／宅地建物取引業法施行規則",
+    "宅地建物取引業法18条2項・20条・22条の2／同法施行規則14条の2の2・14条の7・14条の13（登録事項・変更登録・書換え）",
+    [LEGACY_BUSINESS_SOURCE_URL, LEGACY_BUSINESS_REGULATION_URL]
+  )]),
+  ["q52", legacySourceOverride(
+    "宅地建物取引業法／宅地建物取引業法施行規則",
+    "宅地建物取引業法35条1項7号・14号／同法施行規則16条の4の3（建物貸借の列挙事項）",
+    [LEGACY_BUSINESS_SOURCE_URL, LEGACY_BUSINESS_REGULATION_URL]
+  )],
+  ["q99", legacySourceOverride(
+    "宅地建物取引業法／宅地建物取引業法施行規則",
+    "宅地建物取引業法35条1項6号／同法施行規則16条の2第2・3・6号（共用部分・用途制限・修繕積立金）",
+    [LEGACY_BUSINESS_SOURCE_URL, LEGACY_BUSINESS_REGULATION_URL]
+  )],
+  ...["q14", "q15", "q62", "q104"].map((id) => [id, legacySourceOverride(
+    "宅地建物取引業法／宅地建物取引業法施行規則",
+    "宅地建物取引業法34条の2第5項／同法施行規則15条の10（指定流通機構への7日・5日、休業日不算入）",
+    [LEGACY_BUSINESS_SOURCE_URL, LEGACY_BUSINESS_REGULATION_URL]
+  )]),
+  ["q17", legacySourceOverride(
+    "宅地建物取引業法／宅地建物取引業法施行令",
+    "宅地建物取引業法25条2項・64条の9第1項／同法施行令2条の4・7条（営業保証金・分担金額）",
+    [LEGACY_BUSINESS_SOURCE_URL, LEGACY_BUSINESS_DECREE_URL]
+  )],
+  ...["q71", "q113"].map((id) => [id, legacySourceOverride(
+    "宅地建物取引業法／宅地建物取引業法施行令",
+    "宅地建物取引業法64条の9第1項／同法施行令7条（弁済業務保証金分担金額）",
+    [LEGACY_BUSINESS_SOURCE_URL, LEGACY_BUSINESS_DECREE_URL]
+  )]),
+  ...["q16", "q66", "q111"].map((id) => [id, legacySourceOverride(
+    "宅地建物取引業法／国土交通省・報酬額告示",
+    "宅地建物取引業法46条1項／昭和45年建設省告示1552号第2・第7（通常の売買媒介報酬・低廉な空家等の特例）",
+    [LEGACY_BUSINESS_SOURCE_URL, LEGACY_REMUNERATION_NOTICE_URL]
+  )]),
+  ...["q67", "q108"].map((id) => [id, legacySourceOverride(
+    "宅地建物取引業法／国土交通省・報酬額告示",
+    "宅地建物取引業法46条1項／昭和45年建設省告示1552号第2（売買媒介報酬）",
+    [LEGACY_BUSINESS_SOURCE_URL, LEGACY_REMUNERATION_NOTICE_URL]
+  )]),
+  ...["q68", "q110"].map((id) => [id, legacySourceOverride(
+    "宅地建物取引業法／国土交通省・報酬額告示",
+    "宅地建物取引業法46条1項／昭和45年建設省告示1552号第4（居住用建物の貸借媒介報酬）",
+    [LEGACY_BUSINESS_SOURCE_URL, LEGACY_REMUNERATION_NOTICE_URL]
+  )]),
+  ...["q69", "q109"].map((id) => [id, legacySourceOverride(
+    "宅地建物取引業法／国土交通省・報酬額告示",
+    "宅地建物取引業法46条1項／昭和45年建設省告示1552号第3・第5（売買・貸借の代理報酬）",
+    [LEGACY_BUSINESS_SOURCE_URL, LEGACY_REMUNERATION_NOTICE_URL]
+  )]),
+  ...["q70"].map((id) => [id, legacySourceOverride(
+    "宅地建物取引業法／国土交通省・報酬額告示",
+    "宅地建物取引業法46条1項／昭和45年建設省告示1552号第2〜第7（現行報酬額告示）",
+    [LEGACY_BUSINESS_SOURCE_URL, LEGACY_REMUNERATION_NOTICE_URL]
+  )])
+]));
+
 window.TAKKEN_QUESTIONS = Object.fromEntries(
   HARD_QUESTIONS.map((question) => {
     const { id, ...body } = question;
-    const isRemunerationQuestion = question.tag === "報酬";
+    const sourceOverride = LEGACY_BUSINESS_SOURCE_OVERRIDE_BY_ID[id];
+    const sourceUrls = sourceOverride?.sourceUrls || [LEGACY_BUSINESS_SOURCE_URL];
     return [id, {
       id,
       level: "本試験寄せ",
-      sourceRef: isRemunerationQuestion
-        ? "宅地建物取引業法／国土交通省・報酬額告示"
-        : "宅地建物取引業法",
-      sourceLocator: LEGACY_BUSINESS_SOURCE_LOCATOR_BY_TAG[question.tag] || "宅地建物取引業法（宅建業法論点）",
-      sourceUrl: LEGACY_BUSINESS_SOURCE_URL,
-      sourceUrls: isRemunerationQuestion
-        ? [LEGACY_BUSINESS_SOURCE_URL, LEGACY_REMUNERATION_NOTICE_URL]
-        : [LEGACY_BUSINESS_SOURCE_URL],
+      sourceRef: sourceOverride?.sourceRef || "宅地建物取引業法",
+      sourceLocator: sourceOverride?.sourceLocator ||
+        LEGACY_BUSINESS_SOURCE_LOCATOR_BY_TAG[question.tag] || "宅地建物取引業法（宅建業法論点）",
+      sourceUrl: sourceUrls[0],
+      sourceUrls,
       legalBaseline: "2026-04-01",
       verifiedAt: "2026-08-26",
       ...body
