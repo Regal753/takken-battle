@@ -210,6 +210,89 @@ function startStaticServer(root) {
     assert.deepEqual(recoveredFromV36.recovery.history, v36DowncastFixture.history);
     await recoveryFromV36Page.close();
 
+    const recoveryFromV11Page = await context.newPage();
+    recoveryFromV11Page.on("pageerror", (error) => errors.push(error.message));
+    recoveryFromV11Page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+    const recoveryFromV11Url = new URL(local.baseUrl);
+    recoveryFromV11Url.searchParams.set("review", "v11-guarantee-live-wins");
+    await recoveryFromV11Page.goto(recoveryFromV11Url.toString(), { waitUntil: "networkidle" });
+    await recoveryFromV11Page.locator("#guaranteeSpecialStart").click();
+    const v11Fixture = await recoveryFromV11Page.evaluate(() => {
+      const key = Object.keys(localStorage).find((candidate) =>
+        candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+        candidate.includes("v11-guarantee-live-wins")
+      );
+      const current = JSON.parse(localStorage.getItem(key));
+      const activeSession = current.practicalDrill;
+      const questionId = activeSession.queue[activeSession.position];
+      const liveHistory = {
+        attempts: 4, correct: 4, wrong: 0, uncertain: 0,
+        lastSelected: 1, lastCorrect: true, lastConfidence: "confident",
+        lastAnsweredAt: "2026-08-26T06:30:00+09:00",
+        mistakeTags: {}, lastMistakeTags: []
+      };
+      const staleRecoveryHistory = {
+        attempts: 1, correct: 0, wrong: 1, uncertain: 0,
+        lastSelected: 0, lastCorrect: false, lastConfidence: "wrong",
+        lastAnsweredAt: "2026-08-25T06:30:00+09:00",
+        mistakeTags: { timing: 1 }, lastMistakeTags: ["timing"]
+      };
+      const v11 = {
+        ...current,
+        stateSchemaVersion: 11,
+        practicalDrill: {
+          ...activeSession,
+          stage: "idle",
+          sessionIds: [], queue: [], position: 0, currentAttempt: null, retryIds: [],
+          history: { ...(activeSession.history || {}), [questionId]: liveHistory }
+        },
+        guaranteeAssociationRecovery: {
+          version: 1,
+          history: { [questionId]: staleRecoveryHistory },
+          activeSession: {
+            ...activeSession,
+            history: { [questionId]: staleRecoveryHistory }
+          }
+        }
+      };
+      localStorage.setItem(key, JSON.stringify(v11));
+      return { key, questionId, liveHistory };
+    });
+    await recoveryFromV11Page.reload({ waitUntil: "networkidle" });
+    const recoveredFromV11 = await recoveryFromV11Page.evaluate(({ key, questionId }) => {
+      const state = JSON.parse(localStorage.getItem(key));
+      return {
+        schema: state.stateSchemaVersion,
+        stage: state.practicalDrill?.stage,
+        queue: state.practicalDrill?.queue,
+        retryIds: state.practicalDrill?.retryIds,
+        history: state.practicalDrill?.history?.[questionId],
+        recovery: state.guaranteeAssociationRecovery
+      };
+    }, v11Fixture);
+    assert.equal(recoveredFromV11.schema, 12);
+    assert.equal(recoveredFromV11.stage, "idle", "v11 must not reopen a stale guarantee recovery session");
+    assert.deepEqual(recoveredFromV11.queue, []);
+    assert.deepEqual(recoveredFromV11.retryIds, []);
+    assert.deepEqual({
+      attempts: recoveredFromV11.history?.attempts,
+      correct: recoveredFromV11.history?.correct,
+      wrong: recoveredFromV11.history?.wrong,
+      lastCorrect: recoveredFromV11.history?.lastCorrect,
+      lastConfidence: recoveredFromV11.history?.lastConfidence,
+      lastAnsweredAt: recoveredFromV11.history?.lastAnsweredAt
+    }, {
+      attempts: 4,
+      correct: 4,
+      wrong: 0,
+      lastCorrect: true,
+      lastConfidence: "confident",
+      lastAnsweredAt: v11Fixture.liveHistory.lastAnsweredAt
+    });
+    assert.equal(recoveredFromV11.recovery.activeSession, null);
+    assert.equal(recoveredFromV11.recovery.history[v11Fixture.questionId].lastCorrect, true);
+    await recoveryFromV11Page.close();
+
     const recoveryPage = await context.newPage();
     recoveryPage.on("pageerror", (error) => errors.push(error.message));
     recoveryPage.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
@@ -328,6 +411,7 @@ function startStaticServer(root) {
       controlsDisabled: result.controls,
       corruptPrimaryFuturePreviousReadOnly: true,
       v36ToV37HistoryRetained: true,
+      v11LiveHistoryWinsRecovery: true,
       overflow: 0
     }));
   } finally {

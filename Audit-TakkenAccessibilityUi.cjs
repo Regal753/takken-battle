@@ -36,6 +36,33 @@ async function outlineWidth(locator) {
   return locator.evaluate((node) => parseFloat(getComputedStyle(node).outlineWidth) || 0);
 }
 
+async function undersizedTouchTargets(page) {
+  return page.evaluate(() => [...document.querySelectorAll([
+    "button",
+    "select",
+    "summary",
+    "textarea",
+    'input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"])',
+    "a[href]"
+  ].join(", "))]
+    .filter((node) => {
+      const rect = node.getBoundingClientRect();
+      const style = getComputedStyle(node);
+      return !node.disabled && rect.width > 0 && rect.height > 0 &&
+        style.display !== "none" && style.visibility !== "hidden" && style.pointerEvents !== "none";
+    })
+    .map((node) => {
+      const rect = node.getBoundingClientRect();
+      return {
+        target: node.id ? `#${node.id}` : `${node.tagName.toLowerCase()}.${[...node.classList].join(".")}`,
+        parent: node.parentElement?.id ? `#${node.parentElement.id}` : `${node.parentElement?.tagName?.toLowerCase() || ""}.${[...(node.parentElement?.classList || [])].join(".")}`,
+        text: String(node.textContent || "").replace(/\s+/g, " ").trim().slice(0, 42),
+        height: Math.round(rect.height * 10) / 10
+      };
+    })
+    .filter((item) => item.height < 44));
+}
+
 (async () => {
   const local = await serve(process.cwd());
   const browser = await chromium.launch(chromePath
@@ -64,6 +91,8 @@ async function outlineWidth(locator) {
     assert.ok(await outlineWidth(page.locator("#feedbackBox")) >= 3, "main feedback focus ring is too thin");
     assert.equal(await mainChoice.getAttribute("aria-pressed"), "true");
     assert.equal(await page.locator("#answerDock").isHidden(), false);
+    const postAnswerTouchTargets = await undersizedTouchTargets(page);
+    assert.deepEqual(postAnswerTouchTargets, [], `undersized 390px targets: ${JSON.stringify(postAnswerTouchTargets)}`);
 
     const panel = page.locator("#practicalDrillPanel");
     if (!(await panel.evaluate((node) => node.open))) await panel.locator(":scope > summary").click();
@@ -128,6 +157,8 @@ async function outlineWidth(locator) {
       { overflow: 0, dockHidden: true, hasDockClass: false, missionColumns: 2, missionTitleSize: 12, missionStatusSize: 10, saveSummaryLineCount: 1, saveSummaryWidth: undefined, saveSummaryWhiteSpace: "nowrap" }
     );
     assert.ok(mobile.saveSummaryWidth >= 40, `save summary label is too narrow: ${mobile.saveSummaryWidth}px`);
+    const mobileTouchTargets = await undersizedTouchTargets(page);
+    assert.deepEqual(mobileTouchTargets, [], `undersized 320px targets: ${JSON.stringify(mobileTouchTargets)}`);
 
     const calculationPage = await browser.newPage({ viewport: { width: 320, height: 700 }, timezoneId: "Asia/Tokyo" });
     calculationPage.on("pageerror", (error) => errors.push(error.message));
@@ -177,7 +208,7 @@ async function outlineWidth(locator) {
     assert.equal(await calculationPage.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth), 0);
     await calculationPage.close();
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: "ok", mainFocus: 3, practicalFocus: 3, calculationFocus: 3, saveTransferFocus: 3, targetHeight: confidenceSize.height, calculationTargetHeight: calculationConfidenceHeight, saveTransferTargetHeight: 44, overflow320: 0 }));
+    console.log(JSON.stringify({ status: "ok", mainFocus: 3, practicalFocus: 3, calculationFocus: 3, saveTransferFocus: 3, targetHeight: confidenceSize.height, calculationTargetHeight: calculationConfidenceHeight, saveTransferTargetHeight: 44, touchTargets390: 0, touchTargets320: 0, overflow320: 0 }));
   } finally {
     await browser.close();
     await local.close();
