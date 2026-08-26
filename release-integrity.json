@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20260826-quality-v38-1-87b6c40b9cf8",
-  "digest": "sha256:87b6c40b9cf807abe5f793b348e4d550f4c3702e2c55c83942c09caffdb3f78a",
+  "version": "20260826-quality-v39-3-38fe725d95ea",
+  "digest": "sha256:38fe725d95eaf636c7d03badd650d6d5a01cdeb4582264aaec361d6dfbfdfd37",
   "assetCount": 43,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "6153cd068209d358aa793ef1036d74554ea311ad57d96011132819185a6fad5d"
+      "sha256": "39d7765580e583230e1957e0328bbca0c278616a0a95583d5fdcf1a6c52bd61c"
     },
     {
       "path": "assets/battle/grassland-route.webp",
@@ -146,7 +146,7 @@
     },
     {
       "path": "question-bank.js",
-      "sha256": "da57d919f0082bc38751fec7d22f353ec85f48b9f1d533943e5c77a999dd4efb"
+      "sha256": "5ba022882a3100a4c0fb4c6cc1ba484820e24dc27e4d6148d61943cd0ee1efed"
     },
     {
       "path": "reward-system.js",
@@ -170,7 +170,7 @@
     },
     {
       "path": "styles.css",
-      "sha256": "6cf3035d05f40387a7105ad12c59218cee194da9e00d1516dbfe8c10ec26ef9e"
+      "sha256": "0199e66c59ac6af50dcf01c0c44fba67054b139fe579be03647d75efe6654d94"
     },
     {
       "path": "subject-sprint-bank.js",

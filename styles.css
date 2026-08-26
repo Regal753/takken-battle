@@ -8592,3 +8592,51 @@ button.mission-step:disabled {
 .pwa-update-notice button { flex: 0 0 auto; min-height: 44px; border: 1px solid #2450a4; border-radius: 8px; background: #2450a4; color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
 .pwa-update-notice button:focus-visible { outline: 3px solid #f2bd42; outline-offset: 3px; }
 @media (max-width: 420px) { .pwa-update-notice { align-items: stretch; flex-direction: column; } .pwa-update-notice button { width: 100%; } }
+
+/* Walking/mobile use: every visible semantic control keeps a 44px hit area. */
+@media (max-width: 520px) {
+  .ghost-button,
+  .mark-button,
+  .cut-check-button,
+  .mistake-cause-button,
+  .confidence-button,
+  .understanding-unknown,
+  .understanding-downgrade-button,
+  .radio-links a,
+  .brief-link,
+  .chapter-optional > summary,
+  .chapter-row,
+  .collection-drawer summary,
+  .public-mode-note > summary,
+  .official-manual-entry > summary,
+  .pass-roadmap > summary,
+  #themeDrawer > summary,
+  .progress-drawer-summary,
+  .mission-minutes input,
+  .mission-minutes button,
+  .official-exam-form input,
+  .official-exam-form select,
+  .official-exam-form button,
+  .official-exam-setup select,
+  .official-answer-navigation select,
+  .official-exam-setup > a,
+  .official-exam-setup > button,
+  .official-drill-launch .today-command-primary,
+  .official-drill-launch .today-command-secondary,
+  .official-answer-navigation > button,
+  .today-review-target > select,
+  .practical-drill-controls select {
+    min-height: 44px;
+  }
+
+  .business-mastery-law a,
+  .current-year-check-list a,
+  .official-source-link,
+  .mock-source-link,
+  .app-footer a {
+    display: inline-flex;
+    min-height: 44px;
+    padding-inline: 6px;
+    align-items: center;
+  }
+}

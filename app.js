@@ -258,6 +258,10 @@
   // v12 adds lastConfidenceAt. Keep this separate from v11 so a still-open
   // v37 tab cannot normalize away the ordering timestamp and save that loss.
   const STATE_SCHEMA_VERSION = 12;
+  // Only runtimes older than v11 could strip ga001..ga020 from practicalDrill.
+  // Do not tie this recovery boundary to the current schema: later schema
+  // upgrades must keep the live v11+ history authoritative over its snapshot.
+  const GUARANTEE_RECOVERY_REQUIRED_BEFORE_SCHEMA = 11;
   const DAILY_TARGET = 10;
   const FOUNDATION_UNIT_BATCH_MAX = 4;
   const SPRINT_MINUTES = 25;
@@ -2479,7 +2483,7 @@
       practicalInputWithGuaranteeRecovery(
         input?.practicalDrill,
         guaranteeRecovery,
-        schemaVersionOfState(input) < STATE_SCHEMA_VERSION
+        schemaVersionOfState(input) < GUARANTEE_RECOVERY_REQUIRED_BEFORE_SCHEMA
       )
     );
     next.guaranteeAssociationRecovery = createGuaranteeAssociationRecovery(next.practicalDrill);
@@ -10233,14 +10237,24 @@
 
   function renderBookReference(question) {
     elements.bookRef.replaceChildren();
-    if (question.sourceRef && question.sourceUrl) {
-      const link = document.createElement("a");
-      link.className = "official-source-link";
-      link.href = question.sourceUrl;
-      link.target = "_blank";
-      link.rel = "noopener noreferrer";
-      link.textContent = `公式根拠: ${question.sourceLocator || question.sourceRef}（基準日 ${question.legalBaseline}）`;
-      elements.bookRef.append(link);
+    const sourceUrls = Array.isArray(question.sourceUrls)
+      ? question.sourceUrls.map(String).filter(Boolean)
+      : question.sourceUrl ? [String(question.sourceUrl)] : [];
+    if (question.sourceRef && sourceUrls.length) {
+      const sourceLabels = String(question.sourceRef).split("／").filter(Boolean);
+      sourceUrls.forEach((url, index) => {
+        const link = document.createElement("a");
+        link.className = "official-source-link";
+        link.href = url;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        const label = sourceUrls.length > 1
+          ? sourceLabels[index] || sourceLabels[0] || question.sourceLocator
+          : question.sourceLocator || sourceLabels[0];
+        link.textContent = `公式根拠${sourceUrls.length > 1 ? index + 1 : ""}: ${label}（基準日 ${question.legalBaseline}）`;
+        if (index) elements.bookRef.append(document.createTextNode(" ／ "));
+        elements.bookRef.append(link);
+      });
       return;
     }
     elements.bookRef.textContent =
