@@ -89,13 +89,15 @@ async function seedAdvancedFoundation(page, storageId) {
 
 async function main() {
   const runtimeSource = fs.readFileSync(path.join(__dirname, "pass-readiness.js"), "utf8");
-  // Strict readiness is intentionally more than three high scores: form, day,
-  // current-law, and rolling-capacity evidence are all required.
-  if (!runtimeSource.includes("ids.size === 3") ||
-      !runtimeSource.includes("days.size === 3") ||
+  // Strict readiness is intentionally more than three high scores: eligible
+  // form class, day, repeat spacing, current-law, and capacity are required.
+  if (!runtimeSource.includes("MOCK_STABILITY_POLICY") ||
+      !runtimeSource.includes("ids.size >= requiredDistinctForms") ||
+      !runtimeSource.includes("days.size === requiredAttempts") ||
+      !runtimeSource.includes("repeatSpacingSatisfied") ||
       !runtimeSource.includes("currentLawGate.passed") ||
       !runtimeSource.includes("capacity.verified")) {
-    throw new Error("Strict three-form/current-law/capacity readiness guard is missing from runtime.");
+    throw new Error("Strict A/B/day/spacing/current-law/capacity readiness guard is missing from runtime.");
   }
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   try {
@@ -153,7 +155,7 @@ async function main() {
       !foundationEntry.action.includes("読後2問") ||
       foundationEntry.gate !== "単元 0 / 45" ||
       foundationEntry.mockDisabled ||
-      !foundationEntry.mockTitle.includes("RETIO公式未見") ||
+      !foundationEntry.mockTitle.includes("合格安定判定に数えます") ||
       !foundationEntry.formCExists
     ) {
       throw new Error(`Foundation entry mismatch: ${JSON.stringify(foundationEntry)}`);
@@ -194,7 +196,7 @@ async function main() {
       !blueprintAudit.coachText.includes("全問接触済み") ||
       blueprintAudit.scopeValue !== "business" ||
       blueprintAudit.mockDisabled ||
-      !blueprintAudit.mockTitle.includes("RETIO公式未見") ||
+      !blueprintAudit.mockTitle.includes("合格安定判定に数えます") ||
       blueprintAudit.roundLabel !== "今日 1 / 10" ||
       blueprintAudit.commandTitle !== "固定10問を解く" ||
       blueprintAudit.commandStep !== "今やる・STEP 1 / 4" ||

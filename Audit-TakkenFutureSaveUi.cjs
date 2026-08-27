@@ -139,6 +139,149 @@ function startStaticServer(root) {
     assert.deepEqual(stale.enabledControls, []);
     await stalePage.close();
 
+    // A package with valid integrity can still carry a state schema that this
+    // runtime does not understand. Reject it before confirmation/backup so an
+    // older runtime cannot silently normalize away newer fields.
+    const futureImportPage = await context.newPage();
+    futureImportPage.on("pageerror", (error) => errors.push(error.message));
+    futureImportPage.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+    let fileImportDialogs = 0;
+    futureImportPage.on("dialog", async (dialog) => {
+      fileImportDialogs += 1;
+      await dialog.dismiss();
+    });
+    const futureImportUrl = new URL(local.baseUrl);
+    futureImportUrl.searchParams.set("review", "future-file-import");
+    await futureImportPage.goto(futureImportUrl.toString(), { waitUntil: "networkidle" });
+    const futureFilePackage = await futureImportPage.evaluate(() => {
+      const key = Object.keys(localStorage).find((candidate) =>
+        candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+        candidate.includes("future-file-import") &&
+        !candidate.includes("backup") && !candidate.includes("previous") &&
+        !candidate.includes("corrupt") && !candidate.endsWith("event-outbox")
+      );
+      const raw = localStorage.getItem(key);
+      const current = JSON.parse(raw);
+      const future = {
+        ...current,
+        stateSchemaVersion: Number(current.stateSchemaVersion) + 1,
+        futureSchemaSentinel: { retained: true, source: "file-import" }
+      };
+      const savePackage = window.TAKKEN_SAVE_TRANSFER.createSavePackage(future);
+      return { key, raw, json: JSON.stringify(savePackage), schema: future.stateSchemaVersion };
+    });
+    await futureImportPage.locator("#saveImportInput").setInputFiles({
+      name: "future-schema-save.json",
+      mimeType: "application/json",
+      buffer: Buffer.from(futureFilePackage.json, "utf8")
+    });
+    await futureImportPage.waitForFunction(() =>
+      (document.querySelector("#saveTransferStatus")?.textContent || "").trim().length > 0
+    );
+    const futureFileImport = await futureImportPage.evaluate(({ key, raw }) => ({
+      rawUnchanged: localStorage.getItem(key) === raw,
+      beforeImportKeys: Object.keys(localStorage).filter((candidate) => candidate.startsWith(`${key}-before-import-`)),
+      status: document.querySelector("#saveTransferStatus")?.textContent || ""
+    }), futureFilePackage);
+    assert.equal(fileImportDialogs, 0, "future-schema file import must fail before confirmation");
+    assert.equal(futureFileImport.rawUnchanged, true, "future-schema file import must not overwrite the current primary raw");
+    assert.deepEqual(futureFileImport.beforeImportKeys, [], "future-schema file import must not create a before-import backup");
+    assert.match(futureFileImport.status, new RegExp(`新しい保存形式v${futureFilePackage.schema}`));
+    await futureImportPage.close();
+
+    const futureHashPage = await context.newPage();
+    futureHashPage.on("pageerror", (error) => errors.push(error.message));
+    futureHashPage.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+    let hashImportDialogs = 0;
+    futureHashPage.on("dialog", async (dialog) => {
+      hashImportDialogs += 1;
+      await dialog.dismiss();
+    });
+    const futureHashUrl = new URL(local.baseUrl);
+    futureHashUrl.searchParams.set("review", "future-hash-import");
+    await futureHashPage.goto(futureHashUrl.toString(), { waitUntil: "networkidle" });
+    const futureHashPackage = await futureHashPage.evaluate(() => {
+      const key = Object.keys(localStorage).find((candidate) =>
+        candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+        candidate.includes("future-hash-import") &&
+        !candidate.includes("backup") && !candidate.includes("previous") &&
+        !candidate.includes("corrupt") && !candidate.endsWith("event-outbox")
+      );
+      const raw = localStorage.getItem(key);
+      const current = JSON.parse(raw);
+      const future = {
+        ...current,
+        stateSchemaVersion: Number(current.stateSchemaVersion) + 1,
+        futureSchemaSentinel: { retained: true, source: "hash-import" }
+      };
+      const savePackage = window.TAKKEN_SAVE_TRANSFER.createSavePackage(future);
+      return {
+        key,
+        raw,
+        token: window.TAKKEN_SAVE_TRANSFER.encodePackage(savePackage),
+        schema: future.stateSchemaVersion
+      };
+    });
+    await futureHashPage.close();
+    // Seed a fresh browser context before the app bootstraps. This keeps the
+    // primary raw under test separate from any normal-navigation write that a
+    // page transition itself may perform.
+    const futureHashImportContext = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: "Asia/Tokyo" });
+    await futureHashImportContext.addInitScript(({ key, raw }) => {
+      localStorage.setItem(key, raw);
+      const originalReplaceState = window.history.replaceState.bind(window.history);
+      window.history.replaceState = function (...args) {
+        // consumeSaveTransferHash clears the fragment immediately before it
+        // validates/imports. Snapshot the actual current raw at that boundary
+        // so harmless startup normalization is not confused with an import
+        // overwrite.
+        if (window.location.hash.includes("save=")) {
+          window.__futureSchemaHashPrimaryBeforeImport = localStorage.getItem(key);
+          queueMicrotask(() => {
+            window.__futureSchemaHashPrimaryAfterImport = localStorage.getItem(key);
+          });
+        }
+        return originalReplaceState(...args);
+      };
+      const nativeFetch = window.fetch.bind(window);
+      window.fetch = (input, init) => {
+        if (String(input).includes("study-state/study_progress.json")) {
+          return Promise.resolve(new Response("", { status: 404 }));
+        }
+        return nativeFetch(input, init);
+      };
+    }, { key: futureHashPackage.key, raw: futureHashPackage.raw });
+    const guardedHashPage = await futureHashImportContext.newPage();
+    guardedHashPage.on("pageerror", (error) => errors.push(error.message));
+    guardedHashPage.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+    hashImportDialogs = 0;
+    guardedHashPage.on("dialog", async (dialog) => {
+      hashImportDialogs += 1;
+      await dialog.dismiss();
+    });
+    const futureHashImportUrl = new URL(futureHashUrl);
+    futureHashImportUrl.hash = new URLSearchParams({ save: futureHashPackage.token }).toString();
+    await guardedHashPage.goto(futureHashImportUrl.toString(), { waitUntil: "networkidle" });
+    await guardedHashPage.waitForFunction(() =>
+      (document.querySelector("#saveTransferStatus")?.textContent || "").trim().length > 0
+    );
+    const futureHashImport = await guardedHashPage.evaluate(({ key }) => ({
+      rawUnchanged: window.__futureSchemaHashPrimaryAfterImport === window.__futureSchemaHashPrimaryBeforeImport,
+      primaryBeforeImportCaptured: typeof window.__futureSchemaHashPrimaryBeforeImport === "string",
+      primaryAfterImportCaptured: typeof window.__futureSchemaHashPrimaryAfterImport === "string",
+      beforeImportKeys: Object.keys(localStorage).filter((candidate) => candidate.startsWith(`${key}-before-import-`)),
+      status: document.querySelector("#saveTransferStatus")?.textContent || "",
+      hashCleared: window.location.hash === ""
+    }), futureHashPackage);
+    assert.equal(futureHashImport.primaryBeforeImportCaptured, true, "hash import must capture the primary raw immediately before import handling");
+    assert.equal(futureHashImport.primaryAfterImportCaptured, true, "hash import must capture the primary raw immediately after import handling");
+    assert.match(futureHashImport.status, new RegExp(`新しい保存形式v${futureHashPackage.schema}`));
+    assert.equal(hashImportDialogs, 0, "future-schema hash import must fail before confirmation");
+    assert.equal(futureHashImport.rawUnchanged, true, "future-schema hash import must not overwrite the current primary raw");
+    assert.deepEqual(futureHashImport.beforeImportKeys, [], "future-schema hash import must not create a before-import backup");
+    assert.equal(futureHashImport.hashCleared, true, "failed import links must still be removed from the address bar");
+    await futureHashImportContext.close();
+
     const recoveryFromV36Page = await context.newPage();
     recoveryFromV36Page.on("pageerror", (error) => errors.push(error.message));
     recoveryFromV36Page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });

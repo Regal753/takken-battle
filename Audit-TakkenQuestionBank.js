@@ -167,6 +167,15 @@ if (!/課税事業者/.test(String(window.TAKKEN_QUESTIONS.q68?.text || "")) ||
     !/0\.55倍/.test(String(window.TAKKEN_QUESTIONS.q68?.explain || ""))) {
   issues.push("q68 does not state the current tax-inclusive residential lease remuneration limits");
 }
+const q110 = window.TAKKEN_QUESTIONS.q110;
+if (!/課税事業者/.test(String(q110?.text || "")) ||
+    !/借賃（税抜）1か月分の1\.1倍/.test(String(q110?.text || "")) ||
+    !/双方から受ける税込報酬の合計/.test(String(q110?.explain || "")) ||
+    !/原則0\.55倍以内/.test(String(q110?.explain || "")) ||
+    !/媒介を依頼される際に/.test(String(q110?.explain || "")) ||
+    !/双方合計の上限内/.test(String(q110?.explain || ""))) {
+  issues.push("q110 does not state the complete current tax-inclusive residential lease remuneration limits");
+}
 directSourceExpectations.forEach(({ ids, url, locator }) => {
   ids.forEach((id) => {
     const source = window.TAKKEN_QUESTIONS[id];

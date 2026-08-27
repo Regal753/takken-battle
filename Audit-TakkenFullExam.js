@@ -187,6 +187,11 @@ Object.entries(expectedCoreForms).forEach(([formId, expectedIds]) => {
     issues.push(`${formId}: existing core form changed`);
   }
 });
+for (const formId of ["form-a", "form-b"]) {
+  if (mockFormsById[formId]?.evidenceClass !== "independent-current-law") {
+    issues.push(`${formId} must remain labelled as independent current-law evidence`);
+  }
+}
 
 const expectedStudyTargets = {
   total: 40,

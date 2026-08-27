@@ -11,12 +11,18 @@ assert.equal(readiness.MIN_TIMED_MOCK_MINUTES, 30);
 assert.equal(readiness.STABILITY_LATEST_MAX_AGE_DAYS, 14);
 assert.equal(readiness.STABILITY_WINDOW_DAYS, 21);
 assert.equal(readiness.CURRENT_LAW_ATTEMPT_MAX_AGE_DAYS, 14);
+assert.deepEqual(readiness.MOCK_STABILITY_POLICY.eligibleFormIds, ["form-a", "form-b"]);
 assert.equal(readiness.validDayKey("2026-02-29"), ""); assert.equal(readiness.validDayKey("2028-02-29"), "2028-02-29");
 assert.equal(readiness.dayKey(new Date("2026-08-29T15:30:00Z")), "2026-08-30", "Date inputs use JST regardless of host timezone");
 
 const subjects = { business: { total: 20, contacted: 20, retained: 18 }, rights: { total: 14, contacted: 14, retained: 10 }, restrictions: { total: 8, contacted: 8, retained: 7 }, tax: { total: 3, contacted: 3, retained: 2 }, other: { total: 5, contacted: 5, retained: 4 } };
 const score = { business: 18, rights: 9, restrictions: 7, tax: 2, other: 4 };
-const attempts = [1, 2, 3].map((n) => ({ formId: `internal-${n}`, currentLaw: true, dayKey: `2026-09-0${n}`, completedAt: `2026-09-0${n}T10:00:00+09:00`, total: 40, timed: true, elapsedMinutes: 60, questionCount: 50, sections: score }));
+const attemptDates = ["2026-08-25", "2026-08-26", "2026-09-01"];
+const attempts = ["form-a", "form-b", "form-a"].map((formId, index) => {
+  const dayKey = attemptDates[index];
+  return { formId, evidenceClass: "independent-current-law", currentLaw: true, dayKey, completedAt: `${dayKey}T10:00:00+09:00`, total: 40, timed: true, elapsedMinutes: 60, questionCount: 50, sections: score };
+});
+const officialAttempts = attempts.map((attempt, index) => ({ ...attempt, formId: `official-${index + 1}` }));
 const gate = { attempts: [
   { dayKey: "2026-09-02", completedAt: "2026-09-02T10:00:00+09:00", correct: true, clusters: ["management-disclosure", "signage"] },
   { dayKey: "2026-09-03", completedAt: "2026-09-03T10:00:00+09:00", correct: true, clusters: ["important-matters", "land-regulation"] }
@@ -26,14 +32,28 @@ const freshness = { current: true, failClosed: false };
 
 const blank = readiness.calculatePassReadiness({ todayKey: "2026-08-16" });
 assert.equal(blank.status, "unmeasured"); assert.equal(blank.dailyPlan.mode, "choice"); assert.equal(blank.dailyPlan.businessKnock, null); assert.equal(blank.capacity.status, "unverified");
-const stable = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: freshness });
+const stable = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, officialHistory: officialAttempts, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: freshness });
 assert.equal(stable.status, "on-track"); assert.equal(stable.timed50.stable, true); assert.equal(stable.currentLawGate.passed, true); assert.equal(stable.capacity.verified, true);
 assert.equal(stable.currentYearFreshness.passed, true);
+assert.equal(stable.timed50.mock.requiredDistinctForms, 2);
+assert.equal(stable.timed50.mock.minimumRepeatGapDays, 7);
+assert.equal(stable.timed50.mock.repeatSpacingSatisfied, true);
+assert.equal(stable.timed50.official.stable, true, "generic official stability keeps the existing three-distinct-form rule");
 const staleCurrentYear = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: { current: false, failClosed: true, status: "stale" } });
 assert.equal(staleCurrentYear.onTrack, false); assert.equal(staleCurrentYear.reason, "current-year-freshness-unverified");
 
 const sameForm = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts.map((a) => ({ ...a, formId: "same" })), currentLawGate: gate, studyMinutesHistory: capacity });
-assert.equal(sameForm.timed50.stable, false); assert.equal(sameForm.timed50.mock.distinctFormCount, 1);
+assert.equal(sameForm.timed50.stable, false); assert.equal(sameForm.timed50.mock.eligibleTimedCount, 0);
+const allA = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts.map((a) => ({ ...a, formId: "form-a" })), currentLawGate: gate, studyMinutesHistory: capacity });
+assert.equal(allA.timed50.mock.eligibleTimedCount, 3);
+assert.equal(allA.timed50.mock.distinctFormCount, 1);
+assert.equal(allA.timed50.stable, false, "three eligible attempts still need both independent forms");
+const mixedOnly = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts.map((a) => ({ ...a, formId: "form-c", evidenceClass: "internal-mixed-practice" })), currentLawGate: gate, studyMinutesHistory: capacity });
+assert.equal(mixedOnly.timed50.mock.eligibleTimedCount, 0, "auxiliary mixed form C is excluded from stability evidence");
+assert.equal(mixedOnly.timed50.mock.excludedTimedCount, 3);
+const tooSoonRepeat = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts.map((a, index) => ({ ...a, dayKey: `2026-09-0${index + 1}`, completedAt: `2026-09-0${index + 1}T10:00:00+09:00` })), currentLawGate: gate, studyMinutesHistory: capacity });
+assert.equal(tooSoonRepeat.timed50.mock.repeatSpacingSatisfied, false, "a repeated A/B form needs a seven-day calendar gap");
+assert.equal(tooSoonRepeat.timed50.stable, false);
 const sameDay = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts.map((a) => ({ ...a, dayKey: "2026-09-01" })), currentLawGate: gate, studyMinutesHistory: capacity });
 assert.equal(sameDay.timed50.stable, false);
 assert.equal(sameDay.timed50.mock.validTimed50Count, 1, "a supplied JST day must agree with the ISO completion timestamp");
@@ -101,7 +121,10 @@ const lowCapacity = readiness.calculatePassReadiness({ todayKey: "2026-09-04", s
 assert.equal(lowCapacity.status, "behind"); assert.equal(lowCapacity.reason, "observed-capacity-below-minimum");
 
 const fiveScore = { business: 18, rights: 9, restrictions: 7, tax: 2 };
-const fiveAttempts = [1, 2, 3].map((n) => ({ formId: `five-${n}`, currentLaw: true, dayKey: `2026-09-0${n}`, completedAt: `2026-09-0${n}T10:00:00+09:00`, total: 36, timed: true, elapsedMinutes: 55, questionCount: 45, sections: fiveScore }));
+const fiveAttempts = ["form-a", "form-b", "form-a"].map((formId, index) => {
+  const dayKey = attemptDates[index];
+  return { formId, evidenceClass: "independent-current-law", currentLaw: true, dayKey, completedAt: `${dayKey}T10:00:00+09:00`, total: 36, timed: true, elapsedMinutes: 55, questionCount: 45, sections: fiveScore };
+});
 const five = readiness.calculatePassReadiness({ todayKey: "2026-09-04", examProfile: "fiveExempt", subjects, mockHistory: fiveAttempts, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: freshness });
 assert.equal(five.targets.questions, 45); assert.equal(five.targets.total, 36); assert.equal(five.examProfile.minutes, 110); assert.equal(five.timed50.stable, true); assert.equal(five.subjects.some((s) => s.key === "other"), false);
 assert.equal(five.status, "on-track");
