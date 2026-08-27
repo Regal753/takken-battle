@@ -774,7 +774,13 @@ async function main() {
         finalized: Boolean(saved.mock?.finalized),
         history: saved.mockHistory?.length || 0,
         attempts: saved.attempts,
-        weakWrongCount: (saved.mock?.results || []).filter((result) => !result.correct && saved.marked?.[result.id]).length
+        weakWrongCount: (saved.mock?.results || []).filter((result) => !result.correct && saved.marked?.[result.id]).length,
+        wrongConfidenceCount: (saved.mock?.results || []).filter((result) =>
+          !result.correct &&
+          saved.questionStats?.[result.id]?.lastConfidence === "wrong" &&
+          Number.isFinite(Date.parse(saved.questionStats?.[result.id]?.lastConfidenceAt || "")) &&
+          /^\d{4}-\d{2}-\d{2}$/.test(saved.questionStats?.[result.id]?.lastConfidenceDayKey || "")
+        ).length
       };
     }, storageId);
     const expectedSections = {
@@ -809,7 +815,8 @@ async function main() {
       !mockResult.finalized ||
       mockResult.history !== 1 ||
       mockResult.attempts !== mockStart.attempts + 50 ||
-      mockResult.weakWrongCount !== 10
+      mockResult.weakWrongCount !== 10 ||
+      mockResult.wrongConfidenceCount !== 10
     ) {
       throw new Error(`Mock result mismatch: ${JSON.stringify(mockResult)}`);
     }

@@ -10,6 +10,7 @@
     : "";
   const STORAGE_ID = `takken-battle-study-clean-v2-hard${REVIEW_MODE ? `-review-${REVIEW_NAMESPACE || "default"}` : ""}`;
   const EVENT_OUTBOX_ID = `${STORAGE_ID}-event-outbox`;
+  const CLEAR_RECALL_MIN_INTERVAL_MS = 12 * 60 * 60 * 1000;
   const SAVE_STORE = window.TAKKEN_SAVE_STORE;
   const STATE_SYNC = window.TAKKEN_STATE_SYNC;
   const OFFICIAL_EXAM_DATA = window.TAKKEN_OFFICIAL_EXAMS;
@@ -1227,6 +1228,68 @@
       localDateKey(stats?.lastClearAt)
     ].filter((value) => /^\d{4}-\d{2}-\d{2}$/.test(value));
     return [...new Set(keys)].sort().slice(-8);
+  }
+
+  function normalizedClearAtHistory(stats) {
+    const values = [
+      ...(Array.isArray(stats?.clearAtHistory) ? stats.clearAtHistory : []),
+      stats?.lastClearAt
+    ]
+      .map((value) => String(value || ""))
+      .filter((value) => Number.isFinite(Date.parse(value)));
+    return [...new Set(values)]
+      .sort((left, right) => Date.parse(left) - Date.parse(right))
+      .slice(-16);
+  }
+
+  function updatedClearEvidence(stats, recordedAt, cleared) {
+    const recordedDay = localDateKey(recordedAt) || todayKey();
+    const clearDayKeys = normalizedComprehensionDayKeys(stats)
+      .filter((day) => day !== recordedDay);
+    const hadTimestampHistory = Object.prototype.hasOwnProperty.call(
+      stats || {},
+      "clearAtHistory"
+    );
+    const clearAtHistory = normalizedClearAtHistory(stats)
+      .filter((value) => localDateKey(value) !== recordedDay);
+    if (cleared) {
+      clearDayKeys.push(recordedDay);
+      clearAtHistory.push(recordedAt);
+    }
+    const uniqueHistory = [...new Set(clearAtHistory)]
+      .sort((left, right) => Date.parse(left) - Date.parse(right))
+      .slice(-16);
+    const previousLastClearAt = String(stats?.lastClearAt || "");
+    const lastClearAt = cleared
+      ? recordedAt
+      : localDateKey(previousLastClearAt) === recordedDay
+        ? (uniqueHistory.at(-1) || "")
+        : previousLastClearAt;
+    return {
+      clearDayKeys: [...new Set(clearDayKeys)].sort().slice(-8),
+      clearAtHistory: cleared || hadTimestampHistory ? uniqueHistory : undefined,
+      lastClearAt
+    };
+  }
+
+  function retentionSpacingSatisfied(stats) {
+    // Saves created before timestamp evidence existed keep their prior retention
+    // status. The next clear starts the stricter, time-spaced evidence trail.
+    if (!Object.prototype.hasOwnProperty.call(stats || {}, "clearAtHistory")) return true;
+    const activeDays = new Set(normalizedComprehensionDayKeys(stats));
+    const evidence = normalizedClearAtHistory(stats)
+      .filter((value) => activeDays.has(localDateKey(value)));
+    for (let left = 0; left < evidence.length; left += 1) {
+      for (let right = left + 1; right < evidence.length; right += 1) {
+        if (
+          localDateKey(evidence[left]) !== localDateKey(evidence[right]) &&
+          Date.parse(evidence[right]) - Date.parse(evidence[left]) >= CLEAR_RECALL_MIN_INTERVAL_MS
+        ) {
+          return true;
+        }
+      }
+    }
+    return false;
   }
 
   function normalizedUnderstandingDayKeys(stats) {
@@ -2603,6 +2666,12 @@
         }
         normalized.correctDayKeys = normalizedCorrectDayKeys(normalized);
         normalized.clearDayKeys = normalizedComprehensionDayKeys(normalized);
+        if (Object.prototype.hasOwnProperty.call(normalized, "clearAtHistory")) {
+          normalized.clearAtHistory = normalizedClearAtHistory(normalized);
+        }
+        if (!normalized.lastExplanationShownAt && normalized.lastExplanationAt) {
+          normalized.lastExplanationShownAt = normalized.lastExplanationAt;
+        }
         normalized.understandingDayKeys = normalizedUnderstandingDayKeys(normalized);
         normalized.currentLawGateDayKeys = [...new Set(
           (Array.isArray(normalized.currentLawGateDayKeys) ? normalized.currentLawGateDayKeys : [])
@@ -4108,6 +4177,7 @@
   function isRetained(id) {
     const stats = statsFor(id);
     if (normalizedComprehensionDayKeys(stats).length < 2) return false;
+    if (!retentionSpacingSatisfied(stats)) return false;
     if (weaknessScore(id) > 0) return false;
     const lastCorrectAt = Date.parse(latestAt(stats.lastCorrectAt, stats.centralLastCorrectAt)) || 0;
     const lastWrongAt = Date.parse(latestAt(stats.lastWrongAt, stats.centralLastWrongAt)) || 0;
@@ -11676,6 +11746,8 @@
     const cutCheckMissed = Boolean(cutCheck && !cutCheck.allCorrect);
     const wasMarked = Boolean(state.marked[question.id]);
     const previous = state.questionStats[question.id] || { attempts: 0, correct: 0, wrong: 0 };
+    const answeredAt = new Date().toISOString();
+    const clearEvidence = updatedClearEvidence(previous, answeredAt, isCorrect);
     const alreadyCorrectToday = correctToday(question.id);
     const rewardEligible = Boolean(isCorrect && !alreadyCorrectToday);
     const previousWrongCount = effectiveWrongCount(previous);
@@ -11843,7 +11915,7 @@
             items: cutCheck.items
           }
         : null,
-      at: new Date().toISOString()
+      at: answeredAt
     };
     state.attempts += 1;
     state.step = (state.step || 0) + 1;
@@ -11894,9 +11966,10 @@
       correctDayKeys: isCorrect
         ? [...new Set([...normalizedCorrectDayKeys(previous), todayKey()])].sort().slice(-8)
         : normalizedCorrectDayKeys(previous),
-      clearDayKeys: isCorrect
-        ? [...new Set([...normalizedComprehensionDayKeys(previous), todayKey()])].sort().slice(-8)
-        : normalizedComprehensionDayKeys(previous),
+      clearDayKeys: clearEvidence.clearDayKeys,
+      ...(clearEvidence.clearAtHistory
+        ? { clearAtHistory: clearEvidence.clearAtHistory }
+        : {}),
       currentLawGateDayKeys: CURRENT_LAW_GATE_IDS.includes(question.id)
         ? [...new Set([
             ...(Array.isArray(previous.currentLawGateDayKeys) ? previous.currentLawGateDayKeys : [])
@@ -11908,8 +11981,8 @@
       lastConfidence: isCorrect ? "clear" : "wrong",
       lastConfidenceAt: state.answered.at,
       lastConfidenceDayKey: todayKey(),
-      lastClearAt: isCorrect ? state.answered.at : previous.lastClearAt,
-      lastExplanationAt: state.answered.at,
+      lastClearAt: clearEvidence.lastClearAt,
+      lastExplanationShownAt: state.answered.at,
       lastCutCheckAt: cutCheck ? state.answered.at : previous.lastCutCheckAt,
       lastCutCheckAllCorrect: cutCheck ? cutCheck.allCorrect : previous.lastCutCheckAllCorrect
     };
@@ -12047,16 +12120,11 @@
     const wasMarked = Boolean(state.marked[id]);
     const shouldMark = value === "unsure" || value === "cuts";
     const recordedAt = new Date().toISOString();
-    const clearDayKeys = normalizedComprehensionDayKeys(stats)
-      .filter((day) => day !== todayKey());
+    const clearEvidence = updatedClearEvidence(stats, recordedAt, value === "clear");
     const currentLawGateDayKeys = (Array.isArray(stats.currentLawGateDayKeys)
       ? stats.currentLawGateDayKeys
       : [])
       .filter((day) => day !== todayKey());
-    const previousClearAt = localDateKey(stats.lastClearAt) === todayKey()
-      ? String(state.answered.previousClearAt || "")
-      : stats.lastClearAt;
-    if (value === "clear") clearDayKeys.push(todayKey());
     if (value === "clear" && CURRENT_LAW_GATE_IDS.includes(id)) {
       currentLawGateDayKeys.push(todayKey());
     }
@@ -12066,8 +12134,11 @@
       lastConfidence: value,
       lastConfidenceAt: recordedAt,
       lastConfidenceDayKey: todayKey(),
-      lastClearAt: value === "clear" ? recordedAt : previousClearAt,
-      clearDayKeys: [...new Set(clearDayKeys)].sort().slice(-8),
+      lastClearAt: clearEvidence.lastClearAt,
+      clearDayKeys: clearEvidence.clearDayKeys,
+      ...(clearEvidence.clearAtHistory
+        ? { clearAtHistory: clearEvidence.clearAtHistory }
+        : {}),
       currentLawGateDayKeys: [...new Set(currentLawGateDayKeys)].sort().slice(-8)
     };
     state.daily = normalizeDailyState(state.daily);
@@ -12267,6 +12338,7 @@
 
     results.forEach((result) => {
       const previous = state.questionStats[result.id] || { attempts: 0, correct: 0, wrong: 0 };
+      const clearEvidence = updatedClearEvidence(previous, finishedAt, result.correct);
       state.step = (state.step || 0) + 1;
       state.questionStats[result.id] = {
         ...previous,
@@ -12282,10 +12354,14 @@
         correctDayKeys: result.correct
           ? [...new Set([...normalizedCorrectDayKeys(previous), todayKey()])].sort().slice(-8)
           : normalizedCorrectDayKeys(previous),
-        clearDayKeys: result.correct
-          ? [...new Set([...normalizedComprehensionDayKeys(previous), todayKey()])].sort().slice(-8)
-          : normalizedComprehensionDayKeys(previous),
-        lastClearAt: result.correct ? finishedAt : previous.lastClearAt,
+        clearDayKeys: clearEvidence.clearDayKeys,
+        ...(clearEvidence.clearAtHistory
+          ? { clearAtHistory: clearEvidence.clearAtHistory }
+          : {}),
+        lastClearAt: clearEvidence.lastClearAt,
+        lastConfidence: result.correct ? "clear" : "wrong",
+        lastConfidenceAt: finishedAt,
+        lastConfidenceDayKey: localDateKey(finishedAt),
         lastRunMode: RUN_MODE_MOCK,
         lastMockFormId: form.id
       };
@@ -12759,7 +12835,7 @@
           className: "explain-text",
           text: reviewIds.length
             ? "誤答・迷いは弱点へ残しています。解説を確認し、次回は根拠まで言えるか再テストします。"
-            : "全問の解説確認まで完了。次は未接触を進めるか、学習トップへ戻れます。"
+            : "全問の解答完了。各問の解説は表示済みです。次は未接触を進めるか、学習トップへ戻れます。"
         }),
         actions
       );

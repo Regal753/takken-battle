@@ -36,7 +36,9 @@ requireText(app, 'label: "使う根拠"', "legal basis step is missing");
 requireText(app, 'label: "この問題への当てはめ"', "application step is missing");
 requireText(app, "解答・進捗をこの端末へ自動保存済み", "answer autosave receipt is missing");
 requireText(app, 'confidence: isCorrect ? "clear" : "wrong"', "answer confidence persistence is missing");
-requireText(app, "lastExplanationAt: state.answered.at", "explanation timestamp is missing");
+requireText(app, "lastExplanationShownAt: state.answered.at", "explanation display timestamp is missing");
+requireText(app, "CLEAR_RECALL_MIN_INTERVAL_MS = 12 * 60 * 60 * 1000", "cross-day recall spacing guard is missing");
+requireText(app, "retentionSpacingSatisfied(stats)", "retention does not require time-spaced recall evidence");
 requireText(html, "解答ごとにこの端末へ自動保存", "autosave header copy is missing");
 
 [
@@ -51,6 +53,9 @@ requireText(html, "解答ごとにこの端末へ自動保存", "autosave header
 });
 if (html.includes("understanding-system.js")) {
   issues.push("unused per-answer transfer system is still loaded by the page");
+}
+if (app.includes("全問の解説確認まで完了")) {
+  issues.push("explanation display is still mislabeled as learner-confirmed reading");
 }
 
 const answerStart = app.indexOf("  function answer(index) {");

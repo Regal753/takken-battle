@@ -9,7 +9,7 @@
   ]);
   const SET_ARRAY_KEYS = new Set([
     "correctDayKeys", "clearDayKeys", "understandingDayKeys", "confidentDayKeys",
-    "masteredIds", "retryIds", "reviewTargets", "sessionIds"
+    "clearAtHistory", "masteredIds", "retryIds", "reviewTargets", "sessionIds"
   ]);
   const RECORD_ARRAY_KEYS = new Set(["mockHistory", "officialExamHistory"]);
   const PRACTICAL_SESSION_FIELDS = [
@@ -446,7 +446,7 @@
     );
     copyGroupFromWinner(merged, outcomeWinner, [
       "lastSelected", "lastCorrect", "lastConfidence", "lastConfidenceAt", "lastAnsweredAt",
-      "lastConfidenceDayKey", "lastCorrectAt", "lastWrongAt", "lastClearAt", "lastExplanationAt", "lastCutCheckAt",
+      "lastConfidenceDayKey", "lastCorrectAt", "lastWrongAt", "lastClearAt", "lastExplanationAt", "lastExplanationShownAt", "lastCutCheckAt",
       "lastCutCheckAllCorrect", "lastRunMode", "lastMockFormId"
     ]);
 
@@ -481,7 +481,7 @@
     ]);
     preserveLatestTimestamps(merged, [safeBase, safeLocal, safeRemote], [
       "lastAnsweredAt", "lastCorrectAt", "lastWrongAt", "lastConfidenceAt",
-      "lastExplanationAt", "lastCutCheckAt", "lastMistakeAt", "weakBreakAt",
+      "lastExplanationAt", "lastExplanationShownAt", "lastCutCheckAt", "lastMistakeAt", "weakBreakAt",
       "centralLastAnsweredAt", "centralLastCorrectAt", "centralLastWrongAt",
       "lastUnderstandingAt", "lastUnderstandingPassedAt"
     ]);
@@ -497,6 +497,24 @@
       if (values.length) merged[key] = values;
       else if (["clearDayKeys", "currentLawGateDayKeys"].includes(key)) merged[key] = [];
     });
+    let clearAtHistory = unionPrimitiveArrays(
+      safeBase.clearAtHistory,
+      safeLocal.clearAtHistory,
+      safeRemote.clearAtHistory
+    )
+      .map(validTimestamp)
+      .filter(Boolean)
+      .sort((left, right) => parsedTime(left) - parsedTime(right));
+    if (["unsure", "cuts", "wrong"].includes(outcomeWinner.lastConfidence)) {
+      const invalidatedDay = validDayKey(outcomeWinner.lastConfidenceDayKey) ||
+        localDayKey(outcomeWinner.lastConfidenceAt);
+      if (invalidatedDay) {
+        clearAtHistory = clearAtHistory.filter((value) => localDayKey(value) !== invalidatedDay);
+      }
+    }
+    if (clearAtHistory.length || [safeBase, safeLocal, safeRemote].some((item) => own(item, "clearAtHistory"))) {
+      merged.clearAtHistory = [...new Set(clearAtHistory)].slice(-16);
+    }
     const firstAttemptAt = earliestTimestamp(
       safeBase.firstAttemptAt,
       safeLocal.firstAttemptAt,
