@@ -9,6 +9,8 @@
   const LAW_BASELINE_DAY_KEY = "2026-04-01";
   const FIRST_PASS_DEADLINE_KEY = "2026-08-31";
   const DEFAULT_DAILY_MINUTES = 90;
+  const FIRST_PASS_UNIT_MINUTES = 12;
+  const FIRST_PASS_FIXED_DAILY_MINUTES = 30;
   const MIN_TIMED_MOCK_MINUTES = 30;
   const MIN_RETENTION_RATE = 2 / 3;
   // Evidence is intentionally short-lived: a three-attempt streak must fit in a
@@ -89,7 +91,7 @@
     return { ...subject, total, contacted, retained, metricValid, measured, contactComplete, retentionRate, weak, state: !metricValid ? "invalid" : !measured ? "unmeasured" : weak ? "weak" : !contactComplete ? "scanning" : "ready", remainingContact: total !== null && contacted !== null ? Math.max(0, total - contacted) : null };
   }
   function validIsoTimestamp(value) { return typeof value === "string" && ISO_TIMESTAMP.test(value) && Number.isFinite(Date.parse(value)) ? value : ""; }
-  function normalizeTimedAttempt(entry, profile) {
+  function normalizeTimedAttempt(entry, profile, options = {}) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) return null;
     const total = nonNegativeInteger(entry.total ?? entry.score), count = nonNegativeInteger(entry.questionCount ?? entry.questions), formId = typeof entry.formId === "string" && entry.formId.trim() ? entry.formId.trim() : "";
     const completedAt = validIsoTimestamp(entry.completedAt), date = validDayKey(entry.dayKey ?? entry.dateKey);
@@ -98,7 +100,7 @@
     // producing form explicitly asserts the 2026 baseline.
     if (
       total === null || count !== profile.questions || total > count ||
-      entry.timed !== true || entry.currentLaw !== true || !formId || !completedAt || !date ||
+      entry.timed !== true || (options.requireCurrentLaw !== false && entry.currentLaw !== true) || !formId || !completedAt || !date ||
       dayKey(new Date(completedAt)) !== date ||
       !Number.isFinite(elapsedMinutes) || elapsedMinutes < MIN_TIMED_MOCK_MINUTES || elapsedMinutes > profile.minutes
     ) return null;
@@ -120,7 +122,7 @@
     const minimumRepeatGapDays = Number.isInteger(policy.minimumRepeatGapDays) && policy.minimumRepeatGapDays > 0 ? policy.minimumRepeatGapDays : 0;
     const eligibleFormIds = Array.isArray(policy.eligibleFormIds) && policy.eligibleFormIds.length ? new Set(policy.eligibleFormIds) : null;
     const eligibleEvidenceClasses = Array.isArray(policy.eligibleEvidenceClasses) && policy.eligibleEvidenceClasses.length ? new Set(policy.eligibleEvidenceClasses) : null;
-    const validAttempts = raw.map((entry) => normalizeTimedAttempt(entry, profile)).filter(Boolean).sort((a, b) => a.completedAtMs - b.completedAtMs);
+    const validAttempts = raw.map((entry) => normalizeTimedAttempt(entry, profile, policy)).filter(Boolean).sort((a, b) => a.completedAtMs - b.completedAtMs);
     const attempts = validAttempts.filter((entry) => (!eligibleEvidenceClasses || eligibleEvidenceClasses.has(entry.evidenceClass)) && (!eligibleFormIds || eligibleFormIds.has(entry.formId)));
     const recent = attempts.slice(-requiredAttempts), ids = new Set(recent.map((entry) => entry.formId)), days = new Set(recent.map((entry) => entry.dateKey));
     const chronological = recent.length === requiredAttempts && recent.every((entry, index) => index === 0 || recent[index - 1].completedAtMs < entry.completedAtMs);
@@ -180,12 +182,58 @@
       status: passed ? "current" : typeof raw.status === "string" && raw.status ? raw.status : "unverified"
     };
   }
+  // RETIO/公式過去問は当時法の採点なので、現行法ゲートには混ぜない。
+  // ただし初見の読解・設問処理が内部問題の暗記でないことを示す転移証拠としては必須にする。
+  function officialTransferFrom(input, todayKey) {
+    // This is deliberately a derived, historical-law record supplied by the
+    // official-exam module.  It must never be interpreted as current-law proof.
+    const raw = ownObject(input), rows = Array.isArray(raw.latestThreeInitial) ? raw.latestThreeInitial : [];
+    const attempts = rows.map((entry) => {
+      const examId = typeof entry?.examId === "string" ? entry.examId.trim() : "";
+      const dateKey = validDayKey(entry?.dayKey);
+      const score50 = Number(entry?.score50);
+      return examId && dateKey && Number.isFinite(score50) && score50 >= 0 && score50 <= 50 ? { examId, dateKey, score50 } : null;
+    }).filter(Boolean).sort((left, right) => left.dateKey.localeCompare(right.dateKey));
+    const latest = attempts.at(-1), latestAgeDays = latest ? daysBetween(latest.dateKey, todayKey) : null;
+    const futureDated = attempts.some((entry) => {
+      const ageDays = daysBetween(entry.dateKey, todayKey);
+      return ageDays === null || ageDays < 0;
+    });
+    const mean = attempts.length ? attempts.reduce((sum, entry) => sum + entry.score50, 0) / attempts.length : 0;
+    const minimum = attempts.length ? Math.min(...attempts.map((entry) => entry.score50)) : 0;
+    const distinctExamCount = new Set(attempts.map((entry) => entry.examId)).size;
+    const distinctDayCount = new Set(attempts.map((entry) => entry.dateKey)).size;
+    const initialCount = nonNegativeInteger(raw.initialCount) || 0;
+    const passed = initialCount >= 3 && attempts.length === 3 && distinctExamCount === 3 && distinctDayCount === 3 && mean >= 40 && minimum >= 37 && !futureDated;
+    return { suppliedCount: rows.length, validAttemptCount: attempts.length, initialCount, latestThreeInitial: attempts, distinctExamCount, distinctDayCount, mean, minimum, latestDayKey: latest ? latest.dateKey : "", latestAgeDays, futureDated, passed, status: attempts.length === 0 ? "unmeasured" : passed ? "passed" : "failed" };
+  }
+  function firstPassPlanFrom(input, todayKey, dailyMinutes) {
+    const raw = ownObject(input), totalUnits = nonNegativeInteger(raw.totalUnits), completedUnits = nonNegativeInteger(raw.completedUnits);
+    const minutesPerUnit = nonNegativeInteger(raw.minutesPerUnit) || FIRST_PASS_UNIT_MINUTES;
+    const deadlineDelta = daysBetween(todayKey, FIRST_PASS_DEADLINE_KEY);
+    const daysRemainingInclusive = deadlineDelta !== null && deadlineDelta >= 0 ? deadlineDelta + 1 : 0;
+    const valid = totalUnits !== null && completedUnits !== null && completedUnits <= totalUnits;
+    const remainingUnits = valid ? totalUnits - completedUnits : null;
+    const minimumMinutesRemaining = remainingUnits === null ? null : remainingUnits * minutesPerUnit;
+    const requiredUnitsPerDay = remainingUnits !== null && daysRemainingInclusive > 0 ? Math.ceil(remainingUnits / daysRemainingInclusive) : null;
+    const requiredMinutesPerDay = requiredUnitsPerDay !== null
+      ? requiredUnitsPerDay * minutesPerUnit + (remainingUnits > 0 ? FIRST_PASS_FIXED_DAILY_MINUTES : 0)
+      : null;
+    const deadlinePassedWithWork = valid && daysRemainingInclusive === 0 && remainingUnits > 0;
+    const feasible = valid && (remainingUnits === 0 || (daysRemainingInclusive > 0 && requiredMinutesPerDay <= dailyMinutes));
+    return { valid, totalUnits, completedUnits, remainingUnits, minutesPerUnit, fixedDailyMinutes: FIRST_PASS_FIXED_DAILY_MINUTES, minimumMinutesRemaining, daysRemainingInclusive, requiredUnitsPerDay, requiredMinutesPerDay, deadlinePassedWithWork, feasible, status: !valid ? "unverified" : remainingUnits === 0 ? "complete" : deadlinePassedWithWork ? "deadline-passed" : feasible ? "feasible" : "infeasible" };
+  }
   function rotatingTheme(todayKey) { const weekday = weekdayFor(todayKey); const lookup = [{ key: "mock", label: "本試験形式", mode: "mock" }, { key: "rights", label: "権利関係", mode: "drill" }, { key: "restrictions", label: "法令上の制限", mode: "drill" }, { key: "tax-other", label: "税・価格・免除科目等", mode: "drill" }, { key: "rights", label: "権利関係", mode: "drill" }, { key: "restrictions", label: "法令上の制限", mode: "drill" }, { key: "rights", label: "権利関係", mode: "drill" }]; return weekday === null ? null : lookup[weekday]; }
-  function buildDailyPlan(todayKey, minutes, profile) {
+  function buildDailyPlan(todayKey, minutes, profile, officialTransfer, textbookFirstPass) {
     const theme = rotatingTheme(todayKey); if (!theme) return null;
-    if (theme.mode === "mock") return { availableMinutes: minutes, weekday: weekdayFor(todayKey), mode: "choice", businessKnock: null, theme: { ...theme, minutes: profile.minutes, requiredTimedMinutes: profile.minutes, fitsAvailableMinutes: minutes >= profile.minutes }, choices: [{ key: "full-mock", label: `本試験${profile.questions}問・${profile.minutes}分（今日はこれだけ）`, minutes: profile.minutes, primary: true }, { key: "short-review", label: "短縮75〜90分（宅建業法20＋弱点8＋誤答回収）", minutes: Math.min(90, Math.max(75, minutes)), primary: false }], review: null, note: "日曜は本試験形式か短縮復習のどちらか一方を選ぶ。両方を必須にしない。" };
+    if (theme.mode === "mock") {
+      const full = { key: "full-mock", label: `本試験${profile.questions}問・${profile.minutes}分（今日はこれだけ）`, minutes: profile.minutes, primary: true };
+      if (!textbookFirstPass?.valid || textbookFirstPass.remainingUnits > 0) return { availableMinutes: minutes, weekday: weekdayFor(todayKey), mode: "required-full-mock", requiredMeasurement: "internal-mock", businessKnock: null, theme: { ...theme, minutes: profile.minutes, requiredTimedMinutes: profile.minutes, fitsAvailableMinutes: minutes >= profile.minutes }, choices: [full], review: null, note: "全45単元の高速一周前、または進捗未確認です。短縮復習は選べません。内部A/Bの本試験形式測定で現在地を確認してください。" };
+      if (!officialTransfer?.passed) return { availableMinutes: minutes, weekday: weekdayFor(todayKey), mode: "required-full-mock", requiredMeasurement: "official-transfer", businessKnock: null, theme: { ...theme, minutes: profile.minutes, requiredTimedMinutes: profile.minutes, fitsAvailableMinutes: minutes >= profile.minutes }, choices: [full], review: null, note: "公式初見・転移証拠が未達のため、短縮復習は選べません。公式過去問の時間計測を先に完了してください。" };
+      return { availableMinutes: minutes, weekday: weekdayFor(todayKey), mode: "choice", businessKnock: null, theme: { ...theme, minutes: profile.minutes, requiredTimedMinutes: profile.minutes, fitsAvailableMinutes: minutes >= profile.minutes }, choices: [full, { key: "short-review", label: "短縮75〜90分（宅建業法20＋弱点8＋誤答回収）", minutes: Math.min(90, Math.max(75, minutes)), primary: false }], review: null, note: "日曜は本試験形式か短縮復習のどちらか一方を選ぶ。両方を必須にしない。" };
+    }
     const businessMinutes = Math.min(30, Math.floor(minutes / 3)), reviewMinutes = Math.max(10, Math.min(15, Math.floor(minutes / 6)));
-    return { availableMinutes: minutes, weekday: weekdayFor(todayKey), mode: "standard", businessKnock: { count: 20, minutes: businessMinutes, label: "宅建業法ノック20" }, theme: { ...theme, minutes: Math.max(0, minutes - businessMinutes - reviewMinutes), requiredTimedMinutes: 0, fitsAvailableMinutes: true }, review: { minutes: reviewMinutes, label: "誤答・保留の即日回収" }, note: "宅建業法ノック20を固定し、曜日テーマは未測定→弱点→保留の順で出題。" };
+    return { availableMinutes: minutes, weekday: weekdayFor(todayKey), mode: "standard", requiredMeasurement: "", businessKnock: { count: 20, minutes: businessMinutes, label: "宅建業法ノック20" }, theme: { ...theme, minutes: Math.max(0, minutes - businessMinutes - reviewMinutes), requiredTimedMinutes: 0, fitsAvailableMinutes: true }, review: { minutes: reviewMinutes, label: "誤答・保留の即日回収" }, note: "宅建業法ノック20を固定し、曜日テーマは未測定→弱点→保留の順で出題。" };
   }
   function invalidResult(reason, todayKey, dailyAvailableMinutes, profile) { return { valid: false, reason, status: "invalid", onTrack: false, urgent: false, behind: false, todayKey: todayKey || "", dailyAvailableMinutes: dailyAvailableMinutes === null ? null : dailyAvailableMinutes, examDayKey: EXAM_DAY_KEY, lawBaselineDayKey: LAW_BASELINE_DAY_KEY, firstPassDeadlineKey: FIRST_PASS_DEADLINE_KEY, examProfile: profile, targets: { total: targetTotal(profile), questions: profile.questions, subjects: profileSubjects(profile).map((subject) => ({ ...subject })) } }; }
   function calculatePassReadiness(options = {}) {
@@ -195,15 +243,15 @@
     if (todayKey >= EXAM_DAY_KEY) return invalidResult("exam-window-closed", todayKey, dailyAvailableMinutes, profile);
     const activeSubjects = profileSubjects(profile), subjects = activeSubjects.map((subject) => normalizeSubject(subject, options.subjects)), invalidSubjects = subjects.filter((subject) => !subject.metricValid), unmeasuredSubjects = subjects.filter((subject) => subject.state === "unmeasured"), weakSubjects = subjects.filter((subject) => subject.weak);
     const knownRemainingContact = subjects.reduce((sum, subject) => sum + (subject.remainingContact ?? 0), 0), contactUnknown = subjects.some((subject) => subject.remainingContact === null), deadlineDelta = daysBetween(todayKey, FIRST_PASS_DEADLINE_KEY), firstPassWindowOpen = deadlineDelta !== null && deadlineDelta >= 0, firstPassDaysInclusive = firstPassWindowOpen ? deadlineDelta + 1 : 0, requiredContactsPerDay = !contactUnknown && firstPassDaysInclusive > 0 ? Math.ceil(knownRemainingContact / firstPassDaysInclusive) : null;
-    const mockHistory = stabilityFrom(options.mockHistory, profile, todayKey, MOCK_STABILITY_POLICY), officialHistory = stabilityFrom(options.officialHistory, profile, todayKey), currentLawGate = currentLawGateFrom(options.currentLawGate, todayKey), capacity = capacityFrom(options.studyMinutesHistory, todayKey), currentYearFreshness = currentYearFreshnessFrom(options.currentYearFreshness);
-    const timed50 = { mock: mockHistory, official: officialHistory, baseStable: mockHistory.stable, currentLawGatePassed: currentLawGate.passed, stable: mockHistory.stable && currentLawGate.passed, status: mockHistory.stable && currentLawGate.passed ? "stable" : mockHistory.validTimedCount < mockHistory.requiredAttempts || currentLawGate.status === "unmeasured" ? "unmeasured" : "unstable" };
+    const mockHistory = stabilityFrom(options.mockHistory, profile, todayKey, MOCK_STABILITY_POLICY), officialHistory = stabilityFrom(options.officialHistory, profile, todayKey), officialTransfer = officialTransferFrom(options.officialTransferHistory, todayKey, profile), currentLawGate = currentLawGateFrom(options.currentLawGate, todayKey), capacity = capacityFrom(options.studyMinutesHistory, todayKey), currentYearFreshness = currentYearFreshnessFrom(options.currentYearFreshness), textbookFirstPass = firstPassPlanFrom(options.textbookFirstPass, todayKey, dailyAvailableMinutes);
+    const timed50 = { mock: mockHistory, official: officialHistory, officialTransfer, baseStable: mockHistory.stable, currentLawGatePassed: currentLawGate.passed, stable: mockHistory.stable && currentLawGate.passed && officialTransfer.passed, status: mockHistory.stable && currentLawGate.passed && officialTransfer.passed ? "stable" : mockHistory.validTimedCount < mockHistory.requiredAttempts || currentLawGate.status === "unmeasured" || officialTransfer.status === "unmeasured" ? "unmeasured" : "unstable" };
     const deadlinePassedWithWork = !firstPassWindowOpen && (!contactUnknown ? knownRemainingContact > 0 : unmeasuredSubjects.length > 0);
-    const behind = dailyAvailableMinutes < 75 || deadlinePassedWithWork || capacity.status === "below-minimum";
-    const readinessBlocked = !timed50.stable || !capacity.verified || !currentYearFreshness.passed;
+    const behind = dailyAvailableMinutes < 75 || deadlinePassedWithWork || textbookFirstPass.deadlinePassedWithWork || textbookFirstPass.status === "infeasible" || capacity.status === "below-minimum";
+    const readinessBlocked = !timed50.stable || !capacity.verified || !currentYearFreshness.passed || !textbookFirstPass.valid;
     const urgent = behind || readinessBlocked || (firstPassWindowOpen && knownRemainingContact > 0 && firstPassDaysInclusive <= 7) || weakSubjects.length > 0;
     const status = invalidSubjects.length ? "invalid" : unmeasuredSubjects.length ? "unmeasured" : behind ? "behind" : urgent ? "urgent" : "on-track";
-    const reason = invalidSubjects.length ? "invalid-subject-metric" : deadlinePassedWithWork ? "first-pass-deadline-passed" : dailyAvailableMinutes < 75 ? "daily-time-below-minimum" : capacity.status === "below-minimum" ? "observed-capacity-below-minimum" : unmeasuredSubjects.length ? "subject-unmeasured" : weakSubjects.length ? "weak-retention" : !mockHistory.stable ? "timed-stability-unverified" : !currentLawGate.passed ? "current-law-gate-unverified" : !capacity.verified ? "observed-capacity-unverified" : !currentYearFreshness.passed ? "current-year-freshness-unverified" : "within-plan";
-    return { valid: !invalidSubjects.length, reason, status, onTrack: status === "on-track", urgent, behind, todayKey, dailyAvailableMinutes, examDayKey: EXAM_DAY_KEY, lawBaselineDayKey: LAW_BASELINE_DAY_KEY, firstPassDeadlineKey: FIRST_PASS_DEADLINE_KEY, examProfile: profile, daysToExam: daysBetween(todayKey, EXAM_DAY_KEY), firstPass: { deadlineKey: FIRST_PASS_DEADLINE_KEY, daysRemainingInclusive: firstPassDaysInclusive, knownRemainingContact, contactUnknown, requiredContactsPerDay, deadlinePassedWithWork }, targets: { total: targetTotal(profile), questions: profile.questions, subjects: activeSubjects.map((subject) => ({ ...subject })) }, subjects, unmeasuredSubjectKeys: unmeasuredSubjects.map((subject) => subject.key), weakSubjectKeys: weakSubjects.map((subject) => subject.key), timed50, currentLawGate, capacity, currentYearFreshness, dailyPlan: buildDailyPlan(todayKey, dailyAvailableMinutes, profile), mockCadence: { startKey: todayKey <= FIRST_PASS_DEADLINE_KEY ? FIRST_PASS_DEADLINE_KEY : todayKey, frequency: "weekly", day: "Sunday", requiredMinutes: profile.minutes, stabilityRule: `本試験相当A/Bの時間計測${profile.questions}問をJST 3日で3回（A/B両方、同フォーム再計測は7日以上空ける）。合計${targetTotal(profile)}点以上かつ全科目目標以上、最新は14日以内、3回全体は21日間以内（両端を含む）。補助診断Cは安定判定に含めない。改正確認2回も各14日以内、当年資料の鮮度も必須。` } };
+    const reason = invalidSubjects.length ? "invalid-subject-metric" : deadlinePassedWithWork || textbookFirstPass.deadlinePassedWithWork ? "first-pass-deadline-passed" : textbookFirstPass.status === "infeasible" ? "first-pass-plan-infeasible" : !textbookFirstPass.valid ? "first-pass-plan-unverified" : dailyAvailableMinutes < 75 ? "daily-time-below-minimum" : capacity.status === "below-minimum" ? "observed-capacity-below-minimum" : unmeasuredSubjects.length ? "subject-unmeasured" : weakSubjects.length ? "weak-retention" : !mockHistory.stable ? "timed-stability-unverified" : !officialTransfer.passed ? "official-transfer-unverified" : !currentLawGate.passed ? "current-law-gate-unverified" : !capacity.verified ? "observed-capacity-unverified" : !currentYearFreshness.passed ? "current-year-freshness-unverified" : "within-plan";
+    return { valid: !invalidSubjects.length, reason, status, onTrack: status === "on-track", urgent, behind, todayKey, dailyAvailableMinutes, examDayKey: EXAM_DAY_KEY, lawBaselineDayKey: LAW_BASELINE_DAY_KEY, firstPassDeadlineKey: FIRST_PASS_DEADLINE_KEY, examProfile: profile, daysToExam: daysBetween(todayKey, EXAM_DAY_KEY), firstPass: { deadlineKey: FIRST_PASS_DEADLINE_KEY, daysRemainingInclusive: firstPassDaysInclusive, knownRemainingContact, contactUnknown, requiredContactsPerDay, deadlinePassedWithWork, textbook: textbookFirstPass }, targets: { total: targetTotal(profile), questions: profile.questions, subjects: activeSubjects.map((subject) => ({ ...subject })) }, subjects, unmeasuredSubjectKeys: unmeasuredSubjects.map((subject) => subject.key), weakSubjectKeys: weakSubjects.map((subject) => subject.key), timed50, currentLawGate, capacity, currentYearFreshness, dailyPlan: buildDailyPlan(todayKey, dailyAvailableMinutes, profile, officialTransfer, textbookFirstPass), mockCadence: { startKey: todayKey <= FIRST_PASS_DEADLINE_KEY ? FIRST_PASS_DEADLINE_KEY : todayKey, frequency: "weekly", day: "Sunday", requiredMinutes: profile.minutes, stabilityRule: `本試験相当A/Bの時間計測${profile.questions}問をJST 3日で3回（A/B両方、同フォーム再計測は7日以上空ける）。合計${targetTotal(profile)}点以上かつ全科目目標以上、最新は14日以内、3回全体は21日間以内（両端を含む）。補助診断Cは安定判定に含めない。公式未見3試験回を別3日で測定し、50問換算で平均40点以上・最低37点以上も必須。改正確認2回も各14日以内、当年資料の鮮度も必須。` } };
   }
-  return { EXAM_DAY_KEY, LAW_BASELINE_DAY_KEY, FIRST_PASS_DEADLINE_KEY, DEFAULT_DAILY_MINUTES, MIN_TIMED_MOCK_MINUTES, MIN_RETENTION_RATE, STABILITY_LATEST_MAX_AGE_DAYS, STABILITY_WINDOW_DAYS, CURRENT_LAW_ATTEMPT_MAX_AGE_DAYS, MOCK_STABILITY_POLICY, SUBJECTS, EXAM_PROFILES, CURRENT_LAW_CLUSTERS, TARGET_TOTAL, QUESTION_TOTAL, validDayKey, dayKey, daysBetween, calculatePassReadiness };
+  return { EXAM_DAY_KEY, LAW_BASELINE_DAY_KEY, FIRST_PASS_DEADLINE_KEY, DEFAULT_DAILY_MINUTES, FIRST_PASS_UNIT_MINUTES, FIRST_PASS_FIXED_DAILY_MINUTES, MIN_TIMED_MOCK_MINUTES, MIN_RETENTION_RATE, STABILITY_LATEST_MAX_AGE_DAYS, STABILITY_WINDOW_DAYS, CURRENT_LAW_ATTEMPT_MAX_AGE_DAYS, MOCK_STABILITY_POLICY, SUBJECTS, EXAM_PROFILES, CURRENT_LAW_CLUSTERS, TARGET_TOTAL, QUESTION_TOTAL, validDayKey, dayKey, daysBetween, calculatePassReadiness };
 });
