@@ -1447,8 +1447,25 @@
     };
   }
 
+  function trimMockHistory(input, limitPerBucket = 10) {
+    const rows = Array.isArray(input) ? input : [];
+    const buckets = new Map();
+    rows.forEach((item, index) => {
+      const form = mockFormById(String(item?.formId || ""));
+      if (!form) return;
+      const bucket = `${normalizeExamProfile(item?.examProfile)}:${mockFormEvidenceClass(form)}:${form.id}`;
+      if (!buckets.has(bucket)) buckets.set(bucket, []);
+      buckets.get(bucket).push(index);
+    });
+    const keep = new Set();
+    buckets.forEach((indices) => {
+      indices.slice(-limitPerBucket).forEach((index) => keep.add(index));
+    });
+    return rows.filter((_, index) => keep.has(index));
+  }
+
   function normalizeMockHistory(input) {
-    return (Array.isArray(input) ? input : [])
+    const normalized = (Array.isArray(input) ? input : [])
       .filter((item) => mockFormById(String(item?.formId || "")))
       .map((item) => {
         const examProfile = normalizeExamProfile(item?.examProfile);
@@ -1479,8 +1496,8 @@
             : {}
         };
       })
-      .sort((left, right) => Date.parse(left.completedAt || "") - Date.parse(right.completedAt || ""))
-      .slice(-10);
+      .sort((left, right) => Date.parse(left.completedAt || "") - Date.parse(right.completedAt || ""));
+    return trimMockHistory(normalized);
   }
 
   function boundedInteger(value, maximum) {
@@ -12417,7 +12434,7 @@
       elapsedMs,
       finalized: true
     };
-    state.mockHistory = [
+    state.mockHistory = trimMockHistory([
       ...(state.mockHistory || []),
       {
         formId: form.id,
@@ -12431,7 +12448,7 @@
         elapsedMs,
         sectionScores
       }
-    ].slice(-10);
+    ]);
     const elapsedMinutes = Math.max(1, Math.ceil(elapsedMs / 60000));
     const currentMission = missionForDate(todayKey());
     setMissionForDate(todayKey(), {

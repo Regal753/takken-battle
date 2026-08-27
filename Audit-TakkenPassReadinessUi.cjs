@@ -118,6 +118,9 @@ async function main() {
   assert.match(runtimeSource, /補助C.*安定判定外/);
   assert.match(runtimeSource, /evidenceClass: mockFormEvidenceClass\(form\)/);
   assert.match(runtimeSource, /\.filter\(isStabilityMockForm\)/);
+  assert.match(runtimeSource, /function trimMockHistory\(input, limitPerBucket = 10\)/);
+  assert.match(runtimeSource, /mockFormEvidenceClass\(form\)\}:\$\{form\.id\}/);
+  assert.match(runtimeSource, /state\.mockHistory = trimMockHistory\(\[/);
   assert.match(markupSource, />補助診断C<\/button>/);
   assert.match(markupSource, /<details id="passPlanPanel"/);
   assert.doesNotMatch(markupSource, /<details id="passPlanPanel"[^>]*\bopen\b/);
@@ -169,6 +172,110 @@ async function main() {
     assert.equal(initial.passPlanOpen, false, "the long-term plan must not push today\'s command below the fold");
     assert.match(initial.lawGateLabel, /2026改正2問/);
     assert.deepEqual(initial.exposure || {}, {});
+
+    // Auxiliary C attempts must never evict qualifying A/B evidence from the
+    // shared persisted history. Each profile/evidence class/form has its own cap.
+    const historyRetentionPage = await context.newPage();
+    historyRetentionPage.on("pageerror", (error) => errors.push(String(error)));
+    historyRetentionPage.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+    const historyRetentionUrl = new URL(server.baseUrl);
+    historyRetentionUrl.searchParams.set("review", `prhistory${Date.now().toString(36)}`);
+    historyRetentionUrl.searchParams.set("today", "1");
+    await historyRetentionPage.goto(historyRetentionUrl.toString(), { waitUntil: "networkidle" });
+    await historyRetentionPage.evaluate(() => {
+      const review = new URL(location.href).searchParams.get("review") || "";
+      const key = `takken-battle-study-clean-v2-hard-review-${review}`;
+      const saved = JSON.parse(localStorage.getItem(key) || "{}");
+      const sectionScores = {
+        business: { correct: 18 },
+        rights: { correct: 9 },
+        restrictions: { correct: 7 },
+        tax: { correct: 2 },
+        other: { correct: 4 }
+      };
+      const attempt = (formId, dayKey) => ({
+        formId,
+        examProfile: "general",
+        evidenceVersion: 2,
+        lawBaseline: "2026-04-01",
+        questionCount: 50,
+        completedAt: `${dayKey}T10:00:00+09:00`,
+        dayKey,
+        score: 40,
+        elapsedMs: 60 * 60 * 1000,
+        sectionScores
+      });
+      saved.mockHistory = [
+        attempt("form-a", "2026-08-01"),
+        attempt("form-b", "2026-08-02"),
+        attempt("form-a", "2026-08-08"),
+        ...["09", "10", "11", "12", "13", "14", "15", "16"]
+          .map((day) => attempt("form-c", `2026-08-${day}`))
+      ];
+      localStorage.setItem(key, JSON.stringify(saved));
+    });
+    await historyRetentionPage.reload({ waitUntil: "networkidle" });
+    await historyRetentionPage.waitForFunction(() =>
+      (document.querySelector("#passReadinessStatus")?.textContent || "").includes("補助C 8回")
+    );
+    const historyRetention = await stored(historyRetentionPage);
+    const retainedAorB = historyRetention.state.mockHistory.filter((item) => ["form-a", "form-b"].includes(item.formId));
+    const retainedC = historyRetention.state.mockHistory.filter((item) => item.formId === "form-c");
+    assert.equal(retainedAorB.length, 3, "C practice must not evict the qualifying A/B sequence");
+    assert.equal(retainedC.length, 8);
+    assert.match(await historyRetentionPage.locator("#passReadinessStatus").textContent(), /A\/B測定 通過.*補助C 8回は安定判定外/);
+    await historyRetentionPage.close();
+
+    // Repeating A must not erase the only retained B attempt. The newest
+    // three attempts are still all A, so readiness must honestly remain
+    // unstable while both form histories stay available for future evidence.
+    const formRetentionPage = await context.newPage();
+    formRetentionPage.on("pageerror", (error) => errors.push(String(error)));
+    formRetentionPage.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+    const formRetentionUrl = new URL(server.baseUrl);
+    formRetentionUrl.searchParams.set("review", `prformhistory${Date.now().toString(36)}`);
+    formRetentionUrl.searchParams.set("today", "1");
+    await formRetentionPage.goto(formRetentionUrl.toString(), { waitUntil: "networkidle" });
+    await formRetentionPage.evaluate(() => {
+      const review = new URL(location.href).searchParams.get("review") || "";
+      const key = `takken-battle-study-clean-v2-hard-review-${review}`;
+      const saved = JSON.parse(localStorage.getItem(key) || "{}");
+      const sectionScores = {
+        business: { correct: 18 },
+        rights: { correct: 9 },
+        restrictions: { correct: 7 },
+        tax: { correct: 2 },
+        other: { correct: 4 }
+      };
+      const attempt = (formId, dayKey) => ({
+        formId,
+        examProfile: "general",
+        evidenceVersion: 2,
+        lawBaseline: "2026-04-01",
+        questionCount: 50,
+        completedAt: `${dayKey}T10:00:00+09:00`,
+        dayKey,
+        score: 40,
+        elapsedMs: 60 * 60 * 1000,
+        sectionScores
+      });
+      saved.mockHistory = [
+        attempt("form-b", "2026-08-01"),
+        ...Array.from({ length: 10 }, (_, index) =>
+          attempt("form-a", `2026-08-${String(index + 2).padStart(2, "0")}`))
+      ];
+      localStorage.setItem(key, JSON.stringify(saved));
+    });
+    await formRetentionPage.reload({ waitUntil: "networkidle" });
+    await formRetentionPage.waitForFunction(() =>
+      (document.querySelector("#passReadinessStatus")?.textContent || "").includes("A/B両方が必要")
+    );
+    const formRetention = await stored(formRetentionPage);
+    assert.equal(formRetention.state.mockHistory.filter((item) => item.formId === "form-a").length, 10);
+    assert.equal(formRetention.state.mockHistory.filter((item) => item.formId === "form-b").length, 1);
+    assert.equal(formRetention.state.mockHistory.length, 11);
+    assert.match(await formRetentionPage.locator("#passReadinessStatus").textContent(), /A\/B測定 要再測定（A\/B両方が必要）/);
+    await formRetentionPage.close();
 
     // Retention is source-level evidence. A newer source failure must demote
     // an older retained sprint variant instead of letting the old OR rule push
