@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20260828-quality-v41-1-2c188ca2a594",
-  "digest": "sha256:2c188ca2a594da73d38e9b8ed463fdfa3f684d860e6a58090e0cab5f67650103",
+  "version": "20260828-quality-v42-2-9418c68fd5fd",
+  "digest": "sha256:9418c68fd5fdb6507ccdefc219104cc5ef2006378a577dc9b0414c1d37124c7a",
   "assetCount": 43,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "1c31ccb4c324428f46e9c3ec4b5dddb21d0aa7f9d01c1509f8b2fd40a9cd80f5"
+      "sha256": "f84e0d70886bcfd1428d1a575c10b6f76dd694951c0f46a65f13bb42b87d6fa2"
     },
     {
       "path": "assets/battle/grassland-route.webp",
@@ -86,7 +86,7 @@
     },
     {
       "path": "exam-question-core.js",
-      "sha256": "5f809b62e8e69fe565ad76a729b1d9b84deaf506f2e9ba87396061f8be97cfe9"
+      "sha256": "2c3dc65697c6f557ca2ab5bb887ccdeee8e4653b3b099354678127fd70297d79"
     },
     {
       "path": "exam-questions-business.js",
@@ -110,7 +110,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "cd2939f37a5ee2651e7946e0dcb3014a5b0481022a43298883cd772205390eda"
+      "sha256": "3168d35898068ccdefeb3e878f7e8ce189332acf00c924d3ddef75b6eb7fdba7"
     },
     {
       "path": "manifest.webmanifest",
@@ -130,7 +130,7 @@
     },
     {
       "path": "pass-readiness.js",
-      "sha256": "b07c54bf55084c89aca70bea189f6b85776b348c1c9b71621dba77c6145f14fa"
+      "sha256": "ab0d0a5d04156f981d05909b2c69ebf137d405c2ca860cdce558cf7f73623323"
     },
     {
       "path": "practical-question-bank.js",

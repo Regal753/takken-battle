@@ -2853,16 +2853,17 @@
       if (saveStoreSession.writeBlocked) {
         throw new Error("新しい保存形式を保護中です。アプリを更新するまで端末セーブは変更しません。");
       }
-      // A tab can stay open while another tab upgrades the save. Check the
-      // raw stored schema before taking a lease or normalizing it, otherwise
-      // normalizeState would downcast the newer state to this runtime's schema.
-      const persisted = persistedStateForSync();
-      if (saveStoreSession.writeBlocked) {
-        throw new Error("新しい保存形式を保護中です。アプリを更新するまで端末セーブは変更しません。");
-      }
       releaseLease = acquireStateSaveLease();
       if (!releaseLease) {
         throw new Error("別タブが保存中です。数秒後にもう一度お試しください。");
+      }
+      // Take the lease before reading the primary raw. A remote tab can finish
+      // between an earlier read and this lease acquisition; reconciling against
+      // that stale snapshot would overwrite its progress. This fresh read also
+      // checks a newly written future schema before this runtime normalizes it.
+      const persisted = persistedStateForSync();
+      if (saveStoreSession.writeBlocked) {
+        throw new Error("新しい保存形式を保護中です。アプリを更新するまで端末セーブは変更しません。");
       }
       const savedAt = new Date().toISOString();
       const replace = Boolean(options.replace);
@@ -4613,11 +4614,14 @@
     ) {
       return false;
     }
-    if (item.attemptType !== "retest") return item.attemptType === "initial";
+    if (item.attemptType !== "retest") {
+      return item.attemptType === "initial" && item.appUnseenAtStart === true;
+    }
     const initial = history
       .filter((candidate) =>
         candidate.examId === item.examId &&
         candidate.attemptType === "initial" &&
+        candidate.appUnseenAtStart === true &&
         candidate.sourceMode === "timed-answer-sheet" &&
         Number(candidate.evidenceVersion) >= OFFICIAL_EXAM_LEGACY_EVIDENCE_VERSION &&
         candidate.timed120 &&
@@ -4648,7 +4652,9 @@
     );
     const initial = qualifying.filter((item) => item.attemptType === "initial");
     const retests = qualifying.filter((item) => item.attemptType === "retest");
-    const latestThree = qualifying.slice(-3);
+    // Transfer evidence must remain first-seen performance. Retests measure
+    // retention and must not replace a weak or missing unseen exam score.
+    const latestThree = initial.slice(-3);
     const distinctExamCount = new Set(latestThree.map((item) => item.examId)).size;
     const distinctDayCount = new Set(latestThree.map((item) =>
       String(item.startedDayKey || localDateKey(item.completedAt) || "")
@@ -6330,12 +6336,29 @@
     const currentYearFreshness = EXAM_CURRENT_YEAR?.assessAllFreshness
       ? EXAM_CURRENT_YEAR.assessAllFreshness(todayKey())
       : { current: false, failClosed: true, status: "unavailable" };
+    const officialReadiness = officialReadinessStats();
+    const completedTextbookUnits = TEXTBOOK_CHAPTERS.filter((chapter) =>
+      chapter.ids.every(isContacted)
+    ).length;
     return PASS_READINESS.calculatePassReadiness({
       todayKey: todayKey(),
       examProfile: state.examProfile,
       dailyAvailableMinutes: DAILY_STUDY_MINUTES,
       subjects: passSubjectMetrics(),
       mockHistory: passMockHistory(),
+      officialTransferHistory: {
+        initialCount: officialReadiness.initial.length,
+        latestThreeInitial: officialReadiness.latestThree.map((attempt) => ({
+          examId: String(attempt.examId || ""),
+          dayKey: String(attempt.startedDayKey || localDateKey(attempt.completedAt) || ""),
+          score50: (Number(attempt.score) * 50) / officialExamQuestionCountFor(attempt)
+        }))
+      },
+      textbookFirstPass: {
+        totalUnits: TEXTBOOK_CHAPTERS.length,
+        completedUnits: completedTextbookUnits,
+        minutesPerUnit: PASS_READINESS.FIRST_PASS_UNIT_MINUTES || 12
+      },
       currentLawGate: { attempts: currentLawGateAttempts() },
       studyMinutesHistory: passStudyMinutesHistory(),
       currentYearFreshness,
@@ -6511,11 +6534,24 @@
       startCurrentLawGate();
     } else if (action === "mock") {
       const snapshot = passReadinessSnapshot();
-      if (snapshot?.dailyPlan?.mode === "choice") {
+      if (["choice", "required-full-mock"].includes(snapshot?.dailyPlan?.mode)) {
         setMissionForDate(todayKey(), { sundayMode: "full-mock" });
         saveState();
       }
       startMock(nextMockFormId());
+    } else if (action === "official-exam") {
+      setMissionForDate(todayKey(), { sundayMode: "full-mock" });
+      if (!saveState()) return false;
+      if (elements.passPlanPanel) elements.passPlanPanel.open = true;
+      const ledger = document.querySelector(".official-ledger");
+      if (ledger) ledger.open = true;
+      startOfficialExam();
+      window.requestAnimationFrame(() =>
+        (elements.officialExamSessionForm?.hidden
+          ? elements.officialExamStartButton
+          : elements.officialExamSessionForm
+        )?.scrollIntoView({ block: "start", behavior: "smooth" })
+      );
     } else if (action === "sunday-short") {
       setMissionForDate(todayKey(), { sundayMode: "short-review" });
       saveState();
@@ -6571,19 +6607,33 @@
     const themeDone = themeCount >= themeTarget;
     const minutesDone = mission.minutes >= PASS_MIN_DAILY_MINUTES;
     const nextChapter = nextPassThemeChapter(theme.key);
-    const choiceDay = snapshot.dailyPlan.mode === "choice";
-    const sundayMode = choiceDay ? mission.sundayMode : "";
-    const shortCount = choiceDay ? shortSundayAnswersToday() : 0;
+    const sundayDay = ["choice", "required-full-mock"].includes(snapshot.dailyPlan.mode);
+    const fullMeasurementRequired = snapshot.dailyPlan.mode === "required-full-mock";
+    const officialMeasurementRequired = fullMeasurementRequired &&
+      snapshot.dailyPlan.requiredMeasurement === "official-transfer";
+    const officialInitialDoneToday = officialReadinessStats().initial.some((attempt) =>
+      String(attempt.startedDayKey || localDateKey(attempt.completedAt) || "") === todayKey()
+    );
+    // A previously saved short route cannot bypass a newly detected evidence
+    // gap. Required Sundays are always treated as a full measurement day.
+    const sundayMode = sundayDay
+      ? fullMeasurementRequired ? "full-mock" : mission.sundayMode
+      : "";
+    const shortCount = sundayDay ? shortSundayAnswersToday() : 0;
     const shortDone = businessDone && shortCount >= 8 && minutesDone;
-    const mockDone = choiceDay && themeDone;
-    const completed = choiceDay
+    const mockDone = sundayDay && (officialMeasurementRequired ? officialInitialDoneToday : themeDone);
+    const completed = sundayDay
       ? sundayMode === "full-mock" ? mockDone : sundayMode === "short-review" ? shortDone : false
       : businessDone && themeDone && minutesDone;
     let primary;
     let secondary = null;
     if (active) {
       primary = { action: "resume", label: `${active.label}を再開` };
-    } else if (choiceDay && !sundayMode) {
+    } else if (sundayDay && fullMeasurementRequired) {
+      primary = officialMeasurementRequired
+        ? { action: "official-exam", label: `公式未見${snapshot.examProfile.questions}問・${snapshot.examProfile.minutes}分を開始` }
+        : { action: "mock", label: `内部A/B ${snapshot.examProfile.questions}問・${snapshot.examProfile.minutes}分を開始` };
+    } else if (sundayDay && !sundayMode) {
       primary = {
         action: "mock",
         label: `本試験${snapshot.examProfile.questions}問・${snapshot.examProfile.minutes}分（今日はこれだけ）`
@@ -6593,9 +6643,9 @@
         label: "短縮75–90分（業法20＋弱点8）",
         scope: shortSundayScope(snapshot)
       };
-    } else if (choiceDay && sundayMode === "full-mock") {
+    } else if (sundayDay && sundayMode === "full-mock") {
       primary = { action: "mock", label: `本試験${snapshot.examProfile.questions}問を開始` };
-    } else if (choiceDay && sundayMode === "short-review") {
+    } else if (sundayDay && sundayMode === "short-review") {
       primary = !businessDone
         ? { action: "sunday-short", label: `残り${20 - businessDoneCount}問をノック開始`, scope: shortSundayScope(snapshot) }
         : { action: "sunday-short", label: `弱点補強 残り${Math.max(0, 8 - shortCount)}問`, scope: shortSundayScope(snapshot) };
@@ -6619,23 +6669,27 @@
     elements.todayCommandKicker.textContent = `D-${snapshot.daysToExam}・8/31まで高速一周`;
     elements.todayCommandTitle.textContent = active
       ? active.label
-      : !businessDone && (!choiceDay || sundayMode === "short-review")
+      : !businessDone && (!sundayDay || sundayMode === "short-review")
         ? `今日の宅建業法 残り${20 - businessDoneCount}問`
       : completed
-        ? choiceDay && sundayMode === "full-mock" ? "本試験形式を完了" : "最低75分ライン完了"
+        ? sundayDay && sundayMode === "full-mock" ? "本試験形式を完了" : "最低75分ライン完了"
         : primary.label;
     elements.todayCommandText.textContent = active
       ? "途中セットを上書きせず、保存位置から終わらせて次へ進みます。"
-      : choiceDay
-        ? sundayMode === "full-mock"
-          ? `${snapshot.examProfile.questions}問・${snapshot.examProfile.minutes}分だけに集中します。業法ノックは今日は必須にしません。途中保存できます。`
+      : sundayDay
+        ? fullMeasurementRequired
+          ? officialMeasurementRequired
+            ? `公式未見3試験回の転移証拠が未達です。今日は公式${snapshot.examProfile.questions}問を本試験時間で測り、短縮復習では完了にしません。`
+            : `全45単元の一周が未完了です。今日は内部A/Bを本試験時間で測り、短縮復習では完了にしません。`
+          : sundayMode === "full-mock"
+            ? `${snapshot.examProfile.questions}問・${snapshot.examProfile.minutes}分だけに集中します。業法ノックは今日は必須にしません。途中保存できます。`
           : sundayMode === "short-review"
             ? "今日は短縮ルートだけ。宅建業法20問と非業法の弱点8問を、最低75分・標準90分で終えます。"
             : "今日は二者択一です。本試験形式か短縮復習のどちらか一方だけを選びます。"
         : `${snapshot.dailyPlan.businessKnock.label}を固定。今日は${theme.label}、最後に誤答・迷いを同じセットで回収します。`;
     elements.todayCommandPanel.classList.toggle("is-complete", completed);
     setPassCommandAction(elements.todayCommandStartButton, primary.action, primary.label, primary);
-    elements.todayCommandStartButton.hidden = completed || (choiceDay && sundayMode === "short-review" && businessDone && shortCount >= 8);
+    elements.todayCommandStartButton.hidden = completed || (sundayDay && sundayMode === "short-review" && businessDone && shortCount >= 8);
     elements.todayCommandPracticalButton.hidden = !secondary || Boolean(active);
     if (secondary) setPassCommandAction(elements.todayCommandPracticalButton, secondary.action, secondary.label, secondary);
     elements.todayCommandCalculationButton.hidden = true;
@@ -6645,7 +6699,7 @@
     // the pass-readiness command replaces the older daily command.
     elements.todayCommandOfficialActions.hidden = !foundationCoverageComplete() || Boolean(active);
     elements.todayCommandReviewActions.hidden = true;
-    const taskWorkDone = choiceDay
+    const taskWorkDone = sundayDay
       ? sundayMode === "full-mock"
         ? mockDone
         : sundayMode === "short-review" && businessDone && shortCount >= 8
@@ -6655,20 +6709,26 @@
     if (elements.missionMinutesInput && document.activeElement !== elements.missionMinutesInput) {
       elements.missionMinutesInput.value = String(mission.minutes);
     }
-    elements.missionBattleLabel.textContent = choiceDay ? "日曜モード" : "業法ノック";
-    elements.missionBattleStatus.textContent = choiceDay
-      ? sundayMode === "full-mock" ? "本試験形式" : sundayMode === "short-review" ? "短縮復習" : "未選択"
+    elements.missionBattleLabel.textContent = sundayDay ? "日曜モード" : "業法ノック";
+    elements.missionBattleStatus.textContent = sundayDay
+      ? fullMeasurementRequired
+        ? officialMeasurementRequired ? "公式初見必須" : "内部模試必須"
+        : sundayMode === "full-mock" ? "本試験形式" : sundayMode === "short-review" ? "短縮復習" : "未選択"
       : `解答済 ${Math.min(20, businessDoneCount)} / 20`;
-    elements.missionOfficialLabel.textContent = choiceDay
-      ? sundayMode === "full-mock" ? `${snapshot.examProfile.questions}問模試` : "業法20＋弱点8"
-      : theme.label;
-    elements.missionOfficialStatus.textContent = choiceDay
+    elements.missionOfficialLabel.textContent = sundayDay
       ? sundayMode === "full-mock"
-        ? `解答済 ${Math.min(themeTarget, themeCount)} / ${themeTarget}`
+        ? officialMeasurementRequired ? `公式未見${snapshot.examProfile.questions}問` : `内部${snapshot.examProfile.questions}問模試`
+        : "業法20＋弱点8"
+      : theme.label;
+    elements.missionOfficialStatus.textContent = sundayDay
+      ? sundayMode === "full-mock"
+        ? officialMeasurementRequired
+          ? officialInitialDoneToday ? "本日分を採点済み" : "未測定"
+          : `解答済 ${Math.min(themeTarget, themeCount)} / ${themeTarget}`
         : `業法 ${Math.min(20, businessDoneCount)} / 20・弱点 ${Math.min(8, shortCount)} / 8`
       : `解答済 ${Math.min(themeTarget, themeCount)} / ${themeTarget}`;
     elements.missionReviewLabel.textContent = "セット内誤答";
-    elements.missionReviewStatus.textContent = choiceDay && sundayMode === "full-mock"
+    elements.missionReviewStatus.textContent = sundayDay && sundayMode === "full-mock"
       ? mockDone ? "採点済み" : "採点後に確認"
       : taskWorkDone ? "回収済み" : "各セットで再出題";
     elements.missionMinutesLabel.textContent = "最低75分 / 標準90分";
@@ -6678,12 +6738,12 @@
     elements.missionMinutesStep.disabled = !taskWorkDone || minutesDone || sundayMode === "full-mock";
     elements.missionMinutesStep.dataset.action = taskWorkDone && !minutesDone && sundayMode !== "full-mock" ? "minutes" : "";
     elements.missionMinutesStep.setAttribute("aria-label", "今日の合計学習時間を入力する");
-    const currentIndex = choiceDay
+    const currentIndex = sundayDay
       ? !sundayMode ? 0 : !taskWorkDone ? 1 : sundayMode !== "full-mock" && !minutesDone ? 3 : -1
       : !businessDone ? 0 : !themeDone ? 1 : !minutesDone ? 3 : -1;
     [
-      [elements.missionBattleStep, choiceDay ? Boolean(sundayMode) : businessDone, 0],
-      [elements.missionOfficialStep, choiceDay ? taskWorkDone : themeDone, 1],
+      [elements.missionBattleStep, sundayDay ? Boolean(sundayMode) : businessDone, 0],
+      [elements.missionOfficialStep, sundayDay ? taskWorkDone : themeDone, 1],
       [elements.missionReviewStep, taskWorkDone, 2],
       [elements.missionMinutesStep, sundayMode === "full-mock" ? mockDone : minutesDone, 3]
     ].forEach(([item, done, index]) => {
@@ -6862,24 +6922,31 @@
       }
     });
 
-    const remainingUnits = TEXTBOOK_CHAPTERS.filter((chapter) => chapter.ids.some((id) => !isContacted(id))).length;
-    const passDays = snapshot.firstPass.daysRemainingInclusive;
-    const unitPace = passDays > 0 ? Math.ceil(remainingUnits / passDays) : remainingUnits;
+    const textbookPlan = snapshot.firstPass.textbook;
+    const remainingUnits = textbookPlan.remainingUnits ??
+      TEXTBOOK_CHAPTERS.filter((chapter) => chapter.ids.some((id) => !isContacted(id))).length;
+    const passDays = textbookPlan.daysRemainingInclusive;
+    const unitPace = textbookPlan.requiredUnitsPerDay ?? remainingUnits;
     const latestAt = latestStudyTimestamp();
     const staleDays = latestAt ? daysBetween(localDateKey(latestAt), todayKey()) : -1;
     elements.passReadinessKicker.textContent = `8/31 一周締切まで${passDays > 0 ? `${passDays}日` : "期限超過"}`;
     elements.passReadinessPace.textContent = remainingUnits
-      ? `残り${remainingUnits}単元・今日${Math.max(1, unitPace)}単元`
+      ? `残り${remainingUnits}単元・今日${Math.max(1, unitPace)}単元（最低${textbookPlan.requiredMinutesPerDay ?? "?"}分）`
       : "一周接触済み";
     elements.passReadinessTitle.textContent = snapshot.timed50.stable
-      ? `${snapshot.targets.total}点・科目別目標をA/Bで3回再現`
+      ? `内部A/B＋公式初見3回で${snapshot.targets.total}点を再現`
+      : snapshot.timed50.mock.stable && !snapshot.timed50.officialTransfer.passed
+        ? `内部A/B通過・公式初見 ${snapshot.timed50.officialTransfer.validAttemptCount}/3回`
       : latestMock
         ? `直近の内部${snapshot.targets.questions}問 ${latestMock.score}/${snapshot.targets.questions}・厳格安定は未達`
         : `${snapshot.targets.questions}問は未測定。内部模試で現在地を出す`;
-    elements.passReadinessNote.textContent = staleDays > 1
+    elements.passReadinessNote.textContent = textbookPlan.status === "infeasible"
+      ? `現在の残数では最低${textbookPlan.requiredMinutesPerDay}分/日が必要です。90分枠のまま「8/31完了」とは表示せず、未接触単元を最優先にします。`
+      : staleDays > 1
       ? `最終学習から${staleDays}日空いています。今日は未接触を減らしつつ、業法20問で再起動します。`
       : `内部目標は${snapshot.targets.total}/${snapshot.targets.questions}。未測定は弱点と決めつけず、接触→時間測定→不足点補強の順で処理します。`;
     const mockEvidence = snapshot.timed50.mock;
+    const officialEvidence = snapshot.timed50.officialTransfer;
     const formEvidenceLabel = mockEvidence.passedRecentCount < mockEvidence.requiredAttempts
       ? `${mockEvidence.passedRecentCount}/${mockEvidence.requiredAttempts}`
       : mockEvidence.distinctFormCount < mockEvidence.requiredDistinctForms
@@ -6900,12 +6967,21 @@
         : !snapshot.currentLawGate.recentEnough
           ? "要再確認（両日14日以内）"
           : "条件未達";
+    const officialEvidenceLabel = officialEvidence.passed
+      ? `通過（平均${officialEvidence.mean.toFixed(1)}・最低${officialEvidence.minimum.toFixed(1)}）`
+      : officialEvidence.futureDated
+        ? "要再測定（未来日付を除外）"
+        : officialEvidence.validAttemptCount < 3
+          ? `${officialEvidence.validAttemptCount}/3試験回`
+          : officialEvidence.distinctExamCount < 3 || officialEvidence.distinctDayCount < 3
+            ? "要再測定（別3試験回・別3日）"
+            : `得点未達（平均${officialEvidence.mean.toFixed(1)}・最低${officialEvidence.minimum.toFixed(1)}）`;
     const excludedMockNote = mockEvidence.excludedTimedCount > 0
       ? `・補助C ${mockEvidence.excludedTimedCount}回は安定判定外`
       : "";
     elements.passReadinessStatus.textContent = snapshot.timed50.stable && snapshot.currentYearFreshness.passed && snapshot.capacity.verified
-      ? `A/B両方・3日（同一フォームは7日以上空ける）、改正確認2日、当年資料、直近7日の学習時間をすべて通過しました。`
-      : `A/B測定 ${formEvidenceLabel}${excludedMockNote}・改正確認 ${lawEvidenceLabel}・当年資料 ${snapshot.currentYearFreshness.passed ? "確認済" : "要再確認"}・学習時間 ${snapshot.capacity.verified ? "確認済" : `${snapshot.capacity.observedDays}/4日`}`;
+      ? `A/B両方・3日、公式初見3試験回、改正確認2日、当年資料、直近7日の学習時間をすべて通過しました。`
+      : `A/B測定 ${formEvidenceLabel}${excludedMockNote}・公式初見 ${officialEvidenceLabel}・改正確認 ${lawEvidenceLabel}・当年資料 ${snapshot.currentYearFreshness.passed ? "確認済" : "要再確認"}・学習時間 ${snapshot.capacity.verified ? "確認済" : `${snapshot.capacity.observedDays}/4日`}`;
     elements.passReadinessStatus.classList.toggle("is-urgent", snapshot.urgent || remainingUnits > 0);
 
     const active = activeLearningSession();
@@ -6928,7 +7004,14 @@
         });
       elements.passThemeAction.disabled = Boolean(active);
     }
-    setPassCommandAction(elements.passMockAction, "mock", `内部${snapshot.examProfile.questions}問で現在地を測る`);
+    const officialActionNeeded = remainingUnits === 0 && !officialEvidence.passed;
+    setPassCommandAction(
+      elements.passMockAction,
+      officialActionNeeded ? "official-exam" : "mock",
+      officialActionNeeded
+        ? `公式未見${snapshot.examProfile.questions}問を本試験時間で測る`
+        : `内部${snapshot.examProfile.questions}問で現在地を測る`
+    );
     if (elements.passMockAction) elements.passMockAction.disabled = Boolean(active);
     setPassCommandAction(
       elements.passLawGateAction,
@@ -7009,7 +7092,7 @@
       `${readiness.stability}・初見${readiness.initial.length}/${OFFICIAL_INITIAL_TARGET}` +
       `・再${readiness.retests.length}/${OFFICIAL_RETEST_TARGET}`;
     elements.officialReadinessStatus.title = readiness.latestThree.length
-      ? `直近${readiness.latestThree.length}回 50問換算平均${readiness.mean.toFixed(1)}・最低${readiness.minimum.toFixed(1)}`
+      ? `直近の公式初見${readiness.latestThree.length}回 50問換算平均${readiness.mean.toFixed(1)}・最低${readiness.minimum.toFixed(1)}`
       : "受験プロフィール時間内・自動採点・当時法公式キーの記録だけを算入";
     elements.officialPracticeCoverageStatus.textContent =
       foundationComplete

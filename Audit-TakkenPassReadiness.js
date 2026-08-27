@@ -8,6 +8,8 @@ assert.equal(typeof browserContext.TAKKEN_PASS_READINESS?.calculatePassReadiness
 assert.equal(readiness.EXAM_DAY_KEY, "2026-10-18");
 assert.equal(readiness.TARGET_TOTAL, 40); assert.equal(readiness.QUESTION_TOTAL, 50);
 assert.equal(readiness.MIN_TIMED_MOCK_MINUTES, 30);
+assert.equal(readiness.FIRST_PASS_UNIT_MINUTES, 12);
+assert.equal(readiness.FIRST_PASS_FIXED_DAILY_MINUTES, 30);
 assert.equal(readiness.STABILITY_LATEST_MAX_AGE_DAYS, 14);
 assert.equal(readiness.STABILITY_WINDOW_DAYS, 21);
 assert.equal(readiness.CURRENT_LAW_ATTEMPT_MAX_AGE_DAYS, 14);
@@ -23,6 +25,12 @@ const attempts = ["form-a", "form-b", "form-a"].map((formId, index) => {
   return { formId, evidenceClass: "independent-current-law", currentLaw: true, dayKey, completedAt: `${dayKey}T10:00:00+09:00`, total: 40, timed: true, elapsedMinutes: 60, questionCount: 50, sections: score };
 });
 const officialAttempts = attempts.map((attempt, index) => ({ ...attempt, formId: `official-${index + 1}` }));
+const officialTransfer = { initialCount: 3, latestThreeInitial: [
+  { examId: "retio-2023", dayKey: "2026-08-25", score50: 40 },
+  { examId: "retio-2024", dayKey: "2026-08-26", score50: 42 },
+  { examId: "retio-2025", dayKey: "2026-09-01", score50: 41 }
+] };
+const textbookComplete = { totalUnits: 45, completedUnits: 45, minutesPerUnit: 12 };
 const gate = { attempts: [
   { dayKey: "2026-09-02", completedAt: "2026-09-02T10:00:00+09:00", correct: true, clusters: ["management-disclosure", "signage"] },
   { dayKey: "2026-09-03", completedAt: "2026-09-03T10:00:00+09:00", correct: true, clusters: ["important-matters", "land-regulation"] }
@@ -31,15 +39,34 @@ const capacity = ["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-04"].map((d
 const freshness = { current: true, failClosed: false };
 
 const blank = readiness.calculatePassReadiness({ todayKey: "2026-08-16" });
-assert.equal(blank.status, "unmeasured"); assert.equal(blank.dailyPlan.mode, "choice"); assert.equal(blank.dailyPlan.businessKnock, null); assert.equal(blank.capacity.status, "unverified");
-const stable = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, officialHistory: officialAttempts, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: freshness });
+assert.equal(blank.status, "unmeasured"); assert.equal(blank.dailyPlan.mode, "required-full-mock"); assert.equal(blank.dailyPlan.requiredMeasurement, "internal-mock"); assert.equal(blank.dailyPlan.businessKnock, null); assert.equal(blank.capacity.status, "unverified");
+const stable = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, officialHistory: officialAttempts, officialTransferHistory: officialTransfer, textbookFirstPass: textbookComplete, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: freshness });
 assert.equal(stable.status, "on-track"); assert.equal(stable.timed50.stable, true); assert.equal(stable.currentLawGate.passed, true); assert.equal(stable.capacity.verified, true);
 assert.equal(stable.currentYearFreshness.passed, true);
 assert.equal(stable.timed50.mock.requiredDistinctForms, 2);
 assert.equal(stable.timed50.mock.minimumRepeatGapDays, 7);
 assert.equal(stable.timed50.mock.repeatSpacingSatisfied, true);
 assert.equal(stable.timed50.official.stable, true, "generic official stability keeps the existing three-distinct-form rule");
-const staleCurrentYear = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: { current: false, failClosed: true, status: "stale" } });
+assert.equal(stable.timed50.officialTransfer.passed, true, "official historical transfer proof is required separately from current-law evidence");
+const noOfficialTransfer = readiness.calculatePassReadiness({ todayKey: "2026-09-06", subjects, mockHistory: attempts, textbookFirstPass: textbookComplete, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: freshness });
+assert.equal(noOfficialTransfer.onTrack, false); assert.equal(noOfficialTransfer.reason, "official-transfer-unverified");
+assert.equal(noOfficialTransfer.dailyPlan.requiredMeasurement, "official-transfer");
+const duplicateOfficialExam = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, officialTransferHistory: { ...officialTransfer, latestThreeInitial: officialTransfer.latestThreeInitial.map((entry) => ({ ...entry, examId: "retio-same" })) }, textbookFirstPass: textbookComplete, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: freshness });
+assert.equal(duplicateOfficialExam.timed50.officialTransfer.passed, false, "three scores from one official exam are not transfer evidence");
+const lowOfficialFloor = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, officialTransferHistory: { ...officialTransfer, latestThreeInitial: officialTransfer.latestThreeInitial.map((entry, index) => ({ ...entry, score50: [45, 44, 36][index] })) }, textbookFirstPass: textbookComplete, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: freshness });
+assert.equal(lowOfficialFloor.timed50.officialTransfer.mean, 125 / 3);
+assert.equal(lowOfficialFloor.timed50.officialTransfer.passed, false, "a sub-37 official first-seen floor fails even when the mean exceeds 40");
+const futureOfficial = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, officialTransferHistory: { ...officialTransfer, latestThreeInitial: officialTransfer.latestThreeInitial.map((entry, index) => index === 2 ? { ...entry, dayKey: "2026-09-05" } : entry) }, textbookFirstPass: textbookComplete, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: freshness });
+assert.equal(futureOfficial.timed50.officialTransfer.futureDated, true);
+assert.equal(futureOfficial.timed50.officialTransfer.passed, false, "future-dated official evidence fails closed");
+const unstartedSunday = readiness.calculatePassReadiness({ todayKey: "2026-08-30", subjects, textbookFirstPass: { totalUnits: 45, completedUnits: 0 }, dailyAvailableMinutes: 90 });
+assert.equal(unstartedSunday.dailyPlan.requiredMeasurement, "internal-mock");
+assert.equal(unstartedSunday.dailyPlan.choices.length, 1, "short Sunday route is unavailable before the first pass and official transfer");
+const impossibleFirstPass = readiness.calculatePassReadiness({ todayKey: "2026-08-28", subjects, textbookFirstPass: { totalUnits: 45, completedUnits: 0, minutesPerUnit: 12 }, dailyAvailableMinutes: 90 });
+assert.equal(impossibleFirstPass.behind, true); assert.equal(impossibleFirstPass.reason, "first-pass-plan-infeasible");
+assert.equal(impossibleFirstPass.firstPass.textbook.requiredUnitsPerDay, 12);
+assert.equal(impossibleFirstPass.firstPass.textbook.requiredMinutesPerDay, 174, "unit reading time reserves 30 minutes for the fixed daily business-law knock");
+const staleCurrentYear = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, officialTransferHistory: officialTransfer, textbookFirstPass: textbookComplete, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: { current: false, failClosed: true, status: "stale" } });
 assert.equal(staleCurrentYear.onTrack, false); assert.equal(staleCurrentYear.reason, "current-year-freshness-unverified");
 
 const sameForm = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts.map((a) => ({ ...a, formId: "same" })), currentLawGate: gate, studyMinutesHistory: capacity });
@@ -65,7 +92,7 @@ const historicForm = readiness.calculatePassReadiness({ todayKey: "2026-09-04", 
 assert.equal(historicForm.timed50.mock.validTimed50Count, 0, "a form without current-law evidence fails closed");
 const badSectionSum = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: [{ ...attempts[0], sections: { ...score, business: 17 } }], currentLawGate: gate, studyMinutesHistory: capacity });
 assert.equal(badSectionSum.timed50.mock.validTimed50Count, 0);
-const unordered = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: [attempts[2], attempts[0], attempts[1]], currentLawGate: gate, studyMinutesHistory: capacity });
+const unordered = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: [attempts[2], attempts[0], attempts[1]], officialTransferHistory: officialTransfer, textbookFirstPass: textbookComplete, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: freshness });
 assert.equal(unordered.timed50.stable, true, "valid attempts are sorted before evaluation");
 
 const datedAttempts = (dates) => dates.map((dateKey, index) => ({ ...attempts[index], dayKey: dateKey, completedAt: `${dateKey}T10:00:00+09:00` }));
@@ -90,7 +117,7 @@ assert.equal(futureStreak.timed50.mock.latestAgeDays, -1);
 assert.equal(futureStreak.timed50.mock.latestRecentEnough, false);
 assert.equal(futureStreak.timed50.mock.stable, false, "future-dated evidence fails closed");
 
-const missingGate = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, studyMinutesHistory: capacity });
+const missingGate = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, officialTransferHistory: officialTransfer, textbookFirstPass: textbookComplete, studyMinutesHistory: capacity, currentYearFreshness: freshness });
 assert.equal(missingGate.timed50.baseStable, true); assert.equal(missingGate.timed50.stable, false); assert.equal(missingGate.reason, "current-law-gate-unverified");
 const staleGate = readiness.calculatePassReadiness({ todayKey: "2026-09-25", subjects, mockHistory: attempts, currentLawGate: gate, studyMinutesHistory: capacity });
 assert.equal(staleGate.currentLawGate.passed, false);
@@ -115,9 +142,9 @@ assert.equal(futureGate.currentLawGate.recentEnough, false);
 assert.equal(futureGate.currentLawGate.passed, false, "future-dated current-law evidence fails closed");
 const oneDayGate = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, currentLawGate: { attempts: gate.attempts.map((entry) => ({ ...entry, dayKey: "2026-09-03" })) }, studyMinutesHistory: capacity });
 assert.equal(oneDayGate.currentLawGate.passed, false);
-const unverifiedCapacity = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, currentLawGate: gate });
+const unverifiedCapacity = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, officialTransferHistory: officialTransfer, textbookFirstPass: textbookComplete, currentLawGate: gate, currentYearFreshness: freshness });
 assert.equal(unverifiedCapacity.onTrack, false); assert.equal(unverifiedCapacity.reason, "observed-capacity-unverified");
-const lowCapacity = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, currentLawGate: gate, studyMinutesHistory: capacity.map((entry) => ({ ...entry, minutes: 60 })) });
+const lowCapacity = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, officialTransferHistory: officialTransfer, textbookFirstPass: textbookComplete, currentLawGate: gate, studyMinutesHistory: capacity.map((entry) => ({ ...entry, minutes: 60 })), currentYearFreshness: freshness });
 assert.equal(lowCapacity.status, "behind"); assert.equal(lowCapacity.reason, "observed-capacity-below-minimum");
 
 const fiveScore = { business: 18, rights: 9, restrictions: 7, tax: 2 };
@@ -125,7 +152,7 @@ const fiveAttempts = ["form-a", "form-b", "form-a"].map((formId, index) => {
   const dayKey = attemptDates[index];
   return { formId, evidenceClass: "independent-current-law", currentLaw: true, dayKey, completedAt: `${dayKey}T10:00:00+09:00`, total: 36, timed: true, elapsedMinutes: 55, questionCount: 45, sections: fiveScore };
 });
-const five = readiness.calculatePassReadiness({ todayKey: "2026-09-04", examProfile: "fiveExempt", subjects, mockHistory: fiveAttempts, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: freshness });
+const five = readiness.calculatePassReadiness({ todayKey: "2026-09-04", examProfile: "fiveExempt", subjects, mockHistory: fiveAttempts, officialTransferHistory: officialTransfer, textbookFirstPass: textbookComplete, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: freshness });
 assert.equal(five.targets.questions, 45); assert.equal(five.targets.total, 36); assert.equal(five.examProfile.minutes, 110); assert.equal(five.timed50.stable, true); assert.equal(five.subjects.some((s) => s.key === "other"), false);
 assert.equal(five.status, "on-track");
 const malformed = readiness.calculatePassReadiness({ todayKey: "2026-08-17", subjects: { business: { total: 20, contacted: 21, retained: 18 } } });

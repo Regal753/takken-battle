@@ -498,7 +498,30 @@ async function runStabilityScenario(browser, baseUrl) {
   const sameDayStability = await sameDayPage.locator("#officialReadinessStatus").textContent();
   assert.match(sameDayStability, /^測定中・初見3\/10・再0\/3$/);
   await sameDayContext.close();
-  return { stability, title, retest2024: due.text, sameDayStability };
+
+  const exposedContext = await newFixedContext(browser);
+  const exposedNamespace = `exposed-${Date.now().toString(36)}`;
+  const exposedStorageId = storageIdFor(exposedNamespace);
+  const exposedHistory = history.map((entry) => ({
+    ...entry,
+    recordId: `${entry.recordId}-exposed`,
+    appUnseenAtStart: false
+  }));
+  await exposedContext.addInitScript(({ id, records }) => {
+    localStorage.setItem(id, JSON.stringify({
+      stateSchemaVersion: 12,
+      examContentVersion: 4,
+      officialExamHistory: records
+    }));
+  }, { id: exposedStorageId, records: exposedHistory });
+  const exposedPage = await exposedContext.newPage();
+  await gotoReview(exposedPage, baseUrl, exposedNamespace);
+  const exposedStability = await exposedPage.locator("#officialReadinessStatus").textContent();
+  const exposedTransfer = await exposedPage.locator("#passReadinessStatus").textContent();
+  assert.match(exposedStability, /^測定中・初見0\/10・再0\/3$/);
+  assert.match(exposedTransfer, /公式初見 0\/3試験回/);
+  await exposedContext.close();
+  return { stability, title, retest2024: due.text, sameDayStability, exposedStability };
 }
 
 async function runQuotaWarningScenario(browser, baseUrl) {

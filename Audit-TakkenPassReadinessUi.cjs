@@ -114,7 +114,9 @@ async function main() {
   // the Sunday and evidence policies fail even if the suite is run on a
   // weekday fixture.
   assert.match(runtimeSource, /sundayMode === "full-mock" \? mockDone : sundayMode === "short-review" \? shortDone : false/);
-  assert.match(runtimeSource, /A\/B両方・3日（同一フォームは7日以上空ける）、改正確認2日、当年資料、直近7日の学習時間/);
+  assert.match(runtimeSource, /公式初見3試験回/);
+  assert.match(runtimeSource, /required-full-mock/);
+  assert.match(runtimeSource, /official-exam/);
   assert.match(runtimeSource, /補助C.*安定判定外/);
   assert.match(runtimeSource, /evidenceClass: mockFormEvidenceClass\(form\)/);
   assert.match(runtimeSource, /\.filter\(isStabilityMockForm\)/);
@@ -172,6 +174,55 @@ async function main() {
     assert.equal(initial.passPlanOpen, false, "the long-term plan must not push today\'s command below the fold");
     assert.match(initial.lawGateLabel, /2026改正2問/);
     assert.deepEqual(initial.exposure || {}, {});
+
+    // Completing all 45 units must switch Sunday from the internal measurement
+    // gate to a full official first-seen exam. The short route stays hidden
+    // until three distinct official exams on three days meet the score floor.
+    const foundationIds = await page.evaluate(() =>
+      [...new Set(Object.values(window.TAKKEN_EXAM_BLUEPRINT.textbookRanges)
+        .flatMap((range) => range.chapters)
+        .flatMap((chapter) => chapter.ids))]
+    );
+    const officialGatePage = await context.newPage();
+    officialGatePage.on("pageerror", (error) => errors.push(String(error)));
+    officialGatePage.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
+    const officialGateReview = `profficial${Date.now().toString(36)}`;
+    const officialGateUrl = new URL(server.baseUrl);
+    officialGateUrl.searchParams.set("review", officialGateReview);
+    officialGateUrl.searchParams.set("today", "1");
+    await officialGatePage.goto(officialGateUrl.toString(), { waitUntil: "networkidle" });
+    await officialGatePage.evaluate(({ review, ids }) => {
+      const key = `takken-battle-study-clean-v2-hard-review-${review}`;
+      const saved = JSON.parse(localStorage.getItem(key) || "{}");
+      saved.questionStats = Object.fromEntries(ids.map((id) => [id, {
+        attempts: 1,
+        correct: 1,
+        wrong: 0,
+        lastAnsweredAt: "2026-08-15T10:00:00+09:00"
+      }]));
+      localStorage.setItem(key, JSON.stringify(saved));
+    }, { review: officialGateReview, ids: foundationIds });
+    await officialGatePage.reload({ waitUntil: "networkidle" });
+    await officialGatePage.waitForFunction(() =>
+      document.querySelector("#todayCommandStartButton")?.dataset.commandAction === "official-exam"
+    );
+    const forcedOfficial = await officialGatePage.evaluate(() => ({
+      todayAction: document.querySelector("#todayCommandStartButton")?.dataset.commandAction || "",
+      todayLabel: document.querySelector("#todayCommandStartButton")?.textContent?.trim() || "",
+      todayText: document.querySelector("#todayCommandText")?.textContent?.trim() || "",
+      secondaryHidden: Boolean(document.querySelector("#todayCommandPracticalButton")?.hidden),
+      cardAction: document.querySelector("#passMockAction")?.dataset.commandAction || "",
+      cardLabel: document.querySelector("#passMockAction")?.textContent?.trim() || "",
+      pace: document.querySelector("#passReadinessPace")?.textContent?.trim() || ""
+    }));
+    assert.equal(forcedOfficial.todayAction, "official-exam");
+    assert.match(forcedOfficial.todayLabel, /公式未見50問・120分/);
+    assert.match(forcedOfficial.todayText, /短縮復習では完了にしません/);
+    assert.equal(forcedOfficial.secondaryHidden, true);
+    assert.equal(forcedOfficial.cardAction, "official-exam");
+    assert.match(forcedOfficial.cardLabel, /公式未見50問/);
+    assert.equal(forcedOfficial.pace, "一周接触済み");
+    await officialGatePage.close();
 
     // Auxiliary C attempts must never evict qualifying A/B evidence from the
     // shared persisted history. Each profile/evidence class/form has its own cap.

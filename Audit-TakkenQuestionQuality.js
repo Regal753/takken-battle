@@ -20,6 +20,15 @@ const allowedSourceHosts = new Set([
   "www.retio.or.jp",
   "www.rftc.jp"
 ]);
+const reasonAlignmentExpectations = Object.freeze({
+  l002: [/区画・形・質/, /市街化区域/, /市街化調整区域.*小規模/, /図書館・公民館.*許可不要/],
+  l006: [/道路に2メートル以上/, /4メートル未満.*42条2項/, /中心線から各2メートル/, /防火地域だけ.*都市計画区域/],
+  l007: [/建築面積.*敷地面積/, /延べ面積.*敷地面積/, /幅員が12メートル未満/, /全国一律に20パーセント.*10分の1/],
+  t002: [/1月1日.*課税台帳.*所有者/, /市町村税.*不動産取得税/, /200平方メートル以下.*6分の1/, /年度途中.*1月1日の所有者/],
+  t003: [/取得した時.*都道府県/, /毎年度.*市町村/, /固定資産課税台帳.*価格/, /相続人その他の現所有者/],
+  t004: [/登記等.*国税/, /市町村税ではなく.*国税/, /固定資産課税台帳価格.*売買代金/, /抵当権設定登記.*課税対象/],
+  t006: [/申告分離課税/, /1月1日.*5年を超える/, /最高3,000万円/, /収入金額の5パーセント.*概算取得費/]
+});
 
 function normalize(value) {
   return String(value || "")
@@ -147,6 +156,19 @@ questions.forEach((question) => {
     } else {
       distractorLengths.push(choiceLength);
       if (answerCuePattern.test(choice)) distractorsWithCue += 1;
+    }
+  });
+});
+
+Object.entries(reasonAlignmentExpectations).forEach(([id, expectations]) => {
+  const question = window.TAKKEN_EXAM_QUESTIONS[id];
+  if (!question) {
+    issues.push(`${id}: reason-alignment fixture question is missing`);
+    return;
+  }
+  expectations.forEach((pattern, index) => {
+    if (!pattern.test(String(question.choiceExplanations[index] || ""))) {
+      issues.push(`${id}: choice explanation ${index + 1} does not match its legal element`);
     }
   });
 });
