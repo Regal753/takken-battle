@@ -194,7 +194,11 @@ async function answerCurrentCorrectly(page) {
 
     await desktop.locator("#calculationDrillChoices .calculation-drill-choice").nth(0).click();
     assert.match(await desktop.locator("#calculationDrillVerdict").textContent(), /誤答/);
-    assert.equal(await desktop.locator("#calculationDrillFormula li").count(), 2);
+    assert.equal(await desktop.locator("#calculationDrillFormula li").count(), 3);
+    assert.match(
+      await desktop.locator("#calculationDrillFormula").textContent(),
+      /低廉な空家等の特例を適用しない通常報酬/
+    );
     assert.match(await desktop.locator("#calculationDrillRetryStatus").textContent(), /再出題 1/);
     await desktop.locator("#calculationDrillNextButton").click();
 

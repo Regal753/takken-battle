@@ -50,6 +50,7 @@ const expectedAnswers = {
   "calc-walk-1201": 16,
   "calc-walk-80": 1
 };
+const ordinaryLowPriceSaleIds = ["calc-sale-200", "calc-sale-300"];
 
 const expectedUnits = {
   "calc-coverage-600": "㎡",
@@ -108,6 +109,23 @@ questions.forEach((item) => {
   }
 });
 
+ordinaryLowPriceSaleIds.forEach((id) => {
+  const item = questions.find((question) => question.id === id);
+  if (!item) return;
+  if (!/低廉な空家等の特例を適用しない通常の売買媒介/.test(item.prompt)) {
+    issues.push(`${id}: low-price vacant-property exception is not excluded from the ordinary remuneration calculation.`);
+  }
+  if (!item.sources.includes("remunerationSale")) {
+    issues.push(`${id}: direct remuneration notice source for sections 2 and 7 is missing.`);
+  }
+  if (!item.formula.some((step) => /特例を適用しない通常報酬/.test(step)) || !/特例上限330,000円/.test(item.trap)) {
+    issues.push(`${id}: ordinary remuneration and the special ceiling are not contrasted in the explanation.`);
+  }
+});
+if (!/第2・第7/.test(String(drill?.SOURCES?.remunerationSale?.label || ""))) {
+  issues.push("remunerationSale: direct notice locator is missing.");
+}
+
 const requiredHosts = ["www.mlit.go.jp", "laws.e-gov.go.jp", "www.nta.go.jp"];
 requiredHosts.forEach((host) => {
   if (!sourceHosts.has(host)) issues.push(`Required official source host missing: ${host}`);
@@ -144,7 +162,7 @@ if (!app.includes("function exitCalculationDrill()")) issues.push("Calculation c
 if (!html.includes("id=\"calculationDrillPanel\"")) issues.push("Calculation drill panel is missing.");
 if (!html.includes("id=\"todayCommandCalculationButton\"")) issues.push("Calculation drill quick entry is missing.");
 if (!html.includes("id=\"calculationDrillExitButton\"")) issues.push("Calculation drill completion exit button is missing.");
-if (!html.includes("calculation-drill.js?v=20260826-quality-v39-4-68744e2bbe74")) issues.push("Calculation data script is not loaded.");
+if (!html.includes("calculation-drill.js?v=20260827-quality-v40-1-09a958d00a73")) issues.push("Calculation data script is not loaded.");
 
 const report = {
   status: issues.length ? "error" : "ok",

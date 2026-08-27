@@ -90,6 +90,7 @@ jobs:
           node Audit-TakkenCalculationDrillUi.cjs
           node Audit-TakkenPassPlanUi.cjs
           node Audit-TakkenPassLoopV12Ui.cjs
+          node Audit-TakkenRetentionSpacingUi.cjs
           node Audit-TakkenPwaOffline.cjs
           node Audit-TakkenPwaUpgrade.cjs
           node Audit-TakkenFutureSaveUi.cjs

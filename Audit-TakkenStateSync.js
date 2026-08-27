@@ -324,6 +324,7 @@ confidenceBase.questionStats.main1 = {
   lastConfidenceAt: timestamp("2026-08-15", "09:00:00"),
   lastConfidenceDayKey: "2026-08-15",
   lastClearAt: timestamp("2026-08-15", "09:00:00"),
+  clearAtHistory: [timestamp("2026-08-15", "09:00:00")],
   clearDayKeys: ["2026-08-15"],
   currentLawGateDayKeys: ["2026-08-15"]
 };
@@ -335,6 +336,7 @@ confidenceLocal.questionStats.main1 = {
   lastConfidenceAt: timestamp("2026-08-15", "09:05:00"),
   lastConfidenceDayKey: "2026-08-15",
   lastClearAt: "",
+  clearAtHistory: [],
   clearDayKeys: [],
   currentLawGateDayKeys: []
 };
@@ -349,9 +351,45 @@ assert.deepEqual(
 );
 assert.equal(confidenceMerged.questionStats.main1.lastClearAt, "");
 assert.deepEqual(
+  confidenceMerged.questionStats.main1.clearAtHistory,
+  [],
+  "a later unsure answer must invalidate same-day timestamped clear evidence"
+);
+assert.deepEqual(
   confidenceMerged.questionStats.main1.currentLawGateDayKeys,
   [],
   "a later unsure answer must also invalidate same-day current-law gate evidence"
+);
+
+const mockWrongBase = sync.clone(confidenceBase);
+const mockWrongLocal = sync.clone(mockWrongBase);
+mockWrongLocal.syncMeta.revision = 8;
+mockWrongLocal.questionStats.main1 = {
+  ...mockWrongLocal.questionStats.main1,
+  attempts: 4,
+  wrong: 2,
+  lastAnsweredAt: timestamp("2026-08-15", "10:00:00"),
+  lastWrongAt: timestamp("2026-08-15", "10:00:00"),
+  lastConfidence: "wrong",
+  lastConfidenceAt: timestamp("2026-08-15", "10:00:00"),
+  lastConfidenceDayKey: "2026-08-15",
+  lastClearAt: "",
+  clearDayKeys: [],
+  clearAtHistory: []
+};
+const mockWrongRemote = sync.clone(mockWrongBase);
+mockWrongRemote.syncMeta.revision = 9;
+const mockWrongMerged = sync.mergeStates(mockWrongBase, mockWrongLocal, mockWrongRemote);
+assert.equal(mockWrongMerged.questionStats.main1.lastConfidence, "wrong");
+assert.deepEqual(
+  mockWrongMerged.questionStats.main1.clearDayKeys,
+  [],
+  "a mock wrong answer must not regain a stale tab's same-day clear key"
+);
+assert.deepEqual(
+  mockWrongMerged.questionStats.main1.clearAtHistory,
+  [],
+  "a mock wrong answer must not regain a stale tab's timestamped clear evidence"
 );
 
 const centralLocal = sync.clone(base);
@@ -487,6 +525,7 @@ console.log(JSON.stringify({
   independentCounterDeltasPreserved: true,
   manyWriterCausalityPreserved: true,
   confidenceClearInvalidation: true,
+  mockWrongClearInvalidation: true,
   doubleCountPrevented: true,
   centralProgressMonotonic: true,
   replacementEpochMonotonic: true,

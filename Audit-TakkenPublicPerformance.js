@@ -9,9 +9,9 @@ const releaseIntegrity = require("./release-integrity.json");
 const ROOT = __dirname;
 const EXPECTED_CACHE_VERSION = releaseIntegrity.version;
 releaseIntegrityTools.assertVersionMatchesDigest(releaseIntegrity.version, releaseIntegrity.digest);
-// v38 hardens practical-save rollback and release-integrity enforcement while
-// retaining a small regression guard above the shipped bundle.
-const MAX_PUBLIC_JS_BYTES = 1_335_000;
+// v40 adds timestamped recall evidence and the low-price remuneration boundary.
+// Keep less than 0.2% raw-byte headroom above the reviewed shipped bundle.
+const MAX_PUBLIC_JS_BYTES = 1_340_000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
   "pwa-runtime.js",
