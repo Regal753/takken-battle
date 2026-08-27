@@ -114,7 +114,11 @@ async function main() {
   // the Sunday and evidence policies fail even if the suite is run on a
   // weekday fixture.
   assert.match(runtimeSource, /sundayMode === "full-mock" \? mockDone : sundayMode === "short-review" \? shortDone : false/);
-  assert.match(runtimeSource, /異なる3フォーム・3日、改正確認2日、当年資料、直近7日の学習時間/);
+  assert.match(runtimeSource, /A\/B両方・3日（同一フォームは7日以上空ける）、改正確認2日、当年資料、直近7日の学習時間/);
+  assert.match(runtimeSource, /補助C.*安定判定外/);
+  assert.match(runtimeSource, /evidenceClass: mockFormEvidenceClass\(form\)/);
+  assert.match(runtimeSource, /\.filter\(isStabilityMockForm\)/);
+  assert.match(markupSource, />補助診断C<\/button>/);
   assert.match(markupSource, /<details id="passPlanPanel"/);
   assert.doesNotMatch(markupSource, /<details id="passPlanPanel"[^>]*\bopen\b/);
   const server = process.env.TAKKEN_BASE_URL ? { baseUrl: process.env.TAKKEN_BASE_URL, close: async () => {} } : await staticServer(process.cwd());

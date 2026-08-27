@@ -229,6 +229,8 @@
     {
       id: "form-a",
       label: "本試験フォームA",
+      // コア100を重複なく二分した、本試験形式の安定判定用フォーム。
+      evidenceClass: "independent-current-law",
       ids: [
         ...idsBySection.rights.slice(0, 14),
         ...idsBySection.restrictions.slice(0, 8),
@@ -240,6 +242,8 @@
     {
       id: "form-b",
       label: "本試験フォームB",
+      // A と合わせてコア100を一巡する。本試験形式の安定判定用フォーム。
+      evidenceClass: "independent-current-law",
       ids: [
         ...idsBySection.rights.slice(14, 28),
         ...idsBySection.restrictions.slice(8, 16),
