@@ -9,9 +9,9 @@ const releaseIntegrity = require("./release-integrity.json");
 const ROOT = __dirname;
 const EXPECTED_CACHE_VERSION = releaseIntegrity.version;
 releaseIntegrityTools.assertVersionMatchesDigest(releaseIntegrity.version, releaseIntegrity.digest);
-// v42 adds official unseen-transfer evidence, textbook-unit pacing, and the save lease-race guard.
+// v43 adds six source-verified guarantee-association questions plus the adaptive special-drill UI.
 // Keep less than 0.2% raw-byte headroom above the reviewed shipped bundle.
-const MAX_PUBLIC_JS_BYTES = 1_361_500;
+const MAX_PUBLIC_JS_BYTES = 1_379_000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
   "pwa-runtime.js",
