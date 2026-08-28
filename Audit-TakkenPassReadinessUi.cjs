@@ -83,6 +83,8 @@ async function startSprint(page, scope) {
     return { runMode: saved.runMode, drill: saved.practicalDrill, status: document.querySelector("#todayCommandStatus")?.textContent || "" };
   });
   if (probe.drill?.stage !== "active" || probe.drill?.bankId !== "subject-sprint") throw new Error(`sprint did not start: ${JSON.stringify(probe)}`);
+  assert.equal(await page.locator("#practicalDrillForecast").isHidden(), true, "subject sprint must not inherit the guarantee pre-answer forecast");
+  assert.equal(await page.locator(".practical-drill-choice:enabled").count(), 4, "subject sprint choices must remain immediately answerable");
   return stored(page);
 }
 

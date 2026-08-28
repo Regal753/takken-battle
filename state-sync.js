@@ -13,8 +13,8 @@
   ]);
   const RECORD_ARRAY_KEYS = new Set(["mockHistory", "officialExamHistory"]);
   const PRACTICAL_SESSION_FIELDS = [
-    "version", "bankId", "bankVersion", "presentationKey", "planMode", "knockPreset", "stage", "scope", "unitId",
-    "sessionSize", "sessionIds", "queue", "position", "currentAttempt", "retryIds",
+    "version", "bankId", "bankVersion", "presentationKey", "presentationOverrides", "planMode", "knockPreset", "stage", "scope", "unitId",
+    "sessionSize", "sessionIds", "queue", "position", "preAnswerConfidence", "currentAttempt", "retryIds",
     "sessionStartedAt", "completedAt"
   ];
 
@@ -352,12 +352,20 @@
     const merged = mergeValue(safeBase, safeLocal, safeRemote, ["practicalDrill", "history", "item"], context);
     const outcomeFields = [
       "lastSelected", "lastCorrect", "lastConfidence", "lastConfidenceAt", "lastAnsweredAt",
-      "reviewLevel", "masteryDueKey"
+      "lastPredictedConfidence", "reviewLevel", "masteryDueKey"
     ];
     outcomeFields.forEach((key) => {
       if (own(winner, key)) merged[key] = clone(winner[key]);
     });
-    ["attempts", "correct", "wrong"].forEach((key) => {
+    const retryClockAvailable = Boolean(validTimestamp(safeLocal.retryNotBeforeAt) || validTimestamp(safeRemote.retryNotBeforeAt));
+    const retryWinner = retryClockAvailable
+      ? mostRecentObject(safeLocal, safeRemote, ["retryNotBeforeAt"], context.preferred)
+      : winner;
+    ["retryNotBeforeKey", "retryNotBeforeAt"].forEach((key) => {
+      if (own(retryWinner, key)) merged[key] = clone(retryWinner[key]);
+      else delete merged[key];
+    });
+    ["attempts", "correct", "wrong", "overconfidentWrong", "hesitantCorrect"].forEach((key) => {
       merged[key] = mergeMonotonicCounter(safeBase[key], safeLocal[key], safeRemote[key], context);
     });
     // `uncertain` can decrease when the latest correct answer is confirmed, so it follows the latest outcome.
@@ -595,7 +603,14 @@
       !equal(activeSessionPayload(local, localSession), basePayload);
     const remoteChanged = !equal(remoteSession, baseSession) ||
       !equal(activeSessionPayload(remote, remoteSession), basePayload);
-    if (!localChanged || !remoteChanged || equal(localSession, remoteSession)) return [];
+    if (!localChanged || !remoteChanged) return [];
+    if (equal(localSession, remoteSession)) {
+      const samePayload = equal(
+        activeSessionPayload(local, localSession),
+        activeSessionPayload(remote, remoteSession)
+      );
+      if (samePayload || localSession?.kind !== "practical") return [];
+    }
     return [{
       code: "concurrent-active-session",
       base: clone(baseSession),
@@ -663,6 +678,16 @@
     const currentHistory = currentAttemptId && isObject(merged.history?.[currentAttemptId])
       ? merged.history[currentAttemptId]
       : null;
+    if (
+      isObject(merged.currentAttempt) &&
+      ["confident", "uncertain"].includes(currentHistory?.lastPredictedConfidence)
+    ) {
+      merged.currentAttempt = {
+        ...merged.currentAttempt,
+        predictedConfidence: currentHistory.lastPredictedConfidence
+      };
+      merged.preAnswerConfidence = currentHistory.lastPredictedConfidence;
+    }
     if (
       isObject(merged.currentAttempt) &&
       merged.currentAttempt.correct === true &&

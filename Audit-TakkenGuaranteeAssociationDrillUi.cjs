@@ -41,7 +41,7 @@ function reviewUrl(baseUrl) {
 
 async function waitForApp(page) {
   await page.waitForFunction(() => Boolean(
-    window.TAKKEN_GUARANTEE_ASSOCIATION_DRILL?.QUESTIONS?.length === 26 &&
+    window.TAKKEN_GUARANTEE_ASSOCIATION_DRILL?.QUESTIONS?.length === 33 &&
     document.querySelector("#guaranteeSpecialCard") &&
     document.querySelector("#guaranteeSpecialStart")
   ));
@@ -112,11 +112,24 @@ async function presented(page) {
 async function answerAndAdvance(page, kind = "confident") {
   const question = await presented(page);
   const choice = kind === "wrong" ? (question.answer + 1) % 4 : question.answer;
+  const forecast = kind === "uncertain" ? "uncertain" : "confident";
+  await page.locator(`[data-practical-forecast="${forecast}"]`).click();
   await page.locator(".practical-drill-choice").nth(choice).click();
   await page.locator("#practicalDrillFeedback").waitFor({ state: "visible" });
-  if (kind !== "wrong") await page.locator(`[data-practical-confidence="${kind}"]`).click();
   await page.locator("#practicalDrillNextButton").click();
   return question;
+}
+
+async function presentationDetails(page) {
+  return page.evaluate(() => {
+    const key = Object.keys(localStorage).find((candidate) => candidate.startsWith("takken-battle-study-clean-v2-hard-review-") && !candidate.includes("backup") && !candidate.includes("-before-") && !candidate.includes("previous") && !candidate.includes("corrupt") && !candidate.endsWith("event-outbox"));
+    const state = JSON.parse(localStorage.getItem(key));
+    return Object.fromEntries(state.practicalDrill.sessionIds.map((id) => {
+      const presentationKey = state.practicalDrill.presentationOverrides?.[id] || state.practicalDrill.presentationKey;
+      const question = window.TAKKEN_GUARANTEE_ASSOCIATION_DRILL.presentQuestion(id, presentationKey);
+      return [id, { permutation: question.presentationPermutationIndex, answer: question.answer }];
+    }));
+  });
 }
 
 async function horizontalOverflow(page) {
@@ -150,15 +163,17 @@ async function assertFocusedInViewport(page, expectedSelector) {
     await page.goto(reviewUrl(local.baseUrl), { waitUntil: "networkidle", timeout: 20000 });
     await waitForApp(page);
     assert.equal(await page.locator("#guaranteeSpecialCard").isVisible(), true);
-    assert.match(await page.locator("#guaranteeSpecialTitle").textContent(), /保証協会・営業保証金 特訓26問/);
-    assert.equal(await page.locator("#guaranteeSpecialContacted").textContent(), "0 / 26");
-    assert.equal(await page.locator("#guaranteeSpecialRetained").textContent(), "0 / 26");
+    assert.match(await page.locator("#guaranteeSpecialTitle").textContent(), /保証協会・営業保証金 特訓33問/);
+    assert.equal(await page.locator("#guaranteeSpecialContacted").textContent(), "0 / 33");
+    assert.equal(await page.locator("#guaranteeSpecialRetained").textContent(), "0 / 33");
     assert.match(await page.locator("#guaranteeSpecialStart").textContent(), /基礎から10問/);
-    assert.match(await page.locator("#guaranteeSpecialFullStart").textContent(), /全26問で総点検/);
+    assert.match(await page.locator("#guaranteeSpecialFullStart").textContent(), /全33問で総点検/);
+    assert.match(await page.locator("#todayCommandGuaranteeButton").textContent(), /保証協会：基礎から10問/);
+    assert.equal(await page.locator("#todayCommandGuaranteeButton").isVisible(), true, "walk-friendly guarantee entry must be visible in the first command panel");
     const ids = await page.evaluate(() => window.TAKKEN_GUARANTEE_ASSOCIATION_DRILL.QUESTIONS.map((question) => question.id));
-    assert.equal(ids.length, 26);
+    assert.equal(ids.length, 33);
     assert.ok(ids.every((id) => /^ga\d{3}$/.test(id)), `unexpected special ids: ${ids.join(", ")}`);
-    assert.equal(new Set(ids).size, 26, "guarantee drill IDs must not duplicate");
+    assert.equal(new Set(ids).size, 33, "guarantee drill IDs must not duplicate");
     const startTargets = await page.locator("#guaranteeSpecialCard button").evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().height)));
     assert.ok(startTargets.every((height) => height >= 44), `guarantee CTA under 44px: ${startTargets.join(", ")}`);
 
@@ -214,8 +229,8 @@ async function assertFocusedInViewport(page, expectedSelector) {
     await page.reload({ waitUntil: "networkidle", timeout: 20000 });
     await waitForApp(page);
     assert.equal(await page.locator("#guaranteeSpecialRetry").textContent(), "2", "wrong and due questions must both be visible as review work");
-    assert.equal(await page.locator("#guaranteeSpecialGrounded").textContent(), "2 / 26", "current-schema history must override an older recovery snapshot");
-    assert.equal(await page.locator("#guaranteeSpecialRetained").textContent(), "0 / 26", "same-day confidence and a level-1 due item are not retained yet");
+    assert.equal(await page.locator("#guaranteeSpecialGrounded").textContent(), "2 / 33", "current-schema history must override an older recovery snapshot");
+    assert.equal(await page.locator("#guaranteeSpecialRetained").textContent(), "0 / 33", "same-day confidence and a level-1 due item are not retained yet");
     assert.match(await page.locator("#guaranteeSpecialStart").textContent(), /誤答・期限から10問/);
     const currentAfterReload = await readSavedState(page);
     assert.equal(currentAfterReload.state.practicalDrill.history[currentHistoryId].attempts, 2, "recovery must not roll back current-schema attempts");
@@ -223,7 +238,7 @@ async function assertFocusedInViewport(page, expectedSelector) {
 
     await page.locator("#guaranteeSpecialStart").click();
     await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
-    await assertFocusedInViewport(page, ".practical-drill-choice");
+    await assertFocusedInViewport(page, "[data-practical-forecast]");
     let saved = await readSavedState(page);
     assert.equal(saved.state.practicalDrill.bankId, "guarantee-association-special");
     assert.equal(saved.state.practicalDrill.planMode, "guarantee");
@@ -233,9 +248,12 @@ async function assertFocusedInViewport(page, expectedSelector) {
     assert.equal(new Set(saved.state.practicalDrill.queue).size, 10, "smart session must contain 10 unique ga IDs");
     assert.equal(saved.state.practicalDrill.queue[0], priorityWeakId, "an existing wrong answer must lead the smart round");
     assert.equal(saved.state.practicalDrill.queue[1], priorityDueId, "a due item must precede untouched questions");
-    assert.match(await page.locator("#practicalDrillSummary").textContent(), /保証協会特訓累計 接触 3 \/ 26/);
+    assert.match(await page.locator("#practicalDrillSummary").textContent(), /保証協会特訓累計 接触 3 \/ 33/);
+    assert.equal(await page.locator(".practical-drill-choice:enabled").count(), 0, "answer choices must wait for a pre-answer forecast");
 
     const wrong = await presented(page);
+    await page.locator('[data-practical-forecast="confident"]').click();
+    assert.equal(await page.locator(".practical-drill-choice:enabled").count(), 4, "forecast selection must unlock all choices");
     await page.locator(".practical-drill-choice").nth((wrong.answer + 1) % 4).click();
     await page.locator("#practicalDrillFeedback").waitFor({ state: "visible" });
     await assertFocusedInViewport(page, "#practicalDrillFeedback");
@@ -258,11 +276,14 @@ async function assertFocusedInViewport(page, expectedSelector) {
     assert.equal(saved.state.practicalDrill.bankId, "guarantee-association-special");
     assert.equal(saved.state.practicalDrill.currentAttempt?.id, wrong.id, "reload must resume the answered guarantee question");
     assert.equal(saved.state.practicalDrill.currentAttempt?.correct, false);
+    assert.equal(saved.state.practicalDrill.currentAttempt?.predictedConfidence, "confident", "pre-answer forecast must survive reload");
+    assert.equal(saved.state.practicalDrill.history[wrong.id].overconfidentWrong, 1, "confident wrong must be recorded as an overconfidence miss");
+    assert.match(await page.locator("#guaranteeSpecialWeakness").textContent(), /根拠あり予想からの誤答 1回/);
     assert.equal(await page.evaluate(() => localStorage.getItem("guarantee-ui-sentinel")), "must-survive-reload-and-drill");
     assert.equal(await page.locator("#practicalDrillFeedback").isVisible(), true);
 
     await page.locator("#practicalDrillNextButton").click();
-    await assertFocusedInViewport(page, ".practical-drill-choice");
+    await assertFocusedInViewport(page, "[data-practical-forecast]");
     for (let index = 1; index < saved.state.practicalDrill.sessionIds.length; index += 1) {
       await answerAndAdvance(page, "confident");
     }
@@ -285,14 +306,12 @@ async function assertFocusedInViewport(page, expectedSelector) {
     await page.locator("#guaranteeSpecialCard").waitFor({ state: "visible" });
     await page.locator("#guaranteeSpecialFullStart").click();
     await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
-    await assertFocusedInViewport(page, ".practical-drill-choice");
+    await assertFocusedInViewport(page, "[data-practical-forecast]");
     const fullRound = await readSavedState(page);
-    assert.equal(fullRound.state.practicalDrill.sessionSize, 26, "full audit remains available after the smart round");
-    assert.equal(fullRound.state.practicalDrill.queue.length, 26, "full audit must include every special question");
-    assert.equal(new Set(fullRound.state.practicalDrill.queue).size, 26, "full audit IDs must remain unique");
-    const firstFullPermutation = await page.evaluate(({ id, key }) =>
-      window.TAKKEN_GUARANTEE_ASSOCIATION_DRILL.presentQuestion(id, key).presentationPermutationIndex,
-    { id: fullRound.state.practicalDrill.queue[0], key: fullRound.state.practicalDrill.presentationKey });
+    assert.equal(fullRound.state.practicalDrill.sessionSize, 33, "full audit remains available after the smart round");
+    assert.equal(fullRound.state.practicalDrill.queue.length, 33, "full audit must include every special question");
+    assert.equal(new Set(fullRound.state.practicalDrill.queue).size, 33, "full audit IDs must remain unique");
+    const firstFullPresentations = await presentationDetails(page);
 
     await page.setViewportSize({ width: 320, height: 700 });
     assert.equal(await horizontalOverflow(page), 0, "guarantee special UI must fit 320px");
@@ -305,16 +324,62 @@ async function assertFocusedInViewport(page, expectedSelector) {
       await answerAndAdvance(page, "confident");
     }
     await page.locator("#practicalDrillComplete").waitFor({ state: "visible" });
+    const completedFullRound = await readSavedState(page);
+    assert.equal(Object.keys(completedFullRound.state.practicalDrill.presentationOverrides || {}).length, 33, "completed guarantee round must retain every actual presentation key for the next round");
     await page.locator("#practicalDrillChangeButton").click();
+    const returnedToMenu = await readSavedState(page);
+    assert.equal(Object.keys(returnedToMenu.state.practicalDrill.presentationOverrides || {}).length, 33, "returning to the guarantee menu must preserve the completed round presentation map");
     await page.locator("#guaranteeSpecialFullStart").click();
     await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
     const secondFullRound = await readSavedState(page);
-    const secondFullPermutation = await page.evaluate(({ id, key }) =>
-      window.TAKKEN_GUARANTEE_ASSOCIATION_DRILL.presentQuestion(id, key).presentationPermutationIndex,
-    { id: secondFullRound.state.practicalDrill.queue[0], key: secondFullRound.state.practicalDrill.presentationKey });
-    assert.notEqual(secondFullPermutation, firstFullPermutation, "consecutive full rounds must change the complete four-choice order");
+    const secondFullPresentations = await presentationDetails(page);
+    assert.equal(Object.keys(secondFullPresentations).length, 33);
+    ids.forEach((id) => {
+      assert.notEqual(
+        secondFullPresentations[id].answer,
+        firstFullPresentations[id].answer,
+        `${id}: consecutive full rounds must move the correct answer position`
+      );
+      assert.notEqual(
+        secondFullPresentations[id].permutation,
+        firstFullPresentations[id].permutation,
+        `${id}: consecutive full rounds must change every four-choice order`
+      );
+    });
     for (const selector of ["#todayCommandStartButton", "#businessMasteryPrimary", "#guaranteeSpecialStart", "#businessKnockStart", "#passBusinessAction"]) {
       assert.equal(await page.locator(selector).textContent(), "保証協会特訓を保存位置から再開", `${selector}: resume CTA must use one learner-facing label`);
+    }
+
+    // A miss at the end of a set must not be repeated immediately. It is sent
+    // to the next JST study day because fewer than three different questions
+    // can separate the two attempts.
+    const deferredContext = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: "Asia/Tokyo" });
+    const deferredPage = await deferredContext.newPage();
+    try {
+      await deferredPage.goto(reviewUrl(local.baseUrl), { waitUntil: "networkidle", timeout: 20000 });
+      await waitForApp(deferredPage);
+      await deferredPage.locator("#todayCommandGuaranteeButton").click();
+      await deferredPage.locator("#practicalDrillSession").waitFor({ state: "visible" });
+      const deferredStart = await readSavedState(deferredPage);
+      assert.equal(deferredStart.state.practicalDrill.sessionIds.length, 10, "direct mobile entry must start the bounded smart set");
+      for (let index = 0; index < 9; index += 1) await answerAndAdvance(deferredPage, "confident");
+      const deferredMiss = await answerAndAdvance(deferredPage, "wrong");
+      await deferredPage.locator("#practicalDrillComplete").waitFor({ state: "visible" });
+      const deferredSaved = await readSavedState(deferredPage);
+      const deferredEntry = deferredSaved.state.practicalDrill.history[deferredMiss.id];
+      const todayKey = await deferredPage.evaluate(() => {
+        const now = new Date();
+        return [now.getFullYear(), String(now.getMonth() + 1).padStart(2, "0"), String(now.getDate()).padStart(2, "0")].join("-");
+      });
+      assert.equal(deferredSaved.state.practicalDrill.stage, "complete", "an end-of-set miss must not open an immediate retry stage");
+      assert.ok(deferredSaved.state.practicalDrill.retryIds.includes(deferredMiss.id), "the deferred miss must remain in the retry ledger");
+      assert.ok(deferredEntry.retryNotBeforeKey > todayKey, `deferred retry must be after today: ${deferredEntry.retryNotBeforeKey}`);
+      assert.ok(Number.isFinite(Date.parse(deferredEntry.retryNotBeforeAt)), "deferred retry must carry a causal timestamp for cross-tab merging");
+      await deferredPage.locator("#practicalDrillChangeButton").click();
+      assert.equal(await deferredPage.locator("#guaranteeSpecialRetry").textContent(), "0", "tomorrow's miss must not count as actionable review today");
+      assert.match(await deferredPage.locator("#guaranteeSpecialStart").textContent(), /未接触を10問進める/, "remaining untouched questions must take priority over an early repeat");
+    } finally {
+      await deferredContext.close();
     }
 
     // A failed first write must roll the in-memory launch back to idle rather
@@ -339,12 +404,23 @@ async function assertFocusedInViewport(page, expectedSelector) {
       assert.equal(failedStart.state.practicalDrill.stage, "idle", "failed start must retain the persisted idle state");
       await failurePage.locator("#guaranteeSpecialStart").click();
       await failurePage.locator("#practicalDrillSession").waitFor({ state: "visible" });
-      await assertFocusedInViewport(failurePage, ".practical-drill-choice");
+      await assertFocusedInViewport(failurePage, "[data-practical-forecast]");
       const retriedStart = await readSavedState(failurePage);
       assert.equal(retriedStart.state.practicalDrill.bankId, "guarantee-association-special", "launch must remain retryable after storage recovers");
       assert.deepEqual(retriedStart.state.practicalDrill.queue, ids.slice(0, 10), "the first smart pass must preserve the foundation teaching order");
 
       const failureQuestion = await presented(failurePage);
+      const beforeFailedForecast = await readSavedState(failurePage);
+      await failPrimarySaveWrites(failurePage, beforeFailedForecast.key);
+      await failurePage.locator('[data-practical-forecast="confident"]').click();
+      assert.equal(await failurePage.locator(".practical-drill-choice:enabled").count(), 0, "failed forecast must keep answer choices locked");
+      await assertVisiblePracticalSaveError(failurePage, /解答前の手応えを保存できませんでした/);
+      let failedMutation = await readSavedState(failurePage);
+      assert.deepEqual(failedMutation.state.practicalDrill, beforeFailedForecast.state.practicalDrill, "failed forecast must not change persisted practical state");
+      await restorePrimarySaveWrites(failurePage);
+      await failurePage.locator('[data-practical-forecast="confident"]').click();
+      assert.equal(await failurePage.locator(".practical-drill-choice:enabled").count(), 4, "forecast must remain retryable after storage recovers");
+
       const beforeFailedAnswer = await readSavedState(failurePage);
       await failPrimarySaveWrites(failurePage, beforeFailedAnswer.key);
       await failurePage.locator(".practical-drill-choice").nth(failureQuestion.answer).click();
@@ -352,7 +428,7 @@ async function assertFocusedInViewport(page, expectedSelector) {
       assert.match(await failurePage.locator("#todayCommandStatus").textContent(), /解答を保存できませんでした。進捗は加算していません。/);
       await assertVisiblePracticalSaveError(failurePage, /解答を保存できませんでした。進捗は加算していません。/);
       assert.equal(await horizontalOverflow(failurePage), 0, "the inline save error must not overflow a 320px viewport");
-      let failedMutation = await readSavedState(failurePage);
+      failedMutation = await readSavedState(failurePage);
       assert.deepEqual(failedMutation.state.practicalDrill, beforeFailedAnswer.state.practicalDrill, "failed answer must not change persisted practical state");
       assert.ok(await failurePage.evaluate((key) => localStorage.getItem(`${key}-previous`) !== null, beforeFailedAnswer.key), "the exact primary-write failure must occur after the recoverable previous-save rotation");
       await restorePrimarySaveWrites(failurePage);
@@ -361,23 +437,11 @@ async function assertFocusedInViewport(page, expectedSelector) {
       await failurePage.locator("#practicalDrillFeedback").waitFor({ state: "visible" });
       await assertFocusedInViewport(failurePage, "#practicalDrillFeedback");
       assert.equal(await failurePage.locator("#practicalDrillSaveError").isHidden(), true, "a recovered answer must clear the inline save error");
-      const beforeFailedConfidence = await readSavedState(failurePage);
-      assert.equal(beforeFailedConfidence.state.practicalDrill.currentAttempt?.confidence, "");
-      await failPrimarySaveWrites(failurePage, beforeFailedConfidence.key);
-      await failurePage.locator('[data-practical-confidence="uncertain"]').click();
-      assert.equal(await failurePage.locator("#practicalDrillNextButton").isDisabled(), true, "failed confidence must remain unselected");
-      assert.match(await failurePage.locator("#todayCommandStatus").textContent(), /手応えを保存できませんでした。再出題判定は変更していません。/);
-      await assertVisiblePracticalSaveError(failurePage, /手応えを保存できませんでした。再出題判定は変更していません。/);
-      failedMutation = await readSavedState(failurePage);
-      assert.deepEqual(failedMutation.state.practicalDrill, beforeFailedConfidence.state.practicalDrill, "failed confidence must not change persisted practical state");
-      await restorePrimarySaveWrites(failurePage);
-
-      await failurePage.locator('[data-practical-confidence="uncertain"]').click();
       assert.equal(await failurePage.locator("#practicalDrillNextButton").isDisabled(), false);
-      assert.equal(await failurePage.locator("#practicalDrillSaveError").isHidden(), true, "a recovered confidence choice must clear the inline save error");
       const beforeFailedAdvance = await readSavedState(failurePage);
-      assert.equal(beforeFailedAdvance.state.practicalDrill.history[failureQuestion.id].lastConfidence, "uncertain");
-      assert.ok(Number.isFinite(Date.parse(beforeFailedAdvance.state.practicalDrill.history[failureQuestion.id].lastConfidenceAt)), "confidence update must persist an ordering timestamp");
+      assert.equal(beforeFailedAdvance.state.practicalDrill.history[failureQuestion.id].lastConfidence, "confident");
+      assert.equal(beforeFailedAdvance.state.practicalDrill.currentAttempt?.predictedConfidence, "confident");
+      assert.ok(Number.isFinite(Date.parse(beforeFailedAdvance.state.practicalDrill.history[failureQuestion.id].lastConfidenceAt)), "pre-answer confidence must persist an ordering timestamp");
       await failPrimarySaveWrites(failurePage, beforeFailedAdvance.key);
       await failurePage.locator("#practicalDrillNextButton").click();
       assert.equal(await failurePage.locator("#practicalDrillFeedback").isVisible(), true, "failed advance must retain the answered question");
@@ -421,8 +485,8 @@ async function assertFocusedInViewport(page, expectedSelector) {
         saved.practicalDrill = {
           ...saved.practicalDrill,
           bankId: "guarantee-association-special",
-          bankVersion: 1,
-          presentationKey: "20260828:guarantee:v42",
+          bankVersion: 2,
+          presentationKey: "20260828:guarantee:v43",
           presentationOverrides: {},
           planMode: "guarantee",
           stage: "active",
@@ -452,27 +516,29 @@ async function assertFocusedInViewport(page, expectedSelector) {
         };
         saved.guaranteeAssociationRecovery = { version: 1, history: {}, activeSession: null };
         localStorage.setItem(key, JSON.stringify(saved));
-      }, { key: migrationFixture.key, oldIds: ids.slice(0, 20) });
+      }, { key: migrationFixture.key, oldIds: ids.slice(0, 26) });
       await migrationPage.reload({ waitUntil: "networkidle", timeout: 20000 });
       await waitForApp(migrationPage);
       await migrationPage.locator("#practicalDrillSession").waitFor({ state: "visible" });
-      assert.equal(await migrationPage.locator("#practicalDrillFeedback").isHidden(), true, "v42 in-flight answer must be removed when the bank changes");
-      assert.equal(await migrationPage.locator(".practical-drill-choice:enabled").count(), 4, "v42 migrated question must be safely answerable again");
+      assert.equal(await migrationPage.locator("#practicalDrillFeedback").isHidden(), true, "v43 in-flight answer must be removed when the bank changes");
+      assert.equal(await migrationPage.locator(".practical-drill-choice:enabled").count(), 0, "v43 migration must enter the new pre-answer forecast gate");
+      await migrationPage.locator('[data-practical-forecast="confident"]').click();
+      assert.equal(await migrationPage.locator(".practical-drill-choice:enabled").count(), 4, "v43 migrated question must be safely answerable after forecasting");
       const migratedQuestion = await presented(migrationPage);
       await migrationPage.locator(".practical-drill-choice").nth(migratedQuestion.answer).click();
       await migrationPage.locator("#practicalDrillFeedback").waitFor({ state: "visible" });
       const migrated = await readSavedState(migrationPage);
-      assert.equal(migrated.state.practicalDrill.bankVersion, 2, "v42 guarantee bank must upgrade to v43");
-      assert.deepEqual(migrated.state.practicalDrill.queue, [ids[0], ids[19]], "v42 active queue IDs must survive the upgrade");
-      assert.equal(migrated.state.practicalDrill.history[ids[0]].attempts, 4, "v42 history must survive and accept a fresh answer");
-      assert.equal(migrated.state.practicalDrill.history[ids[0]].wrong, 1, "v42 wrong count must not be erased");
-      assert.equal(migrated.state.practicalDrill.history[ids[19]].wrong, 1, "v42 retry history must survive");
-      assert.equal(migrated.state.practicalDrill.history[ids[20]], undefined, "new v43 questions must start untouched");
-      assert.equal(await migrationPage.locator("#guaranteeSpecialContacted").textContent(), "2 / 26", "migrated history and six new questions must produce the right contact count");
+      assert.equal(migrated.state.practicalDrill.bankVersion, 3, "v43 guarantee bank must upgrade to v44");
+      assert.deepEqual(migrated.state.practicalDrill.queue, [ids[0], ids[19]], "v43 active queue IDs must survive the upgrade");
+      assert.equal(migrated.state.practicalDrill.history[ids[0]].attempts, 4, "v43 history must survive and accept a fresh answer");
+      assert.equal(migrated.state.practicalDrill.history[ids[0]].wrong, 1, "v43 wrong count must not be erased");
+      assert.equal(migrated.state.practicalDrill.history[ids[19]].wrong, 1, "v43 retry history must survive");
+      assert.equal(migrated.state.practicalDrill.history[ids[26]], undefined, "new v44 questions must start untouched");
+      assert.equal(await migrationPage.locator("#guaranteeSpecialContacted").textContent(), "2 / 33", "migrated history and seven new questions must produce the right contact count");
     } finally {
       await migrationContext.close();
     }
-    console.log("Audit-TakkenGuaranteeAssociationDrillUi: OK (26 ga IDs, smart/full repeat, v42 migration, retention, visible focus, reload/retry/save isolation, 390/320)");
+    console.log("Audit-TakkenGuaranteeAssociationDrillUi: OK (33 ga IDs, pre-answer calibration, delayed retry, all-order refresh, v43 migration, retention, direct mobile entry, reload/save isolation, 390/320)");
   } finally {
     await browser.close();
     await local.close();

@@ -7652,7 +7652,8 @@ button.mission-step:disabled {
 .practical-drill-overview[hidden],
 .practical-drill-session[hidden],
 .practical-drill-complete[hidden],
-.practical-drill-confidence[hidden] {
+.practical-drill-confidence[hidden],
+.practical-drill-forecast[hidden] {
   display: none;
 }
 
@@ -7863,6 +7864,24 @@ button.mission-step:disabled {
 .practical-drill-confidence button.is-selected {
   border-color: #8de2c1;
   color: #d8ffec;
+}
+
+.practical-drill-forecast {
+  margin: 0 0 10px;
+  padding: 9px;
+  border: 1px solid rgba(255, 202, 84, 0.45);
+  border-radius: 8px;
+  background: rgba(255, 202, 84, 0.08);
+}
+
+.practical-drill-forecast span {
+  color: #ffe5a6;
+}
+
+.practical-drill-forecast button.is-selected {
+  border-color: #ffca54;
+  color: #fff3cf;
+  background: rgba(121, 47, 28, 0.9);
 }
 
 .practical-drill-feedback > .today-command-primary {
@@ -8519,6 +8538,7 @@ button.mission-step:disabled {
 .guarantee-special-metrics > div { display: grid; gap: 2px; min-width: 0; padding: 8px; border: 1px solid rgba(255, 215, 122, .34); border-radius: 9px; background: rgba(255, 255, 255, .08); }
 .guarantee-special-metrics span { color: #f6d9bc; font-size: .7rem; line-height: 1.35; }
 .guarantee-special-metrics strong { color: #fff6d8; font-size: .92rem; overflow-wrap: anywhere; }
+.guarantee-special-scope { color: #f6d9bc; font-size: .72rem; line-height: 1.45; }
 .guarantee-special-weakness { margin: 0; padding: 8px 10px; border-left: 3px solid #ffd77a; border-radius: 6px; color: #fff0cc; background: rgba(255, 255, 255, .07); font-size: .8rem; line-height: 1.5; overflow-wrap: anywhere; }
 .guarantee-special-actions { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr); gap: 9px; }
 .guarantee-special-start { width: 100%; min-height: 52px; padding: 11px 14px; border: 1px solid #fff1ba; border-radius: 10px; color: #3a2000; background: linear-gradient(180deg, #ffe08a, #ffbd3b); font-size: .98rem; font-weight: 900; box-shadow: 0 4px 0 #8b4b13; cursor: pointer; }
@@ -8529,6 +8549,8 @@ button.mission-step:disabled {
 .guarantee-special-full { width: 100%; min-height: 52px; padding: 11px 12px; border: 1px solid rgba(255, 241, 186, .72); border-radius: 10px; color: #fff7dc; background: rgba(255, 255, 255, .1); font-size: .9rem; font-weight: 900; cursor: pointer; }
 .guarantee-special-full:hover:not(:disabled) { border-color: #fff1ba; background: rgba(255, 255, 255, .17); }
 .guarantee-special-full:disabled { border-color: #82918c; color: #c4cfcb; background: #4d5855; cursor: not-allowed; }
+.today-command-guarantee { border-color: #ffca54; color: #fff4ce; background: rgba(121, 47, 28, .88); }
+.today-command-guarantee:hover:not(:disabled) { border-color: #ffe08a; background: rgba(145, 59, 33, .96); }
 .business-knock-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
 .business-knock-controls label { display: grid; gap: 5px; min-width: 0; color: #f5df9d; font-size: .78rem; font-weight: 800; }
 .business-knock-controls label[hidden] { display: none; }

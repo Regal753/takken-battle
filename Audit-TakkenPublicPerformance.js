@@ -9,9 +9,10 @@ const releaseIntegrity = require("./release-integrity.json");
 const ROOT = __dirname;
 const EXPECTED_CACHE_VERSION = releaseIntegrity.version;
 releaseIntegrityTools.assertVersionMatchesDigest(releaseIntegrity.version, releaseIntegrity.digest);
-// v43 adds six source-verified guarantee-association questions plus the adaptive special-drill UI.
-// Keep less than 0.2% raw-byte headroom above the reviewed shipped bundle.
-const MAX_PUBLIC_JS_BYTES = 1_379_000;
+// v44 adds seven source-verified guarantee-association questions plus pre-answer
+// calibration and delayed-retry state. Keep about 0.2% raw-byte headroom above
+// the reviewed shipped bundle instead of silently dropping the new legal bank.
+const MAX_PUBLIC_JS_BYTES = 1_400_000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
   "pwa-runtime.js",

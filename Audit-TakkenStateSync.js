@@ -216,18 +216,25 @@ practicalConfidenceBase.practicalDrill.history.q1 = {
   ...practicalConfidenceBase.practicalDrill.history.q1,
   lastAnsweredAt: timestamp("2026-08-15", "09:30:00"),
   lastConfidence: "confident",
+  lastPredictedConfidence: "confident",
   lastConfidenceAt: timestamp("2026-08-15", "09:31:00"),
-  uncertain: 0
+  retryNotBeforeKey: "",
+  retryNotBeforeAt: timestamp("2026-08-15", "09:31:00"),
+  uncertain: 0,
+  overconfidentWrong: 0,
+  hesitantCorrect: 0
 };
 Object.assign(practicalConfidenceBase.practicalDrill, {
   stage: "active",
   sessionIds: ["q1"],
   queue: ["q1"],
   position: 0,
+  preAnswerConfidence: "confident",
   currentAttempt: {
     id: "q1",
     selected: 0,
     correct: true,
+    predictedConfidence: "confident",
     confidence: "confident",
     diagnosticRecorded: false
   },
@@ -238,12 +245,19 @@ const practicalConfidenceLocal = sync.clone(practicalConfidenceBase);
 practicalConfidenceLocal.practicalDrill.history.q1 = {
   ...practicalConfidenceLocal.practicalDrill.history.q1,
   lastConfidence: "uncertain",
+  lastPredictedConfidence: "uncertain",
   lastConfidenceAt: timestamp("2026-08-15", "09:35:00"),
-  uncertain: 1
+  retryNotBeforeKey: "2026-08-16",
+  retryNotBeforeAt: timestamp("2026-08-15", "09:36:00"),
+  uncertain: 1,
+  hesitantCorrect: 1
 };
+practicalConfidenceLocal.practicalDrill.preAnswerConfidence = "uncertain";
+practicalConfidenceLocal.practicalDrill.currentAttempt.predictedConfidence = "uncertain";
 practicalConfidenceLocal.practicalDrill.currentAttempt.confidence = "uncertain";
 const practicalConfidenceRemote = sync.clone(practicalConfidenceBase);
 practicalConfidenceRemote.syncMeta.revision = 9;
+practicalConfidenceRemote.practicalDrill.history.q1.overconfidentWrong = 1;
 practicalConfidenceRemote.practicalDrill.currentAttempt.diagnosticRecorded = true;
 const practicalConfidenceMerged = sync.mergeStates(
   practicalConfidenceBase,
@@ -253,8 +267,100 @@ const practicalConfidenceMerged = sync.mergeStates(
 assert.equal(practicalConfidenceMerged.practicalDrill.history.q1.lastConfidence, "uncertain", "newer practical confidence must beat a stale higher-revision tab");
 assert.equal(practicalConfidenceMerged.practicalDrill.history.q1.lastConfidenceAt, timestamp("2026-08-15", "09:35:00"));
 assert.equal(practicalConfidenceMerged.practicalDrill.history.q1.uncertain, 1, "newer uncertainty must remain eligible for retry");
+assert.equal(practicalConfidenceMerged.practicalDrill.history.q1.lastPredictedConfidence, "uncertain", "latest pre-answer forecast must follow the latest outcome");
+assert.equal(practicalConfidenceMerged.practicalDrill.history.q1.retryNotBeforeKey, "2026-08-16", "delayed retry must survive a stale higher-revision tab");
+assert.equal(practicalConfidenceMerged.practicalDrill.history.q1.retryNotBeforeAt, timestamp("2026-08-15", "09:36:00"));
+assert.equal(practicalConfidenceMerged.practicalDrill.history.q1.overconfidentWrong, 1, "independent overconfidence evidence must survive");
+assert.equal(practicalConfidenceMerged.practicalDrill.history.q1.hesitantCorrect, 1, "independent hesitant-correct evidence must survive");
+assert.equal(practicalConfidenceMerged.practicalDrill.preAnswerConfidence, "uncertain", "the visible forecast must follow merged history");
+assert.equal(practicalConfidenceMerged.practicalDrill.currentAttempt.predictedConfidence, "uncertain", "the active answer must use the forecast from merged history");
 assert.equal(practicalConfidenceMerged.practicalDrill.currentAttempt.confidence, "uncertain", "the active answer must use the confidence selected by the merged history");
 assert.equal(practicalConfidenceMerged.practicalDrill.currentAttempt.diagnosticRecorded, true, "independent active-session fields from the preferred tab must survive");
+
+const retryDeferBase = sync.clone(base);
+retryDeferBase.practicalDrill.history.q1 = {
+  ...retryDeferBase.practicalDrill.history.q1,
+  lastAnsweredAt: timestamp("2026-08-15", "10:00:00"),
+  lastConfidenceAt: timestamp("2026-08-15", "10:00:00"),
+  retryNotBeforeKey: "",
+  retryNotBeforeAt: timestamp("2026-08-15", "10:00:00")
+};
+const retryDeferredBranch = sync.clone(retryDeferBase);
+retryDeferredBranch.syncMeta.revision = 8;
+retryDeferredBranch.practicalDrill.history.q1.retryNotBeforeKey = "2026-08-16";
+retryDeferredBranch.practicalDrill.history.q1.retryNotBeforeAt = timestamp("2026-08-15", "10:01:00");
+const retryStaleBranch = sync.clone(retryDeferBase);
+retryStaleBranch.syncMeta.revision = 9;
+for (const mergedRetry of [
+  sync.mergeStates(retryDeferBase, retryDeferredBranch, retryStaleBranch),
+  sync.mergeStates(retryDeferBase, retryStaleBranch, retryDeferredBranch)
+]) {
+  assert.equal(mergedRetry.practicalDrill.history.q1.retryNotBeforeKey, "2026-08-16", "a stale preferred tab must not erase a later retry deferral");
+  assert.equal(mergedRetry.practicalDrill.history.q1.retryNotBeforeAt, timestamp("2026-08-15", "10:01:00"));
+}
+const retryClearedBranch = sync.clone(retryDeferredBranch);
+retryClearedBranch.syncMeta.revision = 10;
+retryClearedBranch.practicalDrill.history.q1.lastAnsweredAt = timestamp("2026-08-15", "11:00:00");
+retryClearedBranch.practicalDrill.history.q1.lastConfidenceAt = timestamp("2026-08-15", "11:00:00");
+retryClearedBranch.practicalDrill.history.q1.retryNotBeforeKey = "";
+retryClearedBranch.practicalDrill.history.q1.retryNotBeforeAt = timestamp("2026-08-15", "11:00:00");
+const retryCleared = sync.mergeStates(retryDeferredBranch, retryClearedBranch, retryStaleBranch);
+assert.equal(retryCleared.practicalDrill.history.q1.retryNotBeforeKey, "", "a later answer must be able to clear a prior deferral");
+assert.equal(retryCleared.practicalDrill.history.q1.retryNotBeforeAt, timestamp("2026-08-15", "11:00:00"));
+
+const guaranteeSessionBase = sync.clone(base);
+guaranteeSessionBase.practicalDrill = {
+  ...guaranteeSessionBase.practicalDrill,
+  version: 3,
+  bankId: "guarantee-association-special",
+  bankVersion: 3,
+  presentationKey: "2026-08-15:guarantee:base",
+  presentationOverrides: {},
+  planMode: "guarantee",
+  stage: "active",
+  sessionSize: 2,
+  sessionIds: ["ga001", "ga002"],
+  queue: ["ga001", "ga002"],
+  position: 0,
+  preAnswerConfidence: "",
+  currentAttempt: null,
+  retryIds: [],
+  sessionStartedAt: timestamp("2026-08-15", "12:00:00")
+};
+const guaranteeRetryBranch = sync.clone(guaranteeSessionBase);
+guaranteeRetryBranch.syncMeta.revision = 8;
+guaranteeRetryBranch.practicalDrill.stage = "retry";
+guaranteeRetryBranch.practicalDrill.queue = ["ga001"];
+guaranteeRetryBranch.practicalDrill.retryIds = ["ga001"];
+guaranteeRetryBranch.practicalDrill.presentationOverrides = { ga001: "2026-08-15:guarantee:retry:ga001" };
+const guaranteeProgressBranch = sync.clone(guaranteeSessionBase);
+guaranteeProgressBranch.syncMeta.revision = 9;
+guaranteeProgressBranch.practicalDrill.position = 1;
+guaranteeProgressBranch.practicalDrill.preAnswerConfidence = "uncertain";
+const guaranteeConflict = sync.reconcileForSave(
+  guaranteeSessionBase,
+  guaranteeRetryBranch,
+  guaranteeProgressBranch,
+  { updatedAt: timestamp("2026-08-15", "12:05:00"), writerId: "guarantee-retry" }
+);
+assert.equal(guaranteeConflict.hasConflict, true, "divergent guarantee retry order and progress must stop instead of silently swapping choice order");
+assert.equal(guaranteeConflict.conflicts[0].code, "concurrent-active-session");
+assert.equal(guaranteeConflict.conflicts[0].local.kind, "practical");
+
+const guaranteeOverrideLocal = sync.clone(guaranteeSessionBase);
+guaranteeOverrideLocal.syncMeta.revision = 8;
+guaranteeOverrideLocal.practicalDrill.presentationOverrides = { ga001: "2026-08-15:guarantee:order-a" };
+const guaranteeOverrideRemote = sync.clone(guaranteeSessionBase);
+guaranteeOverrideRemote.syncMeta.revision = 9;
+guaranteeOverrideRemote.practicalDrill.presentationOverrides = { ga001: "2026-08-15:guarantee:order-b" };
+const guaranteeOverrideConflict = sync.reconcileForSave(
+  guaranteeSessionBase,
+  guaranteeOverrideLocal,
+  guaranteeOverrideRemote,
+  { updatedAt: timestamp("2026-08-15", "12:06:00"), writerId: "guarantee-order" }
+);
+assert.equal(guaranteeOverrideConflict.hasConflict, true, "presentation override divergence alone must stop a same-session save");
+assert.equal(guaranteeOverrideConflict.conflicts[0].local.kind, "practical");
 
 const independentBase = sync.clone(base);
 independentBase.attempts = 10;

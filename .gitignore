@@ -8,6 +8,7 @@ Thumbs.db
 node_modules/
 coverage/
 qa-screenshots/
+.playwright-cli/
 output/
 _site/
 tunnel-logs/

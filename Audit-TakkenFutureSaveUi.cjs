@@ -289,6 +289,7 @@ function startStaticServer(root) {
     recoveryFromV36Url.searchParams.set("review", "v36-guarantee-recovery");
     await recoveryFromV36Page.goto(recoveryFromV36Url.toString(), { waitUntil: "networkidle" });
     await recoveryFromV36Page.locator("#guaranteeSpecialStart").click();
+    await recoveryFromV36Page.locator('[data-practical-forecast="confident"]').click();
     await recoveryFromV36Page.locator(".practical-drill-choice").first().click();
     const v36DowncastFixture = await recoveryFromV36Page.evaluate(() => {
       const key = Object.keys(localStorage).find((candidate) =>

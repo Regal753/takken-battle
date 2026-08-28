@@ -41,7 +41,7 @@
   const SUBJECT_SPRINT_BANK_ID = "subject-sprint";
   const LEGACY_PRACTICAL_BANK_ID = "legacy-practical";
   const BUSINESS_FULLSCORE_EXPECTED_QUESTIONS = 134;
-  const GUARANTEE_SPECIAL_EXPECTED_QUESTIONS = 26;
+  const GUARANTEE_SPECIAL_EXPECTED_QUESTIONS = 33;
   const SUBJECT_SPRINT_EXPECTED_QUESTIONS = 80;
   const EXAM_PROFILE_GENERAL = "general";
   const EXAM_PROFILE_FIVE_EXEMPT = "fiveExempt";
@@ -833,6 +833,7 @@
     todayCommandTitle: $("#todayCommandTitle"),
     todayCommandText: $("#todayCommandText"),
     todayCommandStartButton: $("#todayCommandStartButton"),
+    todayCommandGuaranteeButton: $("#todayCommandGuaranteeButton"),
     todayCommandPracticalButton: $("#todayCommandPracticalButton"),
     todayCommandCalculationButton: $("#todayCommandCalculationButton"),
     todayCommandOfficialActions: $("#todayCommandOfficialActions"),
@@ -978,6 +979,8 @@
     practicalDrillUnit: $("#practicalDrillUnit"),
     practicalDrillRetryStatus: $("#practicalDrillRetryStatus"),
     practicalDrillPrompt: $("#practicalDrillPrompt"),
+    practicalConfidenceHint: $("#practicalConfidenceHint"),
+    practicalDrillForecast: $("#practicalDrillForecast"),
     practicalDrillChoices: $("#practicalDrillChoices"),
     practicalDrillSaveError: $("#practicalDrillSaveError"),
     practicalDrillFeedback: $("#practicalDrillFeedback"),
@@ -1051,6 +1054,7 @@
       stage: "idle",
       queue: [],
       position: 0,
+      preAnswerConfidence: "",
       currentAttempt: null,
       retryIds: [],
       masteredIds: [],
@@ -2249,6 +2253,15 @@
             lastConfidenceAt: Number.isFinite(Date.parse(item?.lastConfidenceAt))
               ? String(item.lastConfidenceAt).slice(0, 64)
               : "",
+            lastPredictedConfidence: ["confident", "uncertain"].includes(item?.lastPredictedConfidence)
+              ? item.lastPredictedConfidence
+              : "",
+            overconfidentWrong: boundedInteger(item?.overconfidentWrong, 10000),
+            hesitantCorrect: boundedInteger(item?.hesitantCorrect, 10000),
+            retryNotBeforeKey: BUSINESS_MASTERY?.dayKey(String(item?.retryNotBeforeKey || "")) || "",
+            retryNotBeforeAt: Number.isFinite(Date.parse(item?.retryNotBeforeAt))
+              ? String(item.retryNotBeforeAt).slice(0, 64)
+              : "",
             lastAnsweredAt: Number.isFinite(Date.parse(item?.lastAnsweredAt))
               ? String(item.lastAnsweredAt).slice(0, 64)
               : "",
@@ -2397,10 +2410,17 @@
           confidence: selected === presentedQuestion.answer
             ? (["confident", "uncertain"].includes(rawAttempt?.confidence) ? rawAttempt.confidence : "")
             : "wrong",
+          predictedConfidence: ["confident", "uncertain"].includes(rawAttempt?.predictedConfidence)
+            ? rawAttempt.predictedConfidence
+            : "",
           masteryRecorded: Boolean(rawAttempt?.masteryRecorded),
           diagnosticRecorded: Boolean(rawAttempt?.diagnosticRecorded)
         }
       : null;
+    const preAnswerConfidence = !bankChanged && !currentAttempt && bankId === GUARANTEE_SPECIAL_BANK_ID &&
+      ["confident", "uncertain"].includes(input?.preAnswerConfidence)
+      ? input.preAnswerConfidence
+      : "";
     return {
       version: bankId === LEGACY_PRACTICAL_BANK_ID ? currentBankVersion : fresh.version,
       bankId,
@@ -2421,6 +2441,7 @@
       sessionIds,
       queue,
       position,
+      preAnswerConfidence,
       currentAttempt,
       retryIds,
       history: normalizePracticalHistory(input?.history, preserveUnknownIds),
@@ -6531,6 +6552,8 @@
     if (!action) return false;
     if (action === "resume") {
       resumeActiveLearningSession();
+    } else if (action === "guarantee-special") {
+      startGuaranteeSpecialSession();
     } else if (action === "business-knock") {
       const remaining = Math.max(1, 20 - businessAnswersToday());
       if (elements.businessKnockSize) elements.businessKnockSize.value = "20";
@@ -6700,6 +6723,17 @@
     elements.todayCommandPanel.classList.toggle("is-complete", completed);
     setPassCommandAction(elements.todayCommandStartButton, primary.action, primary.label, primary);
     elements.todayCommandStartButton.hidden = completed || (sundayDay && sundayMode === "short-review" && businessDone && shortCount >= 8);
+    const guaranteeQuickAction = !active && GUARANTEE_SPECIAL_READY
+      ? guaranteeSpecialPrimaryAction(guaranteeSpecialSummary())
+      : null;
+    elements.todayCommandGuaranteeButton.hidden = !guaranteeQuickAction?.enabled;
+    if (guaranteeQuickAction?.enabled) {
+      setPassCommandAction(
+        elements.todayCommandGuaranteeButton,
+        "guarantee-special",
+        `保証協会：${guaranteeQuickAction.label}`
+      );
+    }
     elements.todayCommandPracticalButton.hidden = !secondary || Boolean(active);
     if (secondary) setPassCommandAction(elements.todayCommandPracticalButton, secondary.action, secondary.label, secondary);
     elements.todayCommandCalculationButton.hidden = true;
@@ -6843,6 +6877,7 @@
     elements.todayCommandTitle.textContent = command.title;
     elements.todayCommandText.textContent = command.text;
     elements.todayCommandPracticalButton.hidden = true;
+    elements.todayCommandGuaranteeButton.hidden = true;
     elements.todayCommandCalculationButton.hidden = true;
     elements.missionBattleLabel.textContent = "固定10問";
     elements.missionOfficialLabel.textContent = "公式問題20問";
@@ -8670,7 +8705,7 @@
       elements.practicalDrillCompleteText.textContent = knockSession
         ? `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計${drill.attempts}解答です。${nextKnockPlan?.size ? `同じ条件の次セットは${nextKnockPlan.size}問。` : "この条件の対象はすべて回収しました。"}同日正答だけでは長期定着レベルは進みません。`
         : guaranteeSpecialSession
-          ? `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計接触${guaranteeSummary.contacted}/${GUARANTEE_SPECIAL_EXPECTED_QUESTIONS}、根拠○${guaranteeSummary.grounded}、日を空けて定着${guaranteeSummary.retained}、要復習${guaranteeSummary.review}問です。`
+          ? `${completionLabel}の今回${drill.sessionIds.length}問を完了。累計接触${guaranteeSummary.contacted}/${GUARANTEE_SPECIAL_EXPECTED_QUESTIONS}、根拠あり正答${guaranteeSummary.grounded}、日を空けて定着${guaranteeSummary.retained}、要復習${guaranteeSummary.review}問です。${guaranteeSummary.nextDueKey ? `次の優先復習は${guaranteeSummary.nextDueKey.replaceAll("-", "/")}以降。` : ""}`
         : `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計${drill.attempts}解答、根拠クリア${grounded}問です。`;
       elements.practicalDrillRestartButton.textContent = knockSession
         ? nextKnockPlan?.size
@@ -8697,6 +8732,7 @@
     const question = currentPresentedPracticalQuestion();
     if (!question) return;
     const attempt = drill.currentAttempt;
+    const guaranteeForecastRequired = guaranteeSpecialSession && !attempt;
     const sessionRetryCount = drill.retryIds.filter((id) => drill.sessionIds.includes(id)).length;
     elements.practicalDrillStage.textContent = drill.stage === "retry"
       ? "迷い・誤答を再出題"
@@ -8716,6 +8752,21 @@
       ? practicalSharedPremiseGroups(choiceBlocks, "choice")
       : practicalSharedPremiseGroups(promptItems, "item");
     renderPracticalPrompt(question, sharedPremiseGroups);
+    if (elements.practicalConfidenceHint) {
+      elements.practicalConfidenceHint.textContent = guaranteeSpecialSession
+        ? "正誤・解説を見る前に手応えを選びます。根拠あり予想からの誤答は過信ミスとして残します。"
+        : "正解後に「根拠を言えた」か「迷った」かを記録し、迷いは復習へ戻します。";
+    }
+    if (elements.practicalDrillForecast) {
+      elements.practicalDrillForecast.hidden = !guaranteeForecastRequired;
+      elements.practicalDrillForecast
+        .querySelectorAll("[data-practical-forecast]")
+        .forEach((button) => {
+          const selected = button.dataset.practicalForecast === drill.preAnswerConfidence;
+          button.setAttribute("aria-pressed", String(selected));
+          button.classList.toggle("is-selected", selected);
+        });
+    }
     elements.practicalDrillChoices.replaceChildren();
     question.choices.forEach((choice, index) => {
       const button = document.createElement("button");
@@ -8729,7 +8780,7 @@
         choiceBlocks[index],
         choiceBlocks.length ? sharedPremiseGroups : []
       );
-      button.disabled = Boolean(attempt);
+      button.disabled = Boolean(attempt) || (guaranteeForecastRequired && !drill.preAnswerConfidence);
       if (attempt) {
         button.classList.toggle("is-selected", attempt.selected === index);
         button.classList.toggle("is-correct", question.answer === index);
@@ -8741,9 +8792,17 @@
 
     elements.practicalDrillFeedback.hidden = !attempt;
     if (!attempt) return;
-    elements.practicalDrillVerdict.textContent = attempt.correct
-      ? `正解。「${question.choices[question.answer]}」を根拠から再現する。`
-      : `誤答。正解は「${question.choices[question.answer]}」。今回の再出題へ追加した。`;
+    elements.practicalDrillVerdict.textContent = guaranteeSpecialSession
+      ? attempt.correct
+        ? attempt.predictedConfidence === "confident"
+          ? `根拠あり予想で正解。「${question.choices[question.answer]}」を各肢の理由まで固定する。`
+          : `迷いながら正解。「${question.choices[question.answer]}」を復習対象に残した。`
+        : attempt.predictedConfidence === "confident"
+          ? `過信ミス。正解は「${question.choices[question.answer]}」。3問以上空けるか翌日以降に再テストする。`
+          : `迷いからの誤答。正解は「${question.choices[question.answer]}」。3問以上空けるか翌日以降に再テストする。`
+      : attempt.correct
+        ? `正解。「${question.choices[question.answer]}」を根拠から再現する。`
+        : `誤答。正解は「${question.choices[question.answer]}」。今回の再出題へ追加した。`;
     elements.practicalDrillReasoning.replaceChildren(
       practicalReasoningStep(1, "判定のまとめ", question.explain),
       practicalStatementReviewStep(question),
@@ -8762,7 +8821,7 @@
         return link;
       })
     );
-    elements.practicalDrillConfidence.hidden = !attempt.correct;
+    elements.practicalDrillConfidence.hidden = guaranteeSpecialSession || !attempt.correct;
     elements.practicalDrillConfidence
       .querySelectorAll("[data-practical-confidence]")
       .forEach((button) => {
@@ -8778,7 +8837,9 @@
     elements.practicalDrillNextButton.disabled = attempt.correct && !attempt.confidence;
     elements.practicalDrillNextButton.textContent = drill.position + 1 < drill.queue.length
       ? "次の実践問題へ"
-      : (sessionRetryCount ? "再出題へ進む" : "今回のセットを完了する");
+      : guaranteeSpecialSession
+        ? "今回の結果を確定する"
+        : (sessionRetryCount ? "再出題へ進む" : "今回のセットを完了する");
   }
 
   function revealPracticalTarget(target) {
@@ -8811,7 +8872,9 @@
       if (!force && unrelatedControlHasFocus) return;
       const target = drill.currentAttempt
         ? elements.practicalDrillFeedback
-        : elements.practicalDrillChoices?.querySelector("button:not(:disabled)");
+        : drill.bankId === GUARANTEE_SPECIAL_BANK_ID && !drill.preAnswerConfidence
+          ? elements.practicalDrillForecast?.querySelector("button")
+          : elements.practicalDrillChoices?.querySelector("button:not(:disabled)");
       revealPracticalTarget(target);
     }));
   }
@@ -9115,17 +9178,29 @@
     const history = guaranteeSpecialHistory();
     const states = { retry: 0, due: 0, untouched: 0, learning: 0, retained: 0, durable: 0 };
     const stateById = {};
+    const currentDayKey = BUSINESS_MASTERY.dayKey(now);
     GUARANTEE_SPECIAL_QUESTIONS.forEach((question) => {
-      const learningState = BUSINESS_MASTERY.stateFor(history[question.id] || {}, now);
+      const entry = history[question.id] || {};
+      const rawState = BUSINESS_MASTERY.stateFor(entry, now);
+      const learningState = rawState === "retry" && entry.retryNotBeforeKey > currentDayKey
+        ? "learning"
+        : rawState;
       stateById[question.id] = learningState;
       if (Object.hasOwn(states, learningState)) states[learningState] += 1;
     });
     const contacted = GUARANTEE_SPECIAL_QUESTION_IDS.filter((id) => (history[id]?.attempts || 0) > 0).length;
     const grounded = GUARANTEE_SPECIAL_QUESTION_IDS.filter((id) => history[id]?.lastConfidence === "confident").length;
     const nextDueKey = GUARANTEE_SPECIAL_QUESTION_IDS
-      .map((id) => BUSINESS_MASTERY.normalizeMasteryHistory(history[id] || {}).masteryDueKey)
+      .flatMap((id) => [
+        BUSINESS_MASTERY.normalizeMasteryHistory(history[id] || {}).masteryDueKey,
+        history[id]?.retryNotBeforeKey || ""
+      ])
       .filter((key) => key && key > BUSINESS_MASTERY.dayKey(now))
       .sort()[0] || "";
+    const overconfidentWrong = GUARANTEE_SPECIAL_QUESTION_IDS
+      .reduce((sum, id) => sum + Math.max(0, Number(history[id]?.overconfidentWrong) || 0), 0);
+    const hesitantCorrect = GUARANTEE_SPECIAL_QUESTION_IDS
+      .reduce((sum, id) => sum + Math.max(0, Number(history[id]?.hesitantCorrect) || 0), 0);
     return {
       history,
       states,
@@ -9135,6 +9210,8 @@
       retained: states.retained + states.durable,
       review: states.retry + states.due,
       actionable: states.retry + states.due + states.untouched,
+      overconfidentWrong,
+      hesitantCorrect,
       nextDueKey
     };
   }
@@ -9215,9 +9292,14 @@
       .filter(([, count]) => count > 0)
       .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
       .slice(0, 3);
+    const calibration = summary.overconfidentWrong
+      ? `根拠あり予想からの誤答 ${summary.overconfidentWrong}回。`
+      : summary.hesitantCorrect
+        ? `迷いながら正解 ${summary.hesitantCorrect}回。`
+        : "";
     return leaders.length
-      ? `累計で混同が多い所：${leaders.map(([tag, count]) => `${BUSINESS_DIAGNOSTIC_LABELS[tag] || tag} ${count}`).join("・")}`
-      : "弱点データはまだありません。誤答・迷いから自動で絞ります。";
+      ? `${calibration}累計で混同が多い所：${leaders.map(([tag, count]) => `${BUSINESS_DIAGNOSTIC_LABELS[tag] || tag} ${count}`).join("・")}`
+      : calibration || "弱点データはまだありません。誤答・迷いから自動で絞ります。";
   }
 
   function renderGuaranteeSpecial(active = activeLearningSession()) {
@@ -9254,7 +9336,7 @@
       elements.guaranteeSpecialStart.disabled = true;
       elements.guaranteeSpecialStart.textContent = "保証協会特訓を読み込めません";
       if (elements.guaranteeSpecialFullStart) elements.guaranteeSpecialFullStart.disabled = true;
-      elements.guaranteeSpecialStatus.textContent = "特訓26問の読込を確認してください。通常の業法ノックは利用できます。";
+      elements.guaranteeSpecialStatus.textContent = `特訓${GUARANTEE_SPECIAL_EXPECTED_QUESTIONS}問の読込を確認してください。通常の業法ノックは利用できます。`;
       return;
     }
     elements.guaranteeSpecialStart.disabled = !action.enabled;
@@ -9264,7 +9346,7 @@
       elements.guaranteeSpecialFullStart.textContent = `全${GUARANTEE_SPECIAL_EXPECTED_QUESTIONS}問で総点検`;
     }
     elements.guaranteeSpecialStatus.textContent = summary.actionable
-      ? `誤答・迷い${summary.states.retry}問／期限${summary.states.due}問／未接触${summary.states.untouched}問。今必要な最大10問だけを先に出し、今回の迷い・誤答は同じセット内で再出題します。`
+      ? `誤答・迷い${summary.states.retry}問／期限${summary.states.due}問／未接触${summary.states.untouched}問。今必要な最大10問を出し、迷い・誤答は3問以上挟める場合だけ再テスト、終盤分は翌日以降へ送ります。`
       : summary.nextDueKey
         ? `今日の優先分は完了。次は${summary.nextDueKey.replaceAll("-", "/")}以降に解き直すと定着が進みます。全問総点検はいつでも選べます。`
         : `接触${summary.contacted}問・日を空けた定着${summary.retained}問。全問総点検で位置暗記を崩せます。`;
@@ -9529,6 +9611,7 @@
       sessionIds: [...queue],
       queue: [...queue],
       position: 0,
+      preAnswerConfidence: "",
       currentAttempt: null,
       retryIds,
       sessionStartedAt: new Date().toISOString(),
@@ -9586,20 +9669,30 @@
   function nextGuaranteeSpecialPresentation(cycleId) {
     const base = `${todayKey()}:guarantee:${cycleId}`
       .replace(/[^0-9a-z:_-]/gi, "")
-      .slice(0, 72);
-    const firstId = GUARANTEE_SPECIAL_QUESTION_IDS[0];
+      .slice(0, 60);
     const previousKey = state.practicalDrill?.bankId === GUARANTEE_SPECIAL_BANK_ID
       ? state.practicalDrill.presentationKey
       : "";
-    const previousPermutation = previousKey
-      ? GUARANTEE_ASSOCIATION_DRILL.presentQuestion(firstId, previousKey).presentationPermutationIndex
-      : null;
-    for (let candidate = 0; candidate < 48; candidate += 1) {
-      const key = `${base}:${candidate.toString(36)}`;
-      const permutation = GUARANTEE_ASSOCIATION_DRILL.presentQuestion(firstId, key).presentationPermutationIndex;
-      if (!Number.isInteger(previousPermutation) || permutation !== previousPermutation) return key;
-    }
-    return `${base}:fallback`;
+    const previousOverrides = state.practicalDrill?.bankId === GUARANTEE_SPECIAL_BANK_ID
+      ? state.practicalDrill.presentationOverrides || {}
+      : {};
+    const overrides = {};
+    GUARANTEE_SPECIAL_QUESTION_IDS.forEach((id) => {
+      const previousPresentationKey = previousOverrides[id] || previousKey;
+      const previousAnswer = previousPresentationKey
+        ? GUARANTEE_ASSOCIATION_DRILL.presentQuestion(id, previousPresentationKey).answer
+        : null;
+      for (let candidate = 0; candidate < 48; candidate += 1) {
+        const key = `${base}:${id}:${candidate.toString(36)}`;
+        const answer = GUARANTEE_ASSOCIATION_DRILL.presentQuestion(id, key).answer;
+        if (!Number.isInteger(previousAnswer) || answer !== previousAnswer) {
+          overrides[id] = key;
+          return;
+        }
+      }
+      throw new Error(`保証協会特訓の肢順を更新できませんでした: ${id}`);
+    });
+    return { key: `${base}:default`, overrides };
   }
 
   function startGuaranteeSpecialSession(strategy = "smart") {
@@ -9620,17 +9713,17 @@
     const plan = guaranteeSpecialPlan(requestedStrategy, cycleId);
     if (!plan?.ids?.length) {
       renderGuaranteeSpecial();
-      setTodayCommandStatus("今日の優先復習は完了しています。全26問で総点検する場合は右のボタンを選んでください。");
+      setTodayCommandStatus(`今日の優先復習は完了しています。全${GUARANTEE_SPECIAL_EXPECTED_QUESTIONS}問で総点検する場合は右のボタンを選んでください。`);
       return;
     }
-    const presentationKey = nextGuaranteeSpecialPresentation(cycleId);
+    const presentation = nextGuaranteeSpecialPresentation(cycleId);
     state.practicalDrill = {
       ...state.practicalDrill,
       version: PRACTICAL_VARIATIONS?.VERSION || 1,
       bankId: GUARANTEE_SPECIAL_BANK_ID,
       bankVersion: GUARANTEE_ASSOCIATION_DRILL.VERSION,
-      presentationKey,
-      presentationOverrides: {},
+      presentationKey: presentation.key,
+      presentationOverrides: presentation.overrides,
       planMode: "guarantee",
       stage: "active",
       scope: "business",
@@ -9639,6 +9732,7 @@
       sessionIds: [...plan.ids],
       queue: [...plan.ids],
       position: 0,
+      preAnswerConfidence: "",
       currentAttempt: null,
       retryIds: practicalRetryIdsForBank(GUARANTEE_SPECIAL_BANK_ID),
       sessionStartedAt: new Date().toISOString(),
@@ -9713,6 +9807,7 @@
       sessionIds: [...queue],
       queue: [...queue],
       position: 0,
+      preAnswerConfidence: "",
       currentAttempt: null,
       retryIds: practicalRetryIdsForBank(SUBJECT_SPRINT_BANK_ID),
       sessionStartedAt: new Date().toISOString(),
@@ -9747,6 +9842,7 @@
       sessionIds: [...queue],
       queue: [...queue],
       position: 0,
+      preAnswerConfidence: "",
       currentAttempt: null,
       retryIds: practicalRetryIdsForBank(LEGACY_PRACTICAL_BANK_ID),
       sessionStartedAt: new Date().toISOString(),
@@ -9808,6 +9904,7 @@
       sessionIds: [...queue],
       queue: [...queue],
       position: 0,
+      preAnswerConfidence: "",
       currentAttempt: null,
       retryIds: practicalRetryIdsForBank(LEGACY_PRACTICAL_BANK_ID),
       sessionStartedAt: new Date().toISOString(),
@@ -9877,10 +9974,35 @@
     setTodayCommandStatus(message, true);
   }
 
+  function setPracticalForecast(confidence) {
+    const drill = state.practicalDrill;
+    if (drill?.bankId !== GUARANTEE_SPECIAL_BANK_ID || drill.currentAttempt ||
+        !["confident", "uncertain"].includes(confidence)) return;
+    const previousState = cloneStateForSync(state);
+    drill.preAnswerConfidence = confidence;
+    if (!saveState()) {
+      rollbackFailedPracticalDrillMutation(
+        previousState,
+        "解答前の手応えを保存できませんでした。進捗は変更していません。もう一度選んでください。"
+      );
+      return;
+    }
+    clearPracticalDrillSaveError();
+    renderPracticalDrill();
+    window.requestAnimationFrame(() =>
+      elements.practicalDrillChoices?.querySelector("button:not(:disabled)")?.focus({ preventScroll: true })
+    );
+  }
+
   function answerPracticalDrill(selected) {
     const drill = state.practicalDrill;
     const question = currentPresentedPracticalQuestion();
     if (!question || drill.currentAttempt || !Number.isInteger(selected) || selected < 0 || selected > 3) return;
+    const guaranteeSpecial = drill.bankId === GUARANTEE_SPECIAL_BANK_ID;
+    const predictedConfidence = guaranteeSpecial && ["confident", "uncertain"].includes(drill.preAnswerConfidence)
+      ? drill.preAnswerConfidence
+      : "";
+    if (guaranteeSpecial && !predictedConfidence) return;
     const previousState = cloneStateForSync(state);
     const correct = selected === question.answer;
     const answeredAt = new Date().toISOString();
@@ -9895,9 +10017,18 @@
       attempts: previous.attempts + 1,
       correct: previous.correct + (correct ? 1 : 0),
       wrong: previous.wrong + (correct ? 0 : 1),
+      uncertain: (previous.uncertain || 0) + (guaranteeSpecial && correct && predictedConfidence === "uncertain" ? 1 : 0),
       lastSelected: selected,
       lastCorrect: correct,
-      lastConfidence: correct ? "" : "wrong",
+      lastConfidence: correct ? (guaranteeSpecial ? predictedConfidence : "") : "wrong",
+      lastConfidenceAt: guaranteeSpecial ? answeredAt : (previous.lastConfidenceAt || ""),
+      lastPredictedConfidence: guaranteeSpecial ? predictedConfidence : (previous.lastPredictedConfidence || ""),
+      overconfidentWrong: (previous.overconfidentWrong || 0) +
+        (guaranteeSpecial && !correct && predictedConfidence === "confident" ? 1 : 0),
+      hesitantCorrect: (previous.hesitantCorrect || 0) +
+        (guaranteeSpecial && correct && predictedConfidence === "uncertain" ? 1 : 0),
+      retryNotBeforeKey: guaranteeSpecial ? "" : (previous.retryNotBeforeKey || ""),
+      retryNotBeforeAt: guaranteeSpecial ? answeredAt : (previous.retryNotBeforeAt || ""),
       lastAnsweredAt: answeredAt
     };
     drill.attempts += 1;
@@ -9906,14 +10037,21 @@
       id: question.id,
       selected,
       correct,
-      confidence: correct ? "" : "wrong",
-      diagnosticRecorded: !correct && recordPracticalDiagnostic(
-        drill.history[question.id],
-        question,
-        diagnosticTagsForPracticalSelection(question, selected)
-      )
+      confidence: correct ? (guaranteeSpecial ? predictedConfidence : "") : "wrong",
+      predictedConfidence,
+      diagnosticRecorded: (!correct || (guaranteeSpecial && predictedConfidence === "uncertain")) &&
+        recordPracticalDiagnostic(
+          drill.history[question.id],
+          question,
+          diagnosticTagsForPracticalSelection(question, selected, correct)
+        )
     };
-    if (!correct) drill.retryIds = addPracticalId(drill.retryIds, question.id);
+    drill.preAnswerConfidence = "";
+    if (!correct || (guaranteeSpecial && predictedConfidence === "uncertain")) {
+      drill.retryIds = addPracticalId(drill.retryIds, question.id);
+    } else if (guaranteeSpecial) {
+      drill.retryIds = removePracticalId(drill.retryIds, question.id);
+    }
     if (!saveState()) {
       rollbackFailedPracticalDrillMutation(
         previousState,
@@ -9980,12 +10118,39 @@
     }
     if (drill.position + 1 < drill.queue.length) {
       drill.position += 1;
+      drill.preAnswerConfidence = "";
       drill.currentAttempt = null;
     } else {
-      const pending = drill.retryIds.filter((id) => drill.sessionIds.includes(id));
+      let pending = drill.retryIds.filter((id) => drill.sessionIds.includes(id));
+      if (drill.bankId === GUARANTEE_SPECIAL_BANK_ID && pending.length) {
+        const activeStage = drill.stage === "active";
+        const eligible = activeStage
+          ? pending.filter((id) => {
+              const originalIndex = drill.sessionIds.indexOf(id);
+              return originalIndex >= 0 && drill.sessionIds.length - originalIndex - 1 >= 3;
+            })
+          : [];
+        const eligibleSet = new Set(eligible);
+        const deferred = pending.filter((id) => !eligibleSet.has(id));
+        const retryNotBeforeKey = localDateKey(new Date(Date.now() + 24 * 60 * 60 * 1000));
+        const retryDecisionAt = new Date().toISOString();
+        deferred.forEach((id) => {
+          if (drill.history[id]) {
+            drill.history[id].retryNotBeforeKey = retryNotBeforeKey;
+            drill.history[id].retryNotBeforeAt = retryDecisionAt;
+          }
+        });
+        eligible.forEach((id) => {
+          if (drill.history[id]) {
+            drill.history[id].retryNotBeforeKey = "";
+            drill.history[id].retryNotBeforeAt = retryDecisionAt;
+          }
+        });
+        pending = eligible;
+      }
       if (pending.length) {
         const previousOverrides = drill.presentationOverrides || {};
-        const nextOverrides = {};
+        const nextOverrides = { ...previousOverrides };
         pending.forEach((id, index) => {
           const question = practicalQuestionFor(id, drill.bankId);
           const previousKey = previousOverrides[id] || drill.presentationKey;
@@ -10002,13 +10167,15 @@
         drill.stage = "retry";
         drill.queue = pending;
         drill.position = 0;
+        drill.preAnswerConfidence = "";
         drill.currentAttempt = null;
       } else {
         drill.stage = "complete";
         drill.queue = [];
         drill.position = 0;
+        drill.preAnswerConfidence = "";
         drill.currentAttempt = null;
-        drill.presentationOverrides = {};
+        if (drill.bankId !== GUARANTEE_SPECIAL_BANK_ID) drill.presentationOverrides = {};
         drill.sessionsCompleted += 1;
         drill.completedAt = new Date().toISOString();
       }
@@ -10047,6 +10214,8 @@
     const active = ["active", "retry"].includes(state.practicalDrill?.stage);
     if (active && !window.confirm("このセットを破棄します。問題順・途中解答・再出題の位置は消えます。解答履歴は残ります。")) return false;
     const previousState = cloneStateForSync(state);
+    const keepMap = state.practicalDrill?.bankId === GUARANTEE_SPECIAL_BANK_ID &&
+      state.practicalDrill?.stage === "complete";
     state.practicalDrill = {
       ...state.practicalDrill,
       stage: "idle",
@@ -10055,8 +10224,11 @@
       sessionIds: [],
       queue: [],
       position: 0,
+      preAnswerConfidence: "",
       currentAttempt: null,
-      presentationOverrides: {},
+      presentationOverrides: keepMap
+        ? { ...(state.practicalDrill.presentationOverrides || {}) }
+        : {},
       sessionStartedAt: "",
       completedAt: ""
     };
@@ -13304,6 +13476,9 @@
       if (runPassCommandAction(event.currentTarget)) return;
       startStudyScopePracticalReview();
     });
+    elements.todayCommandGuaranteeButton?.addEventListener("click", (event) => {
+      runPassCommandAction(event.currentTarget);
+    });
     elements.todayCommandCalculationButton?.addEventListener("click", openCalculationDrill);
     elements.missionMinutesStep?.addEventListener("click", () => {
       if (elements.missionMinutesStep.dataset.action === "practical") {
@@ -13401,6 +13576,10 @@
       .forEach((control) => control.addEventListener("change", updateBusinessKnockPresetFromControls));
     elements.practicalDrillScope?.addEventListener("change", renderPracticalDrillLauncher);
     elements.practicalDrillSize?.addEventListener("change", renderPracticalDrillLauncher);
+    elements.practicalDrillForecast?.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-practical-forecast]");
+      if (button) setPracticalForecast(button.dataset.practicalForecast);
+    });
     elements.practicalDrillConfidence?.addEventListener("click", (event) => {
       const button = event.target.closest("[data-practical-confidence]");
       if (button) setPracticalConfidence(button.dataset.practicalConfidence);
