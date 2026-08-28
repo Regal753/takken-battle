@@ -85,10 +85,10 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
       - name: Verify deployed page
-        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260828-guarantee-v43-3-16a77d5f4f36"
+        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260829-retention-v44-1-1a60cc2b7e90"
       - name: Verify deployed browser boot
         env:
           TAKKEN_CHROME_PATH: /usr/bin/google-chrome
         run: |
           google-chrome --version
-          node scripts/verify-deployed-browser.cjs "${{ steps.deployment.outputs.page_url }}" "20260828-guarantee-v43-3-16a77d5f4f36"
+          node scripts/verify-deployed-browser.cjs "${{ steps.deployment.outputs.page_url }}" "20260829-retention-v44-1-1a60cc2b7e90"

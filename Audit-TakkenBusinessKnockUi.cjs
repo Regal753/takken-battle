@@ -116,6 +116,8 @@ async function startKnock(page, preset) {
   await setKnockPreset(page, preset);
   await page.locator("#businessKnockStart").click();
   await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
+  assert.equal(await page.locator("#practicalDrillForecast").isHidden(), true, "business-fullscore must not inherit the guarantee pre-answer forecast");
+  assert.equal(await page.locator(".practical-drill-choice:enabled").count(), 4, "business-fullscore choices must remain immediately answerable");
   return readSavedState(page);
 }
 
