@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20260829-retention-v44-1-1a60cc2b7e90";
+  const VERSION = "20260829-retention-v44-2-3701208f0d3c";
   const BANNER_ID = "pwaUpdateNotice";
   let reloadRequested = false;
 

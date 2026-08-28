@@ -9679,13 +9679,13 @@
     const overrides = {};
     GUARANTEE_SPECIAL_QUESTION_IDS.forEach((id) => {
       const previousPresentationKey = previousOverrides[id] || previousKey;
-      const previousPermutation = previousPresentationKey
-        ? GUARANTEE_ASSOCIATION_DRILL.presentQuestion(id, previousPresentationKey).presentationPermutationIndex
+      const previousAnswer = previousPresentationKey
+        ? GUARANTEE_ASSOCIATION_DRILL.presentQuestion(id, previousPresentationKey).answer
         : null;
       for (let candidate = 0; candidate < 48; candidate += 1) {
         const key = `${base}:${id}:${candidate.toString(36)}`;
-        const permutation = GUARANTEE_ASSOCIATION_DRILL.presentQuestion(id, key).presentationPermutationIndex;
-        if (!Number.isInteger(previousPermutation) || permutation !== previousPermutation) {
+        const answer = GUARANTEE_ASSOCIATION_DRILL.presentQuestion(id, key).answer;
+        if (!Number.isInteger(previousAnswer) || answer !== previousAnswer) {
           overrides[id] = key;
           return;
         }
@@ -10150,7 +10150,7 @@
       }
       if (pending.length) {
         const previousOverrides = drill.presentationOverrides || {};
-        const nextOverrides = {};
+        const nextOverrides = { ...previousOverrides };
         pending.forEach((id, index) => {
           const question = practicalQuestionFor(id, drill.bankId);
           const previousKey = previousOverrides[id] || drill.presentationKey;
@@ -10175,7 +10175,7 @@
         drill.position = 0;
         drill.preAnswerConfidence = "";
         drill.currentAttempt = null;
-        drill.presentationOverrides = {};
+        if (drill.bankId !== GUARANTEE_SPECIAL_BANK_ID) drill.presentationOverrides = {};
         drill.sessionsCompleted += 1;
         drill.completedAt = new Date().toISOString();
       }
@@ -10214,6 +10214,8 @@
     const active = ["active", "retry"].includes(state.practicalDrill?.stage);
     if (active && !window.confirm("このセットを破棄します。問題順・途中解答・再出題の位置は消えます。解答履歴は残ります。")) return false;
     const previousState = cloneStateForSync(state);
+    const keepMap = state.practicalDrill?.bankId === GUARANTEE_SPECIAL_BANK_ID &&
+      state.practicalDrill?.stage === "complete";
     state.practicalDrill = {
       ...state.practicalDrill,
       stage: "idle",
@@ -10224,7 +10226,9 @@
       position: 0,
       preAnswerConfidence: "",
       currentAttempt: null,
-      presentationOverrides: {},
+      presentationOverrides: keepMap
+        ? { ...(state.practicalDrill.presentationOverrides || {}) }
+        : {},
       sessionStartedAt: "",
       completedAt: ""
     };

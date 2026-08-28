@@ -120,13 +120,14 @@ async function answerAndAdvance(page, kind = "confident") {
   return question;
 }
 
-async function presentationIndexes(page) {
+async function presentationDetails(page) {
   return page.evaluate(() => {
     const key = Object.keys(localStorage).find((candidate) => candidate.startsWith("takken-battle-study-clean-v2-hard-review-") && !candidate.includes("backup") && !candidate.includes("-before-") && !candidate.includes("previous") && !candidate.includes("corrupt") && !candidate.endsWith("event-outbox"));
     const state = JSON.parse(localStorage.getItem(key));
     return Object.fromEntries(state.practicalDrill.sessionIds.map((id) => {
       const presentationKey = state.practicalDrill.presentationOverrides?.[id] || state.practicalDrill.presentationKey;
-      return [id, window.TAKKEN_GUARANTEE_ASSOCIATION_DRILL.presentQuestion(id, presentationKey).presentationPermutationIndex];
+      const question = window.TAKKEN_GUARANTEE_ASSOCIATION_DRILL.presentQuestion(id, presentationKey);
+      return [id, { permutation: question.presentationPermutationIndex, answer: question.answer }];
     }));
   });
 }
@@ -310,7 +311,7 @@ async function assertFocusedInViewport(page, expectedSelector) {
     assert.equal(fullRound.state.practicalDrill.sessionSize, 33, "full audit remains available after the smart round");
     assert.equal(fullRound.state.practicalDrill.queue.length, 33, "full audit must include every special question");
     assert.equal(new Set(fullRound.state.practicalDrill.queue).size, 33, "full audit IDs must remain unique");
-    const firstFullPermutations = await presentationIndexes(page);
+    const firstFullPresentations = await presentationDetails(page);
 
     await page.setViewportSize({ width: 320, height: 700 });
     assert.equal(await horizontalOverflow(page), 0, "guarantee special UI must fit 320px");
@@ -323,17 +324,28 @@ async function assertFocusedInViewport(page, expectedSelector) {
       await answerAndAdvance(page, "confident");
     }
     await page.locator("#practicalDrillComplete").waitFor({ state: "visible" });
+    const completedFullRound = await readSavedState(page);
+    assert.equal(Object.keys(completedFullRound.state.practicalDrill.presentationOverrides || {}).length, 33, "completed guarantee round must retain every actual presentation key for the next round");
     await page.locator("#practicalDrillChangeButton").click();
+    const returnedToMenu = await readSavedState(page);
+    assert.equal(Object.keys(returnedToMenu.state.practicalDrill.presentationOverrides || {}).length, 33, "returning to the guarantee menu must preserve the completed round presentation map");
     await page.locator("#guaranteeSpecialFullStart").click();
     await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
     const secondFullRound = await readSavedState(page);
-    const secondFullPermutations = await presentationIndexes(page);
-    assert.equal(Object.keys(secondFullPermutations).length, 33);
-    ids.forEach((id) => assert.notEqual(
-      secondFullPermutations[id],
-      firstFullPermutations[id],
-      `${id}: consecutive full rounds must change every four-choice order`
-    ));
+    const secondFullPresentations = await presentationDetails(page);
+    assert.equal(Object.keys(secondFullPresentations).length, 33);
+    ids.forEach((id) => {
+      assert.notEqual(
+        secondFullPresentations[id].answer,
+        firstFullPresentations[id].answer,
+        `${id}: consecutive full rounds must move the correct answer position`
+      );
+      assert.notEqual(
+        secondFullPresentations[id].permutation,
+        firstFullPresentations[id].permutation,
+        `${id}: consecutive full rounds must change every four-choice order`
+      );
+    });
     for (const selector of ["#todayCommandStartButton", "#businessMasteryPrimary", "#guaranteeSpecialStart", "#businessKnockStart", "#passBusinessAction"]) {
       assert.equal(await page.locator(selector).textContent(), "保証協会特訓を保存位置から再開", `${selector}: resume CTA must use one learner-facing label`);
     }
