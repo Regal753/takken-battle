@@ -1,11 +1,11 @@
 "use strict";
 
-const VERSION = "20260909-business-knock-ux-v45-5-52dff2863456";
+const VERSION = "20260909-business-knock-ux-v46-197e2dc70d5a";
 const CACHE_NAME = `takken-battle-${VERSION}`;
 const IMMUTABLE = [
   "styles.css", "exam-blueprint.js", "exam-question-core.js", "exam-questions-rights.js",
   "exam-questions-restrictions.js", "exam-questions-tax-other.js", "exam-questions-business.js",
-  "subject-sprint-bank.js", "business-fullscore-supplement.js", "business-fullscore-bank.js",
+  "restrictions-supplement-bank.js", "subject-sprint-bank.js", "business-fullscore-supplement.js", "business-fullscore-bank.js",
   "guarantee-association-drill.js",
   "practical-question-bank.js", "question-bank.js", "question-balance.js", "reward-system.js",
   "official-exam-data.js", "official-law-baseline.js", "official-topic-map.js", "calculation-drill.js",

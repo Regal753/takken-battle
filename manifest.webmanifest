@@ -8,7 +8,7 @@
   "background_color": "#0b1020",
   "theme_color": "#0b1020",
   "icons": [
-    { "src": "./assets/pwa-icon-192.svg?v=20260909-business-knock-ux-v45-5-52dff2863456", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "./assets/pwa-icon-512.svg?v=20260909-business-knock-ux-v45-5-52dff2863456", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any" }
+    { "src": "./assets/pwa-icon-192.svg?v=20260909-business-knock-ux-v46-197e2dc70d5a", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./assets/pwa-icon-512.svg?v=20260909-business-knock-ux-v46-197e2dc70d5a", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any" }
   ]
 }
