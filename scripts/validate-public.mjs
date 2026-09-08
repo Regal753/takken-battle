@@ -24,6 +24,7 @@ const required = [
   "scripts/verify-deployed-browser.cjs",
   "styles.css",
   "app.js",
+  "restrictions-supplement-bank.js",
   "subject-sprint-bank.js",
   "pass-readiness.js",
   "exam-current-year-2026.js",
@@ -82,7 +83,9 @@ const required = [
   "Audit-TakkenGuaranteeAssociationDrillUi.cjs",
   "Audit-TakkenOfficialLawBaseline.js",
   "Audit-TakkenStateSync.js",
+  "Audit-TakkenRestrictionsSupplement.js",
   "Audit-TakkenSubjectSprintBank.js",
+  "Audit-TakkenSubjectSprintUi.cjs",
   "Audit-TakkenPassReadiness.js",
   "Audit-TakkenPassReadinessUi.cjs",
   "Audit-TakkenExamCurrentYear2026.js",
@@ -103,11 +106,11 @@ const pagesWorkflow = text(".github/workflows/pages.yml");
 const ciWorkflow = text(".github/workflows/ci.yml");
 
 assert.match(index, /name="takken-runtime" content="public-static"/);
-assert.match(index, /manifest\.webmanifest\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
-assert.match(index, /pwa-runtime\.js\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
-assert.match(text("service-worker.js"), /const VERSION = "20260909-business-knock-ux-v45-5-52dff2863456"/);
-assert.match(manifest, /pwa-icon-192\.svg\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
-assert.match(manifest, /pwa-icon-512\.svg\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
+assert.match(index, /manifest\.webmanifest\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.match(index, /pwa-runtime\.js\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.match(text("service-worker.js"), /const VERSION = "20260909-business-knock-ux-v46-197e2dc70d5a"/);
+assert.match(manifest, /pwa-icon-192\.svg\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.match(manifest, /pwa-icon-512\.svg\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
 assert.match(app, /const PUBLIC_STATIC_MODE/);
 assert.match(app, /function publicTodayQuest/);
 assert.match(app, /const DEFAULT_STUDY_SCOPE = "business"/);
@@ -234,24 +237,29 @@ assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 第2分冊・権利関係を固める/);
 assert.match(index, /③ 法令・税その他へ進む/);
 assert.match(index, /④ 全分野を混ぜる/);
-assert.match(index, /styles\.css\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
-assert.match(index, /subject-sprint-bank\.js\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
-assert.match(index, /pass-readiness\.js\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
-assert.match(index, /exam-current-year-2026\.js\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
-assert.match(index, /official-topic-map\.js\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
-assert.match(index, /business-mastery\.js\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
-assert.match(index, /business-knock\.js\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
-assert.match(index, /business-pace\.js\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
-assert.match(index, /business-fullscore-supplement\.js\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
-assert.match(index, /business-fullscore-bank\.js\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
-assert.match(index, /guarantee-association-drill\.js\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
-assert.match(index, /practical-question-bank\.js\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
-assert.match(index, /calculation-drill\.js\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
-assert.match(index, /app\.js\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
-assert.match(index, /save-store\.js\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
-assert.match(index, /official-exam-data\.js\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
-assert.match(index, /official-law-baseline\.js\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
-assert.match(index, /state-sync\.js\?v=20260909-business-knock-ux-v45-5-52dff2863456/);
+assert.match(index, /styles\.css\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.match(index, /restrictions-supplement-bank\.js\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.match(index, /subject-sprint-bank\.js\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.ok(
+  index.indexOf("restrictions-supplement-bank.js") < index.indexOf("subject-sprint-bank.js"),
+  "restrictions supplement must load before the subject sprint bank",
+);
+assert.match(index, /pass-readiness\.js\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.match(index, /exam-current-year-2026\.js\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.match(index, /official-topic-map\.js\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.match(index, /business-mastery\.js\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.match(index, /business-knock\.js\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.match(index, /business-pace\.js\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.match(index, /business-fullscore-supplement\.js\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.match(index, /business-fullscore-bank\.js\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.match(index, /guarantee-association-drill\.js\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.match(index, /practical-question-bank\.js\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.match(index, /calculation-drill\.js\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.match(index, /app\.js\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.match(index, /save-store\.js\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.match(index, /official-exam-data\.js\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.match(index, /official-law-baseline\.js\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
+assert.match(index, /state-sync\.js\?v=20260909-business-knock-ux-v46-197e2dc70d5a/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
 assert.doesNotMatch(index, /understanding-system\.js/);
@@ -302,6 +310,7 @@ assert.match(pagesWorkflow, /node Audit-TakkenBusinessKnock\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenBusinessPace\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenOfficialLawBaseline\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenStateSync\.js/);
+assert.match(pagesWorkflow, /node Audit-TakkenRestrictionsSupplement\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenSubjectSprintBank\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenPassReadiness\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenExamCurrentYear2026\.js/);
@@ -310,7 +319,7 @@ assert.match(pagesWorkflow, /node Audit-TakkenReleaseIntegrity\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-browser\.cjs/);
 assert.match(pagesWorkflow, /playwright@1\.62\.1/);
-assert.match(pagesWorkflow, /20260909-business-knock-ux-v45-5-52dff2863456/);
+assert.match(pagesWorkflow, /20260909-business-knock-ux-v46-197e2dc70d5a/);
 assert.match(pagesWorkflow, /node scripts\/assemble-site\.mjs/);
 assert.match(ciWorkflow, /node Audit-TakkenPwaOffline\.cjs/);
 assert.match(ciWorkflow, /node Audit-TakkenSaveLeaseRaceUi\.cjs/);
@@ -330,7 +339,9 @@ assert.match(ciWorkflow, /node Audit-TakkenBusinessFullScoreBank\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenBusinessPace\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenOfficialLawBaseline\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenStateSync\.js/);
+assert.match(ciWorkflow, /node Audit-TakkenRestrictionsSupplement\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenSubjectSprintBank\.js/);
+assert.match(ciWorkflow, /node Audit-TakkenSubjectSprintUi\.cjs/);
 assert.match(ciWorkflow, /node Audit-TakkenPassReadiness\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenPassReadinessUi\.cjs/);
 assert.match(ciWorkflow, /node Audit-TakkenCalculationDrillUi\.cjs/);

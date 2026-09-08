@@ -42,7 +42,8 @@
   const LEGACY_PRACTICAL_BANK_ID = "legacy-practical";
   const BUSINESS_FULLSCORE_EXPECTED_QUESTIONS = 134;
   const GUARANTEE_SPECIAL_EXPECTED_QUESTIONS = 33;
-  const SUBJECT_SPRINT_EXPECTED_QUESTIONS = 80;
+  const SUBJECT_SPRINT_EXPECTED_QUESTIONS = 94;
+  const SUBJECT_SPRINT_RESTRICTIONS_SESSION_SIZE = 20;
   const EXAM_PROFILE_GENERAL = "general";
   const EXAM_PROFILE_FIVE_EXEMPT = "fiveExempt";
   const EXAM_PROFILE_IDS = new Set([EXAM_PROFILE_GENERAL, EXAM_PROFILE_FIVE_EXEMPT]);
@@ -234,7 +235,8 @@
     SUBJECT_SPRINT_BANK?.LEGAL_BASELINE === "2026-04-01" &&
     SUBJECT_SPRINT_QUESTIONS.length === SUBJECT_SPRINT_EXPECTED_QUESTIONS &&
     new Set(SUBJECT_SPRINT_QUESTION_IDS).size === SUBJECT_SPRINT_EXPECTED_QUESTIONS &&
-    typeof SUBJECT_SPRINT_BANK?.presentQuestion === "function"
+    typeof SUBJECT_SPRINT_BANK?.presentQuestion === "function" &&
+    typeof SUBJECT_SPRINT_BANK?.diversify === "function"
   );
   const ALL_PRACTICAL_QUESTION_BY_ID = Object.freeze({
     ...PRACTICAL_QUESTION_BY_ID,
@@ -8275,12 +8277,16 @@
   function buildSubjectSprintQueue(scope, requestedSize) {
     const eligible = SUBJECT_SPRINT_QUESTIONS.filter((question) => question.scopeId === scope);
     const units = SUBJECT_SPRINT_UNIT_DEFINITIONS.filter((unit) => unit.scopeId === scope);
-    return buildPracticalQueueFrom(
+    const target = Math.min(Math.max(1, Number(requestedSize) || eligible.length), eligible.length);
+    const rankedIds = buildPracticalQueueFrom(
       eligible,
-      Math.min(Math.max(1, Number(requestedSize) || eligible.length), eligible.length),
+      eligible.length,
       units,
       { ...state.practicalDrill, bankId: SUBJECT_SPRINT_BANK_ID }
     );
+    return scope === "restrictions"
+      ? SUBJECT_SPRINT_BANK.diversify(rankedIds).slice(0, target)
+      : rankedIds.slice(0, target);
   }
 
   function buildPracticalUnitQueue(unitId) {
@@ -9684,9 +9690,12 @@
     const eligibleCount = SUBJECT_SPRINT_QUESTIONS.filter((question) =>
       question.scopeId === normalizedScope
     ).length;
+    const defaultSessionSize = normalizedScope === "restrictions"
+      ? Math.min(SUBJECT_SPRINT_RESTRICTIONS_SESSION_SIZE, eligibleCount)
+      : eligibleCount;
     const sessionSize = Number.isInteger(Number(requestedSize)) && Number(requestedSize) > 0
       ? Math.min(eligibleCount, Number(requestedSize))
-      : eligibleCount;
+      : defaultSessionSize;
     const queue = buildSubjectSprintQueue(normalizedScope, sessionSize);
     if (!queue.length) {
       setTodayCommandStatus("科目補強問題を読み込めませんでした。", true);
@@ -10048,6 +10057,9 @@
           }
         });
         pending = eligible;
+      }
+      if (drill.bankId === SUBJECT_SPRINT_BANK_ID && pending.length) {
+        pending = [...SUBJECT_SPRINT_BANK.diversify(pending, drill.queue.slice(-2))];
       }
       if (pending.length) {
         const previousOverrides = drill.presentationOverrides || {};
@@ -13443,7 +13455,10 @@
     elements.passMockAction?.addEventListener("click", (event) => runPassCommandAction(event.currentTarget));
     elements.examProfileSelect?.addEventListener("change", changeExamProfile);
     document.querySelectorAll("[data-subject-sprint]").forEach((button) => {
-      button.addEventListener("click", () => startSubjectSprint(button.dataset.subjectSprint));
+      button.addEventListener("click", () => startSubjectSprint(
+        button.dataset.subjectSprint,
+        Number(button.dataset.sessionSize) || 0
+      ));
       button.disabled = !SUBJECT_SPRINT_READY;
     });
     elements.weakQuestButton?.addEventListener("click", jumpToWeakPoint);

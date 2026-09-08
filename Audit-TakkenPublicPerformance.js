@@ -3,16 +3,17 @@
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
+const zlib = require("node:zlib");
 const releaseIntegrityTools = require("./scripts/release-integrity.cjs");
 const releaseIntegrity = require("./release-integrity.json");
 
 const ROOT = __dirname;
 const EXPECTED_CACHE_VERSION = releaseIntegrity.version;
 releaseIntegrityTools.assertVersionMatchesDigest(releaseIntegrity.version, releaseIntegrity.digest);
-// v44 adds seven source-verified guarantee-association questions plus pre-answer
-// calibration and delayed-retry state. Keep about 0.2% raw-byte headroom above
-// the reviewed shipped bundle instead of silently dropping the new legal bank.
-const MAX_PUBLIC_JS_BYTES = 1_400_000;
+// v46 adds 14 independently sourced legal-restrictions scenarios. Preserve a
+// small raw-size ceiling while also enforcing a transfer-relevant gzip budget.
+const MAX_PUBLIC_JS_BYTES = 1_450_000;
+const MAX_PUBLIC_JS_GZIP_BYTES = 350_000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
   "pwa-runtime.js",
@@ -106,6 +107,7 @@ assert.ok(headCloseIndex >= 0, "index.html must have a closing head tag");
 
 const seenRuntimePaths = new Set();
 let totalPublicJsBytes = 0;
+let totalPublicJsGzipBytes = 0;
 
 for (const script of runtimeScripts) {
   const src = attributeValue(script.tag, "src");
@@ -130,11 +132,16 @@ for (const script of runtimeScripts) {
   const stat = fs.statSync(absolutePath);
   assert.ok(stat.isFile(), `${relativePath}: referenced runtime asset must be a file`);
   totalPublicJsBytes += stat.size;
+  totalPublicJsGzipBytes += zlib.gzipSync(fs.readFileSync(absolutePath), { level: 9 }).length;
 }
 
 assert.ok(
   totalPublicJsBytes <= MAX_PUBLIC_JS_BYTES,
   `public JavaScript is ${totalPublicJsBytes.toLocaleString("en-US")} bytes; budget is ${MAX_PUBLIC_JS_BYTES.toLocaleString("en-US")} bytes`
+);
+assert.ok(
+  totalPublicJsGzipBytes <= MAX_PUBLIC_JS_GZIP_BYTES,
+  `public JavaScript gzip is ${totalPublicJsGzipBytes.toLocaleString("en-US")} bytes; budget is ${MAX_PUBLIC_JS_GZIP_BYTES.toLocaleString("en-US")} bytes`
 );
 
 const stylesheetTags = [...html.matchAll(/<link\b[^>]*>/gi)]
@@ -199,5 +206,5 @@ for (const relativePath of RELEASE_CONTRACT_PATHS) {
 }
 
 console.log(
-  `Audit-TakkenPublicPerformance: OK (${runtimeScripts.length} deferred scripts, ${totalPublicJsBytes.toLocaleString("en-US")} JS bytes)`
+  `Audit-TakkenPublicPerformance: OK (${runtimeScripts.length} deferred scripts, ${totalPublicJsBytes.toLocaleString("en-US")} raw / ${totalPublicJsGzipBytes.toLocaleString("en-US")} gzip JS bytes)`
 );
