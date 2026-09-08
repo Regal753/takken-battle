@@ -1,13 +1,18 @@
 "use strict";
 
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const path = require("node:path");
 const { chromium } = require("playwright");
 
 const pageUrl = process.argv[2];
 const expectedVersion = process.argv[3] || "20260909-business-knock-ux-v46-197e2dc70d5a";
 const chromePath = process.env.TAKKEN_CHROME_PATH || undefined;
+const canonicalIndex = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
+const expectedScriptCount = [...canonicalIndex.matchAll(/<script\b[^>]*\bsrc=/gi)].length;
 
 assert.ok(pageUrl, "usage: node scripts/verify-deployed-browser.cjs <page-url> [expected-version]");
+assert.ok(expectedScriptCount > 0, "canonical index has no runtime scripts");
 
 (async () => {
   const browser = await chromium.launch(chromePath
@@ -57,7 +62,7 @@ assert.ok(pageUrl, "usage: node scripts/verify-deployed-browser.cjs <page-url> [
       assert.equal(result.overflow, 0, "deployed page has horizontal overflow");
       assert.equal(result.schema, 12, "deployed page did not initialize save schema v12");
       assert.equal(result.manifestVersion, expectedVersion, "deployed manifest version mismatch");
-      assert.equal(result.scriptVersions.length, 28, "deployed runtime script count mismatch");
+      assert.equal(result.scriptVersions.length, expectedScriptCount, "deployed runtime script count mismatch");
       assert.ok(result.scriptVersions.every((version) => version === expectedVersion), "deployed runtime versions are mixed");
     }
     assert.equal(mobile320.controlled, true, "deployed page is not controlled by its service worker after first load");
