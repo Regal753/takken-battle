@@ -64,6 +64,50 @@ const cycleOneRepeat = knock.plan({ questions: fullBank, mode: "all-random", siz
 const cycleTwo = knock.plan({ questions: fullBank, mode: "all-random", size: 100, now, seed: "cycle-two" });
 assert.deepEqual(cycleOne.ids, cycleOneRepeat.ids, "same cycle seed must retain the exact presentation order");
 assert.notDeepEqual(cycleOne.ids, cycleTwo.ids, "different cycle seed must change presentation order");
+const diverseQuestions = [
+  { id: "same-anchor-a", unitId: "business-book-01", diagnosticTags: ["license"], sourceAnchorIds: ["a"] },
+  { id: "same-anchor-b", unitId: "business-book-01", diagnosticTags: ["license"], sourceAnchorIds: ["a"] },
+  { id: "different-rule", unitId: "business-book-02", diagnosticTags: ["notice"], sourceAnchorIds: ["b"] },
+  { id: "same-tag-only", unitId: "business-book-03", diagnosticTag: "license", sourceAnchor: "c" }
+];
+const diversePlan = knock.plan({ questions: diverseQuestions, mode: "all-random", size: 10, now, seed: "diverse" });
+assert.equal(diversePlan.size, 4, "diversification must retain every eligible question");
+for (let index = 1; index < diversePlan.items.length; index += 1) {
+  const prior = diverseQuestions.find((question) => question.id === diversePlan.items[index - 1].id);
+  const current = diverseQuestions.find((question) => question.id === diversePlan.items[index].id);
+  assert.equal(
+    [prior.sourceAnchorIds?.[0], prior.sourceAnchor].filter(Boolean).includes([current.sourceAnchorIds?.[0], current.sourceAnchor].find(Boolean)),
+    false, "an alternative rule must be scheduled before a same-anchor variant"
+  );
+}
+const priorityDiversity = knock.plan({
+  questions: diverseQuestions,
+  history: { "same-anchor-a": { attempts: 1, lastConfidence: "wrong" } },
+  mode: "all-random", dailyRemainder: 4, now, seed: "priority-diverse"
+});
+assert.equal(priorityDiversity.ids[0], "same-anchor-a", "diversification must not demote a retry item");
+assert.deepEqual(
+  knock.plan({ questions: diverseQuestions, mode: "all-random", size: 10, now, seed: "diverse" }),
+  diversePlan,
+  "diversification must be deterministic for the same input"
+);
+const broadTagCollision = [
+  { id: "anchor-a-1", unitId: "business-book-02", diagnosticTags: ["number"], sourceAnchorIds: ["anchor-a"] },
+  { id: "anchor-a-2", unitId: "business-book-02", diagnosticTags: ["timing"], sourceAnchorIds: ["anchor-a"] },
+  { id: "anchor-b", unitId: "business-book-02", diagnosticTags: ["number", "timing"], sourceAnchorIds: ["anchor-b"] },
+  { id: "anchor-c", unitId: "business-book-02", diagnosticTags: ["number", "timing"], sourceAnchorIds: ["anchor-c"] }
+];
+for (let index = 0; index < 40; index += 1) {
+  const result = knock.plan({ questions: broadTagCollision, mode: "unit", unitId: "business-book-02", size: 10, now, seed: `broad-tag-${index}` });
+  const anchorById = Object.fromEntries(broadTagCollision.map((question) => [question.id, question.sourceAnchorIds[0]]));
+  for (let position = 1; position < result.ids.length; position += 1) {
+    assert.notEqual(
+      anchorById[result.ids[position - 1]],
+      anchorById[result.ids[position]],
+      `source anchors must stay separated even when broad diagnostic tags collide (seed ${index})`
+    );
+  }
+}
 const summary = knock.summarizeHistory(history, now);
 assert.equal(summary.rounds, 12); assert.equal(summary.accuracy, 50); assert.equal(summary.retry, 2);
 console.log("business knock audit: ok");

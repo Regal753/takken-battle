@@ -50,6 +50,85 @@
     }
     return ordered;
   }
+  function valuesFor(question, pluralKey, singularKey) {
+    const plural = Array.isArray(question?.[pluralKey]) ? question[pluralKey] : [];
+    return [...new Set([...plural, question?.[singularKey]].map(clean).filter(Boolean))].sort();
+  }
+  function diversityMetadata(question) {
+    return {
+      anchors: valuesFor(question, "sourceAnchorIds", "sourceAnchor"),
+      tags: valuesFor(question, "diagnosticTags", "diagnosticTag"),
+      unitId: clean(question?.unitId)
+    };
+  }
+  function overlap(left, right) {
+    return left.some((value) => right.includes(value));
+  }
+  function sharesSourceAnchor(left, right) {
+    return overlap(left.anchors, right.anchors);
+  }
+  function similarityFor(left, right) {
+    // Anchors identify the same underlying rule most precisely. Tags are a
+    // weaker but useful fallback; unit is deliberately the lowest penalty so
+    // focused unit rounds still work when their bank is necessarily narrow.
+    // Make an exact source-anchor repeat dominate every possible combination
+    // of the broader tag/unit penalties across the two-question lookback.
+    return (sharesSourceAnchor(left, right) ? 64 : 0)
+      + (overlap(left.tags, right.tags) ? 4 : 0)
+      + (left.unitId && left.unitId === right.unitId ? 1 : 0);
+  }
+  function diversifyBucket(items, seed, recentQuestions = []) {
+    const pending = seededOrder(items, seed).map((item) => ({
+      item,
+      metadata: diversityMetadata(item.question)
+    }));
+    const selected = [];
+    const recent = [...recentQuestions].slice(-2).map(diversityMetadata);
+    const remainingAnchorCounts = new Map();
+    pending.forEach(({ metadata }) => metadata.anchors.forEach((anchor) =>
+      remainingAnchorCounts.set(anchor, (remainingAnchorCounts.get(anchor) || 0) + 1)
+    ));
+    const scoreBefore = (left, right) => {
+      if (!right) return true;
+      for (let index = 0; index < left.length; index += 1) {
+        if (left[index] !== right[index]) return left[index] < right[index];
+      }
+      return false;
+    };
+    while (pending.length) {
+      let bestIndex = 0;
+      let bestScore = null;
+      for (let index = 0; index < pending.length; index += 1) {
+        const candidate = pending[index].metadata;
+        const anchorPenalty = recent.reduce((total, prior, recentIndex) =>
+          total + (sharesSourceAnchor(candidate, prior) ? (recentIndex === recent.length - 1 ? 2 : 1) : 0), 0);
+        const pendingAnchorCopies = candidate.anchors.length
+          ? Math.max(...candidate.anchors.map((anchor) => remainingAnchorCounts.get(anchor) || 1))
+          : 1;
+        const broadPenalty = recent.reduce((total, prior) => total + similarityFor(candidate, prior), 0);
+        // Prefer a repeated anchor early when the recent window is clear. This
+        // leaves enough unrelated questions to separate its later variants,
+        // instead of stranding a same-rule pair at the end of the bucket.
+        const score = [anchorPenalty, -(pendingAnchorCopies - 1), broadPenalty];
+        // The seeded order is the deterministic tie-breaker, preserving the
+        // existing behaviour when questions have no diversity metadata.
+        if (scoreBefore(score, bestScore)) {
+          bestScore = score;
+          bestIndex = index;
+        }
+      }
+      const [next] = pending.splice(bestIndex, 1);
+      selected.push(next.item);
+      recent.push(next.metadata);
+      if (recent.length > 2) recent.shift();
+      next.metadata.anchors.forEach((anchor) => {
+        const remaining = (remainingAnchorCounts.get(anchor) || 1) - 1;
+        if (remaining) remainingAnchorCounts.set(anchor, remaining);
+        else remainingAnchorCounts.delete(anchor);
+      });
+    }
+    return selected;
+  }
   function normalizeQuestions(questions) {
     const ids = new Set();
     return (Array.isArray(questions) ? questions : []).filter((question) => {
@@ -105,12 +184,14 @@
         if (attempts) return attempts;
         return clean(left.question.id).localeCompare(clean(right.question.id));
       });
-    // Shuffle within an equal-priority/attempt bucket, keeping the learning order deterministic.
+    // Diversify only inside an equal-priority/attempt bucket. This preserves
+    // the retry/due/untouched ordering while avoiding consecutive variants of
+    // the same rule whenever another equally urgent question is available.
     const queue = [];
     for (let start = 0; start < ranked.length;) {
       let end = start + 1;
       while (end < ranked.length && priorityFor(ranked[start].entry, now) === priorityFor(ranked[end].entry, now) && attemptsFor(ranked[start].entry) === attemptsFor(ranked[end].entry)) end += 1;
-      queue.push(...seededOrder(ranked.slice(start, end), `${seed}:${start}`));
+      queue.push(...diversifyBucket(ranked.slice(start, end), `${seed}:${start}`, queue.slice(-2).map(({ question }) => question)));
       start = end;
     }
     const selected = queue.slice(0, Math.min(requestedSize, queue.length));

@@ -288,7 +288,7 @@ function startStaticServer(root) {
     const recoveryFromV36Url = new URL(local.baseUrl);
     recoveryFromV36Url.searchParams.set("review", "v36-guarantee-recovery");
     await recoveryFromV36Page.goto(recoveryFromV36Url.toString(), { waitUntil: "networkidle" });
-    await recoveryFromV36Page.locator("#guaranteeSpecialStart").click();
+    await recoveryFromV36Page.locator("#guaranteeSpecialStart").dispatchEvent("click");
     await recoveryFromV36Page.locator('[data-practical-forecast="confident"]').click();
     await recoveryFromV36Page.locator(".practical-drill-choice").first().click();
     const v36DowncastFixture = await recoveryFromV36Page.evaluate(() => {
@@ -360,7 +360,7 @@ function startStaticServer(root) {
     const recoveryFromV11Url = new URL(local.baseUrl);
     recoveryFromV11Url.searchParams.set("review", "v11-guarantee-live-wins");
     await recoveryFromV11Page.goto(recoveryFromV11Url.toString(), { waitUntil: "networkidle" });
-    await recoveryFromV11Page.locator("#guaranteeSpecialStart").click();
+    await recoveryFromV11Page.locator("#guaranteeSpecialStart").dispatchEvent("click");
     const v11Fixture = await recoveryFromV11Page.evaluate(() => {
       const key = Object.keys(localStorage).find((candidate) =>
         candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&

@@ -833,7 +833,6 @@
     todayCommandTitle: $("#todayCommandTitle"),
     todayCommandText: $("#todayCommandText"),
     todayCommandStartButton: $("#todayCommandStartButton"),
-    todayCommandGuaranteeButton: $("#todayCommandGuaranteeButton"),
     todayCommandPracticalButton: $("#todayCommandPracticalButton"),
     todayCommandCalculationButton: $("#todayCommandCalculationButton"),
     todayCommandOfficialActions: $("#todayCommandOfficialActions"),
@@ -1018,15 +1017,8 @@
     businessKnockSize: $("#businessKnockSize"),
     businessKnockStart: $("#businessKnockStart"),
     businessKnockStatus: $("#businessKnockStatus"),
-    guaranteeSpecialCard: $("#guaranteeSpecialCard"),
-    guaranteeSpecialContacted: $("#guaranteeSpecialContacted"),
-    guaranteeSpecialGrounded: $("#guaranteeSpecialGrounded"),
-    guaranteeSpecialRetained: $("#guaranteeSpecialRetained"),
-    guaranteeSpecialRetry: $("#guaranteeSpecialRetry"),
     guaranteeSpecialStart: $("#guaranteeSpecialStart"),
     guaranteeSpecialFullStart: $("#guaranteeSpecialFullStart"),
-    guaranteeSpecialWeakness: $("#guaranteeSpecialWeakness"),
-    guaranteeSpecialStatus: $("#guaranteeSpecialStatus")
   };
 
   let fallbackIdSequence = 0;
@@ -6723,17 +6715,6 @@
     elements.todayCommandPanel.classList.toggle("is-complete", completed);
     setPassCommandAction(elements.todayCommandStartButton, primary.action, primary.label, primary);
     elements.todayCommandStartButton.hidden = completed || (sundayDay && sundayMode === "short-review" && businessDone && shortCount >= 8);
-    const guaranteeQuickAction = !active && GUARANTEE_SPECIAL_READY
-      ? guaranteeSpecialPrimaryAction(guaranteeSpecialSummary())
-      : null;
-    elements.todayCommandGuaranteeButton.hidden = !guaranteeQuickAction?.enabled;
-    if (guaranteeQuickAction?.enabled) {
-      setPassCommandAction(
-        elements.todayCommandGuaranteeButton,
-        "guarantee-special",
-        `保証協会：${guaranteeQuickAction.label}`
-      );
-    }
     elements.todayCommandPracticalButton.hidden = !secondary || Boolean(active);
     if (secondary) setPassCommandAction(elements.todayCommandPracticalButton, secondary.action, secondary.label, secondary);
     elements.todayCommandCalculationButton.hidden = true;
@@ -6877,7 +6858,6 @@
     elements.todayCommandTitle.textContent = command.title;
     elements.todayCommandText.textContent = command.text;
     elements.todayCommandPracticalButton.hidden = true;
-    elements.todayCommandGuaranteeButton.hidden = true;
     elements.todayCommandCalculationButton.hidden = true;
     elements.missionBattleLabel.textContent = "固定10問";
     elements.missionOfficialLabel.textContent = "公式問題20問";
@@ -8666,7 +8646,6 @@
     const guaranteeSpecialSession = drill.bankId === GUARANTEE_SPECIAL_BANK_ID;
     const subjectSprintSession = drill.bankId === SUBJECT_SPRINT_BANK_ID;
     const guaranteeSummary = guaranteeSpecialSession ? guaranteeSpecialSummary() : null;
-    const guaranteeAction = guaranteeSummary ? guaranteeSpecialPrimaryAction(guaranteeSummary) : null;
     const bankLabel = knockSession ? "業法ノック"
       : drill.bankId === BUSINESS_FULLSCORE_BANK_ID ? "満点変形"
       : guaranteeSpecialSession ? "保証協会特訓"
@@ -8712,7 +8691,7 @@
           ? `同じ条件でさらに${nextKnockPlan.size}問`
           : "この条件は完了"
         : guaranteeSpecialSession
-          ? guaranteeAction.label
+          ? "宅建業法ノックへ戻る"
         : subjectSprintSession
           ? `${practicalScopeLabel(drill.scope)}をもう一周`
         : unitSession
@@ -8720,10 +8699,10 @@
           : `${scopeLabel}を${drill.sessionIds.length}問続ける`;
       elements.practicalDrillRestartButton.disabled = knockSession
         ? !(nextKnockPlan?.size > 0)
-        : guaranteeSpecialSession ? !guaranteeAction.enabled : false;
+        : false;
       if (elements.practicalDrillChangeButton) {
         elements.practicalDrillChangeButton.textContent = guaranteeSpecialSession
-          ? "特訓メニューへ戻る"
+          ? "宅建業法ノックへ戻る"
           : "分野・問題数を変える";
       }
       return;
@@ -8860,6 +8839,20 @@
     });
   }
 
+  function currentPracticalInputTarget(drill = state.practicalDrill) {
+    if (!drill || !["active", "retry"].includes(drill.stage)) return null;
+    return drill.bankId === GUARANTEE_SPECIAL_BANK_ID && !drill.preAnswerConfidence
+      ? elements.practicalDrillForecast?.querySelector("button")
+      : elements.practicalDrillChoices?.querySelector("button:not(:disabled)");
+  }
+
+  function focusCurrentPracticalInputWithMinimalScroll() {
+    const target = currentPracticalInputTarget();
+    if (!target) return;
+    target.focus({ preventScroll: true });
+    target.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }
+
   function focusCurrentPracticalContext({ force = false } = {}) {
     const drill = state.practicalDrill;
     if (!["active", "retry"].includes(drill?.stage)) return;
@@ -8872,9 +8865,7 @@
       if (!force && unrelatedControlHasFocus) return;
       const target = drill.currentAttempt
         ? elements.practicalDrillFeedback
-        : drill.bankId === GUARANTEE_SPECIAL_BANK_ID && !drill.preAnswerConfidence
-          ? elements.practicalDrillForecast?.querySelector("button")
-          : elements.practicalDrillChoices?.querySelector("button:not(:disabled)");
+        : currentPracticalInputTarget(drill);
       revealPracticalTarget(target);
     }));
   }
@@ -9265,93 +9256,6 @@
     };
   }
 
-  function guaranteeSpecialPrimaryAction(summary = guaranteeSpecialSummary()) {
-    const size = Math.min(10, summary.actionable);
-    if (!size) {
-      return {
-        enabled: false,
-        size: 0,
-        label: summary.nextDueKey ? `${summary.nextDueKey.replaceAll("-", "/")}に復習` : "今日の優先分は完了"
-      };
-    }
-    if (!summary.contacted) return { enabled: true, size, label: `基礎から${size}問を開始` };
-    if (summary.states.retry && summary.states.due) return { enabled: true, size, label: `誤答・期限から${size}問` };
-    if (summary.states.retry) return { enabled: true, size, label: `誤答・迷いから${size}問` };
-    if (summary.states.due) return { enabled: true, size, label: `期限復習を${size}問` };
-    return { enabled: true, size, label: `未接触を${size}問進める` };
-  }
-
-  function guaranteeSpecialWeaknessText(summary = guaranteeSpecialSummary()) {
-    const counts = {};
-    Object.values(summary.history).forEach((entry) => {
-      Object.entries(normalizeBusinessMistakeTags(entry?.mistakeTags)).forEach(([tag, count]) => {
-        counts[tag] = (counts[tag] || 0) + count;
-      });
-    });
-    const leaders = Object.entries(counts)
-      .filter(([, count]) => count > 0)
-      .sort((left, right) => right[1] - left[1] || left[0].localeCompare(right[0]))
-      .slice(0, 3);
-    const calibration = summary.overconfidentWrong
-      ? `根拠あり予想からの誤答 ${summary.overconfidentWrong}回。`
-      : summary.hesitantCorrect
-        ? `迷いながら正解 ${summary.hesitantCorrect}回。`
-        : "";
-    return leaders.length
-      ? `${calibration}累計で混同が多い所：${leaders.map(([tag, count]) => `${BUSINESS_DIAGNOSTIC_LABELS[tag] || tag} ${count}`).join("・")}`
-      : calibration || "弱点データはまだありません。誤答・迷いから自動で絞ります。";
-  }
-
-  function renderGuaranteeSpecial(active = activeLearningSession()) {
-    if (!elements.guaranteeSpecialCard) return;
-    const summary = guaranteeSpecialSummary();
-    const action = guaranteeSpecialPrimaryAction(summary);
-    if (elements.guaranteeSpecialContacted) {
-      elements.guaranteeSpecialContacted.textContent = `${summary.contacted} / ${GUARANTEE_SPECIAL_EXPECTED_QUESTIONS}`;
-    }
-    if (elements.guaranteeSpecialGrounded) {
-      elements.guaranteeSpecialGrounded.textContent = `${summary.grounded} / ${GUARANTEE_SPECIAL_EXPECTED_QUESTIONS}`;
-    }
-    if (elements.guaranteeSpecialRetained) {
-      elements.guaranteeSpecialRetained.textContent = `${summary.retained} / ${GUARANTEE_SPECIAL_EXPECTED_QUESTIONS}`;
-    }
-    if (elements.guaranteeSpecialRetry) elements.guaranteeSpecialRetry.textContent = String(summary.review);
-    if (elements.guaranteeSpecialWeakness) {
-      elements.guaranteeSpecialWeakness.textContent = guaranteeSpecialWeaknessText(summary);
-    }
-    if (!elements.guaranteeSpecialStart || !elements.guaranteeSpecialStatus) return;
-    if (active) {
-      const activeGuarantee = active.kind === "practical" && state.practicalDrill?.bankId === GUARANTEE_SPECIAL_BANK_ID;
-      elements.guaranteeSpecialStart.disabled = !activeGuarantee;
-      elements.guaranteeSpecialStart.textContent = activeGuarantee
-        ? activeResumeLabel(active)
-        : `${active.label}を先に完了`;
-      if (elements.guaranteeSpecialFullStart) elements.guaranteeSpecialFullStart.disabled = true;
-      elements.guaranteeSpecialStatus.textContent = activeGuarantee
-        ? "途中位置・解答・再出題を保持しています。続きから再開します。"
-        : `${active.label}があります。特訓で上書きせず、先に現在のセットを完了してください。`;
-      return;
-    }
-    if (!GUARANTEE_SPECIAL_READY) {
-      elements.guaranteeSpecialStart.disabled = true;
-      elements.guaranteeSpecialStart.textContent = "保証協会特訓を読み込めません";
-      if (elements.guaranteeSpecialFullStart) elements.guaranteeSpecialFullStart.disabled = true;
-      elements.guaranteeSpecialStatus.textContent = `特訓${GUARANTEE_SPECIAL_EXPECTED_QUESTIONS}問の読込を確認してください。通常の業法ノックは利用できます。`;
-      return;
-    }
-    elements.guaranteeSpecialStart.disabled = !action.enabled;
-    elements.guaranteeSpecialStart.textContent = action.label;
-    if (elements.guaranteeSpecialFullStart) {
-      elements.guaranteeSpecialFullStart.disabled = false;
-      elements.guaranteeSpecialFullStart.textContent = `全${GUARANTEE_SPECIAL_EXPECTED_QUESTIONS}問で総点検`;
-    }
-    elements.guaranteeSpecialStatus.textContent = summary.actionable
-      ? `誤答・迷い${summary.states.retry}問／期限${summary.states.due}問／未接触${summary.states.untouched}問。今必要な最大10問を出し、迷い・誤答は3問以上挟める場合だけ再テスト、終盤分は翌日以降へ送ります。`
-      : summary.nextDueKey
-        ? `今日の優先分は完了。次は${summary.nextDueKey.replaceAll("-", "/")}以降に解き直すと定着が進みます。全問総点検はいつでも選べます。`
-        : `接触${summary.contacted}問・日を空けた定着${summary.retained}問。全問総点検で位置暗記を崩せます。`;
-  }
-
   function businessKnockPlan(preset, seed = "preview") {
     if (!BUSINESS_KNOCK_READY) return null;
     const normalized = normalizeBusinessKnockPreset(preset);
@@ -9400,7 +9304,6 @@
     elements.businessKnockUntouched.textContent = String(transfer.untouched || 0);
 
     const active = activeLearningSession();
-    renderGuaranteeSpecial(active);
     const plan = businessKnockPlan(preset);
     const controlsDisabled = Boolean(active) || !BUSINESS_KNOCK_READY;
     [elements.businessKnockMode, elements.businessKnockUnit, elements.businessKnockSize]
@@ -9702,7 +9605,6 @@
         resumeActiveLearningSession();
       } else {
         setTodayCommandStatus(`${active.label}があります。保証協会特訓で上書きせず、先に現在のセットを完了してください。`, true);
-        renderGuaranteeSpecial(active);
       }
       return;
     }
@@ -9712,8 +9614,7 @@
     const requestedStrategy = strategy === "full" ? "full" : "smart";
     const plan = guaranteeSpecialPlan(requestedStrategy, cycleId);
     if (!plan?.ids?.length) {
-      renderGuaranteeSpecial();
-      setTodayCommandStatus(`今日の優先復習は完了しています。全${GUARANTEE_SPECIAL_EXPECTED_QUESTIONS}問で総点検する場合は右のボタンを選んでください。`);
+      setTodayCommandStatus(`保証協会特訓の優先復習は完了しています。`);
       return;
     }
     const presentation = nextGuaranteeSpecialPresentation(cycleId);
@@ -9920,7 +9821,7 @@
 
   function restartPracticalDrill() {
     if (state.practicalDrill?.bankId === GUARANTEE_SPECIAL_BANK_ID) {
-      startGuaranteeSpecialSession();
+      changePracticalDrillSettings();
       return;
     }
     if (state.practicalDrill?.bankId === SUBJECT_SPRINT_BANK_ID) {
@@ -10193,7 +10094,11 @@
     renderPassPlan();
     window.requestAnimationFrame(() => {
       if (["active", "retry"].includes(drill.stage)) {
-        focusCurrentPracticalContext({ force: true });
+        // The learner just pressed Next at the bottom of the explanation. The
+        // browser often re-anchors the collapsed panel near the new question.
+        // Correct only the exposed edge instead of jumping the answer back to
+        // the large top margin used when a session first opens.
+        focusCurrentPracticalInputWithMinimalScroll();
       } else if (drill.stage === "complete") {
         revealPracticalTarget(elements.practicalDrillRestartButton);
       }
@@ -10262,7 +10167,7 @@
       );
     } else if (wasGuaranteeSpecial) {
       window.requestAnimationFrame(() =>
-        elements.guaranteeSpecialCard?.scrollIntoView({ block: "center", behavior: "smooth" })
+        elements.businessKnockPanel?.scrollIntoView({ block: "center", behavior: "smooth" })
       );
     } else if (wasSubjectSprint) {
       if (elements.passPlanPanel) elements.passPlanPanel.open = true;
@@ -13475,9 +13380,6 @@
     elements.todayCommandPracticalButton?.addEventListener("click", (event) => {
       if (runPassCommandAction(event.currentTarget)) return;
       startStudyScopePracticalReview();
-    });
-    elements.todayCommandGuaranteeButton?.addEventListener("click", (event) => {
-      runPassCommandAction(event.currentTarget);
     });
     elements.todayCommandCalculationButton?.addEventListener("click", openCalculationDrill);
     elements.missionMinutesStep?.addEventListener("click", () => {

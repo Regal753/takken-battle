@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20260829-retention-v44-2-3701208f0d3c";
+  const VERSION = "20260909-business-knock-ux-v45-5-52dff2863456";
   const BANNER_ID = "pwaUpdateNotice";
   let reloadRequested = false;
 
