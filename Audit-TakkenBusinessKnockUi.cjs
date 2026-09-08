@@ -186,6 +186,60 @@ async function horizontalOverflow(page) {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 }
 
+async function assertNextQuestionViewport(page, viewport) {
+  await page.setViewportSize(viewport);
+  await resetKnockState(page);
+  await startKnock(page, { mode: "all-random", size: 10 });
+  const presented = await currentPresented(page);
+  await page.locator(".practical-drill-choice").nth(presented.answer).click();
+  await page.locator("#practicalDrillFeedback").waitFor({ state: "visible" });
+  await page.locator('[data-practical-confidence="confident"]').click();
+  await page.locator("#practicalDrillNextButton").scrollIntoViewIfNeeded();
+  await page.evaluate(() => {
+    window.__takkenOriginalScrollTo = window.scrollTo;
+    window.__takkenNextScrollCalls = [];
+    window.scrollTo = function (...args) {
+      window.__takkenNextScrollCalls.push(args);
+      return window.__takkenOriginalScrollTo.apply(window, args);
+    };
+  });
+  await page.locator("#practicalDrillNextButton").click();
+  await page.waitForFunction(() => {
+    const key = Object.keys(localStorage).find((candidate) =>
+      candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+      !candidate.includes("backup") && !candidate.includes("-before-") &&
+      !candidate.includes("previous") && !candidate.includes("corrupt") &&
+      !candidate.endsWith("event-outbox")
+    );
+    return key && JSON.parse(localStorage.getItem(key)).practicalDrill.position === 1;
+  });
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const nextViewport = await page.evaluate(() => {
+    const choice = document.querySelector(".practical-drill-choice:enabled");
+    const choiceRect = choice?.getBoundingClientRect();
+    const promptRect = document.querySelector("#practicalDrillPrompt")?.getBoundingClientRect();
+    const calls = [...(window.__takkenNextScrollCalls || [])];
+    window.scrollTo = window.__takkenOriginalScrollTo;
+    delete window.__takkenOriginalScrollTo;
+    delete window.__takkenNextScrollCalls;
+    return {
+      calls,
+      activeChoice: document.activeElement?.classList.contains("practical-drill-choice") || false,
+      choiceTop: choiceRect?.top ?? -1,
+      choiceBottom: choiceRect?.bottom ?? -1,
+      promptTop: promptRect?.top ?? -1,
+      promptBottom: promptRect?.bottom ?? -1,
+      viewportHeight: window.innerHeight
+    };
+  });
+  const label = `${viewport.width}x${viewport.height}`;
+  assert.deepEqual(nextViewport.calls, [], `${label}: next question must not force an upward window.scrollTo: ${JSON.stringify(nextViewport.calls)}`);
+  assert.equal(nextViewport.activeChoice, true, `${label}: next question must retain keyboard focus after the minimal edge correction`);
+  assert.ok(nextViewport.choiceBottom > 0 && nextViewport.choiceTop < nextViewport.viewportHeight, `${label}: next answer must remain in the viewport: ${JSON.stringify(nextViewport)}`);
+  await cancelKnock(page);
+  return nextViewport;
+}
+
 async function forcePracticalQuestion(page, { bankId, id, presentationKey = "premise-readability-v28-a" }) {
   await page.evaluate(({ nextBankId, nextId, nextPresentationKey }) => {
     const key = Object.keys(localStorage).find((candidate) =>
@@ -284,6 +338,8 @@ async function presentedFixture(page) {
     );
     assert.equal(await page.locator("#businessKnockPanel").isVisible(), true);
     assert.match(await page.locator("#businessKnockPanel").textContent(), /宅建業法ノック道場/);
+    assert.equal(await page.locator("#guaranteeSpecialCard").isHidden(), true, "the retired guarantee intensive card must not compete with the current dojo");
+    assert.equal(await page.locator("#todayCommandGuaranteeButton").isHidden(), true, "the retired guarantee intensive CTA must stay out of today's command");
     assert.equal(await page.locator("#businessKnockSize option").count(), 4);
     assert.deepEqual(await page.locator("#businessKnockSize option").evaluateAll((options) => options.map((option) => option.value)), ["10", "20", "50", "100"]);
     assert.equal(await page.locator("#businessKnockUnitField").isVisible(), false, "unit select must stay hidden outside unit mode");
@@ -304,6 +360,14 @@ async function presentedFixture(page) {
     await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
     let commandSaved = await readSavedState(page);
     assert.equal(commandSaved.practicalDrill.sessionSize, 20);
+    const commandDiversity = await page.evaluate((ids) => ids.map((id) => {
+      const question = window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS_BY_ID[id];
+      return { id, anchors: [...(question?.sourceAnchorIds || [])], unitId: question?.unitId || "" };
+    }), commandSaved.practicalDrill.sessionIds);
+    const adjacentAnchorRepeats = commandDiversity.slice(1).filter((item, index) =>
+      item.anchors.some((anchor) => commandDiversity[index].anchors.includes(anchor))
+    );
+    assert.deepEqual(adjacentAnchorRepeats, [], `today's knock must separate variants of the same source rule: ${JSON.stringify(adjacentAnchorRepeats)}`);
     assert.equal(await page.locator("#practicalDrillProgress").textContent(), "第1問 / 全20問");
     assert.match(await page.locator("#practicalDrillSummary").textContent(), /^業法ノック累計 接触 0 \/ 134/);
     assert.equal(await page.locator("#practicalDrillCancelButton").textContent(), "一時停止して上へ");
@@ -418,6 +482,12 @@ async function presentedFixture(page) {
     assert.equal(remainingSession.practicalDrill.sessionIds.length, 19, "daily route must ignore a stale unit/100 preset");
     assert.equal(remainingSession.practicalDrill.sessionIds.includes(todayAnsweredId), false, "today's answered id must not consume one of the visible remaining questions");
     await cancelKnock(page);
+
+    // Moving on from a long explanation must not trigger the old large upward
+    // scroll. Prove the minimal edge correction on regular and narrow phones.
+    await assertNextQuestionViewport(page, { width: 390, height: 844 });
+    await assertNextQuestionViewport(page, { width: 320, height: 700 });
+    await page.setViewportSize({ width: 390, height: 844 });
 
     // Fresh, untouched starts must select precisely the requested unique count.
     for (const size of [10, 20, 50, 100]) {
@@ -725,7 +795,7 @@ async function presentedFixture(page) {
     await fallbackPage.close();
 
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: "ok", sequentialTopCommand: true, explicitProgressLabels: true, knockOnlyTransferSummary: true, plannerSizes: [10, 20, 50, 100], unitFiltered: true, weakDuePrioritized: true, random100Unique: true, randomOrderPreserved: true, reloadPreserved: true, retryLoop: true, retryAnswerPositionsRotated: true, sameDayLevelCapped: true, structuredPromptFormats: ["combination", "count", "case"], singleChoiceBlocks: 4, legacyRawFallback: true, coreFallbackWithoutKnock: true, overflow390: 0, overflow320: 0, errors: 0 }));
+    console.log(JSON.stringify({ status: "ok", sequentialTopCommand: true, explicitProgressLabels: true, knockOnlyTransferSummary: true, nextQuestionKeepsViewport: true, plannerSizes: [10, 20, 50, 100], unitFiltered: true, weakDuePrioritized: true, random100Unique: true, randomOrderPreserved: true, reloadPreserved: true, retryLoop: true, retryAnswerPositionsRotated: true, sameDayLevelCapped: true, structuredPromptFormats: ["combination", "count", "case"], singleChoiceBlocks: 4, legacyRawFallback: true, coreFallbackWithoutKnock: true, overflow390: 0, overflow320: 0, errors: 0 }));
   } finally {
     await browser.close();
     await local.close();

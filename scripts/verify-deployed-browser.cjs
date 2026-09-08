@@ -4,7 +4,7 @@ const assert = require("node:assert/strict");
 const { chromium } = require("playwright");
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260829-retention-v44-2-3701208f0d3c";
+const expectedVersion = process.argv[3] || "20260908-business-knock-ux-v45-4-7dd67a574d37";
 const chromePath = process.env.TAKKEN_CHROME_PATH || undefined;
 
 assert.ok(pageUrl, "usage: node scripts/verify-deployed-browser.cjs <page-url> [expected-version]");

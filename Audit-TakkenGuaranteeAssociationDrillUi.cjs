@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 "use strict";
 
-// Browser proof for the learner-facing guarantee-association weak-point drill.
+// Browser proof that the retired guarantee-association intensive lane stays
+// hidden while its saved history and in-progress-session compatibility remain.
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const http = require("node:http");
@@ -162,20 +163,18 @@ async function assertFocusedInViewport(page, expectedSelector) {
   try {
     await page.goto(reviewUrl(local.baseUrl), { waitUntil: "networkidle", timeout: 20000 });
     await waitForApp(page);
-    assert.equal(await page.locator("#guaranteeSpecialCard").isVisible(), true);
+    assert.equal(await page.locator("#guaranteeSpecialCard").isHidden(), true, "retired special card must stay out of the learner-facing dojo");
     assert.match(await page.locator("#guaranteeSpecialTitle").textContent(), /保証協会・営業保証金 特訓33問/);
     assert.equal(await page.locator("#guaranteeSpecialContacted").textContent(), "0 / 33");
     assert.equal(await page.locator("#guaranteeSpecialRetained").textContent(), "0 / 33");
     assert.match(await page.locator("#guaranteeSpecialStart").textContent(), /基礎から10問/);
     assert.match(await page.locator("#guaranteeSpecialFullStart").textContent(), /全33問で総点検/);
-    assert.match(await page.locator("#todayCommandGuaranteeButton").textContent(), /保証協会：基礎から10問/);
-    assert.equal(await page.locator("#todayCommandGuaranteeButton").isVisible(), true, "walk-friendly guarantee entry must be visible in the first command panel");
+    assert.equal(await page.locator("#todayCommandGuaranteeButton").isHidden(), true, "retired guarantee CTA must stay out of today's command");
     const ids = await page.evaluate(() => window.TAKKEN_GUARANTEE_ASSOCIATION_DRILL.QUESTIONS.map((question) => question.id));
     assert.equal(ids.length, 33);
     assert.ok(ids.every((id) => /^ga\d{3}$/.test(id)), `unexpected special ids: ${ids.join(", ")}`);
     assert.equal(new Set(ids).size, 33, "guarantee drill IDs must not duplicate");
-    const startTargets = await page.locator("#guaranteeSpecialCard button").evaluateAll((nodes) => nodes.map((node) => Math.round(node.getBoundingClientRect().height)));
-    assert.ok(startTargets.every((height) => height >= 44), `guarantee CTA under 44px: ${startTargets.join(", ")}`);
+    assert.equal(await page.locator("#guaranteeSpecialCard button:visible").count(), 0, "retired guarantee controls must not expose a touch target");
 
     const priorityWeakId = ids.at(-1);
     const currentHistoryId = ids.at(-2);
@@ -228,15 +227,11 @@ async function assertFocusedInViewport(page, expectedSelector) {
     }, { key: priorityFixture.key, weakId: priorityWeakId, currentId: currentHistoryId, dueId: priorityDueId });
     await page.reload({ waitUntil: "networkidle", timeout: 20000 });
     await waitForApp(page);
-    assert.equal(await page.locator("#guaranteeSpecialRetry").textContent(), "2", "wrong and due questions must both be visible as review work");
-    assert.equal(await page.locator("#guaranteeSpecialGrounded").textContent(), "2 / 33", "current-schema history must override an older recovery snapshot");
-    assert.equal(await page.locator("#guaranteeSpecialRetained").textContent(), "0 / 33", "same-day confidence and a level-1 due item are not retained yet");
-    assert.match(await page.locator("#guaranteeSpecialStart").textContent(), /誤答・期限から10問/);
     const currentAfterReload = await readSavedState(page);
     assert.equal(currentAfterReload.state.practicalDrill.history[currentHistoryId].attempts, 2, "recovery must not roll back current-schema attempts");
     assert.equal(currentAfterReload.state.practicalDrill.history[currentHistoryId].lastConfidence, "confident", "recovery must not revive an obsolete wrong outcome");
 
-    await page.locator("#guaranteeSpecialStart").click();
+    await page.locator("#guaranteeSpecialStart").dispatchEvent("click");
     await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
     await assertFocusedInViewport(page, "[data-practical-forecast]");
     let saved = await readSavedState(page);
@@ -278,7 +273,7 @@ async function assertFocusedInViewport(page, expectedSelector) {
     assert.equal(saved.state.practicalDrill.currentAttempt?.correct, false);
     assert.equal(saved.state.practicalDrill.currentAttempt?.predictedConfidence, "confident", "pre-answer forecast must survive reload");
     assert.equal(saved.state.practicalDrill.history[wrong.id].overconfidentWrong, 1, "confident wrong must be recorded as an overconfidence miss");
-    assert.match(await page.locator("#guaranteeSpecialWeakness").textContent(), /根拠あり予想からの誤答 1回/);
+    assert.equal(await page.locator("#guaranteeSpecialCard").isHidden(), true, "legacy activity must not revive the retired focus card");
     assert.equal(await page.evaluate(() => localStorage.getItem("guarantee-ui-sentinel")), "must-survive-reload-and-drill");
     assert.equal(await page.locator("#practicalDrillFeedback").isVisible(), true);
 
@@ -303,8 +298,8 @@ async function assertFocusedInViewport(page, expectedSelector) {
     assert.equal(errors.length, 0, errors.join("\n"));
 
     await page.locator("#practicalDrillChangeButton").click();
-    await page.locator("#guaranteeSpecialCard").waitFor({ state: "visible" });
-    await page.locator("#guaranteeSpecialFullStart").click();
+    await page.locator("#guaranteeSpecialCard").waitFor({ state: "hidden" });
+    await page.locator("#guaranteeSpecialFullStart").dispatchEvent("click");
     await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
     await assertFocusedInViewport(page, "[data-practical-forecast]");
     const fullRound = await readSavedState(page);
@@ -329,7 +324,7 @@ async function assertFocusedInViewport(page, expectedSelector) {
     await page.locator("#practicalDrillChangeButton").click();
     const returnedToMenu = await readSavedState(page);
     assert.equal(Object.keys(returnedToMenu.state.practicalDrill.presentationOverrides || {}).length, 33, "returning to the guarantee menu must preserve the completed round presentation map");
-    await page.locator("#guaranteeSpecialFullStart").click();
+    await page.locator("#guaranteeSpecialFullStart").dispatchEvent("click");
     await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
     const secondFullRound = await readSavedState(page);
     const secondFullPresentations = await presentationDetails(page);
@@ -346,7 +341,7 @@ async function assertFocusedInViewport(page, expectedSelector) {
         `${id}: consecutive full rounds must change every four-choice order`
       );
     });
-    for (const selector of ["#todayCommandStartButton", "#businessMasteryPrimary", "#guaranteeSpecialStart", "#businessKnockStart", "#passBusinessAction"]) {
+    for (const selector of ["#todayCommandStartButton", "#businessMasteryPrimary", "#businessKnockStart", "#passBusinessAction"]) {
       assert.equal(await page.locator(selector).textContent(), "保証協会特訓を保存位置から再開", `${selector}: resume CTA must use one learner-facing label`);
     }
 
@@ -358,7 +353,7 @@ async function assertFocusedInViewport(page, expectedSelector) {
     try {
       await deferredPage.goto(reviewUrl(local.baseUrl), { waitUntil: "networkidle", timeout: 20000 });
       await waitForApp(deferredPage);
-      await deferredPage.locator("#todayCommandGuaranteeButton").click();
+      await deferredPage.locator("#guaranteeSpecialStart").dispatchEvent("click");
       await deferredPage.locator("#practicalDrillSession").waitFor({ state: "visible" });
       const deferredStart = await readSavedState(deferredPage);
       assert.equal(deferredStart.state.practicalDrill.sessionIds.length, 10, "direct mobile entry must start the bounded smart set");
@@ -376,8 +371,7 @@ async function assertFocusedInViewport(page, expectedSelector) {
       assert.ok(deferredEntry.retryNotBeforeKey > todayKey, `deferred retry must be after today: ${deferredEntry.retryNotBeforeKey}`);
       assert.ok(Number.isFinite(Date.parse(deferredEntry.retryNotBeforeAt)), "deferred retry must carry a causal timestamp for cross-tab merging");
       await deferredPage.locator("#practicalDrillChangeButton").click();
-      assert.equal(await deferredPage.locator("#guaranteeSpecialRetry").textContent(), "0", "tomorrow's miss must not count as actionable review today");
-      assert.match(await deferredPage.locator("#guaranteeSpecialStart").textContent(), /未接触を10問進める/, "remaining untouched questions must take priority over an early repeat");
+      assert.equal(await deferredPage.locator("#guaranteeSpecialCard").isHidden(), true, "deferred history must not revive the retired card");
     } finally {
       await deferredContext.close();
     }
@@ -393,7 +387,7 @@ async function assertFocusedInViewport(page, expectedSelector) {
       assert.equal(failedStart.state.practicalDrill.stage, "idle", "failure fixture must begin idle");
       assert.match(await failurePage.locator("#guaranteeSpecialStart").textContent(), /基礎から10問/, "first pass must begin with a bounded foundation set");
       await failPrimarySaveWrites(failurePage, failedStart.key);
-      await failurePage.locator("#guaranteeSpecialStart").click();
+      await failurePage.locator("#guaranteeSpecialStart").dispatchEvent("click");
       assert.equal(await failurePage.locator("#practicalDrillSession").isHidden(), true, "failed start must not leave a visible session");
       assert.match(
         await failurePage.locator("#todayCommandStatus").textContent(),
@@ -402,7 +396,7 @@ async function assertFocusedInViewport(page, expectedSelector) {
       await restorePrimarySaveWrites(failurePage);
       failedStart = await readSavedState(failurePage);
       assert.equal(failedStart.state.practicalDrill.stage, "idle", "failed start must retain the persisted idle state");
-      await failurePage.locator("#guaranteeSpecialStart").click();
+      await failurePage.locator("#guaranteeSpecialStart").dispatchEvent("click");
       await failurePage.locator("#practicalDrillSession").waitFor({ state: "visible" });
       await assertFocusedInViewport(failurePage, "[data-practical-forecast]");
       const retriedStart = await readSavedState(failurePage);
@@ -534,11 +528,11 @@ async function assertFocusedInViewport(page, expectedSelector) {
       assert.equal(migrated.state.practicalDrill.history[ids[0]].wrong, 1, "v43 wrong count must not be erased");
       assert.equal(migrated.state.practicalDrill.history[ids[19]].wrong, 1, "v43 retry history must survive");
       assert.equal(migrated.state.practicalDrill.history[ids[26]], undefined, "new v44 questions must start untouched");
-      assert.equal(await migrationPage.locator("#guaranteeSpecialContacted").textContent(), "2 / 33", "migrated history and seven new questions must produce the right contact count");
+      assert.equal(ids.filter((id) => (migrated.state.practicalDrill.history[id]?.attempts || 0) > 0).length, 2, "migrated history must retain its exact contacted count");
     } finally {
       await migrationContext.close();
     }
-    console.log("Audit-TakkenGuaranteeAssociationDrillUi: OK (33 ga IDs, pre-answer calibration, delayed retry, all-order refresh, v43 migration, retention, direct mobile entry, reload/save isolation, 390/320)");
+    console.log("Audit-TakkenGuaranteeAssociationDrillUi: OK (retired UI hidden, 33 ga IDs/history preserved, delayed retry, v43 migration, reload/save isolation, 390/320)");
   } finally {
     await browser.close();
     await local.close();

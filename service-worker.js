@@ -1,6 +1,6 @@
 "use strict";
 
-const VERSION = "20260829-retention-v44-2-3701208f0d3c";
+const VERSION = "20260908-business-knock-ux-v45-4-7dd67a574d37";
 const CACHE_NAME = `takken-battle-${VERSION}`;
 const IMMUTABLE = [
   "styles.css", "exam-blueprint.js", "exam-question-core.js", "exam-questions-rights.js",

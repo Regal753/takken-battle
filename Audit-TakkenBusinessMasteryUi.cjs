@@ -696,7 +696,9 @@ async function installFullScoreProofFixture(page, mode) {
     const renderedTotals = unitTotals.map((text) => Number(text.match(/変形接触 \d+\/(\d+)/)?.[1] || 0));
     assert.equal(renderedTotals.reduce((sum, total) => sum + total, 0), 134);
     const minimumTargets = await page.locator("#businessMasteryPanel button").evaluateAll((buttons) =>
-      buttons.map((button) => Math.round(button.getBoundingClientRect().height))
+      buttons
+        .filter((button) => !button.closest("[hidden]") && button.getBoundingClientRect().height > 0)
+        .map((button) => Math.round(button.getBoundingClientRect().height))
     );
     assert.ok(minimumTargets.every((height) => height >= 44));
     assert.equal(await horizontalOverflow(page), 0);

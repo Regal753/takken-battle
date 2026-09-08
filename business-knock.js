@@ -50,6 +50,68 @@
     }
     return ordered;
   }
+  function valuesFor(question, pluralKey, singularKey) {
+    const plural = Array.isArray(question?.[pluralKey]) ? question[pluralKey] : [];
+    return [...new Set([...plural, question?.[singularKey]].map(clean).filter(Boolean))].sort();
+  }
+  function sharesSourceAnchor(left, right) {
+    const leftAnchors = valuesFor(left, "sourceAnchorIds", "sourceAnchor");
+    const rightAnchors = valuesFor(right, "sourceAnchorIds", "sourceAnchor");
+    return leftAnchors.some((value) => rightAnchors.includes(value));
+  }
+  function similarityFor(left, right) {
+    const overlap = (a, b) => a.some((value) => b.includes(value));
+    const leftTags = valuesFor(left, "diagnosticTags", "diagnosticTag");
+    const rightTags = valuesFor(right, "diagnosticTags", "diagnosticTag");
+    // Anchors identify the same underlying rule most precisely. Tags are a
+    // weaker but useful fallback; unit is deliberately the lowest penalty so
+    // focused unit rounds still work when their bank is necessarily narrow.
+    // Make an exact source-anchor repeat dominate every possible combination
+    // of the broader tag/unit penalties across the two-question lookback.
+    return (sharesSourceAnchor(left, right) ? 64 : 0)
+      + (overlap(leftTags, rightTags) ? 4 : 0)
+      + (clean(left?.unitId) && clean(left?.unitId) === clean(right?.unitId) ? 1 : 0);
+  }
+  function diversifyBucket(items, seed, recentQuestions = []) {
+    const pending = seededOrder(items, seed);
+    const selected = [];
+    const recent = [...recentQuestions].slice(-2);
+    const scoreBefore = (left, right) => {
+      if (!right) return true;
+      for (let index = 0; index < left.length; index += 1) {
+        if (left[index] !== right[index]) return left[index] < right[index];
+      }
+      return false;
+    };
+    while (pending.length) {
+      let bestIndex = 0;
+      let bestScore = null;
+      for (let index = 0; index < pending.length; index += 1) {
+        const candidate = pending[index].question;
+        const anchorPenalty = recent.reduce((total, prior, recentIndex) =>
+          total + (sharesSourceAnchor(candidate, prior) ? (recentIndex === recent.length - 1 ? 2 : 1) : 0), 0);
+        const pendingAnchorCopies = valuesFor(candidate, "sourceAnchorIds", "sourceAnchor").length
+          ? pending.filter((item) => sharesSourceAnchor(candidate, item.question)).length
+          : 1;
+        const broadPenalty = recent.reduce((total, prior) => total + similarityFor(candidate, prior), 0);
+        // Prefer a repeated anchor early when the recent window is clear. This
+        // leaves enough unrelated questions to separate its later variants,
+        // instead of stranding a same-rule pair at the end of the bucket.
+        const score = [anchorPenalty, -(pendingAnchorCopies - 1), broadPenalty];
+        // The seeded order is the deterministic tie-breaker, preserving the
+        // existing behaviour when questions have no diversity metadata.
+        if (scoreBefore(score, bestScore)) {
+          bestScore = score;
+          bestIndex = index;
+        }
+      }
+      const [next] = pending.splice(bestIndex, 1);
+      selected.push(next);
+      recent.push(next.question);
+      if (recent.length > 2) recent.shift();
+    }
+    return selected;
+  }
   function normalizeQuestions(questions) {
     const ids = new Set();
     return (Array.isArray(questions) ? questions : []).filter((question) => {
@@ -105,12 +167,14 @@
         if (attempts) return attempts;
         return clean(left.question.id).localeCompare(clean(right.question.id));
       });
-    // Shuffle within an equal-priority/attempt bucket, keeping the learning order deterministic.
+    // Diversify only inside an equal-priority/attempt bucket. This preserves
+    // the retry/due/untouched ordering while avoiding consecutive variants of
+    // the same rule whenever another equally urgent question is available.
     const queue = [];
     for (let start = 0; start < ranked.length;) {
       let end = start + 1;
       while (end < ranked.length && priorityFor(ranked[start].entry, now) === priorityFor(ranked[end].entry, now) && attemptsFor(ranked[start].entry) === attemptsFor(ranked[end].entry)) end += 1;
-      queue.push(...seededOrder(ranked.slice(start, end), `${seed}:${start}`));
+      queue.push(...diversifyBucket(ranked.slice(start, end), `${seed}:${start}`, queue.map(({ question }) => question)));
       start = end;
     }
     const selected = queue.slice(0, Math.min(requestedSize, queue.length));
