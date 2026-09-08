@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "20260908-business-knock-ux-v45-4-7dd67a574d37",
-  "digest": "sha256:7dd67a574d37b3a1762a69e96311e3cc03467577a0678698a5c351457791a537",
+  "version": "20260909-business-knock-ux-v45-5-52dff2863456",
+  "digest": "sha256:52dff2863456c9989135a721f080c59be565325eb47ebaa52b669c54604880a2",
   "assetCount": 43,
   "assets": [
     {
@@ -62,7 +62,7 @@
     },
     {
       "path": "business-knock.js",
-      "sha256": "1b90d8affbb671cd451c376e97d459c739a50475665a36d707a89d19ae191acb"
+      "sha256": "84c9c814e542c3203405d8ec2b93f4933e77d35abb0df5627fcb5b23cfb7c7e6"
     },
     {
       "path": "business-mastery.js",
