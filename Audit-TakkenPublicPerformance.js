@@ -10,10 +10,10 @@ const releaseIntegrity = require("./release-integrity.json");
 const ROOT = __dirname;
 const EXPECTED_CACHE_VERSION = releaseIntegrity.version;
 releaseIntegrityTools.assertVersionMatchesDigest(releaseIntegrity.version, releaseIntegrity.digest);
-// v46 adds 14 independently sourced legal-restrictions scenarios. Preserve a
-// small raw-size ceiling while also enforcing a transfer-relevant gzip budget.
-const MAX_PUBLIC_JS_BYTES = 1_475_000;
-const MAX_PUBLIC_JS_GZIP_BYTES = 355_000;
+// v50 adds eight fully explained, independently sourced restriction scenarios.
+// Keep a narrow ceiling while allowing the deliberate 4.4 KB gzip increase.
+const MAX_PUBLIC_JS_BYTES = 1_510_000;
+const MAX_PUBLIC_JS_GZIP_BYTES = 360_000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
   "pwa-runtime.js",

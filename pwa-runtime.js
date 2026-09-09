@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20260910-restriction-grounding-v49-69d7164401d7";
+  const VERSION = "20260910-restriction-precision-v50-364ed7a15787";
   const BANNER_ID = "pwaUpdateNotice";
   let reloadRequested = false;
 

@@ -7,9 +7,13 @@ require("./exam-questions-rights.js");
 require("./exam-questions-restrictions.js");
 require("./exam-questions-tax-other.js");
 require("./exam-questions-business.js");
+const restrictionsSupplement = require("./restrictions-supplement-bank.js");
 
 const blueprint = window.TAKKEN_EXAM_BLUEPRINT;
-const questions = Object.values(window.TAKKEN_EXAM_QUESTIONS);
+const questions = [
+  ...Object.values(window.TAKKEN_EXAM_QUESTIONS),
+  ...restrictionsSupplement.QUESTIONS
+];
 const issues = [];
 const allowedSourceHosts = new Set([
   "elaws.e-gov.go.jp",
@@ -103,6 +107,19 @@ questions.forEach((question) => {
   }
   if (sourceHost && !allowedSourceHosts.has(sourceHost)) {
     issues.push(`${question.id}: non-official source host ${sourceHost}`);
+  }
+
+  if (String(question.id).startsWith("rs") && Number(question.id.slice(2)) >= 15) {
+    const frame = question.groundingFrame;
+    if (!frame || typeof frame !== "object") {
+      issues.push(`${question.id}: grounded precision question has no grounding frame`);
+    } else {
+      ["area", "action", "actor", "threshold"].forEach((key) => {
+        if (normalize(frame[key]).length < 4) {
+          issues.push(`${question.id}: grounding frame ${key} is missing or too short`);
+        }
+      });
+    }
   }
 
   const verdicts = question.choiceExplanations.map(verdictOf);

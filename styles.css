@@ -292,6 +292,7 @@ button {
 .question-text:focus-visible,
 .practical-drill-choice:focus-visible,
 .practical-drill-confidence button:focus-visible,
+.practical-grounding-actions button:focus-visible,
 .calculation-drill-choice:focus-visible,
 .calculation-drill-confidence button:focus-visible,
 .feedback:focus-visible,
@@ -5430,7 +5431,7 @@ body.is-save-read-only .save-protection-status {
 
 .restriction-mastery-actions {
   display: grid;
-  grid-template-columns: 1.25fr 1fr 1fr;
+  grid-template-columns: 1.25fr repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -7610,6 +7611,7 @@ button.mission-step:disabled {
 
 .practical-drill-prompt {
   margin: 12px 0;
+  scroll-margin-top: 68px;
   color: #f4f5fb;
   font-size: 16px;
   font-weight: 680;
@@ -7911,7 +7913,8 @@ button.mission-step:disabled {
 .practical-drill-session[hidden],
 .practical-drill-complete[hidden],
 .practical-drill-confidence[hidden],
-.practical-drill-forecast[hidden] {
+.practical-drill-forecast[hidden],
+.practical-grounding-checklist[hidden] {
   display: none;
 }
 
@@ -8140,6 +8143,95 @@ button.mission-step:disabled {
   border-color: #ffca54;
   color: #fff3cf;
   background: rgba(121, 47, 28, 0.9);
+}
+
+.practical-grounding-checklist {
+  display: grid;
+  gap: 8px;
+  margin: 0 0 10px;
+  padding: 10px;
+  border: 1px solid rgba(120, 213, 234, 0.55);
+  border-radius: 8px;
+  background: rgba(36, 117, 141, 0.11);
+}
+
+.practical-grounding-checklist > div:first-child {
+  display: grid;
+  gap: 3px;
+}
+
+.practical-grounding-checklist > div:first-child strong {
+  color: #c8f5ff;
+  font-size: 13px;
+}
+
+.practical-grounding-checklist > div:first-child small,
+#practicalGroundingStatus {
+  color: #b9d4d8;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.practical-grounding-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.practical-grounding-actions button {
+  min-height: 44px;
+  padding: 7px 8px;
+  border: 1px solid rgba(132, 211, 228, 0.34);
+  border-radius: 6px;
+  color: #dff9ff;
+  background: rgba(18, 53, 67, 0.94);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.practical-grounding-actions button.is-selected {
+  border-color: #77df9b;
+  color: #e4ffed;
+  background: rgba(29, 105, 64, 0.88);
+}
+
+#practicalGroundingStatus {
+  margin: 0;
+}
+
+.practical-grounding-frame {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+}
+
+.practical-grounding-frame > div {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
+  gap: 8px;
+  padding: 7px 8px;
+  border-left: 3px solid rgba(120, 213, 234, 0.68);
+  border-radius: 5px;
+  background: rgba(36, 117, 141, 0.09);
+}
+
+.practical-grounding-frame dt {
+  color: #a7e7f4;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.practical-grounding-frame dd {
+  min-width: 0;
+  margin: 0;
+  color: #e8f7f8;
+  font-size: 12px;
+  font-weight: 760;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
 }
 
 .practical-drill-feedback > .today-command-primary {
@@ -8529,6 +8621,15 @@ button.mission-step:disabled {
   .practical-drill-confidence {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .practical-grounding-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .practical-grounding-frame > div {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 3px;
   }
 
   .practical-statement-review-card dl > div {
