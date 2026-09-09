@@ -797,13 +797,39 @@
     "監督処分": "第1分冊 宅建業法 / 監督処分"
   };
 
+  const REIWA_BANK = window.TAKKEN_REIWA_EXAM_BANK;
+  const REIWA_FORMS = Array.isArray(REIWA_BANK?.forms) ? REIWA_BANK.forms.map((form) => ({
+    id: String(form.id),
+    label: String(form.label || form.id),
+    ids: (Array.isArray(form.questions) ? form.questions : []).map((question) => String(question.id)),
+    evidenceClass: "independent-current-law",
+    reiwaOriginal: true
+  })) : [];
+  const REIWA_QUESTIONS = Object.fromEntries(
+    (REIWA_BANK?.forms || []).flatMap((form) => (form.questions || []).map((question) => [question.id, question]))
+  );
   const QUESTIONS = {
     ...(window.TAKKEN_QUESTIONS || {}),
-    ...(window.TAKKEN_EXAM_QUESTIONS || {})
+    ...(window.TAKKEN_EXAM_QUESTIONS || {}),
+    ...REIWA_QUESTIONS
   };
+  const ALL_MOCK_FORMS = [...(EXAM_BLUEPRINT?.mockForms || []), ...REIWA_FORMS];
   const idToChapter = new Map();
   CHAPTERS.forEach((chapter, chapterIndex) => {
     chapter.ids.forEach((id) => idToChapter.set(id, { ...chapter, chapterIndex }));
+  });
+  REIWA_FORMS.forEach((form, formIndex) => {
+    (EXAM_BLUEPRINT?.sections || []).forEach((section, sectionIndex) => {
+      const ids = form.ids.filter((id) => REIWA_QUESTIONS[id]?.sectionId === section.id);
+      const chapter = {
+        id: `${form.id}-${section.id}`,
+        label: `令和実戦 / ${section.label}`,
+        topicLabel: `${form.label} ${section.label}`,
+        ids,
+        chapterIndex: CHAPTERS.length + formIndex * 5 + sectionIndex
+      };
+      ids.forEach((id) => idToChapter.set(id, chapter));
+    });
   });
 
   const $ = (selector) => document.querySelector(selector);
@@ -1474,7 +1500,7 @@
   }
 
   function mockFormById(formId) {
-    return (EXAM_BLUEPRINT?.mockForms || []).find((form) => form.id === formId) || null;
+    return ALL_MOCK_FORMS.find((form) => form.id === formId) || null;
   }
 
   function mockFormEvidenceClass(form) {
@@ -2954,9 +2980,6 @@
       next.daily = createDailyState();
       next.mock = createMockState("", next.examProfile);
     }
-    next.activeCutCheck = next.activeCutCheck && next.activeCutCheck.id === ORDER[next.index] && !next.answered
-      ? { id: next.activeCutCheck.id, answers: next.activeCutCheck.answers || {} }
-      : null;
     next.dailyFinishedDate = String(next.dailyFinishedDate || "");
     const questCompletion = next.questCompletion;
     next.questCompletion = questCompletion && ["daily", "unit"].includes(questCompletion.kind)
@@ -2970,14 +2993,19 @@
       : null;
     next.daily = normalizeDailyState(next.daily);
     next.sprint = normalizeSprintState(next.sprint);
+    let normalizedQuestionId = ORDER[next.index];
     if (next.runMode === RUN_MODE_MOCK) {
       const form = mockFormById(next.mock.formId);
       const mockId = mockIdsForForm(form, next.mock.examProfile)[next.mock.position];
       const mockIndex = ORDER.indexOf(mockId);
       if (mockIndex >= 0) next.index = mockIndex;
+      if (mockId && QUESTIONS[mockId]) normalizedQuestionId = mockId;
       next.finished = Boolean(next.mock.finalized);
     }
-    if (next.answered && next.answered.id !== ORDER[next.index]) {
+    next.activeCutCheck = next.activeCutCheck && next.activeCutCheck.id === normalizedQuestionId && !next.answered
+      ? { id: next.activeCutCheck.id, answers: next.activeCutCheck.answers || {} }
+      : null;
+    if (next.answered && next.answered.id !== normalizedQuestionId) {
       next.answered = null;
       next.activeCutCheck = null;
     }
@@ -4131,6 +4159,12 @@
   }
 
   function currentId() {
+    if (state?.runMode === RUN_MODE_MOCK) {
+      const form = mockFormById(state.mock?.formId);
+      const mockIds = mockIdsForForm(form, state.mock?.examProfile || state.examProfile);
+      const mockId = mockIds[Math.max(0, Number(state.mock?.position) || 0)];
+      if (mockId && QUESTIONS[mockId]) return mockId;
+    }
     return ORDER[state.index];
   }
 
@@ -4704,8 +4738,9 @@
 
   function mockFormShortLabel(form = currentMockForm()) {
     if (!form) return "模試";
-    if (!isStabilityMockForm(form)) return "補助診断C";
-    return `フォーム${String(form.id || "").split("-").at(-1)?.toUpperCase() || ""}`;
+    const suffix = String(form.id || "").split("-").at(-1)?.toUpperCase() || "";
+    if (!form.reiwaOriginal) return `旧フォーム${suffix}`;
+    return `令和実戦${suffix}`;
   }
 
   function mockQuestionIds() {
@@ -4813,7 +4848,10 @@
 
   function latestMockAttempt() {
     return [...(state.mockHistory || [])]
-      .filter((item) => mockFormById(item.formId) && item.examProfile === state.examProfile)
+      .filter((item) => {
+        const form = mockFormById(item.formId);
+        return form?.reiwaOriginal && item.examProfile === state.examProfile;
+      })
       .sort((left, right) =>
         (Date.parse(right.completedAt) || 0) - (Date.parse(left.completedAt) || 0)
       )[0] || null;
@@ -5018,13 +5056,13 @@
         return {
           id: "foundation-catchup",
           title: "一周遅れを7日で回収",
-          text: `業法20問は毎日維持し、法令→税その他→権利の未接触を7日で潰す。今週中にRETIO公式${examProfileSummary()}を本番時間で1回測り、科目別目標に届かない論点へ戻す。`
+          text: `業法20問は毎日維持し、税その他→法令→権利の未接触を7日で潰す。今週中にRETIO公式${examProfileSummary()}を本番時間で1回測り、科目別目標に届かない論点へ戻す。`
         };
       }
       return {
         id: "foundation",
         title: "8/31まで高速一周",
-        text: `業法20問を毎日固定し、曜日別の未接触単元を先に潰す。内部${examProfileSummary()}は診断に使い、RETIO公式未見は保全する。`
+        text: `業法20問は維持し、税その他→法令→権利の順で未接触単元を潰す。令和実戦${examProfileSummary()}は現行法診断に使い、RETIO公式未見は保全する。`
       };
     }
     if (date <= "2026-08-31") {
@@ -5038,7 +5076,7 @@
       return {
         id: "september",
         title: "本試験演習",
-        text: "週1回以上、本試験と同じ問題数・制限時間で測定し、独立フォームA・Bの合計と科目別目標を3日へそろえる。同一フォームの再測定は7日以上空ける。"
+        text: "週1回以上、本試験と同じ問題数・制限時間で測定し、令和実戦A・B・Cのうち別2フォーム以上で合計と科目別目標を3日へそろえる。同一フォームの再測定は7日以上空ける。"
       };
     }
     if (date <= "2026-10-11") {
@@ -6618,7 +6656,7 @@
       currentLawGate: { attempts: currentLawGateAttempts() },
       studyMinutesHistory: passStudyMinutesHistory(),
       currentYearFreshness,
-      // RETIO過去問は当時法の採点。現行法40点の安定判定には内部模試だけを使う。
+      // RETIO過去問は当時法の採点。現行法40点の安定判定には令和実戦フォームだけを使う。
       officialHistory: []
     });
   }
@@ -6716,15 +6754,18 @@
   }
 
   function nextMockFormId() {
-    const counts = new Map((EXAM_BLUEPRINT?.mockForms || [])
-      .filter(isStabilityMockForm)
+    const currentForm = currentMockForm();
+    const candidateForms = currentForm && !currentForm.reiwaOriginal
+      ? (EXAM_BLUEPRINT?.mockForms || []).filter(isStabilityMockForm)
+      : REIWA_FORMS;
+    const counts = new Map(candidateForms
       .map((form) => [form.id, 0]));
     (state.mockHistory || []).forEach((item) => {
       if (item.examProfile === state.examProfile && counts.has(item.formId)) {
         counts.set(item.formId, counts.get(item.formId) + 1);
       }
     });
-    return [...counts.entries()].sort((left, right) => left[1] - right[1] || left[0].localeCompare(right[0]))[0]?.[0] || "form-a";
+    return [...counts.entries()].sort((left, right) => left[1] - right[1] || left[0].localeCompare(right[0]))[0]?.[0] || "reiwa-form-a";
   }
 
   function setPassCommandAction(button, action, label, { scope = "", unitId = "", size = 0 } = {}) {
@@ -6891,7 +6932,7 @@
     } else if (sundayDay && fullMeasurementRequired) {
       primary = officialMeasurementRequired
         ? { action: "official-exam", label: `公式未見${snapshot.examProfile.questions}問・${snapshot.examProfile.minutes}分を開始` }
-        : { action: "mock", label: `内部A/B ${snapshot.examProfile.questions}問・${snapshot.examProfile.minutes}分を開始` };
+        : { action: "mock", label: `令和実戦A/B/C ${snapshot.examProfile.questions}問・${snapshot.examProfile.minutes}分を開始` };
     } else if (sundayDay && !sundayMode) {
       primary = {
         action: "mock",
@@ -6939,7 +6980,7 @@
         ? fullMeasurementRequired
           ? officialMeasurementRequired
             ? `公式未見3試験回の転移証拠が未達です。今日は公式${snapshot.examProfile.questions}問を本試験時間で測り、短縮復習では完了にしません。`
-            : `全45単元の一周が未完了です。今日は内部A/Bを本試験時間で測り、短縮復習では完了にしません。`
+            : `全45単元の一周が未完了です。今日は令和実戦A/B/Cを本試験時間で測り、短縮復習では完了にしません。`
           : sundayMode === "full-mock"
             ? `${snapshot.examProfile.questions}問・${snapshot.examProfile.minutes}分だけに集中します。業法ノックは今日は必須にしません。途中保存できます。`
           : sundayMode === "short-review"
@@ -6971,12 +7012,12 @@
     elements.missionBattleLabel.textContent = sundayDay ? "日曜モード" : "業法ノック";
     elements.missionBattleStatus.textContent = sundayDay
       ? fullMeasurementRequired
-        ? officialMeasurementRequired ? "公式初見必須" : "内部模試必須"
+        ? officialMeasurementRequired ? "公式初見必須" : "令和実戦必須"
         : sundayMode === "full-mock" ? "本試験形式" : sundayMode === "short-review" ? "短縮復習" : "未選択"
       : `解答済 ${Math.min(20, businessDoneCount)} / 20`;
     elements.missionOfficialLabel.textContent = sundayDay
       ? sundayMode === "full-mock"
-        ? officialMeasurementRequired ? `公式未見${snapshot.examProfile.questions}問` : `内部${snapshot.examProfile.questions}問模試`
+        ? officialMeasurementRequired ? `公式未見${snapshot.examProfile.questions}問` : `令和実戦${snapshot.examProfile.questions}問`
         : "業法20＋弱点8"
       : theme.label;
     elements.missionOfficialStatus.textContent = sundayDay
@@ -7193,23 +7234,23 @@
       ? `残り${remainingUnits}単元・今日${Math.max(1, unitPace)}単元（最低${textbookPlan.requiredMinutesPerDay ?? "?"}分）`
       : "一周接触済み";
     elements.passReadinessTitle.textContent = snapshot.timed50.stable
-      ? `内部A/B＋公式初見3回で${snapshot.targets.total}点を再現`
+      ? `令和実戦＋公式初見3回で${snapshot.targets.total}点を再現`
       : snapshot.timed50.mock.stable && !snapshot.timed50.officialTransfer.passed
-        ? `内部A/B通過・公式初見 ${snapshot.timed50.officialTransfer.validAttemptCount}/3回`
+        ? `令和実戦通過・公式初見 ${snapshot.timed50.officialTransfer.validAttemptCount}/3回`
       : latestMock
-        ? `直近の内部${snapshot.targets.questions}問 ${latestMock.score}/${snapshot.targets.questions}・厳格安定は未達`
-        : `${snapshot.targets.questions}問は未測定。内部模試で現在地を出す`;
+        ? `直近の令和実戦${snapshot.targets.questions}問 ${latestMock.score}/${snapshot.targets.questions}・厳格安定は未達`
+        : `${snapshot.targets.questions}問は未測定。令和実戦で現在地を出す`;
     elements.passReadinessNote.textContent = textbookPlan.status === "infeasible"
       ? `現在の残数では最低${textbookPlan.requiredMinutesPerDay}分/日が必要です。90分枠のまま「8/31完了」とは表示せず、未接触単元を最優先にします。`
       : staleDays > 1
       ? `最終学習から${staleDays}日空いています。今日は未接触を減らしつつ、業法20問で再起動します。`
-      : `内部目標は${snapshot.targets.total}/${snapshot.targets.questions}。未測定は弱点と決めつけず、接触→時間測定→不足点補強の順で処理します。`;
+      : `令和実戦目標は${snapshot.targets.total}/${snapshot.targets.questions}。未測定は弱点と決めつけず、接触→時間測定→不足点補強の順で処理します。`;
     const mockEvidence = snapshot.timed50.mock;
     const officialEvidence = snapshot.timed50.officialTransfer;
     const formEvidenceLabel = mockEvidence.passedRecentCount < mockEvidence.requiredAttempts
       ? `${mockEvidence.passedRecentCount}/${mockEvidence.requiredAttempts}`
       : mockEvidence.distinctFormCount < mockEvidence.requiredDistinctForms
-        ? "要再測定（A/B両方が必要）"
+        ? "要再測定（別2フォームが必要）"
         : !mockEvidence.repeatSpacingSatisfied
           ? `要再測定（同一フォームは${mockEvidence.minimumRepeatGapDays}日以上空ける）`
       : !mockEvidence.latestRecentEnough
@@ -7236,11 +7277,11 @@
             ? "要再測定（別3試験回・別3日）"
             : `得点未達（平均${officialEvidence.mean.toFixed(1)}・最低${officialEvidence.minimum.toFixed(1)}）`;
     const excludedMockNote = mockEvidence.excludedTimedCount > 0
-      ? `・補助C ${mockEvidence.excludedTimedCount}回は安定判定外`
+      ? `・旧フォーム履歴 ${mockEvidence.excludedTimedCount}回は安定判定外`
       : "";
     elements.passReadinessStatus.textContent = snapshot.timed50.stable && snapshot.currentYearFreshness.passed && snapshot.capacity.verified
-      ? `A/B両方・3日、公式初見3試験回、改正確認2日、当年資料、直近7日の学習時間をすべて通過しました。`
-      : `A/B測定 ${formEvidenceLabel}${excludedMockNote}・公式初見 ${officialEvidenceLabel}・改正確認 ${lawEvidenceLabel}・当年資料 ${snapshot.currentYearFreshness.passed ? "確認済" : "要再確認"}・学習時間 ${snapshot.capacity.verified ? "確認済" : `${snapshot.capacity.observedDays}/4日`}`;
+      ? `別2フォーム・3日、公式初見3試験回、改正確認2日、当年資料、直近7日の学習時間をすべて通過しました。`
+      : `令和実戦測定 ${formEvidenceLabel}${excludedMockNote}・公式初見 ${officialEvidenceLabel}・改正確認 ${lawEvidenceLabel}・当年資料 ${snapshot.currentYearFreshness.passed ? "確認済" : "要再確認"}・学習時間 ${snapshot.capacity.verified ? "確認済" : `${snapshot.capacity.observedDays}/4日`}`;
     elements.passReadinessStatus.classList.toggle("is-urgent", snapshot.urgent || remainingUnits > 0);
 
     const active = activeLearningSession();
@@ -7269,7 +7310,7 @@
       officialActionNeeded ? "official-exam" : "mock",
       officialActionNeeded
         ? `公式未見${snapshot.examProfile.questions}問を本試験時間で測る`
-        : `内部${snapshot.examProfile.questions}問で現在地を測る`
+        : `令和実戦${snapshot.examProfile.questions}問で現在地を測る`
     );
     if (elements.passMockAction) elements.passMockAction.disabled = Boolean(active);
     setPassCommandAction(
@@ -7343,7 +7384,7 @@
     elements.foundationGateStatus.textContent = `単元 ${completedTextbookUnits} / ${TEXTBOOK_CHAPTERS.length}`;
     elements.foundationGateStatus.title = foundationComplete
       ? `高速一周の接触完了。${examProfileQuestionCount()}問測定と不足点補強へ進めます。`
-      : `8/31まで残り${TEXTBOOK_CHAPTERS.length - completedTextbookUnits}単元。内部${examProfileSummary()}は現在地診断として利用できます。`;
+      : `8/31まで残り${TEXTBOOK_CHAPTERS.length - completedTextbookUnits}単元。令和実戦${examProfileSummary()}は現在地診断として利用できます。`;
     elements.textbookCoverageStatus.textContent =
       `接触 ${TEXTBOOK_IDS.filter(isContacted).length} / ${TEXTBOOK_IDS.length}`;
     elements.textbookRetentionStatus.textContent =
@@ -7850,6 +7891,7 @@
   function renderAnswerDock(question) {
     if (!elements.answerDock) return;
     const answered = state.answered;
+    const mockMode = isMockMode();
     const auxiliaryDrillOwnsNextAction = [
       state.practicalDrill?.stage,
       state.calculationDrill?.stage
@@ -7858,10 +7900,11 @@
       answered && !state.finished && !isDailyQuestPaused() && !auxiliaryDrillOwnsNextAction
     );
     elements.answerDock.hidden = !visible;
+    elements.answerDock.classList.toggle("is-mock-mode", visible && mockMode);
     document.body.classList.toggle("has-answer-dock", visible);
     if (!visible) return;
 
-    if (isMockMode()) {
+    if (mockMode) {
       const targetId = nextTargetId();
       const targetQuestion = targetId ? QUESTIONS[targetId] : null;
       elements.dockResultText.textContent = "解答を記録";
@@ -7963,7 +8006,21 @@
     const prompt = elements.questionText;
     if (!prompt) return;
     prompt.focus({ preventScroll: true });
-    prompt.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const viewportHeight = Math.max(1, Number(window.visualViewport?.height) || window.innerHeight || 1);
+    // `nearest` can leave the new prompt just above the viewport when the
+    // preceding, long question has kept part of the quiz card in view. Move
+    // only far enough to expose the semantic start of the next question; this
+    // deliberately avoids a page-top jump.
+    const desiredTop = Math.min(72, Math.max(16, Math.round(viewportHeight * 0.06)));
+    const reveal = () => {
+      const anchor = elements.roundLabel || prompt;
+      const rect = anchor.getBoundingClientRect();
+      if (rect.top < desiredTop || rect.top >= viewportHeight) {
+        window.scrollTo(0, Math.max(0, window.scrollY + rect.top - desiredTop));
+      }
+    };
+    reveal();
+    window.requestAnimationFrame(reveal);
   }
 
   function revealCurrentQuestionAfterAdvance() {
@@ -11146,6 +11203,30 @@
 
   function renderQuestionPrompt(question) {
     removeStructuredQuestionPrompt();
+    const normalizeReiwaQuestion = window.TAKKEN_REIWA_QUESTION_VIEW?.normalizeQuestion;
+    if (normalizeReiwaQuestion && String(question?.id || "").startsWith("reiwa-")) {
+      const view = normalizeReiwaQuestion(question);
+      elements.questionText.textContent = [view.premise, view.stem].filter(Boolean).join("\n\n");
+      if (!view.statements.length || shouldCutCheck(question.id)) return;
+      const panel = document.createElement("section");
+      panel.className = "core-statement-prompt reiwa-statement-prompt";
+      panel.setAttribute("aria-label", "判定する記述");
+      const list = document.createElement("div");
+      list.className = "core-statement-prompt-list";
+      view.statements.forEach((statement) => {
+        const item = document.createElement("article");
+        item.className = "core-statement-prompt-item";
+        const label = document.createElement("span");
+        label.textContent = statement.id;
+        const text = document.createElement("p");
+        text.textContent = statement.text;
+        item.append(label, text);
+        list.append(item);
+      });
+      panel.append(list);
+      elements.quizCard?.insertBefore(panel, elements.choices);
+      return;
+    }
     const statements = choiceStatements(question);
     if (!statements.length) {
       elements.questionText.textContent = question.text;
@@ -11435,7 +11516,8 @@
         const label = sourceUrls.length > 1
           ? sourceLabels[index] || sourceLabels[0] || question.sourceLocator
           : question.sourceLocator || sourceLabels[0];
-        link.textContent = `公式根拠${sourceUrls.length > 1 ? index + 1 : ""}: ${label}（基準日 ${question.legalBaseline}）`;
+        const verified = question.verifiedAt ? `・確認 ${question.verifiedAt}` : "";
+        link.textContent = `公式根拠${sourceUrls.length > 1 ? index + 1 : ""}: ${label}（基準日 ${question.legalBaseline}${verified}）`;
         if (index) elements.bookRef.append(document.createTextNode(" ／ "));
         elements.bookRef.append(link);
       });
@@ -11988,9 +12070,7 @@
     [elements.mockAButton, elements.mockBButton, elements.mockCButton].forEach((button) => {
       if (!button) return;
       button.disabled = false;
-      button.title = button === elements.mockCButton
-        ? "補助論点を含む弱点診断。合格安定判定には数えません。"
-        : "独立フォームの本試験配分測定。合格安定判定に数えます。";
+      button.title = "独自作問・令和現行法の本試験配分測定です。公式過去問とは別に扱います。";
       button.classList.remove("is-active");
     });
     if (isMockMode()) {
@@ -12017,9 +12097,9 @@
       elements.weakQuestButton.disabled = true;
       elements.sprintButton.disabled = true;
       const activeButton = {
-        "form-a": elements.mockAButton,
-        "form-b": elements.mockBButton,
-        "form-c": elements.mockCButton
+        "reiwa-form-a": elements.mockAButton,
+        "reiwa-form-b": elements.mockBButton,
+        "reiwa-form-c": elements.mockCButton
       }[form.id];
       activeButton?.classList.add("is-active");
       return;
@@ -12030,9 +12110,7 @@
     [elements.mockAButton, elements.mockBButton, elements.mockCButton].forEach((button) => {
       if (!button) return;
       button.disabled = false;
-      button.title = button === elements.mockCButton
-        ? "補助論点を含む弱点診断。合格安定判定には数えません。"
-        : "独立フォームの本試験配分測定。合格安定判定に数えます。";
+      button.title = "独自作問・令和現行法の本試験配分測定です。公式過去問とは別に扱います。";
     });
     const target = state.daily.target || DAILY_TARGET;
     const fixedIds = dailyQuestIds();
@@ -12735,7 +12813,7 @@
       durationMinutes: examProfileDurationMinutes(examProfile)
     });
     render();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    revealCurrentQuestionAfterAdvance();
   }
 
   function leaveMockForDailyQuest() {
@@ -13483,9 +13561,19 @@
         lastRunMode: RUN_MODE_MOCK,
         lastMockFormId: form.id
       };
-      if (!result.correct && !state.marked[result.id]) {
-        state.marked[result.id] = true;
-        state.autoMarked[result.id] = true;
+      if (!result.correct) {
+        mockWeakSourceIds(result).forEach((sourceId) => {
+          if (!state.marked[sourceId]) {
+            state.marked[sourceId] = true;
+            state.autoMarked[sourceId] = true;
+          }
+          state.questionStats[sourceId] = {
+            ...statsFor(sourceId),
+            lastMockSourceMissAt: finishedAt,
+            lastMockFormId: form.id,
+            lastMockCompositeId: result.id
+          };
+        });
       }
     });
 
@@ -13594,18 +13682,70 @@
     view.append(meta);
   }
 
-  function appendSafeSourceLink(parent, question) {
-    const link = resultElement("a", { className: "mock-source-link" });
-    try {
-      const url = new URL(question.sourceUrl, window.location.href);
-      if (url.protocol === "https:" || url.protocol === "http:") link.href = url.href;
-    } catch {
-      // The source record is invalid. Leave the link inert rather than creating an executable URL.
+  function mockWeakSourceIds(result) {
+    const question = QUESTIONS[result?.id];
+    const legacySourceIds = Array.isArray(question?.sourceQuestionIds)
+      ? question.sourceQuestionIds.filter((id) => STUDY_ORDER.includes(id))
+      : [];
+    const optionSourceIds = (index) => {
+      const components = question?.sourceChoices?.[index]?.components;
+      if (Array.isArray(components) && components.length) {
+        return [...new Set(components.map((component) => component?.questionId).filter((id) => STUDY_ORDER.includes(id)))];
+      }
+      return STUDY_ORDER.includes(legacySourceIds[index]) ? [legacySourceIds[index]] : [];
+    };
+    const allSourceIds = [...new Set([0, 1, 2, 3].flatMap(optionSourceIds))];
+    if (!allSourceIds.length) {
+      return STUDY_ORDER.includes(result?.id) ? [result.id] : [];
     }
-    link.target = "_blank";
-    link.rel = "noopener noreferrer";
-    link.textContent = `公式根拠: ${question.sourceLocator || question.sourceRef}（基準日 ${question.legalBaseline}）`;
-    parent.append(link);
+
+    if (question.formatFamily === "single") {
+      return [...new Set([...optionSourceIds(result.selected), ...optionSourceIds(question.answer)])];
+    }
+
+    if (question.formatFamily === "combination") {
+      const statementLabels = ["ア", "イ", "ウ", "エ"];
+      const selectedText = String(question.choices?.[result.selected] || "");
+      const correctText = String(question.choices?.[question.answer] || "");
+      const differingIds = statementLabels.flatMap((label, index) =>
+        selectedText.includes(label) !== correctText.includes(label) ? optionSourceIds(index) : []
+      );
+      return differingIds.length ? [...new Set(differingIds)] : allSourceIds;
+    }
+
+    // A count answer reveals only the number of true statements, not which
+    // proposition the learner misjudged. Route both components of all four
+    // compound statements back to review.
+    return allSourceIds;
+  }
+
+  function appendSafeSourceLink(parent, question) {
+    const sourceRecords = Array.isArray(question.legalSources) && question.legalSources.length
+      ? question.legalSources
+      : [{ label: question.sourceLocator || question.sourceRef, url: question.sourceUrl }];
+    const seen = new Set();
+    const links = resultElement("div", { className: "mock-source-links" });
+    sourceRecords.forEach((source, index) => {
+      const rawUrl = typeof source === "string" ? source : source?.url;
+      if (!rawUrl || seen.has(rawUrl)) return;
+      try {
+        const url = new URL(rawUrl, window.location.href);
+        if (url.protocol !== "https:" && url.protocol !== "http:") return;
+        seen.add(rawUrl);
+        const label = typeof source === "string" ? "公式根拠" : (source.label || `公式根拠${index + 1}`);
+        const link = resultElement("a", { className: "mock-source-link", text: label });
+        link.href = url.href;
+        link.target = "_blank";
+        link.rel = "noopener noreferrer";
+        links.append(link);
+      } catch {
+        // Ignore malformed source records rather than exposing an executable URL.
+      }
+    });
+    if (!links.childElementCount) return;
+    const verified = question.verifiedAt ? `・確認 ${question.verifiedAt}` : "";
+    links.prepend(resultElement("span", { text: `公式根拠（基準日 ${question.legalBaseline || "確認日記載"}${verified}）` }));
+    parent.append(links);
   }
 
   function showMockFinished() {
@@ -13628,6 +13768,7 @@
     const score = results.filter((result) => result.correct).length;
     const sectionScores = mockSectionScores(results);
     const wrongResults = results.filter((result) => !result.correct);
+    const weakSourceCount = new Set(wrongResults.flatMap(mockWeakSourceIds)).size;
     const targetReached = score >= safeTarget;
     const strategyTargetReached = score >= passTarget;
     const otherFormId = nextMockFormId();
@@ -13636,8 +13777,8 @@
     const scoreMessage = targetReached
       ? `演習安全圏${safeTarget}点を達成`
       : (strategyTargetReached
-          ? `内部目標${passTarget}点を達成。演習安全圏${safeTarget}点まであと${safeTarget - score}点`
-          : `内部目標${passTarget}点まであと${passTarget - score}点`);
+          ? `令和実戦目標${passTarget}点を達成。演習安全圏${safeTarget}点まであと${safeTarget - score}点`
+          : `令和実戦目標${passTarget}点まであと${passTarget - score}点`);
     const historyItems = [...(state.mockHistory || [])]
       .sort((left, right) => (Date.parse(right.completedAt) || 0) - (Date.parse(left.completedAt) || 0))
       .slice(0, 3);
@@ -13651,7 +13792,7 @@
       scoreValue.append(resultElement("small", { text: ` / ${questionCount}` }));
       hero.append(resultElement("span", { text: "得点" }), scoreValue, resultElement("p", { text: scoreMessage }));
       const meta = resultElement("div", { className: "mock-result-meta" });
-      [["所要時間", formatElapsed(state.mock.elapsedMs)], ["誤答", `${wrongResults.length}問`], ["弱点へ登録", `${wrongResults.length}問`]].forEach(([label, value]) => {
+      [["所要時間", formatElapsed(state.mock.elapsedMs)], ["誤答", `${wrongResults.length}問`], ["基礎弱点へ登録", `${weakSourceCount}論点`]].forEach(([label, value]) => {
         const item = resultElement("span", { text: `${label} ` });
         item.append(resultElement("strong", { text: value }));
         meta.append(item);
@@ -13686,9 +13827,9 @@
       const calibration = resultElement("section", { className: "mock-calibration" });
       const officialButton = resultElement("button", { className: "ghost-button", id: "mockOfficialExamButton", text: `露出記録つき公式${examProfileQuestionCount(state.examProfile)}問へ` });
       officialButton.type = "button";
-      calibration.append(resultElement("strong", { text: "初見実力は公式過去問で確認" }), resultElement("p", { text: "A・Bは重複しない独立フォーム。両方を使って3日測定し、同じフォームの再測定は7日以上空ける。Cは補助論点の弱点診断専用で、安定判定には数えない。" }), officialButton);
+      calibration.append(resultElement("strong", { text: "初見実力は公式過去問で確認" }), resultElement("p", { text: "令和実戦A・B・Cは独自作問の現行法フォーム。別フォームを含む3日測定とし、同じフォームの再測定は7日以上空ける。公式過去問とは混同しない。" }), officialButton);
       const wrongReview = resultElement("section", { className: "mock-wrong-review" });
-      wrongReview.append(resultElement("h3", { text: "誤答レビュー" }), resultElement("p", { text: "誤答は弱点リストへ登録済み。各問を開くと正解と解説を確認できます。" }));
+      wrongReview.append(resultElement("h3", { text: "誤答レビュー" }), resultElement("p", { text: "誤答に関係する基礎論点は弱点リストへ登録済み。各問を開くと全肢の判定理由と公式根拠を確認できます。" }));
       if (!wrongResults.length) {
         wrongReview.append(resultElement("p", { className: "mock-perfect", text: `全${questionCount}問正解。誤答レビューはありません。` }));
       } else {
@@ -13697,11 +13838,16 @@
           const position = mockIdsForForm(form, state.mock.examProfile).indexOf(result.id) + 1;
           const details = resultElement("details", { className: "mock-wrong-item" });
           const answers = document.createElement("dl");
+          const choiceReasons = resultElement("ol", { className: "mock-choice-reasons" });
+          (question.choiceExplanations || []).forEach((reason) => {
+            choiceReasons.append(resultElement("li", { text: reason }));
+          });
           details.append(
             resultElement("summary", { text: `問${position} ${question.tag}：選択${result.selected + 1} → 正解${question.answer + 1}` }),
             resultElement("p", { text: question.text }),
             answers,
-            resultElement("p", { text: question.explain })
+            resultElement("p", { text: question.explain }),
+            choiceReasons
           );
           answers.append(resultDefinition("あなたの解答", `${result.selected + 1}. ${question.choices[result.selected]}`), resultDefinition("正解", `${question.answer + 1}. ${question.choices[question.answer]}`));
           appendSafeSourceLink(details, question);
@@ -14188,9 +14334,9 @@
       }
     });
     elements.passQuestButton?.addEventListener("click", startFirstPass);
-    elements.mockAButton?.addEventListener("click", () => startMock("form-a"));
-    elements.mockBButton?.addEventListener("click", () => startMock("form-b"));
-    elements.mockCButton?.addEventListener("click", () => startMock("form-c"));
+    elements.mockAButton?.addEventListener("click", () => startMock("reiwa-form-a"));
+    elements.mockBButton?.addEventListener("click", () => startMock("reiwa-form-b"));
+    elements.mockCButton?.addEventListener("click", () => startMock("reiwa-form-c"));
     elements.passBusinessAction?.addEventListener("click", (event) => runPassCommandAction(event.currentTarget));
     elements.passThemeAction?.addEventListener("click", (event) => runPassCommandAction(event.currentTarget));
     elements.passLawGateAction?.addEventListener("click", (event) => runPassCommandAction(event.currentTarget));

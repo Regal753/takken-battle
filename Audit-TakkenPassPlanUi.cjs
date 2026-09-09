@@ -100,7 +100,7 @@ async function main() {
       initial.mission !== "0 / 45単元" ||
       initial.official !== "測定中・初見0/10・再0/3" ||
       initial.currentRoadmap !== 1 ||
-      !initial.commandTitle.includes("内部A/B 50問・120分") ||
+      !initial.commandTitle.includes("令和実戦A/B/C 50問・120分") ||
       !initial.secondaryHidden ||
       initial.secondaryAction.includes("短縮75") ||
       !initial.commandStep.includes("8/31まで高速一周") ||
@@ -394,7 +394,7 @@ async function main() {
     await lateContext.close();
     if (
       latePhase.title !== "一周遅れを7日で回収" ||
-      !latePhase.text.includes("法令→税その他→権利") ||
+      !latePhase.text.includes("税その他→法令→権利") ||
       !latePhase.text.includes("RETIO公式50問・120分") ||
       latePhase.countdown !== "D-39" ||
       latePhase.overflow

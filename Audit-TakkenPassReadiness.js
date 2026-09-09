@@ -13,14 +13,14 @@ assert.equal(readiness.FIRST_PASS_FIXED_DAILY_MINUTES, 30);
 assert.equal(readiness.STABILITY_LATEST_MAX_AGE_DAYS, 14);
 assert.equal(readiness.STABILITY_WINDOW_DAYS, 21);
 assert.equal(readiness.CURRENT_LAW_ATTEMPT_MAX_AGE_DAYS, 14);
-assert.deepEqual(readiness.MOCK_STABILITY_POLICY.eligibleFormIds, ["form-a", "form-b"]);
+assert.deepEqual(readiness.MOCK_STABILITY_POLICY.eligibleFormIds, ["reiwa-form-a", "reiwa-form-b", "reiwa-form-c"]);
 assert.equal(readiness.validDayKey("2026-02-29"), ""); assert.equal(readiness.validDayKey("2028-02-29"), "2028-02-29");
 assert.equal(readiness.dayKey(new Date("2026-08-29T15:30:00Z")), "2026-08-30", "Date inputs use JST regardless of host timezone");
 
 const subjects = { business: { total: 20, contacted: 20, retained: 18 }, rights: { total: 14, contacted: 14, retained: 10 }, restrictions: { total: 8, contacted: 8, retained: 7 }, tax: { total: 3, contacted: 3, retained: 2 }, other: { total: 5, contacted: 5, retained: 4 } };
 const score = { business: 18, rights: 9, restrictions: 7, tax: 2, other: 4 };
 const attemptDates = ["2026-08-25", "2026-08-26", "2026-09-01"];
-const attempts = ["form-a", "form-b", "form-a"].map((formId, index) => {
+const attempts = ["reiwa-form-a", "reiwa-form-b", "reiwa-form-a"].map((formId, index) => {
   const dayKey = attemptDates[index];
   return { formId, evidenceClass: "independent-current-law", currentLaw: true, dayKey, completedAt: `${dayKey}T10:00:00+09:00`, total: 40, timed: true, elapsedMinutes: 60, questionCount: 50, sections: score };
 });
@@ -40,6 +40,19 @@ const freshness = { current: true, failClosed: false };
 
 const blank = readiness.calculatePassReadiness({ todayKey: "2026-08-16" });
 assert.equal(blank.status, "unmeasured"); assert.equal(blank.dailyPlan.mode, "required-full-mock"); assert.equal(blank.dailyPlan.requiredMeasurement, "internal-mock"); assert.equal(blank.dailyPlan.businessKnock, null); assert.equal(blank.capacity.status, "unverified");
+const weekdayPriority = [
+  ["2026-09-07", "tax-other"],
+  ["2026-09-08", "restrictions"],
+  ["2026-09-09", "rights"],
+  ["2026-09-10", "tax-other"],
+  ["2026-09-11", "restrictions"],
+  ["2026-09-12", "rights"]
+];
+weekdayPriority.forEach(([todayKey, expectedTheme]) => {
+  const result = readiness.calculatePassReadiness({ todayKey, dailyAvailableMinutes: 90 });
+  assert.equal(result.dailyPlan.theme.key, expectedTheme, `${todayKey} must preserve the tax-other -> restrictions -> rights repair rotation`);
+  assert.equal(result.dailyPlan.businessKnock.count, 20, "business law stays in maintenance without taking the priority slot");
+});
 const stable = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, officialHistory: officialAttempts, officialTransferHistory: officialTransfer, textbookFirstPass: textbookComplete, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: freshness });
 assert.equal(stable.status, "on-track"); assert.equal(stable.timed50.stable, true); assert.equal(stable.currentLawGate.passed, true); assert.equal(stable.capacity.verified, true);
 assert.equal(stable.currentYearFreshness.passed, true);
@@ -71,13 +84,13 @@ assert.equal(staleCurrentYear.onTrack, false); assert.equal(staleCurrentYear.rea
 
 const sameForm = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts.map((a) => ({ ...a, formId: "same" })), currentLawGate: gate, studyMinutesHistory: capacity });
 assert.equal(sameForm.timed50.stable, false); assert.equal(sameForm.timed50.mock.eligibleTimedCount, 0);
-const allA = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts.map((a) => ({ ...a, formId: "form-a" })), currentLawGate: gate, studyMinutesHistory: capacity });
+const allA = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts.map((a) => ({ ...a, formId: "reiwa-form-a" })), currentLawGate: gate, studyMinutesHistory: capacity });
 assert.equal(allA.timed50.mock.eligibleTimedCount, 3);
 assert.equal(allA.timed50.mock.distinctFormCount, 1);
 assert.equal(allA.timed50.stable, false, "three eligible attempts still need both independent forms");
-const mixedOnly = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts.map((a) => ({ ...a, formId: "form-c", evidenceClass: "internal-mixed-practice" })), currentLawGate: gate, studyMinutesHistory: capacity });
-assert.equal(mixedOnly.timed50.mock.eligibleTimedCount, 0, "auxiliary mixed form C is excluded from stability evidence");
-assert.equal(mixedOnly.timed50.mock.excludedTimedCount, 3);
+const legacyOnly = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts.map((a, index) => ({ ...a, formId: ["form-a", "form-b", "form-c"][index] })), currentLawGate: gate, studyMinutesHistory: capacity });
+assert.equal(legacyOnly.timed50.mock.eligibleTimedCount, 0, "legacy A/B/C history remains readable but cannot certify v51 stability");
+assert.equal(legacyOnly.timed50.mock.excludedTimedCount, 3);
 const tooSoonRepeat = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts.map((a, index) => ({ ...a, dayKey: `2026-09-0${index + 1}`, completedAt: `2026-09-0${index + 1}T10:00:00+09:00` })), currentLawGate: gate, studyMinutesHistory: capacity });
 assert.equal(tooSoonRepeat.timed50.mock.repeatSpacingSatisfied, false, "a repeated A/B form needs a seven-day calendar gap");
 assert.equal(tooSoonRepeat.timed50.stable, false);
@@ -148,7 +161,7 @@ const lowCapacity = readiness.calculatePassReadiness({ todayKey: "2026-09-04", s
 assert.equal(lowCapacity.status, "behind"); assert.equal(lowCapacity.reason, "observed-capacity-below-minimum");
 
 const fiveScore = { business: 18, rights: 9, restrictions: 7, tax: 2 };
-const fiveAttempts = ["form-a", "form-b", "form-a"].map((formId, index) => {
+const fiveAttempts = ["reiwa-form-a", "reiwa-form-b", "reiwa-form-a"].map((formId, index) => {
   const dayKey = attemptDates[index];
   return { formId, evidenceClass: "independent-current-law", currentLaw: true, dayKey, completedAt: `${dayKey}T10:00:00+09:00`, total: 36, timed: true, elapsedMinutes: 55, questionCount: 45, sections: fiveScore };
 });

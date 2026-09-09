@@ -469,6 +469,10 @@ button {
   padding: 0 12px;
 }
 
+.dock-explain-button[hidden] {
+  display: none;
+}
+
 .dock-explain-mark {
   display: grid;
   width: 22px;
@@ -3065,8 +3069,8 @@ body.has-answer-dock {
   }
 
   .answer-dock-inner {
-    grid-template-columns: 48px minmax(0, 1fr) minmax(130px, 43%);
-    min-height: 64px;
+    grid-template-columns: 48px minmax(0, 1fr);
+    min-height: 112px;
     padding: 5px;
     gap: 5px;
   }
@@ -3107,6 +3111,8 @@ body.has-answer-dock {
   }
 
   .dock-next-button {
+    grid-column: 1 / -1;
+    grid-row: 2;
     grid-template-columns: minmax(0, 1fr) 20px;
     min-height: 52px;
     padding: 0 6px 0 10px;
@@ -3118,7 +3124,22 @@ body.has-answer-dock {
   }
 
   body.has-answer-dock {
-    padding-bottom: calc(82px + env(safe-area-inset-bottom));
+    padding-bottom: calc(132px + env(safe-area-inset-bottom));
+  }
+
+  .answer-dock.is-mock-mode .answer-dock-inner {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 66px;
+  }
+
+  .answer-dock.is-mock-mode .dock-status {
+    display: none;
+  }
+
+  .answer-dock.is-mock-mode .dock-next-button {
+    grid-column: 1;
+    grid-row: 1;
+    min-height: 54px;
   }
 
   .finish-actions {
@@ -5280,7 +5301,8 @@ body.is-save-read-only .save-protection-status {
 }
 
 .mock-wrong-item > p,
-.mock-wrong-item > dl {
+.mock-wrong-item > dl,
+.mock-wrong-item > ol {
   margin: 0;
   padding: 0 10px 10px;
   color: #d7e1e5;
@@ -5290,10 +5312,30 @@ body.is-save-read-only .save-protection-status {
 }
 
 .mock-source-link {
-  display: block;
-  margin: 0 10px 10px;
+  display: inline-flex;
+  margin: 0;
   font-size: 11px;
   line-height: 1.55;
+}
+
+.mock-source-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  margin: 0 10px 10px;
+  color: #9fb6c0;
+  font-size: 11px;
+}
+
+.mock-source-links > span {
+  flex-basis: 100%;
+  font-weight: 800;
+}
+
+.mock-choice-reasons {
+  display: grid;
+  gap: 6px;
+  list-style-position: inside;
 }
 
 .mock-wrong-item dl {
@@ -8986,12 +9028,34 @@ button.mission-step:disabled {
     font-size: 10px;
     line-height: 1.3;
   }
+
+  .answer-dock-inner {
+    grid-template-columns: 48px minmax(0, 1fr);
+    min-height: 112px;
+  }
+
+  .dock-next-button {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+
+  body.has-answer-dock {
+    padding-bottom: calc(132px + env(safe-area-inset-bottom));
+  }
 }
 
 .pwa-update-notice { position: fixed; z-index: 1000; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); left: max(12px, env(safe-area-inset-left)); display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 600px; margin: 0 auto; padding: 12px; border: 1px solid #8da9e7; border-radius: 12px; background: #eff5ff; box-shadow: 0 8px 26px rgba(11, 16, 32, .25); color: #10234b; }
+/* Fallback before the runtime measures the actual dock. */
+body.has-answer-dock .pwa-update-notice { bottom: calc(158px + env(safe-area-inset-bottom)); }
 .pwa-update-notice p { margin: 0; font-size: .88rem; font-weight: 700; line-height: 1.45; }
 .pwa-update-notice button { flex: 0 0 auto; min-height: 44px; border: 1px solid #2450a4; border-radius: 8px; background: #2450a4; color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
 .pwa-update-notice button:focus-visible { outline: 3px solid #f2bd42; outline-offset: 3px; }
+@media (max-width: 520px) {
+  body.has-answer-dock .pwa-update-notice { bottom: calc(144px + env(safe-area-inset-bottom)); }
+  @supports selector(body:has(.answer-dock.is-mock-mode)) {
+    body.has-answer-dock:has(.answer-dock.is-mock-mode) .pwa-update-notice { bottom: calc(86px + env(safe-area-inset-bottom)); }
+  }
+}
 @media (max-width: 420px) { .pwa-update-notice { align-items: stretch; flex-direction: column; } .pwa-update-notice button { width: 100%; } }
 
 /* Walking/mobile use: every visible semantic control keeps a 44px hit area. */

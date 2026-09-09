@@ -610,10 +610,10 @@
       3: "登記名義人が死亡していても、相続人その他の現所有者を納税義務者とする仕組みがあり、誰にも課税できないわけではない。"
     },
     t004: {
-      0: "登録免許税は不動産登記等を受ける際に国が課す国税である。",
-      1: "登録免許税は市町村税ではなく、登記等を受けることに課される国税である。",
+      0: "登録免許税法に基づき、不動産登記等を受ける際に国が課す国税である。",
+      1: "土地売買による所有権移転登記は、令和11年3月31日まで軽減税率1,000分の15が適用される。",
       2: "売買による所有権移転登記の課税標準は、原則として固定資産課税台帳価格等を基礎とし、実際の売買代金に必ず一致しない。",
-      3: "抵当権設定登記も登録免許税の課税対象であるため、課税されないという記述は誤りである。"
+      3: "抵当権設定登記も登録免許税の課税対象である。"
     },
     t006: {
       0: "土地建物の譲渡所得は、給与所得などと分けて原則として申告分離課税で計算する。",
@@ -622,7 +622,10 @@
       3: "取得費が不明なときは、収入金額の5パーセントを概算取得費として用いることができる場合がある。"
     },
     t005: {
-      1: "印紙税は作成した課税文書ごとに課されるため、契約書を2通作って各当事者が保有すれば原則2通分が必要となる。"
+      0: "不動産の譲渡に関する契約書は、第1号文書として印紙税の課税対象になり得る。",
+      1: "記載金額が10万円を超え、令和9年3月31日までに作成される不動産譲渡契約書は軽減措置の対象となる。",
+      2: "印紙税は作成した課税文書ごとに課されるため、契約書を2通作って各当事者が保有すれば原則として各通に納税が必要となる。",
+      3: "印紙税の納付義務と契約効力は別問題であり、不貼付だけで売買契約が当然に無効となるわけではない。"
     },
     o003: {
       1: "住宅金融支援機構は民間住宅ローン債権の買取型・保証型による証券化支援を行うため、証券化と無関係ではない。"
@@ -685,8 +688,16 @@
     b040: "宅地建物取引業法35条1項6号・同条3項6号／施行規則16条の2第9号・16条の4の6第9号・19条の2の5第9号／別記様式第9号・第27号／施行令3条1項23号・35号・46号・47号（令和8年4月1日基準）"
   });
 
-  function upgradedReason(id, index, fallback) {
-    return choiceReasonUpgradesFinal[id]?.[index]
+  function upgradedReason(id, index, originIndex, fallback) {
+    const finalReasons = choiceReasonUpgradesFinal[id];
+    // The completed four-reason sets are authored in the original choice
+    // order. Sparse upgrades were added later against the already-balanced
+    // display order. Keep both contracts explicit so a rotated choice never
+    // inherits the legal reason from a different option.
+    const finalIndex = finalReasons && Object.keys(finalReasons).length === 4
+      ? originIndex
+      : index;
+    return finalReasons?.[finalIndex]
       || choiceReasonUpgradesCompletion[id]?.[index]
       || choiceReasonUpgrades[id]?.[index]
       || fallback;
@@ -747,9 +758,11 @@
       explain,
       trap,
       choiceExplanations: balancedChoices.map((_, index) =>
-        `${index + 1} ${balancedTruths[index] ? "○" : "×"} ${upgradedReason(id, index, balancedNotes[index])}`
+        `${index + 1} ${balancedTruths[index] ? "○" : "×"} ${upgradedReason(id, index, originIndexes[index], balancedNotes[index])}`
       ),
       choiceOriginIndexes: originIndexes,
+      choiceFacts: balancedChoices,
+      choiceTruths: balancedTruths,
       memoryRule,
       sourceRef: sourceLabelOverride || source.label,
       sourceLocator: sourceLocator || sourceLocatorByQuestionId[id] || `${source.label}｜論点「${tag}」`,
@@ -800,8 +813,10 @@
       explain,
       trap,
       choiceExplanations: statements.map((_, index) =>
-        `${kana[index]} ${truths[index] ? "○" : "×"} ${upgradedReason(id, index, notes[index])}`
+        `${kana[index]} ${truths[index] ? "○" : "×"} ${upgradedReason(id, index, index, notes[index])}`
       ),
+      choiceFacts: statements,
+      choiceTruths: truths.map(Boolean),
       memoryRule,
       sourceRef: sourceLabelOverride || source.label,
       sourceLocator: sourceLocator || sourceLocatorByQuestionId[id] || `${source.label}｜論点「${tag}」`,

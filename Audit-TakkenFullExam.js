@@ -92,8 +92,10 @@ Object.values(questions).forEach((question) => {
   if (String(question.trap || "").length < 12) issues.push(`${question.id}: trap too short`);
   if (String(question.memoryRule || "").length < 12) issues.push(`${question.id}: memory rule too short`);
   if (question.legalBaseline !== "2026-04-01") issues.push(`${question.id}: legal baseline mismatch`);
-  const expectedVerifiedAt = question.id === "b040"
-    ? "2026-08-02"
+  const expectedVerifiedAt = ["t004", "t005"].includes(question.id)
+    ? "2026-09-10"
+    : question.id === "b040"
+      ? "2026-08-02"
     : supplementalIds.includes(question.id)
       ? "2026-08-01"
       : "2026-07-26";

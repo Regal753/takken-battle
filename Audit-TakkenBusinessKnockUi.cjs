@@ -331,7 +331,7 @@ async function presentedFixture(page) {
     assert.equal(await page.locator("#todayCommandStartButton").textContent(), "残り20問をノック開始");
     assert.equal(await page.locator("#todayCommandPracticalButton").isHidden(), true, "the next subject must stay hidden until the fixed business knock is done");
     assert.equal(await page.locator("#missionBattleStatus").textContent(), "解答済 0 / 20");
-    assert.match(await page.locator("#missionOfficialStatus").textContent(), /^解答済 0 \/ 8$/);
+    assert.match(await page.locator("#missionOfficialStatus").textContent(), /^解答済 0 \/ 12$/, "Monday prioritizes the 12-question tax/other repair block");
     assert.equal(
       await page.locator("#passPlanPanel .pass-plan-summary > div:first-child span").textContent(),
       "4 合格ロード・2026 PASS PLAN"
