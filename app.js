@@ -238,6 +238,9 @@
       sourceQuestionIds: Object.freeze(["l101", "l102", "rs013", "rs014"])
     })
   });
+  const SUBJECT_SPRINT_CITY_PLANNING_SOURCE_IDS = Object.freeze([
+    "l001", "l002", "l003", "l004", "rs001", "rs002"
+  ]);
   const SUBJECT_SPRINT_QUESTIONS = Object.freeze(
     (Array.isArray(SUBJECT_SPRINT_BANK?.QUESTIONS) ? SUBJECT_SPRINT_BANK.QUESTIONS : [])
       .map((item) => {
@@ -1071,6 +1074,7 @@
     postTrainingRestrictions: $("#postTrainingRestrictions"),
     postTrainingBusiness: $("#postTrainingBusiness"),
     postTrainingExam: $("#postTrainingExam"),
+    postTrainingTarget: $("#postTrainingTarget"),
   };
 
   let fallbackIdSequence = 0;
@@ -6679,6 +6683,7 @@
     state.mock = createMockState("", requested);
     saveState();
     renderPassPlan();
+    renderBusinessKnock();
     setTodayCommandStatus(
       requested === EXAM_PROFILE_FIVE_EXEMPT
         ? "登録講習修了者の45問・110分へ切り替えました。問46〜50は合格判定から除外します。"
@@ -8351,6 +8356,11 @@
     return topic || null;
   }
 
+  function cityPlanningSubjectSprintComplete() {
+    const contacts = subjectSprintSourceContacts("restrictions");
+    return SUBJECT_SPRINT_CITY_PLANNING_SOURCE_IDS.every((id) => isContacted(id) || contacts.has(id));
+  }
+
   function subjectSprintSessionTopic(drill = state.practicalDrill) {
     if (drill?.bankId !== SUBJECT_SPRINT_BANK_ID || drill?.scope !== "restrictions") return null;
     const token = String(drill.presentationKey || "")
@@ -9422,11 +9432,17 @@
     }
     if (postTrainingUnlocked) {
       const guaranteeReviewReady = guaranteeSummary.review > 0;
+      const guaranteeReviewSetSize = guaranteeReviewReady
+        ? Math.min(10, guaranteeSummary.review)
+        : 0;
+      const cityPlanningComplete = cityPlanningSubjectSprintComplete();
       if (elements.postTrainingGuaranteeReview) {
         elements.postTrainingGuaranteeReview.disabled = Boolean(active) || !guaranteeReviewReady;
         elements.postTrainingGuaranteeReview.classList.toggle("post-training-primary", guaranteeReviewReady);
         elements.postTrainingGuaranteeReview.textContent = guaranteeReviewReady
-          ? `保証協会を${guaranteeSummary.review}問再戦（最優先）`
+          ? guaranteeSummary.review > guaranteeReviewSetSize
+            ? `保証協会を${guaranteeReviewSetSize}問再戦（要復習${guaranteeSummary.review}問・最優先）`
+            : `保証協会を${guaranteeReviewSetSize}問再戦（最優先）`
           : guaranteeSummary.nextDueKey
             ? `保証協会は${guaranteeSummary.nextDueKey.replaceAll("-", "/")}に再戦`
             : "保証協会の翌日復習は期限待ち";
@@ -9434,11 +9450,23 @@
       if (elements.postTrainingRestrictions) {
         elements.postTrainingRestrictions.disabled = Boolean(active) || !SUBJECT_SPRINT_READY;
         elements.postTrainingRestrictions.classList.toggle("post-training-primary", !guaranteeReviewReady);
+        elements.postTrainingRestrictions.dataset.subjectSprintTopic = cityPlanningComplete ? "catchup" : "";
+        elements.postTrainingRestrictions.textContent = cityPlanningComplete
+          ? "都市計画法以外を20問で診断（推奨）"
+          : "法令全体を20問で診断（推奨）";
       }
       if (elements.postTrainingBusiness) {
         elements.postTrainingBusiness.disabled = Boolean(active) || !BUSINESS_KNOCK_READY;
       }
-      if (elements.postTrainingExam) elements.postTrainingExam.disabled = Boolean(active);
+      if (elements.postTrainingExam) {
+        elements.postTrainingExam.disabled = Boolean(active);
+        elements.postTrainingExam.textContent = `公式${examProfileSummary()}の記録へ`;
+      }
+      if (elements.postTrainingTarget) {
+        elements.postTrainingTarget.textContent = state.examProfile === EXAM_PROFILE_FIVE_EXEMPT
+          ? "最低運用目標は業法18/20・法令6/8・権利9/14・税2/3、合計35点。安定目標は36点。アプリ内の到達表示は合格を保証しません。"
+          : "最低運用目標は業法18/20・法令6/8・権利9/14・税その他5/8、合計38点。安定目標は40点。アプリ内の到達表示は合格を保証しません。";
+      }
     }
     const plan = businessKnockPlan(preset);
     const controlsDisabled = Boolean(active) || !BUSINESS_KNOCK_READY;
@@ -13648,7 +13676,7 @@
     elements.guaranteeSpecialFullStart?.addEventListener("click", () => startGuaranteeSpecialSession("full"));
     elements.postTrainingGuaranteeReview?.addEventListener("click", startGuaranteeSpecialSession);
     elements.postTrainingRestrictions?.addEventListener("click", () =>
-      startSubjectSprint("restrictions", 20, "catchup")
+      startSubjectSprint("restrictions", 20, elements.postTrainingRestrictions?.dataset.subjectSprintTopic || "")
     );
     elements.postTrainingBusiness?.addEventListener("click", startPostTrainingBusinessKnock);
     elements.postTrainingExam?.addEventListener("click", openPostTrainingExamRoute);

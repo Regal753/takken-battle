@@ -371,15 +371,17 @@ async function assertFocusedInViewport(page, expectedSelector) {
             lastConfidenceAt: answeredAt
           };
         });
-        saved.practicalDrill.history[questionIds[0]] = {
-          attempts: 1,
-          correct: 0,
-          wrong: 1,
-          uncertain: 0,
-          lastConfidence: "wrong",
-          lastAnsweredAt: answeredAt,
-          lastConfidenceAt: answeredAt
-        };
+        questionIds.slice(0, 12).forEach((id) => {
+          saved.practicalDrill.history[id] = {
+            attempts: 1,
+            correct: 0,
+            wrong: 1,
+            uncertain: 0,
+            lastConfidence: "wrong",
+            lastAnsweredAt: answeredAt,
+            lastConfidenceAt: answeredAt
+          };
+        });
         localStorage.setItem(key, JSON.stringify(saved));
       }, { key: routeFixture.key, ids });
       await routePage.reload({ waitUntil: "networkidle", timeout: 20000 });
@@ -393,44 +395,83 @@ async function assertFocusedInViewport(page, expectedSelector) {
       assert.ok(routeLayout.heights.every((height) => height >= 44), `post-training CTA under 44px: ${routeLayout.heights.join(", ")}`);
 
       assert.equal(await routePage.locator("#postTrainingGuaranteeReview").isDisabled(), false, "due guarantee review must become actionable");
-      assert.match(await routePage.locator("#postTrainingGuaranteeReview").textContent(), /保証協会を1問再戦（最優先）/);
+      assert.match(await routePage.locator("#postTrainingGuaranteeReview").textContent(), /保証協会を10問再戦（要復習12問・最優先）/);
       await routePage.locator("#postTrainingGuaranteeReview").click();
       await routePage.locator("#practicalDrillSession").waitFor({ state: "visible" });
       let routed = await readSavedState(routePage);
       assert.equal(routed.state.practicalDrill.bankId, "guarantee-association-special");
-      assert.equal(routed.state.practicalDrill.queue[0], ids[0], "due guarantee item must lead the review set");
+      assert.equal(routed.state.practicalDrill.queue.length, 10, "review CTA must state the actual capped set size");
+      assert.ok(routed.state.practicalDrill.queue.every((id) => ids.slice(0, 12).includes(id)), "smart review must contain only the due backlog");
       routePage.once("dialog", (dialog) => dialog.accept());
       await routePage.locator("#practicalDrillDiscardButton").click();
       await routePage.locator("#practicalDrillSession").waitFor({ state: "hidden" });
-      await routePage.evaluate(({ key, id }) => {
+      await routePage.evaluate(({ key, reviewIds }) => {
         const saved = JSON.parse(localStorage.getItem(key));
         const answeredAt = new Date().toISOString();
-        saved.practicalDrill.history[id] = {
-          attempts: 2,
-          correct: 1,
-          wrong: 1,
-          uncertain: 0,
-          lastConfidence: "confident",
-          lastAnsweredAt: answeredAt,
-          lastConfidenceAt: answeredAt
-        };
+        reviewIds.forEach((id) => {
+          saved.practicalDrill.history[id] = {
+            attempts: 2,
+            correct: 1,
+            wrong: 1,
+            uncertain: 0,
+            lastConfidence: "confident",
+            lastAnsweredAt: answeredAt,
+            lastConfidenceAt: answeredAt
+          };
+        });
         localStorage.setItem(key, JSON.stringify(saved));
-      }, { key: routeFixture.key, id: ids[0] });
+      }, { key: routeFixture.key, reviewIds: ids.slice(0, 12) });
       await routePage.reload({ waitUntil: "networkidle", timeout: 20000 });
       await waitForApp(routePage);
       assert.equal(await routePage.locator("#postTrainingGuaranteeReview").isDisabled(), true, "review CTA must wait when no item is due");
 
+      assert.match(await routePage.locator("#postTrainingRestrictions").textContent(), /法令全体を20問で診断/);
+      assert.match(await routePage.locator("#postTrainingExam").textContent(), /公式50問・120分の記録へ/);
+      assert.match(await routePage.locator("#postTrainingTarget").textContent(), /合計38点。安定目標は40点/);
       await routePage.locator("#postTrainingRestrictions").click();
       await routePage.locator("#practicalDrillSession").waitFor({ state: "visible" });
       routed = await readSavedState(routePage);
       assert.equal(routed.state.practicalDrill.bankId, "subject-sprint");
       assert.equal(routed.state.practicalDrill.scope, "restrictions");
       assert.equal(routed.state.practicalDrill.queue.length, 20);
-      assert.match(routed.state.practicalDrill.presentationKey, /:topic-catchup:/);
-      const lawSources = await routePage.evaluate((queue) => queue.map((id) =>
+      assert.match(routed.state.practicalDrill.presentationKey, /:topic-all:/);
+      let lawSources = await routePage.evaluate((queue) => queue.map((id) =>
         window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS_BY_ID[id].sourceQuestionId
       ), routed.state.practicalDrill.queue);
-      assert.ok(lawSources.every((id) => !["l001", "l002", "l003", "l004", "rs001", "rs002"].includes(id)), "post-training law route must skip city planning");
+      assert.ok(lawSources.some((id) => ["l001", "l002", "l003", "l004", "rs001", "rs002"].includes(id)), "law route must include city planning while its saved coverage is incomplete");
+
+      routePage.once("dialog", (dialog) => dialog.accept());
+      await routePage.locator("#practicalDrillDiscardButton").click();
+      await routePage.locator("#practicalDrillSession").waitFor({ state: "hidden" });
+      await routePage.evaluate(({ key, cityPlanningIds }) => {
+        const saved = JSON.parse(localStorage.getItem(key));
+        const answeredAt = new Date().toISOString();
+        Object.values(window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS_BY_ID)
+          .filter((question) => cityPlanningIds.includes(question.sourceQuestionId))
+          .forEach((question) => {
+            saved.practicalDrill.history[question.id] = {
+              attempts: 1,
+              correct: 1,
+              wrong: 0,
+              uncertain: 0,
+              lastConfidence: "confident",
+              lastAnsweredAt: answeredAt,
+              lastConfidenceAt: answeredAt
+            };
+          });
+        localStorage.setItem(key, JSON.stringify(saved));
+      }, { key: routeFixture.key, cityPlanningIds: ["l001", "l002", "l003", "l004", "rs001", "rs002"] });
+      await routePage.reload({ waitUntil: "networkidle", timeout: 20000 });
+      await waitForApp(routePage);
+      assert.match(await routePage.locator("#postTrainingRestrictions").textContent(), /都市計画法以外を20問で診断/);
+      await routePage.locator("#postTrainingRestrictions").click();
+      await routePage.locator("#practicalDrillSession").waitFor({ state: "visible" });
+      routed = await readSavedState(routePage);
+      assert.match(routed.state.practicalDrill.presentationKey, /:topic-catchup:/);
+      lawSources = await routePage.evaluate((queue) => queue.map((id) =>
+        window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS_BY_ID[id].sourceQuestionId
+      ), routed.state.practicalDrill.queue);
+      assert.ok(lawSources.every((id) => !["l001", "l002", "l003", "l004", "rs001", "rs002"].includes(id)), "post-training law route may skip city planning only after all six sources are in saved history");
 
       routePage.once("dialog", (dialog) => dialog.accept());
       await routePage.locator("#practicalDrillDiscardButton").click();
@@ -446,10 +487,18 @@ async function assertFocusedInViewport(page, expectedSelector) {
       routePage.once("dialog", (dialog) => dialog.accept());
       await routePage.locator("#practicalDrillDiscardButton").click();
       await routePage.locator("#practicalDrillSession").waitFor({ state: "hidden" });
+      await routePage.evaluate(() => {
+        const select = document.querySelector("#examProfileSelect");
+        select.value = "fiveExempt";
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      });
+      assert.match(await routePage.locator("#postTrainingExam").textContent(), /公式45問・110分の記録へ/);
+      assert.doesNotMatch(await routePage.locator("#postTrainingTarget").textContent(), /その他|38点|40点/);
+      assert.match(await routePage.locator("#postTrainingTarget").textContent(), /税2\/3、合計35点。安定目標は36点/);
       await routePage.locator("#postTrainingExam").click();
       assert.equal(await routePage.locator("#passPlanPanel").getAttribute("open"), "");
       assert.equal(await routePage.locator(".official-ledger").getAttribute("open"), "");
-      assert.match(await routePage.locator("#todayCommandStatus").textContent(), /RETIO公式50問・120分/);
+      assert.match(await routePage.locator("#todayCommandStatus").textContent(), /RETIO公式45問・110分/);
     } finally {
       await routeContext.close();
     }

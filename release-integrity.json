@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20260909-post-training-v47-53417b39e0ec",
-  "digest": "sha256:53417b39e0ec9b8ff3a4e60af29be3791d51f747d8759415a351412bbd6c89a4",
+  "version": "20260909-post-training-v47-263f66779379",
+  "digest": "sha256:263f66779379658dd1572016c300413c87e0108a2e9475e9c179ebffb2becf20",
   "assetCount": 44,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "cd36bd2b3e8631a3689646094fda9a5ba1fcb5ac8557e1910f0ae35e864e734c"
+      "sha256": "1356b9f6531a45d3b3fe67dd7b7ceaafa74d28f00f7e23881175cbf1b2390869"
     },
     {
       "path": "assets/battle/grassland-route.webp",
@@ -110,7 +110,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "6f490c538ac94e6a5901d23c63def35f50c023cd201bc36dd45b1c7c4a2bcbca"
+      "sha256": "e33402286c29fbc0d645e8988887a3e1417d4b375ae5835c9ca13267b6398123"
     },
     {
       "path": "manifest.webmanifest",
