@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20260910-reiwa-exam-v51-5595c1679292";
+  const VERSION = "20260910-reiwa-exam-v51-c8c37bf3c6f6";
   const BANNER_ID = "pwaUpdateNotice";
   let reloadRequested = false;
 
@@ -24,6 +24,29 @@
     });
     notice.append(reload);
     document.body.append(notice);
+
+    // The answer dock is fixed and its height differs between normal practice,
+    // timed mocks, and narrow screens. Measure it instead of guessing with a
+    // breakpoint so the update control never covers the next action.
+    const positionAboveAnswerDock = () => {
+      const dock = document.getElementById("answerDock");
+      const dockRect = dock && !dock.hidden ? dock.getBoundingClientRect() : null;
+      if (!dockRect || dockRect.height <= 0 || dockRect.top >= window.innerHeight) {
+        notice.style.removeProperty("bottom");
+        return;
+      }
+      notice.style.bottom = `${Math.ceil(window.innerHeight - dockRect.top + 12)}px`;
+    };
+    positionAboveAnswerDock();
+    window.addEventListener("resize", positionAboveAnswerDock, { passive: true });
+    const dock = document.getElementById("answerDock");
+    if (dock) {
+      new ResizeObserver(positionAboveAnswerDock).observe(dock);
+      new MutationObserver(positionAboveAnswerDock).observe(dock, {
+        attributes: true,
+        attributeFilter: ["class", "hidden", "style"]
+      });
+    }
   };
 
   if (!("serviceWorker" in navigator) || !window.isSecureContext) return;

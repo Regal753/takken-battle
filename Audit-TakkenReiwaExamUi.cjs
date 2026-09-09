@@ -89,12 +89,15 @@ async function main() {
     await page.waitForTimeout(120);
     const second = await page.evaluate(() => {
       const prompt = document.querySelector("#questionText")?.getBoundingClientRect();
+      const questionHeader = document.querySelector("#roundLabel")?.getBoundingClientRect();
       const dock = document.querySelector("#answerDock")?.getBoundingClientRect();
       return {
         id: document.querySelector("#quizCard")?.dataset.questionId,
         focused: document.activeElement?.id,
         promptTop: prompt?.top,
         promptBottom: prompt?.bottom,
+        questionHeaderTop: questionHeader?.top,
+        questionHeaderBottom: questionHeader?.bottom,
         dockTop: dock?.top,
         dockVisible: Boolean(dock && dock.height > 0),
         overflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth)
@@ -102,7 +105,8 @@ async function main() {
     });
     assert.equal(second.id, "reiwa-a-02");
     assert.equal(second.focused, "questionText", "advance should focus the semantic question prompt");
-    assert.ok(second.promptTop >= 0, "advanced prompt must remain in the visible viewport");
+    assert.ok(second.questionHeaderTop >= 0, "advance must leave the new question header visible");
+    assert.ok(second.promptTop >= 16, "advanced prompt needs a positive reading offset");
     assert.ok(!second.dockVisible || second.promptBottom <= second.dockTop, "advanced prompt must not sit behind the answer dock");
     assert.equal(second.overflow, 0);
 
@@ -137,7 +141,40 @@ async function main() {
     }));
     assert.match(legacy.id, /^[a-z]\d{3}$/i, "legacy form-a snapshot should render a core question ID");
     assert.equal(legacy.choices, 4);
-    assert.match(legacy.title, /(?:フォーム|令和実戦)A/);
+    assert.match(legacy.title, /旧フォームA/);
+
+    // Legacy results remain readable but must never be presented as a Reiwa
+    // measurement on the current readiness card.
+    await page.evaluate((storageId) => {
+      const saved = JSON.parse(localStorage.getItem(storageId));
+      saved.runMode = "quest";
+      saved.finished = false;
+      saved.mock = {
+        formId: "", examProfile: "general", position: 0,
+        startedAt: "", finishedAt: "", elapsedMs: 0,
+        results: [], finalized: false
+      };
+      saved.mockHistory = [{
+        formId: "form-a", examProfile: "general", evidenceVersion: 2,
+        lawBaseline: "2026-04-01", questionCount: 50,
+        completedAt: "2026-08-16T10:00:00+09:00", dayKey: "2026-08-16",
+        score: 40, elapsedMs: 60 * 60 * 1000,
+        sectionScores: {
+          business: { correct: 18 }, rights: { correct: 9 }, restrictions: { correct: 7 },
+          tax: { correct: 2 }, other: { correct: 4 }
+        }
+      }];
+      localStorage.setItem(storageId, JSON.stringify(saved));
+    }, reviewKey);
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await page.waitForFunction(() => Boolean(window.TAKKEN_REIWA_EXAM_BANK));
+    const legacyReadiness = await page.evaluate(() => ({
+      title: document.querySelector("#passReadinessTitle")?.textContent || "",
+      subjectScores: [...document.querySelectorAll("#passSubjectGrid strong")].map((node) => node.textContent || "")
+    }));
+    assert.match(legacyReadiness.title, /50問は未測定。令和実戦で現在地を出す/);
+    assert.ok(legacyReadiness.subjectScores.every((value) => value.startsWith("未測定")),
+      `legacy history must not populate Reiwa card scores: ${JSON.stringify(legacyReadiness.subjectScores)}`);
 
     // 320px is where the fixed dock is most likely to overlap controls.
     await page.setViewportSize({ width: 320, height: 720 });
@@ -154,10 +191,17 @@ async function main() {
       const innerBox = inner?.getBoundingClientRect();
       const nextBox = next?.getBoundingClientRect();
       const style = inner ? getComputedStyle(inner) : null;
+      const notice = document.createElement("section");
+      notice.className = "pwa-update-notice";
+      notice.innerHTML = "<p>教材データを更新できます。</p><button type=\"button\">更新</button>";
+      document.body.append(notice);
+      const noticeBox = notice.getBoundingClientRect();
+      notice.remove();
       return {
         overflow: Math.max(0, document.documentElement.scrollWidth - window.innerWidth),
         dockVisible: Boolean(dockBox && dockBox.height > 0),
         dockHeight: dockBox?.height || 0,
+        dockTop: dockBox?.top || 0,
         dockBottom: dockBox?.bottom,
         viewport: window.innerHeight,
         nextTop: nextBox?.top,
@@ -166,7 +210,9 @@ async function main() {
         innerBottom: innerBox?.bottom,
         explainHidden: explain?.hidden && getComputedStyle(explain).display === "none",
         gridRows: style?.gridTemplateRows || "",
-        nextHeight: nextBox?.height || 0
+        nextHeight: nextBox?.height || 0,
+        noticeTop: noticeBox.top,
+        noticeBottom: noticeBox.bottom
       };
     });
     assert.equal(mobile.overflow, 0, "320px view must not horizontally overflow");
@@ -176,6 +222,7 @@ async function main() {
     assert.equal(mobile.explainHidden, true, "the explanation control must not occupy mock-exam space");
     assert.ok(mobile.nextTop >= mobile.innerTop && mobile.nextBottom <= mobile.innerBottom, "the next action must fit the single compact row");
     assert.ok(mobile.nextHeight >= 44, "the mobile next action needs a usable hit area");
+    assert.ok(mobile.noticeBottom <= mobile.dockTop, `the update notice fallback must clear the fixed answer dock: ${JSON.stringify(mobile)}`);
 
     // Complete the same form through the real answer/next controls. Always
     // selecting the first displayed option guarantees a substantial wrong-answer

@@ -9045,11 +9045,17 @@ button.mission-step:disabled {
 }
 
 .pwa-update-notice { position: fixed; z-index: 1000; right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); left: max(12px, env(safe-area-inset-left)); display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 600px; margin: 0 auto; padding: 12px; border: 1px solid #8da9e7; border-radius: 12px; background: #eff5ff; box-shadow: 0 8px 26px rgba(11, 16, 32, .25); color: #10234b; }
-body.has-answer-dock .pwa-update-notice { bottom: calc(90px + env(safe-area-inset-bottom)); }
+/* Fallback before the runtime measures the actual dock. */
+body.has-answer-dock .pwa-update-notice { bottom: calc(158px + env(safe-area-inset-bottom)); }
 .pwa-update-notice p { margin: 0; font-size: .88rem; font-weight: 700; line-height: 1.45; }
 .pwa-update-notice button { flex: 0 0 auto; min-height: 44px; border: 1px solid #2450a4; border-radius: 8px; background: #2450a4; color: #fff; font: inherit; font-weight: 800; cursor: pointer; }
 .pwa-update-notice button:focus-visible { outline: 3px solid #f2bd42; outline-offset: 3px; }
-@media (max-width: 520px) { body.has-answer-dock .pwa-update-notice { bottom: calc(142px + env(safe-area-inset-bottom)); } }
+@media (max-width: 520px) {
+  body.has-answer-dock .pwa-update-notice { bottom: calc(144px + env(safe-area-inset-bottom)); }
+  @supports selector(body:has(.answer-dock.is-mock-mode)) {
+    body.has-answer-dock:has(.answer-dock.is-mock-mode) .pwa-update-notice { bottom: calc(86px + env(safe-area-inset-bottom)); }
+  }
+}
 @media (max-width: 420px) { .pwa-update-notice { align-items: stretch; flex-direction: column; } .pwa-update-notice button { width: 100%; } }
 
 /* Walking/mobile use: every visible semantic control keeps a 44px hit area. */

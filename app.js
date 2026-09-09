@@ -4739,7 +4739,7 @@
   function mockFormShortLabel(form = currentMockForm()) {
     if (!form) return "模試";
     const suffix = String(form.id || "").split("-").at(-1)?.toUpperCase() || "";
-    if (!isStabilityMockForm(form)) return `旧フォーム${suffix}`;
+    if (!form.reiwaOriginal) return `旧フォーム${suffix}`;
     return `令和実戦${suffix}`;
   }
 
@@ -4848,7 +4848,10 @@
 
   function latestMockAttempt() {
     return [...(state.mockHistory || [])]
-      .filter((item) => mockFormById(item.formId) && item.examProfile === state.examProfile)
+      .filter((item) => {
+        const form = mockFormById(item.formId);
+        return form?.reiwaOriginal && item.examProfile === state.examProfile;
+      })
       .sort((left, right) =>
         (Date.parse(right.completedAt) || 0) - (Date.parse(left.completedAt) || 0)
       )[0] || null;
@@ -8003,7 +8006,21 @@
     const prompt = elements.questionText;
     if (!prompt) return;
     prompt.focus({ preventScroll: true });
-    prompt.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const viewportHeight = Math.max(1, Number(window.visualViewport?.height) || window.innerHeight || 1);
+    // `nearest` can leave the new prompt just above the viewport when the
+    // preceding, long question has kept part of the quiz card in view. Move
+    // only far enough to expose the semantic start of the next question; this
+    // deliberately avoids a page-top jump.
+    const desiredTop = Math.min(72, Math.max(16, Math.round(viewportHeight * 0.06)));
+    const reveal = () => {
+      const anchor = elements.roundLabel || prompt;
+      const rect = anchor.getBoundingClientRect();
+      if (rect.top < desiredTop || rect.top >= viewportHeight) {
+        window.scrollTo(0, Math.max(0, window.scrollY + rect.top - desiredTop));
+      }
+    };
+    reveal();
+    window.requestAnimationFrame(reveal);
   }
 
   function revealCurrentQuestionAfterAdvance() {
