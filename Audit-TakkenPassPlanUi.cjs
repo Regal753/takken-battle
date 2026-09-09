@@ -354,6 +354,79 @@ async function main() {
       throw new Error(`Touched year was recorded as unseen: ${JSON.stringify(touchedYearGuard)}`);
     }
 
+    const lateContext = await browser.newContext({
+      viewport: { width: 390, height: 844 },
+      reducedMotion: "reduce",
+      locale: "ja-JP",
+      timezoneId: "Asia/Tokyo"
+    });
+    await lateContext.addInitScript(() => {
+      const RealDate = Date;
+      const fixedNow = new RealDate("2026-09-09T10:00:00+09:00").getTime();
+      class FixedDate extends RealDate {
+        constructor(...args) {
+          super(...(args.length ? args : [fixedNow]));
+        }
+
+        static now() {
+          return fixedNow;
+        }
+      }
+      window.Date = FixedDate;
+    });
+    const latePage = await lateContext.newPage();
+    latePage.on("console", (message) => {
+      if (message.type() === "error") consoleErrors.push(message.text());
+    });
+    latePage.on("pageerror", (error) => pageErrors.push(String(error)));
+    const lateUrl = new URL(baseUrl);
+    lateUrl.searchParams.set("review", `latepass${Date.now().toString(36)}`);
+    await latePage.goto(lateUrl.toString(), { waitUntil: "domcontentloaded", timeout: 15000 });
+    await latePage.waitForFunction(() =>
+      (document.querySelector("#passPhaseTitle")?.textContent || "").includes("一周遅れを7日で回収")
+    );
+    const latePhase = await latePage.evaluate(() => ({
+      title: document.querySelector("#passPhaseTitle")?.textContent?.trim() || "",
+      text: document.querySelector("#passPhaseText")?.textContent?.trim() || "",
+      countdown: document.querySelector("#examCountdown")?.textContent?.trim() || "",
+      overflow: Math.max(0, document.documentElement.scrollWidth - innerWidth)
+    }));
+    await lateContext.close();
+    if (
+      latePhase.title !== "一周遅れを7日で回収" ||
+      !latePhase.text.includes("法令→税その他→権利") ||
+      !latePhase.text.includes("RETIO公式50問・120分") ||
+      latePhase.countdown !== "D-39" ||
+      latePhase.overflow
+    ) {
+      throw new Error(`Late foundation catch-up mismatch: ${JSON.stringify(latePhase)}`);
+    }
+
+    const finalContext = await browser.newContext({
+      viewport: { width: 390, height: 844 }, locale: "ja-JP", timezoneId: "Asia/Tokyo"
+    });
+    await finalContext.addInitScript(() => {
+      const RealDate = Date;
+      const fixedNow = new RealDate("2026-10-12T10:00:00+09:00").getTime();
+      class FixedDate extends RealDate {
+        constructor(...args) { super(...(args.length ? args : [fixedNow])); }
+        static now() { return fixedNow; }
+      }
+      window.Date = FixedDate;
+    });
+    const finalPage = await finalContext.newPage();
+    const finalUrl = new URL(baseUrl);
+    finalUrl.searchParams.set("review", `finalpass${Date.now().toString(36)}`);
+    await finalPage.goto(finalUrl.toString(), { waitUntil: "domcontentloaded", timeout: 15000 });
+    await finalPage.waitForFunction(() =>
+      (document.querySelector("#passPhaseTitle")?.textContent || "").includes("最終7日・得点を固定")
+    );
+    const finalPhaseText = await finalPage.locator("#passPhaseText").textContent();
+    await finalContext.close();
+    if (!finalPhaseText.includes("新規の全範囲一周は止める")) {
+      throw new Error(`Final-week catch-up did not switch strategy: ${finalPhaseText}`);
+    }
+
     if (consoleErrors.length || pageErrors.length) {
       throw new Error(
         `Browser errors: ${JSON.stringify({ consoleErrors, pageErrors })}`

@@ -194,6 +194,50 @@
     Object.freeze({ id: "subject-sprint-taxOther", scopeId: "taxOther", label: "税の得点源", page: 0, part: 3 }),
     Object.freeze({ id: "subject-sprint-other", scopeId: "other", label: "その他の得点源", page: 0, part: 3 })
   ]);
+  const SUBJECT_SPRINT_RESTRICTION_TOPICS = Object.freeze({
+    catchup: Object.freeze({
+      id: "catchup",
+      label: "都市計画法以外",
+      sourceQuestionIds: Object.freeze([
+        "l005", "l006", "l007", "l008", "rs003", "rs004",
+        "l009", "l010", "rs005", "rs006",
+        "l011", "l012", "rs007", "rs008",
+        "l013", "l014", "rs009", "rs010",
+        "l015", "l016", "rs011", "rs012",
+        "l101", "l102", "rs013", "rs014"
+      ])
+    }),
+    building: Object.freeze({
+      id: "building",
+      label: "建築基準法",
+      sourceQuestionIds: Object.freeze(["l005", "l006", "l007", "l008", "rs003", "rs004"])
+    }),
+    "national-land": Object.freeze({
+      id: "national-land",
+      label: "国土利用計画法",
+      sourceQuestionIds: Object.freeze(["l009", "l010", "rs005", "rs006"])
+    }),
+    agriculture: Object.freeze({
+      id: "agriculture",
+      label: "農地法",
+      sourceQuestionIds: Object.freeze(["l011", "l012", "rs007", "rs008"])
+    }),
+    readjustment: Object.freeze({
+      id: "readjustment",
+      label: "土地区画整理法",
+      sourceQuestionIds: Object.freeze(["l013", "l014", "rs009", "rs010"])
+    }),
+    embankment: Object.freeze({
+      id: "embankment",
+      label: "盛土規制法",
+      sourceQuestionIds: Object.freeze(["l015", "l016", "rs011", "rs012"])
+    }),
+    "other-law": Object.freeze({
+      id: "other-law",
+      label: "文化財・道路法",
+      sourceQuestionIds: Object.freeze(["l101", "l102", "rs013", "rs014"])
+    })
+  });
   const SUBJECT_SPRINT_QUESTIONS = Object.freeze(
     (Array.isArray(SUBJECT_SPRINT_BANK?.QUESTIONS) ? SUBJECT_SPRINT_BANK.QUESTIONS : [])
       .map((item) => {
@@ -1021,6 +1065,12 @@
     businessKnockStatus: $("#businessKnockStatus"),
     guaranteeSpecialStart: $("#guaranteeSpecialStart"),
     guaranteeSpecialFullStart: $("#guaranteeSpecialFullStart"),
+    postTrainingGuide: $("#postTrainingGuide"),
+    postTrainingStatus: $("#postTrainingStatus"),
+    postTrainingGuaranteeReview: $("#postTrainingGuaranteeReview"),
+    postTrainingRestrictions: $("#postTrainingRestrictions"),
+    postTrainingBusiness: $("#postTrainingBusiness"),
+    postTrainingExam: $("#postTrainingExam"),
   };
 
   let fallbackIdSequence = 0;
@@ -4790,6 +4840,27 @@
 
   function passPhaseFor(date = todayKey()) {
     if (!foundationCoverageComplete()) {
+      if (date > "2026-10-11") {
+        return {
+          id: "foundation-final",
+          title: "最終7日・得点を固定",
+          text: "新規の全範囲一周は止める。公式50問の誤答、業法18点と法令6点の得点源、2026改正・統計、受験準備だけに絞る。"
+        };
+      }
+      if (date > "2026-09-30") {
+        return {
+          id: "foundation-repair",
+          title: "本試験測定と弱点補修",
+          text: `RETIO公式${examProfileSummary()}を週2回まで本番時間で測り、誤答した得点源だけを24時間以内に回収する。未接触は業法・法令の頻出へ限定する。`
+        };
+      }
+      if (date > FIRST_PASS_DEADLINE) {
+        return {
+          id: "foundation-catchup",
+          title: "一周遅れを7日で回収",
+          text: `業法20問は毎日維持し、法令→税その他→権利の未接触を7日で潰す。今週中にRETIO公式${examProfileSummary()}を本番時間で1回測り、科目別目標に届かない論点へ戻す。`
+        };
+      }
       return {
         id: "foundation",
         title: "8/31まで高速一周",
@@ -8274,8 +8345,26 @@
     );
   }
 
-  function buildSubjectSprintQueue(scope, requestedSize) {
-    const eligible = SUBJECT_SPRINT_QUESTIONS.filter((question) => question.scopeId === scope);
+  function subjectSprintTopicDefinition(scope, topicId) {
+    if (scope !== "restrictions") return null;
+    const topic = SUBJECT_SPRINT_RESTRICTION_TOPICS[String(topicId || "")];
+    return topic || null;
+  }
+
+  function subjectSprintSessionTopic(drill = state.practicalDrill) {
+    if (drill?.bankId !== SUBJECT_SPRINT_BANK_ID || drill?.scope !== "restrictions") return null;
+    const token = String(drill.presentationKey || "")
+      .split(":")
+      .find((part) => part.startsWith("topic-"));
+    return subjectSprintTopicDefinition("restrictions", token?.slice(6));
+  }
+
+  function buildSubjectSprintQueue(scope, requestedSize, topicId = "") {
+    const topic = subjectSprintTopicDefinition(scope, topicId);
+    const topicSourceIds = topic ? new Set(topic.sourceQuestionIds) : null;
+    const eligible = SUBJECT_SPRINT_QUESTIONS.filter((question) =>
+      question.scopeId === scope && (!topicSourceIds || topicSourceIds.has(question.sourceQuestionId))
+    );
     const units = SUBJECT_SPRINT_UNIT_DEFINITIONS.filter((unit) => unit.scopeId === scope);
     const target = Math.min(Math.max(1, Number(requestedSize) || eligible.length), eligible.length);
     const rankedIds = buildPracticalQueueFrom(
@@ -8652,6 +8741,14 @@
     const guaranteeSpecialSession = drill.bankId === GUARANTEE_SPECIAL_BANK_ID;
     const subjectSprintSession = drill.bankId === SUBJECT_SPRINT_BANK_ID;
     const guaranteeSummary = guaranteeSpecialSession ? guaranteeSpecialSummary() : null;
+    const subjectSprintTopic = subjectSprintSession ? subjectSprintSessionTopic(drill) : null;
+    const subjectSprintTopicUntouched = subjectSprintTopic
+      ? SUBJECT_SPRINT_QUESTIONS.filter((question) =>
+          question.scopeId === drill.scope &&
+          subjectSprintTopic.sourceQuestionIds.includes(question.sourceQuestionId) &&
+          !(drill.history[question.id]?.attempts > 0)
+        ).length
+      : 0;
     const bankLabel = knockSession ? "業法ノック"
       : drill.bankId === BUSINESS_FULLSCORE_BANK_ID ? "満点変形"
       : guaranteeSpecialSession ? "保証協会特訓"
@@ -8685,12 +8782,14 @@
       const completionLabel = knockSession
         ? businessKnockModeLabel(knockPreset.mode)
         : guaranteeSpecialSession ? "保証協会・営業保証金"
-          : subjectSprintSession ? `${practicalScopeLabel(drill.scope)}・高速補強`
+          : subjectSprintSession ? `${subjectSprintTopic?.label || practicalScopeLabel(drill.scope)}・高速補強`
         : unitSession ? unitSession.label : scopeLabel;
       elements.practicalDrillCompleteText.textContent = knockSession
         ? `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計${drill.attempts}解答です。${nextKnockPlan?.size ? `同じ条件の次セットは${nextKnockPlan.size}問。` : "この条件の対象はすべて回収しました。"}同日正答だけでは長期定着レベルは進みません。`
         : guaranteeSpecialSession
-          ? `${completionLabel}の今回${drill.sessionIds.length}問を完了。累計接触${guaranteeSummary.contacted}/${GUARANTEE_SPECIAL_EXPECTED_QUESTIONS}、根拠あり正答${guaranteeSummary.grounded}、日を空けて定着${guaranteeSummary.retained}、要復習${guaranteeSummary.review}問です。${guaranteeSummary.nextDueKey ? `次の優先復習は${guaranteeSummary.nextDueKey.replaceAll("-", "/")}以降。` : ""}`
+          ? `${completionLabel}の今回${drill.sessionIds.length}問を完了。累計接触${guaranteeSummary.contacted}/${GUARANTEE_SPECIAL_EXPECTED_QUESTIONS}、根拠あり正答${guaranteeSummary.grounded}、日を空けて定着${guaranteeSummary.retained}、要復習${guaranteeSummary.review}問です。${guaranteeSummary.contacted >= GUARANTEE_SPECIAL_EXPECTED_QUESTIONS ? "33問への接触は完了。1周だけで定着とは判定しません。" : ""}${guaranteeSummary.nextDueKey ? `次の優先復習は${guaranteeSummary.nextDueKey.replaceAll("-", "/")}以降。` : ""}`
+        : subjectSprintSession
+          ? `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計${drill.attempts}解答、根拠クリア${grounded}問です。${subjectSprintTopic?.id === "catchup" ? `都市計画法以外26問の未接触は残り${subjectSprintTopicUntouched}問。${subjectSprintTopicUntouched ? "同じ20問診断を続けると未接触を優先して回収します。" : "26問すべてへ接触済みです。"}` : ""}`
         : `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計${drill.attempts}解答、根拠クリア${grounded}問です。`;
       elements.practicalDrillRestartButton.textContent = knockSession
         ? nextKnockPlan?.size
@@ -8699,7 +8798,7 @@
         : guaranteeSpecialSession
           ? "宅建業法ノックへ戻る"
         : subjectSprintSession
-          ? `${practicalScopeLabel(drill.scope)}をもう一周`
+          ? `${subjectSprintTopic?.label || practicalScopeLabel(drill.scope)}をもう一周`
         : unitSession
           ? `同じ単元を${drill.sessionIds.length}問続ける`
           : `${scopeLabel}を${drill.sessionIds.length}問続ける`;
@@ -9310,6 +9409,37 @@
     elements.businessKnockUntouched.textContent = String(transfer.untouched || 0);
 
     const active = activeLearningSession();
+    const guaranteeSummary = guaranteeSpecialSummary();
+    const postTrainingUnlocked = guaranteeSummary.contacted >= GUARANTEE_SPECIAL_EXPECTED_QUESTIONS;
+    if (elements.postTrainingGuide) elements.postTrainingGuide.hidden = !postTrainingUnlocked;
+    if (postTrainingUnlocked && elements.postTrainingStatus) {
+      const dueText = guaranteeSummary.nextDueKey
+        ? ` 次の優先復習は${guaranteeSummary.nextDueKey.replaceAll("-", "/")}以降です。`
+        : " 翌日以降に同じ根拠を再現できるか確認します。";
+      const activeText = active ? ` ${active.label}を先に完了してください。` : "";
+      elements.postTrainingStatus.textContent =
+        `33/33問への接触完了。根拠あり正答${guaranteeSummary.grounded}/33、別日定着${guaranteeSummary.retained}/33、要復習${guaranteeSummary.review}問。1周完走だけでは定着済みにしません。${dueText}${activeText}`;
+    }
+    if (postTrainingUnlocked) {
+      const guaranteeReviewReady = guaranteeSummary.review > 0;
+      if (elements.postTrainingGuaranteeReview) {
+        elements.postTrainingGuaranteeReview.disabled = Boolean(active) || !guaranteeReviewReady;
+        elements.postTrainingGuaranteeReview.classList.toggle("post-training-primary", guaranteeReviewReady);
+        elements.postTrainingGuaranteeReview.textContent = guaranteeReviewReady
+          ? `保証協会を${guaranteeSummary.review}問再戦（最優先）`
+          : guaranteeSummary.nextDueKey
+            ? `保証協会は${guaranteeSummary.nextDueKey.replaceAll("-", "/")}に再戦`
+            : "保証協会の翌日復習は期限待ち";
+      }
+      if (elements.postTrainingRestrictions) {
+        elements.postTrainingRestrictions.disabled = Boolean(active) || !SUBJECT_SPRINT_READY;
+        elements.postTrainingRestrictions.classList.toggle("post-training-primary", !guaranteeReviewReady);
+      }
+      if (elements.postTrainingBusiness) {
+        elements.postTrainingBusiness.disabled = Boolean(active) || !BUSINESS_KNOCK_READY;
+      }
+      if (elements.postTrainingExam) elements.postTrainingExam.disabled = Boolean(active);
+    }
     const plan = businessKnockPlan(preset);
     const controlsDisabled = Boolean(active) || !BUSINESS_KNOCK_READY;
     [elements.businessKnockMode, elements.businessKnockUnit, elements.businessKnockSize]
@@ -9681,14 +9811,16 @@
     }
   }
 
-  function startSubjectSprint(scope = "rights", requestedSize = 0) {
+  function startSubjectSprint(scope = "rights", requestedSize = 0, topicId = "") {
     if (resumeActiveLearningSession() || !SUBJECT_SPRINT_READY) return;
     const previousState = cloneStateForSync(state);
     const normalizedScope = ["rights", "restrictions", "taxOther", "other"].includes(scope)
       ? scope
       : "rights";
+    const topic = subjectSprintTopicDefinition(normalizedScope, topicId);
     const eligibleCount = SUBJECT_SPRINT_QUESTIONS.filter((question) =>
-      question.scopeId === normalizedScope
+      question.scopeId === normalizedScope &&
+      (!topic || topic.sourceQuestionIds.includes(question.sourceQuestionId))
     ).length;
     const defaultSessionSize = normalizedScope === "restrictions"
       ? Math.min(SUBJECT_SPRINT_RESTRICTIONS_SESSION_SIZE, eligibleCount)
@@ -9696,7 +9828,7 @@
     const sessionSize = Number.isInteger(Number(requestedSize)) && Number(requestedSize) > 0
       ? Math.min(eligibleCount, Number(requestedSize))
       : defaultSessionSize;
-    const queue = buildSubjectSprintQueue(normalizedScope, sessionSize);
+    const queue = buildSubjectSprintQueue(normalizedScope, sessionSize, topic?.id || "");
     if (!queue.length) {
       setTodayCommandStatus("科目補強問題を読み込めませんでした。", true);
       return;
@@ -9706,7 +9838,7 @@
       version: PRACTICAL_VARIATIONS?.VERSION || 1,
       bankId: SUBJECT_SPRINT_BANK_ID,
       bankVersion: SUBJECT_SPRINT_BANK.VERSION,
-      presentationKey: `${todayKey()}:subject-sprint:${normalizedScope}:${createOpaqueId("cycle")}`
+      presentationKey: `${todayKey()}:subject-sprint:${normalizedScope}:topic-${topic?.id || "all"}:${createOpaqueId("cycle")}`
         .replace(/[^0-9a-z:_-]/gi, "").slice(0, 80),
       presentationOverrides: {},
       planMode: "sprint",
@@ -9733,6 +9865,28 @@
     renderPracticalDrill();
     renderPassPlan();
     focusCurrentPracticalContext({ force: true });
+  }
+
+  function startPostTrainingBusinessKnock() {
+    if (resumeActiveLearningSession() || !BUSINESS_KNOCK_READY) return;
+    state.practicalDrill.knockPreset = normalizeBusinessKnockPreset({
+      mode: "all-random",
+      size: 20,
+      unitId: "",
+      lastPresentationOffset: state.practicalDrill.knockPreset?.lastPresentationOffset
+    });
+    startBusinessKnockSession(20);
+  }
+
+  function openPostTrainingExamRoute() {
+    if (resumeActiveLearningSession()) return;
+    if (elements.passPlanPanel) elements.passPlanPanel.open = true;
+    if (elements.officialLedgerPanel) elements.officialLedgerPanel.open = true;
+    renderOfficialExamYearOptions();
+    setTodayCommandStatus(`次はRETIO公式${examProfileSummary()}を、無参照・本番時間で測って科目別に記録します。`);
+    window.requestAnimationFrame(() =>
+      elements.officialLedgerPanel?.scrollIntoView({ block: "start", behavior: "smooth" })
+    );
   }
 
   function startPracticalDrillWith(scope, sessionSize) {
@@ -9834,7 +9988,11 @@
       return;
     }
     if (state.practicalDrill?.bankId === SUBJECT_SPRINT_BANK_ID) {
-      startSubjectSprint(state.practicalDrill.scope, state.practicalDrill.sessionSize);
+      startSubjectSprint(
+        state.practicalDrill.scope,
+        state.practicalDrill.sessionSize,
+        subjectSprintSessionTopic(state.practicalDrill)?.id || ""
+      );
       return;
     }
     if (state.practicalDrill?.bankId === BUSINESS_FULLSCORE_BANK_ID) {
@@ -13457,7 +13615,8 @@
     document.querySelectorAll("[data-subject-sprint]").forEach((button) => {
       button.addEventListener("click", () => startSubjectSprint(
         button.dataset.subjectSprint,
-        Number(button.dataset.sessionSize) || 0
+        Number(button.dataset.sessionSize) || 0,
+        button.dataset.subjectSprintTopic || ""
       ));
       button.disabled = !SUBJECT_SPRINT_READY;
     });
@@ -13487,6 +13646,12 @@
     elements.practicalDrillDiscardButton?.addEventListener("click", cancelPracticalDrill);
     elements.guaranteeSpecialStart?.addEventListener("click", startGuaranteeSpecialSession);
     elements.guaranteeSpecialFullStart?.addEventListener("click", () => startGuaranteeSpecialSession("full"));
+    elements.postTrainingGuaranteeReview?.addEventListener("click", startGuaranteeSpecialSession);
+    elements.postTrainingRestrictions?.addEventListener("click", () =>
+      startSubjectSprint("restrictions", 20, "catchup")
+    );
+    elements.postTrainingBusiness?.addEventListener("click", startPostTrainingBusinessKnock);
+    elements.postTrainingExam?.addEventListener("click", openPostTrainingExamRoute);
     elements.businessKnockStart?.addEventListener("click", startBusinessKnockSession);
     [elements.businessKnockMode, elements.businessKnockUnit, elements.businessKnockSize]
       .filter(Boolean)
