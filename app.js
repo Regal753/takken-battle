@@ -10360,18 +10360,24 @@
     const wasSubjectSprint = state.practicalDrill?.bankId === SUBJECT_SPRINT_BANK_ID;
     if (!cancelPracticalDrill()) return;
     if (wasBusinessKnock) {
-      window.requestAnimationFrame(() =>
-        elements.businessKnockPanel?.scrollIntoView({ block: "center", behavior: "smooth" })
-      );
+      window.requestAnimationFrame(() => {
+        if (!activeLearningSession()) {
+          elements.businessKnockPanel?.scrollIntoView({ block: "center", behavior: "smooth" });
+        }
+      });
     } else if (wasGuaranteeSpecial) {
-      window.requestAnimationFrame(() =>
-        elements.businessKnockPanel?.scrollIntoView({ block: "center", behavior: "smooth" })
-      );
+      window.requestAnimationFrame(() => {
+        if (!activeLearningSession()) {
+          elements.businessKnockPanel?.scrollIntoView({ block: "center", behavior: "smooth" });
+        }
+      });
     } else if (wasSubjectSprint) {
       if (elements.passPlanPanel) elements.passPlanPanel.open = true;
-      window.requestAnimationFrame(() =>
-        document.querySelector(".subject-sprint-card")?.scrollIntoView({ block: "center", behavior: "smooth" })
-      );
+      window.requestAnimationFrame(() => {
+        if (!activeLearningSession()) {
+          document.querySelector(".subject-sprint-card")?.scrollIntoView({ block: "center", behavior: "smooth" });
+        }
+      });
     }
   }
 
