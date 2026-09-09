@@ -86,8 +86,15 @@ async function startSprint(page, scope) {
     return { runMode: saved.runMode, drill: saved.practicalDrill, status: document.querySelector("#todayCommandStatus")?.textContent || "" };
   });
   if (probe.drill?.stage !== "active" || probe.drill?.bankId !== "subject-sprint") throw new Error(`sprint did not start: ${JSON.stringify(probe)}`);
-  assert.equal(await page.locator("#practicalDrillForecast").isHidden(), true, "subject sprint must not inherit the guarantee pre-answer forecast");
-  assert.equal(await page.locator(".practical-drill-choice:enabled").count(), 4, "subject sprint choices must remain immediately answerable");
+  if (scope === "restrictions") {
+    assert.equal(await page.locator("#practicalDrillForecast").isHidden(), false, "restriction sprint must require pre-answer evidence");
+    assert.equal(await page.locator(".practical-drill-choice:enabled").count(), 0, "restriction choices stay locked before evidence");
+    await page.locator('[data-practical-forecast="confident"]').click();
+    assert.equal(await page.locator(".practical-drill-choice:enabled").count(), 4, "restriction evidence unlocks choices");
+  } else {
+    assert.equal(await page.locator("#practicalDrillForecast").isHidden(), true, "other subject sprints must not inherit the restriction forecast");
+    assert.equal(await page.locator(".practical-drill-choice:enabled").count(), 4, "other subject sprint choices must remain immediately answerable");
+  }
   return stored(page);
 }
 
@@ -574,7 +581,7 @@ async function main() {
     const migratedOnLoad = await legacyPage.evaluate((key) =>
       JSON.parse(localStorage.getItem(key) || "{}").stateSchemaVersion, legacyKey
     );
-    assert.equal(migratedOnLoad, 12, "schema migration must persist during initial load");
+    assert.equal(migratedOnLoad, 13, "schema migration must persist during initial load");
     // Normalization is persisted on the first ordinary state-changing action.
     await openPassPanel(legacyPage);
     await legacyPage.locator("#passMockAction").click();
@@ -583,7 +590,7 @@ async function main() {
       key,
       state: JSON.parse(localStorage.getItem(key) || "{}")
     }), legacyKey);
-    assert.equal(legacy.state.stateSchemaVersion, 12);
+    assert.equal(legacy.state.stateSchemaVersion, 13);
     // Schema-8 records predate the sprint presentation key; normalization must
     // fail closed to an idle launch state instead of reviving a corrupt session.
     assert.equal(legacy.state.practicalDrill.stage, "idle");

@@ -86,6 +86,7 @@ const required = [
   "Audit-TakkenRestrictionsSupplement.js",
   "Audit-TakkenSubjectSprintBank.js",
   "Audit-TakkenSubjectSprintUi.cjs",
+  "Audit-TakkenRestrictionMasteryUi.cjs",
   "Audit-TakkenPassReadiness.js",
   "Audit-TakkenPassReadinessUi.cjs",
   "Audit-TakkenExamCurrentYear2026.js",
@@ -106,11 +107,11 @@ const pagesWorkflow = text(".github/workflows/pages.yml");
 const ciWorkflow = text(".github/workflows/ci.yml");
 
 assert.match(index, /name="takken-runtime" content="public-static"/);
-assert.match(index, /manifest\.webmanifest\?v=20260909-answer-scroll-v48-b544a46a571e/);
-assert.match(index, /pwa-runtime\.js\?v=20260909-answer-scroll-v48-b544a46a571e/);
-assert.match(text("service-worker.js"), /const VERSION = "20260909-answer-scroll-v48-b544a46a571e"/);
-assert.match(manifest, /pwa-icon-192\.svg\?v=20260909-answer-scroll-v48-b544a46a571e/);
-assert.match(manifest, /pwa-icon-512\.svg\?v=20260909-answer-scroll-v48-b544a46a571e/);
+assert.match(index, /manifest\.webmanifest\?v=20260910-restriction-grounding-v49-69d7164401d7/);
+assert.match(index, /pwa-runtime\.js\?v=20260910-restriction-grounding-v49-69d7164401d7/);
+assert.match(text("service-worker.js"), /const VERSION = "20260910-restriction-grounding-v49-69d7164401d7"/);
+assert.match(manifest, /pwa-icon-192\.svg\?v=20260910-restriction-grounding-v49-69d7164401d7/);
+assert.match(manifest, /pwa-icon-512\.svg\?v=20260910-restriction-grounding-v49-69d7164401d7/);
 assert.match(app, /const PUBLIC_STATIC_MODE/);
 assert.match(app, /function publicTodayQuest/);
 assert.match(app, /const DEFAULT_STUDY_SCOPE = "business"/);
@@ -149,7 +150,7 @@ assert.match(app, /各記述を1つずつ判定/);
 assert.match(text("styles.css"), /\.practical-statement-review-card/);
 assert.match(text("business-fullscore-bank.js"), /function sourceStatementExplanations/);
 assert.match(app, /const PRACTICAL_SESSION_SIZES = Object\.freeze\(\[4, 10, 20, 45\]\)/);
-assert.match(app, /const STATE_SCHEMA_VERSION = 12/);
+assert.match(app, /const STATE_SCHEMA_VERSION = 13/);
 assert.match(app, /const BUSINESS_FULLSCORE_EXPECTED_QUESTIONS = 134/);
 assert.match(app, /const OFFICIAL_EXAM_EVIDENCE_VERSION = 3/);
 assert.match(app, /const OFFICIAL_DAILY_DRILL_DEFINITIONS/);
@@ -188,6 +189,12 @@ assert.match(index, /id="mockBButton"/);
 assert.match(index, /id="studyScopeSelect"/);
 assert.match(index, /id="passPlanPanel"/);
 assert.match(index, /id="passReadinessCard"/);
+assert.match(index, /id="restrictionMasteryPanel"/);
+assert.match(index, /id="restrictionExamStart"/);
+assert.match(index, /data-practical-forecast="guess"/);
+assert.match(index, /法令基準日：2026年4月1日/);
+assert.match(index, /本試験を意識した8問配分/);
+assert.doesNotMatch(index, /直近本試験型/);
 assert.match(index, /id="passReadinessStatus"/);
 assert.match(index, /id="todayCommandPanel"/);
 assert.match(index, /id="todayReviewInput"/);
@@ -237,29 +244,29 @@ assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 第2分冊・権利関係を固める/);
 assert.match(index, /③ 法令・税その他へ進む/);
 assert.match(index, /④ 全分野を混ぜる/);
-assert.match(index, /styles\.css\?v=20260909-answer-scroll-v48-b544a46a571e/);
-assert.match(index, /restrictions-supplement-bank\.js\?v=20260909-answer-scroll-v48-b544a46a571e/);
-assert.match(index, /subject-sprint-bank\.js\?v=20260909-answer-scroll-v48-b544a46a571e/);
+assert.match(index, /styles\.css\?v=20260910-restriction-grounding-v49-69d7164401d7/);
+assert.match(index, /restrictions-supplement-bank\.js\?v=20260910-restriction-grounding-v49-69d7164401d7/);
+assert.match(index, /subject-sprint-bank\.js\?v=20260910-restriction-grounding-v49-69d7164401d7/);
 assert.ok(
   index.indexOf("restrictions-supplement-bank.js") < index.indexOf("subject-sprint-bank.js"),
   "restrictions supplement must load before the subject sprint bank",
 );
-assert.match(index, /pass-readiness\.js\?v=20260909-answer-scroll-v48-b544a46a571e/);
-assert.match(index, /exam-current-year-2026\.js\?v=20260909-answer-scroll-v48-b544a46a571e/);
-assert.match(index, /official-topic-map\.js\?v=20260909-answer-scroll-v48-b544a46a571e/);
-assert.match(index, /business-mastery\.js\?v=20260909-answer-scroll-v48-b544a46a571e/);
-assert.match(index, /business-knock\.js\?v=20260909-answer-scroll-v48-b544a46a571e/);
-assert.match(index, /business-pace\.js\?v=20260909-answer-scroll-v48-b544a46a571e/);
-assert.match(index, /business-fullscore-supplement\.js\?v=20260909-answer-scroll-v48-b544a46a571e/);
-assert.match(index, /business-fullscore-bank\.js\?v=20260909-answer-scroll-v48-b544a46a571e/);
-assert.match(index, /guarantee-association-drill\.js\?v=20260909-answer-scroll-v48-b544a46a571e/);
-assert.match(index, /practical-question-bank\.js\?v=20260909-answer-scroll-v48-b544a46a571e/);
-assert.match(index, /calculation-drill\.js\?v=20260909-answer-scroll-v48-b544a46a571e/);
-assert.match(index, /app\.js\?v=20260909-answer-scroll-v48-b544a46a571e/);
-assert.match(index, /save-store\.js\?v=20260909-answer-scroll-v48-b544a46a571e/);
-assert.match(index, /official-exam-data\.js\?v=20260909-answer-scroll-v48-b544a46a571e/);
-assert.match(index, /official-law-baseline\.js\?v=20260909-answer-scroll-v48-b544a46a571e/);
-assert.match(index, /state-sync\.js\?v=20260909-answer-scroll-v48-b544a46a571e/);
+assert.match(index, /pass-readiness\.js\?v=20260910-restriction-grounding-v49-69d7164401d7/);
+assert.match(index, /exam-current-year-2026\.js\?v=20260910-restriction-grounding-v49-69d7164401d7/);
+assert.match(index, /official-topic-map\.js\?v=20260910-restriction-grounding-v49-69d7164401d7/);
+assert.match(index, /business-mastery\.js\?v=20260910-restriction-grounding-v49-69d7164401d7/);
+assert.match(index, /business-knock\.js\?v=20260910-restriction-grounding-v49-69d7164401d7/);
+assert.match(index, /business-pace\.js\?v=20260910-restriction-grounding-v49-69d7164401d7/);
+assert.match(index, /business-fullscore-supplement\.js\?v=20260910-restriction-grounding-v49-69d7164401d7/);
+assert.match(index, /business-fullscore-bank\.js\?v=20260910-restriction-grounding-v49-69d7164401d7/);
+assert.match(index, /guarantee-association-drill\.js\?v=20260910-restriction-grounding-v49-69d7164401d7/);
+assert.match(index, /practical-question-bank\.js\?v=20260910-restriction-grounding-v49-69d7164401d7/);
+assert.match(index, /calculation-drill\.js\?v=20260910-restriction-grounding-v49-69d7164401d7/);
+assert.match(index, /app\.js\?v=20260910-restriction-grounding-v49-69d7164401d7/);
+assert.match(index, /save-store\.js\?v=20260910-restriction-grounding-v49-69d7164401d7/);
+assert.match(index, /official-exam-data\.js\?v=20260910-restriction-grounding-v49-69d7164401d7/);
+assert.match(index, /official-law-baseline\.js\?v=20260910-restriction-grounding-v49-69d7164401d7/);
+assert.match(index, /state-sync\.js\?v=20260910-restriction-grounding-v49-69d7164401d7/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
 assert.doesNotMatch(index, /understanding-system\.js/);
@@ -272,6 +279,11 @@ assert.match(app, /解答・進捗をこの端末へ自動保存済み/);
 assert.match(app, /normalizedComprehensionDayKeys/);
 assert.match(app, /誤答・根拠なし.*1行化/);
 assert.match(app, /reviewNote/);
+assert.match(app, /function buildRestrictionExamQueue/);
+assert.match(app, /guessAnswers/);
+assert.match(app, /function completeRestrictionExamResult/);
+assert.match(app, /targetGroundedCorrect: RESTRICTION_EXAM_TARGET_GROUNDED/);
+assert.match(app, /elapsedMs <= RESTRICTION_EXAM_TARGET_MS/);
 
 const localReferencePattern = /\b(?:href|src)="([^"]+)"/g;
 for (const [, reference] of index.matchAll(localReferencePattern)) {
@@ -319,7 +331,7 @@ assert.match(pagesWorkflow, /node Audit-TakkenReleaseIntegrity\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-browser\.cjs/);
 assert.match(pagesWorkflow, /playwright@1\.62\.1/);
-assert.match(pagesWorkflow, /20260909-answer-scroll-v48-b544a46a571e/);
+assert.match(pagesWorkflow, /20260910-restriction-grounding-v49-69d7164401d7/);
 assert.match(pagesWorkflow, /node scripts\/assemble-site\.mjs/);
 assert.match(ciWorkflow, /node Audit-TakkenPwaOffline\.cjs/);
 assert.match(ciWorkflow, /node Audit-TakkenSaveLeaseRaceUi\.cjs/);
@@ -342,6 +354,7 @@ assert.match(ciWorkflow, /node Audit-TakkenStateSync\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenRestrictionsSupplement\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenSubjectSprintBank\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenSubjectSprintUi\.cjs/);
+assert.match(ciWorkflow, /node Audit-TakkenRestrictionMasteryUi\.cjs/);
 assert.match(ciWorkflow, /node Audit-TakkenPassReadiness\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenPassReadinessUi\.cjs/);
 assert.match(ciWorkflow, /node Audit-TakkenCalculationDrillUi\.cjs/);

@@ -54,7 +54,7 @@ function startStaticServer(root) {
       const current = JSON.parse(localStorage.getItem(key));
       const future = {
         ...current,
-        stateSchemaVersion: 13,
+        stateSchemaVersion: 14,
         futureSchemaSentinel: { retained: true, bytes: "do-not-downgrade" }
       };
       const raw = JSON.stringify(future);
@@ -81,10 +81,10 @@ function startStaticServer(root) {
       };
     }, fixture);
     assert.equal(result.rawUnchanged, true);
-    assert.equal(result.storedSchema, 13);
+    assert.equal(result.storedSchema, 14);
     assert.deepEqual(result.sentinel, { retained: true, bytes: "do-not-downgrade" });
     assert.equal(result.bodyReadOnly, true);
-    assert.match(`${result.protection} ${result.transfer}`, /新しい保存形式v13|読み取り専用/);
+    assert.match(`${result.protection} ${result.transfer}`, /新しい保存形式v14|読み取り専用/);
     assert.ok(result.controls > 20);
     assert.deepEqual(result.enabledControlIds, [], `enabled read-only controls: ${result.enabledControlIds.join(", ")}`);
     assert.equal(result.exportDisabled, true);
@@ -112,7 +112,7 @@ function startStaticServer(root) {
       );
       const future = {
         ...JSON.parse(localStorage.getItem(key)),
-        stateSchemaVersion: 13,
+        stateSchemaVersion: 14,
         futureSchemaSentinel: { retained: true, bytes: "stale-open-tab-must-not-downcast" }
       };
       const raw = JSON.stringify(future);
@@ -132,10 +132,10 @@ function startStaticServer(root) {
         .map((control) => control.id || control.outerHTML.slice(0, 80))
     }), staleFixture);
     assert.equal(stale.rawUnchanged, true, "stale tab must not rewrite the future-schema primary raw");
-    assert.equal(stale.storedSchema, 13);
+    assert.equal(stale.storedSchema, 14);
     assert.deepEqual(stale.sentinel, { retained: true, bytes: "stale-open-tab-must-not-downcast" });
     assert.equal(stale.readOnly, true);
-    assert.match(stale.notice, /別タブで新しい保存形式v13|読み取り専用/);
+    assert.match(stale.notice, /別タブで新しい保存形式v14|読み取り専用/);
     assert.deepEqual(stale.enabledControls, []);
     await stalePage.close();
 
@@ -341,7 +341,7 @@ function startStaticServer(root) {
         practical: state.practicalDrill
       };
     }, v36DowncastFixture);
-    assert.equal(recoveredFromV36.schema, 12);
+    assert.equal(recoveredFromV36.schema, 13);
     assert.equal(recoveredFromV36.practical.bankId, v36DowncastFixture.session.bankId);
     assert.equal(recoveredFromV36.practical.stage, v36DowncastFixture.session.stage);
     assert.deepEqual(recoveredFromV36.practical.queue, v36DowncastFixture.session.queue);
@@ -414,7 +414,7 @@ function startStaticServer(root) {
         recovery: state.guaranteeAssociationRecovery
       };
     }, v11Fixture);
-    assert.equal(recoveredFromV11.schema, 12);
+    assert.equal(recoveredFromV11.schema, 13);
     assert.equal(recoveredFromV11.stage, "idle", "v11 must not reopen a stale guarantee recovery session");
     assert.deepEqual(recoveredFromV11.queue, []);
     assert.deepEqual(recoveredFromV11.retryIds, []);
@@ -448,7 +448,7 @@ function startStaticServer(root) {
       const current = JSON.parse(localStorage.getItem(key));
       const previous = {
         ...current,
-        stateSchemaVersion: 13,
+        stateSchemaVersion: 14,
         futureSchemaSentinel: { retained: true, bytes: "future-previous-must-survive" }
       };
       const previousRaw = JSON.stringify(previous);
@@ -478,7 +478,7 @@ function startStaticServer(root) {
     assert.equal(recovery.previousUnchanged, true);
     assert.equal(recovery.corruptCopyRetained, true);
     assert.equal(recovery.readOnly, true);
-    assert.match(recovery.notice, /直前セーブは新しい保存形式v13|読み取り専用/);
+    assert.match(recovery.notice, /直前セーブは新しい保存形式v14|読み取り専用/);
     assert.deepEqual(recovery.enabledControls, []);
     assert.equal(recovery.overflow, 0);
     await recoveryPage.close();
@@ -518,7 +518,7 @@ function startStaticServer(root) {
     await migrationPage.reload({ waitUntil: "networkidle" });
     const migration = await migrationPage.evaluate(({ key, questionId }) => {
       const state = JSON.parse(localStorage.getItem(key));
-      const backup = localStorage.getItem(`${key}-before-upgrade-v10-to-v12`);
+      const backup = localStorage.getItem(`${key}-before-upgrade-v10-to-v13`);
       return {
         schema: state.stateSchemaVersion,
         migratedHistory: state.practicalDrill?.history?.[questionId],
@@ -526,7 +526,7 @@ function startStaticServer(root) {
         notice: document.querySelector("#saveTransferStatus")?.textContent || ""
       };
     }, migrationFixture);
-    assert.equal(migration.schema, 12);
+    assert.equal(migration.schema, 13);
     assert.deepEqual(migration.migratedHistory && {
       attempts: migration.migratedHistory.attempts,
       correct: migration.migratedHistory.correct,
@@ -550,7 +550,7 @@ function startStaticServer(root) {
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({
       status: "ok",
-      schema: 12,
+      schema: 13,
       rawUnchanged: true,
       controlsDisabled: result.controls,
       corruptPrimaryFuturePreviousReadOnly: true,

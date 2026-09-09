@@ -1,6 +1,6 @@
 "use strict";
 
-const VERSION = "20260909-answer-scroll-v48-b544a46a571e";
+const VERSION = "20260910-restriction-grounding-v49-69d7164401d7";
 const CACHE_NAME = `takken-battle-${VERSION}`;
 const IMMUTABLE = [
   "styles.css", "exam-blueprint.js", "exam-question-core.js", "exam-questions-rights.js",

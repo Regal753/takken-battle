@@ -771,7 +771,7 @@ async function installFullScoreProofFixture(page, mode) {
 
     await page.locator("#businessMasteryFull").click();
     let saved = await readSavedState(page);
-    assert.equal(saved.stateSchemaVersion, 12);
+    assert.equal(saved.stateSchemaVersion, 13);
     assert.equal(saved.practicalDrill.bankId, "business-fullscore");
     assert.equal(saved.practicalDrill.sessionSize, 134);
     assert.equal(saved.practicalDrill.queue.length, 134);
