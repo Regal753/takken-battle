@@ -289,6 +289,7 @@ button {
 .dock-explain-button:focus-visible,
 .dock-unsure-button:focus-visible,
 .dock-next-button:focus-visible,
+.question-text:focus-visible,
 .practical-drill-choice:focus-visible,
 .practical-drill-confidence button:focus-visible,
 .calculation-drill-choice:focus-visible,

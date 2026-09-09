@@ -361,6 +361,53 @@ async function answerCurrentCorrectly(page) {
     assert.equal(mobileOverflow.rootOverflow, 0, JSON.stringify(mobileOverflow));
     assert.deepEqual(mobileOverflow.offenders, [], JSON.stringify(mobileOverflow));
     await mobile.screenshot({ path: path.join(screenshotDir, "mobile-390.png"), fullPage: true });
+    const mobileAnswer = await mobile.evaluate((storageId) => {
+      const drill = JSON.parse(localStorage.getItem(storageId) || "{}").calculationDrill;
+      const id = drill.queue[drill.position];
+      return window.TAKKEN_CALCULATION_DRILL.QUESTIONS.find((item) => item.id === id).answer;
+    }, storageIdFor("calc-mobile"));
+    const mobileChoice = mobile.locator("#calculationDrillChoices .calculation-drill-choice").nth(mobileAnswer);
+    await mobileChoice.scrollIntoViewIfNeeded();
+    const calculationAnswerBefore = await mobile.evaluate(() => {
+      window.__takkenOriginalCalculationScrollTo = window.scrollTo;
+      window.__takkenCalculationAnswerScrollCalls = [];
+      window.scrollTo = function (...args) {
+        window.__takkenCalculationAnswerScrollCalls.push(args);
+        return window.__takkenOriginalCalculationScrollTo.apply(window, args);
+      };
+      window.__takkenOriginalCalculationReveal = Element.prototype.scrollIntoView;
+      window.__takkenCalculationAnswerRevealCalls = [];
+      Element.prototype.scrollIntoView = function (...args) {
+        window.__takkenCalculationAnswerRevealCalls.push({ id: this.id || "", args });
+        return window.__takkenOriginalCalculationReveal.apply(this, args);
+      };
+      return window.scrollY;
+    });
+    await mobileChoice.click();
+    await mobile.locator("#calculationDrillFeedback").waitFor({ state: "visible" });
+    await mobile.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const calculationAnswerAfter = await mobile.evaluate(() => {
+      const result = {
+        scrollY: window.scrollY,
+        scrollCalls: [...(window.__takkenCalculationAnswerScrollCalls || [])],
+        revealCalls: [...(window.__takkenCalculationAnswerRevealCalls || [])],
+        activeId: document.activeElement?.id || ""
+      };
+      window.scrollTo = window.__takkenOriginalCalculationScrollTo;
+      Element.prototype.scrollIntoView = window.__takkenOriginalCalculationReveal;
+      delete window.__takkenOriginalCalculationScrollTo;
+      delete window.__takkenCalculationAnswerScrollCalls;
+      delete window.__takkenOriginalCalculationReveal;
+      delete window.__takkenCalculationAnswerRevealCalls;
+      return result;
+    });
+    assert.equal(calculationAnswerAfter.activeId, "calculationDrillFeedback", "calculation feedback must still receive accessible focus");
+    assert.deepEqual(calculationAnswerAfter.scrollCalls, [], `calculation answer must not call window.scrollTo: ${JSON.stringify(calculationAnswerAfter)}`);
+    assert.deepEqual(calculationAnswerAfter.revealCalls, [], `calculation answer must not move the viewport to feedback: ${JSON.stringify(calculationAnswerAfter)}`);
+    assert.ok(
+      Math.abs(calculationAnswerAfter.scrollY - calculationAnswerBefore) <= 1,
+      `calculation answer must preserve the selected-choice viewport: ${JSON.stringify({ calculationAnswerBefore, calculationAnswerAfter })}`
+    );
     await mobileContext.close();
 
     assert.deepEqual(errors, []);

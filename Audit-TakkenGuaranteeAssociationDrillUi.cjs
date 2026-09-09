@@ -249,9 +249,37 @@ async function assertFocusedInViewport(page, expectedSelector) {
     const wrong = await presented(page);
     await page.locator('[data-practical-forecast="confident"]').click();
     assert.equal(await page.locator(".practical-drill-choice:enabled").count(), 4, "forecast selection must unlock all choices");
-    await page.locator(".practical-drill-choice").nth((wrong.answer + 1) % 4).click();
+    const wrongChoice = page.locator(".practical-drill-choice").nth((wrong.answer + 1) % 4);
+    await wrongChoice.scrollIntoViewIfNeeded();
+    const answerScrollBefore = await page.evaluate(() => {
+      window.__takkenOriginalGuaranteeScrollTo = window.scrollTo;
+      window.__takkenGuaranteeAnswerScrollCalls = [];
+      window.scrollTo = function (...args) {
+        window.__takkenGuaranteeAnswerScrollCalls.push(args);
+        return window.__takkenOriginalGuaranteeScrollTo.apply(window, args);
+      };
+      return window.scrollY;
+    });
+    await wrongChoice.click();
     await page.locator("#practicalDrillFeedback").waitFor({ state: "visible" });
-    await assertFocusedInViewport(page, "#practicalDrillFeedback");
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const answerScrollAfter = await page.evaluate(() => {
+      const result = {
+        scrollY: window.scrollY,
+        calls: [...(window.__takkenGuaranteeAnswerScrollCalls || [])],
+        activeId: document.activeElement?.id || ""
+      };
+      window.scrollTo = window.__takkenOriginalGuaranteeScrollTo;
+      delete window.__takkenOriginalGuaranteeScrollTo;
+      delete window.__takkenGuaranteeAnswerScrollCalls;
+      return result;
+    });
+    assert.equal(answerScrollAfter.activeId, "practicalDrillFeedback", "feedback must still receive accessible focus");
+    assert.deepEqual(answerScrollAfter.calls, [], `guarantee answer must not force window.scrollTo: ${JSON.stringify(answerScrollAfter)}`);
+    assert.ok(
+      Math.abs(answerScrollAfter.scrollY - answerScrollBefore) <= 1,
+      `guarantee answer must preserve the selected-choice viewport: ${JSON.stringify({ answerScrollBefore, answerScrollAfter })}`
+    );
     const feedback = await page.locator("#practicalDrillFeedback").textContent();
     assert.doesNotMatch(feedback, /\[object Object\]/, "feedback must never stringify explanation objects");
     assert.match(feedback, /判定のまとめ/);

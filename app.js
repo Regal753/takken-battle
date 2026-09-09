@@ -7802,7 +7802,20 @@
     return [...topics.values()].sort((a, b) => b.score - a.score)[0] || null;
   }
 
-  function goToQuestion(id) {
+  function focusCurrentQuestionWithMinimalScroll() {
+    const prompt = elements.questionText;
+    if (!prompt) return;
+    prompt.focus({ preventScroll: true });
+    prompt.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }
+
+  function revealCurrentQuestionAfterAdvance() {
+    window.requestAnimationFrame(() => window.requestAnimationFrame(() => {
+      focusCurrentQuestionWithMinimalScroll();
+    }));
+  }
+
+  function goToQuestion(id, { scrollMode = "top" } = {}) {
     const nextIndex = ORDER.indexOf(id);
     if (nextIndex < 0) return;
     state.index = nextIndex;
@@ -7812,7 +7825,11 @@
     state.questCompletion = null;
     saveState();
     render();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    if (scrollMode === "question") {
+      revealCurrentQuestionAfterAdvance();
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
   }
 
   function formatCalculationValue(value, unit = "円") {
@@ -7966,7 +7983,6 @@
     renderCalculationDrill();
     window.requestAnimationFrame(() => {
       elements.calculationDrillFeedback?.focus({ preventScroll: true });
-      elements.calculationDrillFeedback?.scrollIntoView({ block: "start", behavior: "smooth" });
     });
   }
 
@@ -10159,7 +10175,9 @@
     renderPracticalDrill();
     renderBusinessMastery();
     renderPassPlan();
-    focusCurrentPracticalContext({ force: true });
+    window.requestAnimationFrame(() => {
+      elements.practicalDrillFeedback?.focus({ preventScroll: true });
+    });
   }
 
   function setPracticalConfidence(confidence) {
@@ -12623,7 +12641,6 @@
     render();
     window.requestAnimationFrame(() => {
       elements.feedbackBox?.focus({ preventScroll: true });
-      elements.feedbackBox?.scrollIntoView({ block: "start", behavior: isCorrect ? "auto" : "smooth" });
     });
   }
 
@@ -12776,9 +12793,10 @@
     }
     setAdvanceBusy(true);
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    const leadIn = reducedMotion ? 0 : 180;
-    const delay = reducedMotion ? 120 : 760;
-    elements.battleField.scrollIntoView({ block: "center", behavior: reducedMotion ? "auto" : "smooth" });
+    const battleRect = elements.battleField.getBoundingClientRect();
+    const battleVisible = battleRect.bottom > 0 && battleRect.top < window.innerHeight;
+    const leadIn = reducedMotion || !battleVisible ? 0 : 180;
+    const delay = reducedMotion || !battleVisible ? 120 : 760;
     window.setTimeout(() => {
       elements.battleField.classList.add("is-marching");
       window.setTimeout(() => {
@@ -12831,13 +12849,13 @@
       state.activeCutCheck = null;
       saveState();
       render();
-      window.scrollTo({ top: 0, behavior: "smooth" });
+      revealCurrentQuestionAfterAdvance();
       return;
     }
     if (isFirstPassMode()) {
       const nextId = nextFirstPassId();
       if (nextId) {
-        goToQuestion(nextId);
+        goToQuestion(nextId, { scrollMode: "question" });
         return;
       }
       showFinished();
@@ -12846,7 +12864,7 @@
     if (isChapterMode()) {
       const nextId = nextChapterModeId();
       if (nextId) {
-        goToQuestion(nextId);
+        goToQuestion(nextId, { scrollMode: "question" });
         return;
       }
       showChapterFinished();
@@ -12863,7 +12881,7 @@
     if (isDailyQuestQuestion(currentId())) {
       const questId = nextDailyQuestId();
       if (questId && questId !== currentId()) {
-        goToQuestion(questId);
+        goToQuestion(questId, { scrollMode: "question" });
         return;
       }
       if (dailyQuestDoneCount() >= dailyQuestIds().length) {
@@ -12874,7 +12892,7 @@
     if (isChapterEnd()) {
       const nextId = nextFirstPassId();
       if (nextId) {
-        goToQuestion(nextId);
+        goToQuestion(nextId, { scrollMode: "question" });
         return;
       }
       showFinished();
@@ -12884,7 +12902,7 @@
     const localIndex = chapter?.ids.indexOf(currentId()) ?? -1;
     const chapterNextId = localIndex >= 0 ? chapter.ids[localIndex + 1] : null;
     if (chapterNextId) {
-      goToQuestion(chapterNextId);
+      goToQuestion(chapterNextId, { scrollMode: "question" });
       return;
     }
     state.index += 1;
@@ -12892,7 +12910,7 @@
     state.activeCutCheck = null;
     saveState();
     render();
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    revealCurrentQuestionAfterAdvance();
   }
 
   function finishMock() {
