@@ -18,12 +18,20 @@ const required = [
   "Audit-TakkenSaveLeaseRaceUi.cjs",
   "Audit-TakkenAccessibilityUi.cjs",
   "Audit-TakkenReleaseIntegrity.js",
+  "Audit-TakkenCurrentLawSources.js",
+  "Audit-TakkenReiwaExamBank.js",
+  "Audit-TakkenReiwaQuestionView.js",
+  "Audit-TakkenReiwaExamUi.cjs",
   "scripts/assemble-site.mjs",
   "scripts/release-integrity.cjs",
   "scripts/update-release-integrity.mjs",
   "scripts/verify-deployed-browser.cjs",
   "styles.css",
+  "reiwa-exam.css",
   "app.js",
+  "current-law-source-ledger.js",
+  "reiwa-exam-bank.js",
+  "reiwa-question-view.js",
   "restrictions-supplement-bank.js",
   "subject-sprint-bank.js",
   "pass-readiness.js",
@@ -107,11 +115,11 @@ const pagesWorkflow = text(".github/workflows/pages.yml");
 const ciWorkflow = text(".github/workflows/ci.yml");
 
 assert.match(index, /name="takken-runtime" content="public-static"/);
-assert.match(index, /manifest\.webmanifest\?v=20260910-restriction-precision-v50-364ed7a15787/);
-assert.match(index, /pwa-runtime\.js\?v=20260910-restriction-precision-v50-364ed7a15787/);
-assert.match(text("service-worker.js"), /const VERSION = "20260910-restriction-precision-v50-364ed7a15787"/);
-assert.match(manifest, /pwa-icon-192\.svg\?v=20260910-restriction-precision-v50-364ed7a15787/);
-assert.match(manifest, /pwa-icon-512\.svg\?v=20260910-restriction-precision-v50-364ed7a15787/);
+assert.match(index, /manifest\.webmanifest\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /pwa-runtime\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(text("service-worker.js"), /const VERSION = "20260910-reiwa-exam-v51-5595c1679292"/);
+assert.match(manifest, /pwa-icon-192\.svg\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(manifest, /pwa-icon-512\.svg\?v=20260910-reiwa-exam-v51-5595c1679292/);
 assert.match(app, /const PUBLIC_STATIC_MODE/);
 assert.match(app, /function publicTodayQuest/);
 assert.match(app, /const DEFAULT_STUDY_SCOPE = "business"/);
@@ -244,29 +252,39 @@ assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 第2分冊・権利関係を固める/);
 assert.match(index, /③ 法令・税その他へ進む/);
 assert.match(index, /④ 全分野を混ぜる/);
-assert.match(index, /styles\.css\?v=20260910-restriction-precision-v50-364ed7a15787/);
-assert.match(index, /restrictions-supplement-bank\.js\?v=20260910-restriction-precision-v50-364ed7a15787/);
-assert.match(index, /subject-sprint-bank\.js\?v=20260910-restriction-precision-v50-364ed7a15787/);
+assert.match(index, /styles\.css\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /reiwa-exam\.css\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /current-law-source-ledger\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /reiwa-exam-bank\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /reiwa-question-view\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.ok(
+  index.indexOf("current-law-source-ledger.js") < index.indexOf("reiwa-exam-bank.js")
+    && index.indexOf("reiwa-exam-bank.js") < index.indexOf("reiwa-question-view.js")
+    && index.indexOf("reiwa-question-view.js") < index.indexOf("app.js"),
+  "Reiwa current-law sources, bank, and view must load before the app",
+);
+assert.match(index, /restrictions-supplement-bank\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /subject-sprint-bank\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
 assert.ok(
   index.indexOf("restrictions-supplement-bank.js") < index.indexOf("subject-sprint-bank.js"),
   "restrictions supplement must load before the subject sprint bank",
 );
-assert.match(index, /pass-readiness\.js\?v=20260910-restriction-precision-v50-364ed7a15787/);
-assert.match(index, /exam-current-year-2026\.js\?v=20260910-restriction-precision-v50-364ed7a15787/);
-assert.match(index, /official-topic-map\.js\?v=20260910-restriction-precision-v50-364ed7a15787/);
-assert.match(index, /business-mastery\.js\?v=20260910-restriction-precision-v50-364ed7a15787/);
-assert.match(index, /business-knock\.js\?v=20260910-restriction-precision-v50-364ed7a15787/);
-assert.match(index, /business-pace\.js\?v=20260910-restriction-precision-v50-364ed7a15787/);
-assert.match(index, /business-fullscore-supplement\.js\?v=20260910-restriction-precision-v50-364ed7a15787/);
-assert.match(index, /business-fullscore-bank\.js\?v=20260910-restriction-precision-v50-364ed7a15787/);
-assert.match(index, /guarantee-association-drill\.js\?v=20260910-restriction-precision-v50-364ed7a15787/);
-assert.match(index, /practical-question-bank\.js\?v=20260910-restriction-precision-v50-364ed7a15787/);
-assert.match(index, /calculation-drill\.js\?v=20260910-restriction-precision-v50-364ed7a15787/);
-assert.match(index, /app\.js\?v=20260910-restriction-precision-v50-364ed7a15787/);
-assert.match(index, /save-store\.js\?v=20260910-restriction-precision-v50-364ed7a15787/);
-assert.match(index, /official-exam-data\.js\?v=20260910-restriction-precision-v50-364ed7a15787/);
-assert.match(index, /official-law-baseline\.js\?v=20260910-restriction-precision-v50-364ed7a15787/);
-assert.match(index, /state-sync\.js\?v=20260910-restriction-precision-v50-364ed7a15787/);
+assert.match(index, /pass-readiness\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /exam-current-year-2026\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /official-topic-map\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /business-mastery\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /business-knock\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /business-pace\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /business-fullscore-supplement\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /business-fullscore-bank\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /guarantee-association-drill\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /practical-question-bank\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /calculation-drill\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /app\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /save-store\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /official-exam-data\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /official-law-baseline\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
+assert.match(index, /state-sync\.js\?v=20260910-reiwa-exam-v51-5595c1679292/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
 assert.doesNotMatch(index, /understanding-system\.js/);
@@ -328,10 +346,16 @@ assert.match(pagesWorkflow, /node Audit-TakkenPassReadiness\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenExamCurrentYear2026\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenOfficialTopicMap\.js/);
 assert.match(pagesWorkflow, /node Audit-TakkenReleaseIntegrity\.js/);
+assert.match(pagesWorkflow, /node Audit-TakkenCurrentLawSources\.js/);
+assert.match(pagesWorkflow, /node Audit-TakkenReiwaExamBank\.js/);
+assert.match(pagesWorkflow, /node Audit-TakkenReiwaQuestionView\.js/);
+assert.match(ciWorkflow, /node Audit-TakkenReiwaExamBank\.js/);
+assert.match(ciWorkflow, /node Audit-TakkenReiwaQuestionView\.js/);
+assert.match(ciWorkflow, /node Audit-TakkenCurrentLawSources\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-browser\.cjs/);
 assert.match(pagesWorkflow, /playwright@1\.62\.1/);
-assert.match(pagesWorkflow, /20260910-restriction-precision-v50-364ed7a15787/);
+assert.match(pagesWorkflow, /20260910-reiwa-exam-v51-5595c1679292/);
 assert.match(pagesWorkflow, /node scripts\/assemble-site\.mjs/);
 assert.match(ciWorkflow, /node Audit-TakkenPwaOffline\.cjs/);
 assert.match(ciWorkflow, /node Audit-TakkenSaveLeaseRaceUi\.cjs/);
@@ -364,7 +388,23 @@ assert.match(ciWorkflow, /static:[\s\S]*browser:[\s\S]*needs: static[\s\S]*valid
 assert.match(ciWorkflow, /node Audit-TakkenExamCurrentYear2026\.js/);
 assert.match(ciWorkflow, /node Audit-TakkenOfficialTopicMap\.js/);
 assert.match(ciWorkflow, /node Audit-Takken2026Coverage\.js/);
+assert.match(ciWorkflow, /node Audit-TakkenReiwaExamUi\.cjs/);
 assert.doesNotMatch(ciWorkflow, /node Audit-TakkenRuleChoiceAmbiguity\.js/);
+
+const serviceWorker = text("service-worker.js");
+for (const reiwaAsset of [
+  "reiwa-exam.css",
+  "current-law-source-ledger.js",
+  "reiwa-exam-bank.js",
+  "reiwa-question-view.js",
+]) {
+  assert.match(serviceWorker, new RegExp(`"${reiwaAsset.replace(/\\./g, "\\\\.")}"`));
+}
+assert.ok(
+  serviceWorker.indexOf('"current-law-source-ledger.js"') < serviceWorker.indexOf('"reiwa-exam-bank.js"')
+    && serviceWorker.indexOf('"reiwa-exam-bank.js"') < serviceWorker.indexOf('"reiwa-question-view.js"'),
+  "Reiwa sources must pre-cache before their bank and view consumers",
+);
 
 const forbiddenNames = new Set([
   ".env",

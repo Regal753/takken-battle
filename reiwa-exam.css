@@ -1,0 +1,26 @@
+/* Opt-in styles for TAKKEN_REIWA_QUESTION_VIEW; no selectors alter legacy UI. */
+.reiwa-question-view { max-width: 860px; margin: 0 auto; color: #edf5f7; }
+.reiwa-question-heading, .reiwa-choice-fieldset, .reiwa-feedback { scroll-margin-top: 76px; }
+.reiwa-question-premise { margin: 0 0 14px; padding: 14px; border-left: 4px solid #f2b94d; background: #152a38; line-height: 1.7; }
+.reiwa-question-premise p { margin: 6px 0 0; }
+.reiwa-eyebrow { color: #f4cc72; }
+.reiwa-statement-list { display: grid; gap: 8px; padding: 0; list-style: none; }
+.reiwa-statement { display: grid; grid-template-columns: 36px minmax(0, 1fr); gap: 10px; padding: 11px; border: 1px solid #36566a; line-height: 1.6; }
+.reiwa-statement-label { color: #f4cc72; }
+.reiwa-choice-fieldset { display: grid; gap: 8px; margin: 16px 0; padding: 12px; border: 1px solid #426a81; }
+.reiwa-choice { min-height: 52px; padding: 10px 14px; border: 1px solid #5e98b7; color: inherit; background: #102737; text-align: left; font: inherit; line-height: 1.5; }
+.reiwa-choice:focus-visible, .reiwa-all-explanations summary:focus-visible { outline: 3px solid #f2b94d; outline-offset: 3px; }
+.reiwa-choice.is-correct { border-color: #70d878; background: #153b2a; }
+.reiwa-choice.is-selected-wrong { border-color: #ff766d; background: #4b2526; }
+.reiwa-feedback { padding: 14px; border-left: 4px solid #79cfff; background: #102737; }
+.reiwa-selected-explanation { font-weight: 700; }
+.reiwa-all-explanations > p { margin: 10px 0 0; line-height: 1.6; }
+.reiwa-answer-dock { position: sticky; bottom: 0; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; padding: 8px max(8px, env(safe-area-inset-right)) calc(8px + env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left)); background: rgba(5, 18, 27, .97); }
+.reiwa-answer-dock button { min-height: 48px; }
+@media (max-width: 360px) {
+  .reiwa-statement { grid-template-columns: 28px minmax(0, 1fr); padding: 9px; }
+  .reiwa-answer-dock { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .reiwa-answer-dock .reiwa-dock-next { grid-column: 1 / -1; grid-row: 1; }
+  .reiwa-answer-dock .reiwa-dock-explain, .reiwa-answer-dock .reiwa-dock-unsure { grid-row: 2; }
+}
+@media (prefers-reduced-motion: reduce) { .reiwa-question-view * { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }

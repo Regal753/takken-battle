@@ -21,6 +21,7 @@ const allowedSourceHosts = new Set([
   "www.jhf.go.jp",
   "www.mlit.go.jp",
   "www.moj.go.jp",
+  "www.nta.go.jp",
   "www.retio.or.jp",
   "www.rftc.jp"
 ]);
@@ -30,7 +31,8 @@ const reasonAlignmentExpectations = Object.freeze({
   l007: [/建築面積.*敷地面積/, /延べ面積.*敷地面積/, /幅員が12メートル未満/, /全国一律に20パーセント.*10分の1/],
   t002: [/1月1日.*課税台帳.*所有者/, /市町村税.*不動産取得税/, /200平方メートル以下.*6分の1/, /年度途中.*1月1日の所有者/],
   t003: [/取得した時.*都道府県/, /毎年度.*市町村/, /固定資産課税台帳.*価格/, /相続人その他の現所有者/],
-  t004: [/登記等.*国税/, /市町村税ではなく.*国税/, /固定資産課税台帳価格.*売買代金/, /抵当権設定登記.*課税対象/],
+  t004: [/登録免許税法.*国税/, /令和11年3月31日.*1,000分の15/, /固定資産課税台帳価格.*売買代金/, /抵当権設定登記.*課税対象/],
+  t005: [/第1号文書.*課税対象/, /(?:10万円を超え.*令和9年3月31日|令和9年3月31日.*10万円を超え)/, /契約書を2通.*各通/, /(?:納付義務.*契約効力.*別|契約効力.*納付義務.*別)/],
   t006: [/申告分離課税/, /1月1日.*5年を超える/, /最高3,000万円/, /収入金額の5パーセント.*概算取得費/]
 });
 
@@ -126,8 +128,24 @@ questions.forEach((question) => {
   if (verdicts.some((verdict) => !verdict)) {
     issues.push(`${question.id}: a choice explanation lacks a verdict`);
   }
+  const isCoreQuestion = Boolean(window.TAKKEN_EXAM_QUESTIONS[question.id]);
+  if (isCoreQuestion && (!Array.isArray(question.choiceFacts) || question.choiceFacts.length !== 4)) {
+    issues.push(`${question.id}: four source facts are required`);
+  }
+  if (isCoreQuestion && (!Array.isArray(question.choiceTruths) || question.choiceTruths.length !== 4)) {
+    issues.push(`${question.id}: four source truth values are required`);
+  } else if (isCoreQuestion) {
+    question.choiceTruths.forEach((truth, index) => {
+      if ((truth ? "○" : "×") !== verdicts[index]) {
+        issues.push(`${question.id}: source truth ${index + 1} does not match its displayed explanation`);
+      }
+    });
+  }
 
   if (question.format === "単一選択") {
+    if (isCoreQuestion && question.choiceFacts?.some((fact, index) => fact !== question.choices[index])) {
+      issues.push(`${question.id}: source facts are not aligned to displayed choices`);
+    }
     const asksIncorrect = question.text.includes("誤っている");
     const expectedAnswerVerdict = asksIncorrect ? "×" : "○";
     const expectedOtherVerdict = asksIncorrect ? "○" : "×";
@@ -142,6 +160,11 @@ questions.forEach((question) => {
       }
     });
   } else if (question.format === "個数問題") {
+    const displayedStatements = question.text.split(/\r?\n/).slice(-4)
+      .map((line) => line.replace(/^\s*[アイウエ]\s*/, ""));
+    if (isCoreQuestion && question.choiceFacts?.some((fact, index) => fact !== displayedStatements[index])) {
+      issues.push(`${question.id}: source facts are not aligned to displayed count statements`);
+    }
     const correctCount = verdicts.filter((verdict) => verdict === "○").length;
     if (correctCount !== question.answer + 1) {
       issues.push(
@@ -183,9 +206,13 @@ Object.entries(reasonAlignmentExpectations).forEach(([id, expectations]) => {
     issues.push(`${id}: reason-alignment fixture question is missing`);
     return;
   }
-  expectations.forEach((pattern, index) => {
-    if (!pattern.test(String(question.choiceExplanations[index] || ""))) {
-      issues.push(`${id}: choice explanation ${index + 1} does not match its legal element`);
+  question.choices.forEach((_, index) => {
+    const originIndex = Array.isArray(question.choiceOriginIndexes)
+      ? question.choiceOriginIndexes[index]
+      : index;
+    const pattern = expectations[originIndex];
+    if (!pattern?.test(String(question.choiceExplanations[index] || ""))) {
+      issues.push(`${id}: displayed choice explanation ${index + 1} does not match original legal element ${originIndex + 1}`);
     }
   });
 });

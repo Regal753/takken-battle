@@ -10,10 +10,11 @@ const releaseIntegrity = require("./release-integrity.json");
 const ROOT = __dirname;
 const EXPECTED_CACHE_VERSION = releaseIntegrity.version;
 releaseIntegrityTools.assertVersionMatchesDigest(releaseIntegrity.version, releaseIntegrity.digest);
-// v50 adds eight fully explained, independently sourced restriction scenarios.
-// Keep a narrow ceiling while allowing the deliberate 4.4 KB gzip increase.
-const MAX_PUBLIC_JS_BYTES = 1_510_000;
-const MAX_PUBLIC_JS_GZIP_BYTES = 360_000;
+// v51 adds the 150-question compound exam generator, current-law source ledger,
+// and structured long-question view. Keep only a narrow margin above the
+// measured release so later unrelated growth still fails closed.
+const MAX_PUBLIC_JS_BYTES = 1_560_000;
+const MAX_PUBLIC_JS_GZIP_BYTES = 380_000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
   "pwa-runtime.js",

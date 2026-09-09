@@ -155,7 +155,7 @@ async function main() {
       !foundationEntry.action.includes("読後2問") ||
       foundationEntry.gate !== "単元 0 / 45" ||
       foundationEntry.mockDisabled ||
-      !foundationEntry.mockTitle.includes("合格安定判定に数えます") ||
+      !foundationEntry.mockTitle.includes("令和現行法") ||
       !foundationEntry.formCExists
     ) {
       throw new Error(`Foundation entry mismatch: ${JSON.stringify(foundationEntry)}`);
@@ -196,7 +196,7 @@ async function main() {
       !blueprintAudit.coachText.includes("全問接触済み") ||
       blueprintAudit.scopeValue !== "business" ||
       blueprintAudit.mockDisabled ||
-      !blueprintAudit.mockTitle.includes("合格安定判定に数えます") ||
+      !blueprintAudit.mockTitle.includes("令和現行法") ||
       blueprintAudit.roundLabel !== "今日 1 / 10" ||
       blueprintAudit.commandTitle !== "固定10問を解く" ||
       blueprintAudit.commandStep !== "今やる・STEP 1 / 4" ||
@@ -644,7 +644,7 @@ async function main() {
     await page.locator("#mockAButton").waitFor({ state: "visible" });
     await page.locator("#mockAButton").click();
     await page.waitForFunction(
-      () => document.querySelector("#quizCard")?.dataset.questionId === "r001"
+      () => document.querySelector("#quizCard")?.dataset.questionId === "reiwa-a-01"
     );
     const mockStart = await page.evaluate((id) => {
       const saved = JSON.parse(localStorage.getItem(id) || "{}");
@@ -661,7 +661,7 @@ async function main() {
     }, storageId);
     if (
       mockStart.runMode !== "mock" ||
-      mockStart.formId !== "form-a" ||
+      mockStart.formId !== "reiwa-form-a" ||
       mockStart.position !== 0 ||
       mockStart.questLabel !== "50問確認模試" ||
       !mockStart.coachText.includes("既習問題の定着確認") ||
@@ -676,7 +676,9 @@ async function main() {
     for (let index = 0; index < 50; index += 1) {
       const question = await page.evaluate(() => {
         const id = document.querySelector("#quizCard")?.dataset.questionId || "";
-        const item = window.TAKKEN_EXAM_QUESTIONS?.[id];
+        const item = window.TAKKEN_REIWA_EXAM_BANK?.forms
+          ?.flatMap((form) => form.questions)
+          .find((candidate) => candidate.id === id);
         if (!item) throw new Error(`Mock question not found: ${id || "missing id"}`);
         return { id: item.id, answer: item.answer };
       });
@@ -736,7 +738,7 @@ async function main() {
         );
       }
     }
-    await page.locator('[data-mock-result="form-a"]').waitFor({ state: "visible" });
+    await page.locator('[data-mock-result="reiwa-form-a"]').waitFor({ state: "visible" });
     const mockResult = await page.evaluate((id) => {
       const saved = JSON.parse(localStorage.getItem(id) || "{}");
       const sections = Object.fromEntries(
@@ -762,6 +764,7 @@ async function main() {
           target: link.target,
           rel: link.rel
         })),
+        wrongSourceBlocks: [...document.querySelectorAll(".mock-wrong-item .mock-source-links")].map((block) => block.textContent?.replace(/\s+/g, " ").trim() || ""),
         calibration: {
           text: document.querySelector(".mock-calibration")?.textContent?.replace(/\s+/g, " ").trim() || "",
           button: document.querySelector("#mockOfficialExamButton")?.textContent?.trim() || "",
@@ -776,7 +779,17 @@ async function main() {
         finalized: Boolean(saved.mock?.finalized),
         history: saved.mockHistory?.length || 0,
         attempts: saved.attempts,
-        weakWrongCount: (saved.mock?.results || []).filter((result) => !result.correct && saved.marked?.[result.id]).length,
+        generatedWrongMarkedCount: (saved.mock?.results || []).filter((result) => !result.correct && saved.marked?.[result.id]).length,
+        generatedAutoMarkedCount: Object.keys(saved.autoMarked || {}).filter((id) => id.startsWith("reiwa-")).length,
+        baseAutoMarkedCount: Object.keys(saved.autoMarked || {}).filter((id) => !id.startsWith("reiwa-")).length,
+        expectedWrongSourceLinkCount: (saved.mock?.results || [])
+          .filter((result) => !result.correct)
+          .reduce((count, result) => {
+            const question = window.TAKKEN_REIWA_EXAM_BANK?.forms
+              ?.flatMap((form) => form.questions)
+              .find((item) => item.id === result.id);
+            return count + new Set((question?.legalSources || []).map((source) => source?.url).filter(Boolean)).size;
+          }, 0),
         wrongConfidenceCount: (saved.mock?.results || []).filter((result) =>
           !result.correct &&
           saved.questionStats?.[result.id]?.lastConfidence === "wrong" &&
@@ -794,16 +807,18 @@ async function main() {
     };
     if (
       !mockResult.scoreText.includes("40 / 50") ||
-      !mockResult.targetText.includes("内部目標40点を達成") ||
+      !mockResult.targetText.includes("令和実戦目標40点を達成") ||
       mockResult.wrongItems !== 10 ||
       JSON.stringify(mockResult.sections) !== JSON.stringify(expectedSections) ||
       !mockResult.priorityText.includes("宅建業法 16/20 → 目標18") ||
       mockResult.historyItems !== 1 ||
       !mockResult.historyText.includes("40 / 50") ||
-      mockResult.wrongSourceLinks.length !== 10 ||
+      mockResult.wrongSourceLinks.length !== mockResult.expectedWrongSourceLinkCount ||
+      mockResult.wrongSourceBlocks.length !== 10 ||
+      mockResult.wrongSourceBlocks.some((text) => !text.includes("公式根拠")) ||
       mockResult.wrongSourceLinks.some((link) =>
         !allowedSourceHosts.has(link.host) ||
-        !link.text.includes("公式根拠") ||
+        !link.text ||
         link.target !== "_blank" ||
         !link.rel.includes("noopener")
       ) ||
@@ -817,14 +832,16 @@ async function main() {
       !mockResult.finalized ||
       mockResult.history !== 1 ||
       mockResult.attempts !== mockStart.attempts + 50 ||
-      mockResult.weakWrongCount !== 10 ||
+      mockResult.generatedWrongMarkedCount !== 0 ||
+      mockResult.generatedAutoMarkedCount !== 0 ||
+      mockResult.baseAutoMarkedCount < 1 ||
       mockResult.wrongConfidenceCount !== 10
     ) {
       throw new Error(`Mock result mismatch: ${JSON.stringify(mockResult)}`);
     }
 
     await page.reload({ waitUntil: "domcontentloaded" });
-    await page.locator('[data-mock-result="form-a"]').waitFor({ state: "visible" });
+    await page.locator('[data-mock-result="reiwa-form-a"]').waitFor({ state: "visible" });
     await page.setViewportSize({ width: 390, height: 844 });
     await page.waitForTimeout(100);
     await page.locator(".mock-wrong-item summary").first().click();
@@ -837,7 +854,7 @@ async function main() {
     }
     await page.locator("#mockOtherButton").click();
     await page.waitForFunction(
-      () => document.querySelector("#quizCard")?.dataset.questionId === "r015"
+      () => document.querySelector("#quizCard")?.dataset.questionId === "reiwa-b-01"
     );
     const formBStart = await page.evaluate((id) => {
       const saved = JSON.parse(localStorage.getItem(id) || "{}");
@@ -847,7 +864,7 @@ async function main() {
         current: document.querySelector("#roundLabel")?.textContent?.trim() || ""
       };
     }, storageId);
-    if (formBStart.formId !== "form-b" || formBStart.position !== 0 || formBStart.current !== "1 / 50") {
+    if (formBStart.formId !== "reiwa-form-b" || formBStart.position !== 0 || formBStart.current !== "1 / 50") {
       throw new Error(`Mock B did not start correctly: ${JSON.stringify(formBStart)}`);
     }
     const formCPage = await context.newPage();
@@ -864,7 +881,7 @@ async function main() {
       const saved = JSON.parse(localStorage.getItem(id) || "{}");
       return { formId: saved.mock?.formId, position: saved.mock?.position, current: document.querySelector("#roundLabel")?.textContent?.trim() || "" };
     }, `takken-battle-study-clean-v2-hard-review-${formCReview}`);
-    if (formCStart.formId !== "form-c" || formCStart.position !== 0 || formCStart.current !== "1 / 50") {
+    if (formCStart.formId !== "reiwa-form-c" || formCStart.position !== 0 || formCStart.current !== "1 / 50") {
       throw new Error(`Mock C did not start correctly: ${JSON.stringify(formCStart)}`);
     }
     await formCPage.close();

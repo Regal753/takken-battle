@@ -140,13 +140,13 @@ async function main() {
   assert.match(runtimeSource, /公式初見3試験回/);
   assert.match(runtimeSource, /required-full-mock/);
   assert.match(runtimeSource, /official-exam/);
-  assert.match(runtimeSource, /補助C.*安定判定外/);
+  assert.match(runtimeSource, /旧フォーム履歴.*安定判定外/);
   assert.match(runtimeSource, /evidenceClass: mockFormEvidenceClass\(form\)/);
   assert.match(runtimeSource, /\.filter\(isStabilityMockForm\)/);
   assert.match(runtimeSource, /function trimMockHistory\(input, limitPerBucket = 10\)/);
   assert.match(runtimeSource, /mockFormEvidenceClass\(form\)\}:\$\{form\.id\}/);
   assert.match(runtimeSource, /state\.mockHistory = trimMockHistory\(\[/);
-  assert.match(markupSource, />補助診断C<\/button>/);
+  assert.match(markupSource, />令和実戦C<\/button>/);
   assert.match(markupSource, /<details id="passPlanPanel"/);
   assert.doesNotMatch(markupSource, /<details id="passPlanPanel"[^>]*\bopen\b/);
   const server = process.env.TAKKEN_BASE_URL ? { baseUrl: process.env.TAKKEN_BASE_URL, close: async () => {} } : await staticServer(process.cwd());
@@ -247,8 +247,9 @@ async function main() {
     assert.equal(forcedOfficial.pace, "一周接触済み");
     await officialGatePage.close();
 
-    // Auxiliary C attempts must never evict qualifying A/B evidence from the
-    // shared persisted history. Each profile/evidence class/form has its own cap.
+    // Legacy attempts stay readable and retained, but cannot contribute to
+    // v51 readiness.  Qualifying evidence comes only from the independent
+    // long-form Reiwa A/B/C bank, and every form keeps its own history cap.
     const historyRetentionPage = await context.newPage();
     historyRetentionPage.on("pageerror", (error) => errors.push(String(error)));
     historyRetentionPage.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
@@ -280,9 +281,9 @@ async function main() {
         sectionScores
       });
       saved.mockHistory = [
-        attempt("form-a", "2026-08-01"),
-        attempt("form-b", "2026-08-02"),
-        attempt("form-a", "2026-08-08"),
+        attempt("reiwa-form-a", "2026-08-01"),
+        attempt("reiwa-form-b", "2026-08-02"),
+        attempt("reiwa-form-a", "2026-08-08"),
         ...["09", "10", "11", "12", "13", "14", "15", "16"]
           .map((day) => attempt("form-c", `2026-08-${day}`))
       ];
@@ -290,19 +291,19 @@ async function main() {
     });
     await historyRetentionPage.reload({ waitUntil: "networkidle" });
     await historyRetentionPage.waitForFunction(() =>
-      (document.querySelector("#passReadinessStatus")?.textContent || "").includes("補助C 8回")
+      (document.querySelector("#passReadinessStatus")?.textContent || "").includes("旧フォーム履歴 8回は安定判定外")
     );
     const historyRetention = await stored(historyRetentionPage);
-    const retainedAorB = historyRetention.state.mockHistory.filter((item) => ["form-a", "form-b"].includes(item.formId));
-    const retainedC = historyRetention.state.mockHistory.filter((item) => item.formId === "form-c");
-    assert.equal(retainedAorB.length, 3, "C practice must not evict the qualifying A/B sequence");
-    assert.equal(retainedC.length, 8);
-    assert.match(await historyRetentionPage.locator("#passReadinessStatus").textContent(), /A\/B測定 通過.*補助C 8回は安定判定外/);
+    const retainedReiwa = historyRetention.state.mockHistory.filter((item) => ["reiwa-form-a", "reiwa-form-b"].includes(item.formId));
+    const retainedLegacy = historyRetention.state.mockHistory.filter((item) => item.formId === "form-c");
+    assert.equal(retainedReiwa.length, 3, "legacy practice must not evict qualifying Reiwa evidence");
+    assert.equal(retainedLegacy.length, 8);
+    assert.match(await historyRetentionPage.locator("#passReadinessStatus").textContent(), /令和実戦測定 通過.*旧フォーム履歴 8回は安定判定外/);
     await historyRetentionPage.close();
 
-    // Repeating A must not erase the only retained B attempt. The newest
-    // three attempts are still all A, so readiness must honestly remain
-    // unstable while both form histories stay available for future evidence.
+    // Repeating Reiwa A must not erase the only retained Reiwa B attempt. The
+    // newest three attempts are still all A, so readiness stays unstable while
+    // both qualifying form histories remain available for future evidence.
     const formRetentionPage = await context.newPage();
     formRetentionPage.on("pageerror", (error) => errors.push(String(error)));
     formRetentionPage.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
@@ -334,21 +335,21 @@ async function main() {
         sectionScores
       });
       saved.mockHistory = [
-        attempt("form-b", "2026-08-01"),
+        attempt("reiwa-form-b", "2026-08-01"),
         ...Array.from({ length: 10 }, (_, index) =>
-          attempt("form-a", `2026-08-${String(index + 2).padStart(2, "0")}`))
+          attempt("reiwa-form-a", `2026-08-${String(index + 2).padStart(2, "0")}`))
       ];
       localStorage.setItem(key, JSON.stringify(saved));
     });
     await formRetentionPage.reload({ waitUntil: "networkidle" });
     await formRetentionPage.waitForFunction(() =>
-      (document.querySelector("#passReadinessStatus")?.textContent || "").includes("A/B両方が必要")
+      (document.querySelector("#passReadinessStatus")?.textContent || "").includes("別2フォームが必要")
     );
     const formRetention = await stored(formRetentionPage);
-    assert.equal(formRetention.state.mockHistory.filter((item) => item.formId === "form-a").length, 10);
-    assert.equal(formRetention.state.mockHistory.filter((item) => item.formId === "form-b").length, 1);
+    assert.equal(formRetention.state.mockHistory.filter((item) => item.formId === "reiwa-form-a").length, 10);
+    assert.equal(formRetention.state.mockHistory.filter((item) => item.formId === "reiwa-form-b").length, 1);
     assert.equal(formRetention.state.mockHistory.length, 11);
-    assert.match(await formRetentionPage.locator("#passReadinessStatus").textContent(), /A\/B測定 要再測定（A\/B両方が必要）/);
+    assert.match(await formRetentionPage.locator("#passReadinessStatus").textContent(), /令和実戦測定 要再測定（別2フォームが必要）/);
     await formRetentionPage.close();
 
     // Retention is source-level evidence. A newer source failure must demote
