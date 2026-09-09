@@ -89,6 +89,7 @@ jobs:
           node Audit-TakkenFullExamUi.cjs
           node Audit-TakkenPassReadinessUi.cjs
           node Audit-TakkenSubjectSprintUi.cjs
+          node Audit-TakkenRestrictionMasteryUi.cjs
           node Audit-TakkenCalculationDrillUi.cjs
           node Audit-TakkenPassPlanUi.cjs
           node Audit-TakkenPassLoopV12Ui.cjs

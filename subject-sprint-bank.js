@@ -25,7 +25,7 @@
   }
   const sourceQuestions = Object.freeze({ ...baseQuestions, ...restrictionsSupplement.QUESTIONS_BY_ID });
 
-  const VERSION = 3;
+  const VERSION = 4;
   const LEGAL_BASELINE = "2026-04-01";
   const clean = (value) => String(value || "").replace(/\s+/g, " ").trim();
   const stableHash = (value) => [...String(value || "")].reduce((hash, character) => ((hash * 31) + character.codePointAt(0)) >>> 0, 2166136261);

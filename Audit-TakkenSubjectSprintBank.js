@@ -23,7 +23,7 @@ function countPromptStatements(source) {
     .map((line) => line.match(/^\s*[アイウエ]\s+(.+)$/)?.[1]?.trim())
     .filter(Boolean);
 }
-assert.equal(bank.VERSION, 3, "bank version");
+assert.equal(bank.VERSION, 4, "bank version");
 assert.equal(bank.LEGAL_BASELINE, "2026-04-01", "legal baseline");
 assert.strictEqual(window.TAKKEN_SUBJECT_SPRINT_BANK, bank, "browser/CommonJS identity");
 assert.ok(Object.isFrozen(bank) && Object.isFrozen(bank.QUESTIONS), "frozen public API");

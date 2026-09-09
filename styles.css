@@ -5340,6 +5340,171 @@ body.is-save-read-only .save-protection-status {
   }
 }
 
+.restriction-mastery-panel {
+  display: grid;
+  gap: 12px;
+  margin: 16px 0;
+  padding: 16px;
+  border: 1px solid rgba(255, 205, 99, 0.55);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(255, 194, 82, 0.13), transparent 34%),
+    linear-gradient(145deg, rgba(10, 31, 27, 0.98), rgba(6, 17, 24, 0.98));
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.24);
+}
+
+.restriction-mastery-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.restriction-mastery-heading > div {
+  display: grid;
+  gap: 3px;
+}
+
+.restriction-mastery-heading span {
+  color: #ffd77e;
+  font-size: 10px;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+}
+
+.restriction-mastery-heading strong {
+  color: #fff8e6;
+  font-size: clamp(20px, 3vw, 28px);
+  line-height: 1.18;
+}
+
+.restriction-mastery-heading .restriction-mastery-target {
+  flex: 0 0 auto;
+  color: #a8edff;
+  font-size: 16px;
+}
+
+.restriction-mastery-panel > p,
+.restriction-mastery-law-note {
+  margin: 0;
+  color: #d1ddd9;
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.6;
+}
+
+.restriction-mastery-law-note a {
+  color: #a8e8ff;
+}
+
+.restriction-mastery-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.restriction-mastery-metrics > div,
+.restriction-mastery-topics > article {
+  display: grid;
+  min-width: 0;
+  gap: 3px;
+  padding: 9px;
+  border: 1px solid rgba(120, 195, 210, 0.22);
+  border-radius: 8px;
+  background: rgba(2, 14, 18, 0.62);
+}
+
+.restriction-mastery-metrics span,
+.restriction-mastery-topics span,
+.restriction-mastery-topics small {
+  color: #9fb8b7;
+  font-size: 10px;
+  font-weight: 850;
+}
+
+.restriction-mastery-metrics strong,
+.restriction-mastery-topics strong {
+  color: #f9fcf7;
+  font-size: 16px;
+}
+
+.restriction-mastery-actions {
+  display: grid;
+  grid-template-columns: 1.25fr 1fr 1fr;
+  gap: 8px;
+}
+
+.restriction-mastery-actions button {
+  min-height: 48px;
+  padding: 9px 11px;
+  border: 1px solid rgba(126, 205, 229, 0.48);
+  border-radius: 9px;
+  color: #e4f7ff;
+  background: rgba(48, 142, 178, 0.13);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 950;
+  cursor: pointer;
+}
+
+.restriction-mastery-actions .restriction-mastery-primary {
+  border-color: #ffd16d;
+  color: #231800;
+  background: linear-gradient(180deg, #ffe39a, #efb747);
+}
+
+.restriction-mastery-actions button:hover:not(:disabled),
+.restriction-mastery-actions button:focus-visible {
+  filter: brightness(1.08);
+}
+
+.restriction-mastery-actions button:disabled {
+  opacity: 0.58;
+  cursor: not-allowed;
+}
+
+.restriction-mastery-status {
+  padding: 8px 10px;
+  border-left: 3px solid #ffd16d;
+  background: rgba(255, 209, 109, 0.07);
+}
+
+.restriction-mastery-topics {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.restriction-mastery-topics > article[data-state="review"] {
+  border-color: rgba(255, 132, 112, 0.62);
+}
+
+.restriction-mastery-topics > article[data-state="grounded"] {
+  border-color: rgba(113, 213, 110, 0.5);
+}
+
+@media (max-width: 760px) {
+  .restriction-mastery-metrics,
+  .restriction-mastery-topics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .restriction-mastery-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 420px) {
+  .restriction-mastery-panel {
+    padding: 13px;
+  }
+
+  .restriction-mastery-heading {
+    align-items: start;
+    flex-direction: column;
+  }
+}
+
 .pass-plan-panel {
   display: grid;
   gap: 14px;
@@ -7430,6 +7595,17 @@ button.mission-step:disabled {
   color: #8de2c1;
   font-size: 10px;
   font-weight: 950;
+}
+
+#practicalDrillRetryStatus.is-over {
+  color: #ff9f9f;
+}
+
+.restriction-mastery-law-note a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding-inline: 3px;
 }
 
 .practical-drill-prompt {
