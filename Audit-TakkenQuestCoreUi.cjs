@@ -63,6 +63,111 @@ async function answerCorrect(page) {
   await page.locator(`.choice-button[data-index="${answer}"]`).click();
 }
 
+async function assertNormalAnswerAndNextKeepContext(browser, baseUrl, wireErrors, viewport) {
+  const label = `${viewport.width}x${viewport.height}`;
+  const page = await browser.newPage({ viewport, timezoneId: "Asia/Tokyo" });
+  wireErrors(page);
+  await page.goto(reviewUrl(baseUrl, `next-context-${viewport.width}`), { waitUntil: "networkidle" });
+  await page.waitForFunction(() => (document.querySelector("#dailyQuestSource")?.textContent || "").includes("読後2問"));
+  const previousId = (await currentAnswer(page)).id;
+  await page.locator(".choice-button").first().scrollIntoViewIfNeeded();
+  await page.evaluate(() => {
+    window.__takkenOriginalScrollTo = window.scrollTo;
+    window.__takkenScrollCalls = [];
+    window.scrollTo = function (...args) {
+      window.__takkenScrollCalls.push(args);
+      return window.__takkenOriginalScrollTo.apply(window, args);
+    };
+    window.__takkenOriginalScrollIntoView = Element.prototype.scrollIntoView;
+    window.__takkenRevealCalls = [];
+    Element.prototype.scrollIntoView = function (...args) {
+      window.__takkenRevealCalls.push({ id: this.id || "", args });
+      return window.__takkenOriginalScrollIntoView.apply(this, args);
+    };
+  });
+  const beforeAnswerScrollY = await page.evaluate(() => window.scrollY);
+  await answerCorrect(page);
+  await page.locator("#feedbackBox").waitFor({ state: "visible" });
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const answerResult = await page.evaluate(() => {
+    const snapshot = {
+      beforeScrollY: 0,
+      afterScrollY: window.scrollY,
+      scrollCalls: [...(window.__takkenScrollCalls || [])],
+      revealCalls: [...(window.__takkenRevealCalls || [])],
+      activeFeedback: document.activeElement?.id === "feedbackBox"
+    };
+    window.__takkenScrollCalls = [];
+    window.__takkenRevealCalls = [];
+    return snapshot;
+  });
+  answerResult.beforeScrollY = beforeAnswerScrollY;
+  assert.equal(answerResult.scrollCalls.length, 0, `${label}: answering must not call window.scrollTo: ${JSON.stringify(answerResult)}`);
+  assert.equal(
+    answerResult.revealCalls.some((call) => call.id === "feedbackBox"),
+    false,
+    `${label}: answering must not move the viewport to feedback: ${JSON.stringify(answerResult)}`
+  );
+  assert.ok(
+    Math.abs(answerResult.afterScrollY - answerResult.beforeScrollY) <= 1,
+    `${label}: answering moved the learner away from the selected choice: ${JSON.stringify(answerResult)}`
+  );
+  assert.equal(answerResult.activeFeedback, true, `${label}: feedback must still receive accessible focus: ${JSON.stringify(answerResult)}`);
+
+  await page.locator("#nextButton").scrollIntoViewIfNeeded();
+  const beforeNextScrollY = await page.evaluate(() => window.scrollY);
+  await page.locator("#nextButton").click();
+  await page.waitForFunction((id) =>
+    document.querySelector("#quizCard")?.dataset.questionId !== id &&
+    Boolean(document.querySelector(".choice-button:not(:disabled)")),
+  previousId);
+  await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+  const nextResult = await page.evaluate(() => {
+    const prompt = document.querySelector("#questionText");
+    const choice = document.querySelector(".choice-button:not(:disabled)");
+    const promptRect = prompt?.getBoundingClientRect();
+    const choiceRect = choice?.getBoundingClientRect();
+    const snapshot = {
+      beforeScrollY: 0,
+      afterScrollY: window.scrollY,
+      scrollCalls: [...(window.__takkenScrollCalls || [])],
+      revealCalls: [...(window.__takkenRevealCalls || [])],
+      promptVisible: Boolean(promptRect && promptRect.bottom > 0 && promptRect.top < window.innerHeight),
+      choiceVisible: Boolean(choiceRect && choiceRect.bottom > 0 && choiceRect.top < window.innerHeight),
+      activePrompt: document.activeElement?.id === "questionText",
+      promptOutline: Number.parseFloat(getComputedStyle(prompt).outlineWidth) || 0
+    };
+    window.scrollTo = window.__takkenOriginalScrollTo;
+    Element.prototype.scrollIntoView = window.__takkenOriginalScrollIntoView;
+    delete window.__takkenOriginalScrollTo;
+    delete window.__takkenScrollCalls;
+    delete window.__takkenOriginalScrollIntoView;
+    delete window.__takkenRevealCalls;
+    return snapshot;
+  });
+  nextResult.beforeScrollY = beforeNextScrollY;
+  assert.equal(
+    nextResult.revealCalls.some((call) => call.id === "battleField"),
+    false,
+    `${label}: next must not drag the viewport to the battle animation: ${JSON.stringify(nextResult)}`
+  );
+  assert.equal(
+    nextResult.scrollCalls.some((args) => Number(args?.[0]?.top ?? args?.[1]) === 0),
+    false,
+    `${label}: next must not reset the page to the top: ${JSON.stringify(nextResult)}`
+  );
+  assert.equal(nextResult.promptVisible, true, `${label}: next question prompt must remain visible: ${JSON.stringify(nextResult)}`);
+  assert.equal(nextResult.choiceVisible, true, `${label}: next answer must remain visible: ${JSON.stringify(nextResult)}`);
+  assert.equal(nextResult.activePrompt, true, `${label}: next prompt must receive keyboard focus: ${JSON.stringify(nextResult)}`);
+  assert.ok(nextResult.promptOutline >= 3, `${label}: next prompt focus ring must remain visible: ${JSON.stringify(nextResult)}`);
+  assert.ok(
+    nextResult.afterScrollY > viewport.height,
+    `${label}: next question fell back to the page header instead of the question context: ${JSON.stringify(nextResult)}`
+  );
+  await page.close();
+  return { answer: answerResult, next: nextResult };
+}
+
 async function outlineWidth(locator) {
   await locator.focus();
   return locator.evaluate((node) => parseFloat(getComputedStyle(node).outlineWidth) || 0);
@@ -81,6 +186,11 @@ async function outlineWidth(locator) {
     page.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
   };
   try {
+    const nextContext = [];
+    for (const viewport of [{ width: 390, height: 844 }, { width: 320, height: 700 }]) {
+      nextContext.push(await assertNormalAnswerAndNextKeepContext(browser, baseUrl, wireErrors, viewport));
+    }
+
     // A normal two-question foundation unit must land on an actual result view,
     // retain it through reload, and let the learner enter the next unit.
     const completion = await browser.newPage({ viewport: { width: 1280, height: 900 }, timezoneId: "Asia/Tokyo" });
@@ -272,7 +382,7 @@ async function outlineWidth(locator) {
     await mobile.close();
 
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: "ok", coverage: ["unit-completion", "unit-batch-totals", "day-rollover", "save-rollback", "structured-statements", "mobile-targets", "archive-label"] }));
+    console.log(JSON.stringify({ status: "ok", coverage: ["normal-answer-and-next-keep-context", "unit-completion", "unit-batch-totals", "day-rollover", "save-rollback", "structured-statements", "mobile-targets", "archive-label"], nextContext }));
   } finally {
     await browser.close();
     if (local) await local.close();

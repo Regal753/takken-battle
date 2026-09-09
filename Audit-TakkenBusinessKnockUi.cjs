@@ -375,9 +375,36 @@ async function presentedFixture(page) {
     assert.equal(await page.locator("#practicalDrillDiscardButton").textContent(), "セットを破棄");
     assert.equal(await page.evaluate(() => document.activeElement?.classList.contains("practical-drill-choice")), true);
     const commandQuestion = await currentPresented(page);
+    await page.locator(".practical-drill-choice").nth(commandQuestion.answer).scrollIntoViewIfNeeded();
+    const practicalAnswerBefore = await page.evaluate(() => {
+      window.__takkenOriginalPracticalScrollTo = window.scrollTo;
+      window.__takkenPracticalAnswerScrollCalls = [];
+      window.scrollTo = function (...args) {
+        window.__takkenPracticalAnswerScrollCalls.push(args);
+        return window.__takkenOriginalPracticalScrollTo.apply(window, args);
+      };
+      return window.scrollY;
+    });
     await page.locator(".practical-drill-choice").nth(commandQuestion.answer).click();
     await page.locator("#practicalDrillFeedback").waitFor({ state: "visible" });
-    assert.equal(await page.evaluate(() => document.activeElement?.id), "practicalDrillFeedback");
+    await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const practicalAnswerAfter = await page.evaluate(() => {
+      const result = {
+        scrollY: window.scrollY,
+        calls: [...(window.__takkenPracticalAnswerScrollCalls || [])],
+        activeId: document.activeElement?.id || ""
+      };
+      window.scrollTo = window.__takkenOriginalPracticalScrollTo;
+      delete window.__takkenOriginalPracticalScrollTo;
+      delete window.__takkenPracticalAnswerScrollCalls;
+      return result;
+    });
+    assert.equal(practicalAnswerAfter.activeId, "practicalDrillFeedback");
+    assert.deepEqual(practicalAnswerAfter.calls, [], `practical answer must not force window.scrollTo: ${JSON.stringify(practicalAnswerAfter)}`);
+    assert.ok(
+      Math.abs(practicalAnswerAfter.scrollY - practicalAnswerBefore) <= 1,
+      `practical answer must preserve the selected-choice viewport: ${JSON.stringify({ practicalAnswerBefore, practicalAnswerAfter })}`
+    );
     await page.reload({ waitUntil: "networkidle" });
     await waitForApp(page);
     commandSaved = await readSavedState(page);
