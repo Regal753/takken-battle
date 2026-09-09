@@ -71,7 +71,10 @@ async function answerSprint(page, { wrong = false } = {}) {
 async function startSprint(page, scope) {
   const panel = page.locator("#passPlanPanel");
   if (!(await panel.evaluate((node) => node.open))) await panel.locator(":scope > summary").click();
-  await page.locator(`[data-subject-sprint="${scope}"]`).click();
+  const selector = scope === "restrictions"
+    ? '[data-subject-sprint="restrictions"]:not([data-subject-sprint-topic])'
+    : `[data-subject-sprint="${scope}"]`;
+  await page.locator(selector).click();
   await page.waitForTimeout(120);
   const probe = await page.evaluate(() => {
     const review = new URL(location.href).searchParams.get("review") || "";

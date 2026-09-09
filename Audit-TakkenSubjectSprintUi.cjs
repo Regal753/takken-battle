@@ -59,7 +59,7 @@ async function waitForApp(page) {
   await page.waitForFunction(() =>
     window.TAKKEN_SUBJECT_SPRINT_BANK?.VERSION === 3 &&
     window.TAKKEN_SUBJECT_SPRINT_BANK?.COVERAGE?.bySection?.restrictions === 32 &&
-    document.querySelector('[data-subject-sprint="restrictions"]')
+    document.querySelector('[data-subject-sprint="restrictions"]:not([data-subject-sprint-topic])')
   );
 }
 
@@ -97,12 +97,12 @@ async function main() {
     await page.goto(url.toString(), { waitUntil: "networkidle", timeout: 20000 });
     await waitForApp(page);
 
-    const button = page.locator('[data-subject-sprint="restrictions"]');
+    const button = page.locator('[data-subject-sprint="restrictions"]:not([data-subject-sprint-topic])');
     assert.equal((await button.textContent()).trim(), "法令 20問（全32問）・約27分");
     assert.equal(await button.getAttribute("data-session-size"), "20");
     // Dispatch the same click event without waiting for the smooth-scroll
     // animation, which is irrelevant to the saved-session contract.
-    await page.evaluate(() => document.querySelector('[data-subject-sprint="restrictions"]')?.click());
+    await page.evaluate(() => document.querySelector('[data-subject-sprint="restrictions"]:not([data-subject-sprint-topic])')?.click());
     await page.waitForFunction((storageKey) => {
       const drill = JSON.parse(localStorage.getItem(storageKey) || "{}").practicalDrill;
       return drill?.bankId === "subject-sprint" && drill?.stage === "active" && drill?.queue?.length === 20;
@@ -222,7 +222,7 @@ async function main() {
     }, key);
     await page.reload({ waitUntil: "networkidle" });
     await waitForApp(page);
-    await page.evaluate(() => document.querySelector('[data-subject-sprint="restrictions"]')?.click());
+    await page.evaluate(() => document.querySelector('[data-subject-sprint="restrictions"]:not([data-subject-sprint-topic])')?.click());
     await page.waitForFunction((storageKey) =>
       JSON.parse(localStorage.getItem(storageKey) || "{}").practicalDrill?.queue?.length === 20,
     key);
@@ -235,6 +235,87 @@ async function main() {
     assert.ok(splitPriority.queue.indexOf("sprint-law-l002") > 1, "same-law retry crosses its attempt bucket to avoid repetition");
     assertAnchorSpacing(splitPriority);
     await context.close();
+
+    const topicReview = `lawtopic${Date.now().toString(36)}`;
+    const topicKey = saveKey(topicReview);
+    const topicContext = await browser.newContext({
+      viewport: { width: 320, height: 844 }, locale: "ja-JP", timezoneId: "Asia/Tokyo", reducedMotion: "reduce"
+    });
+    const topicPage = await topicContext.newPage();
+    topicPage.on("pageerror", (error) => errors.push(String(error)));
+    topicPage.on("console", (message) => {
+      if (message.type() === "error") errors.push(message.text());
+    });
+    const topicUrl = new URL(server.baseUrl);
+    topicUrl.searchParams.set("review", topicReview);
+    topicUrl.searchParams.set("today", "1");
+    await topicPage.goto(topicUrl.toString(), { waitUntil: "networkidle", timeout: 20000 });
+    await waitForApp(topicPage);
+    const topicLayout = await topicPage.evaluate(() => ({
+      overflow: Math.max(0, document.documentElement.scrollWidth - innerWidth),
+      labels: [...document.querySelectorAll("[data-subject-sprint-topic]")].map((node) => node.textContent.trim()),
+      heights: [...document.querySelectorAll("[data-subject-sprint-topic]")].map((node) => Math.round(node.getBoundingClientRect().height))
+    }));
+    assert.equal(topicLayout.overflow, 0, "restriction topic launcher must fit 320px");
+    assert.equal(topicLayout.labels.length, 7, "all restriction catch-up launchers must be exposed");
+    assert.ok(topicLayout.heights.every((height) => height >= 44), `restriction topic target under 44px: ${topicLayout.heights.join(", ")}`);
+
+    await topicPage.evaluate(() =>
+      document.querySelector('[data-subject-sprint-topic="catchup"]')?.click()
+    );
+    await topicPage.waitForFunction((storageKey) => {
+      const drill = JSON.parse(localStorage.getItem(storageKey) || "{}").practicalDrill;
+      return drill?.bankId === "subject-sprint" && drill?.stage === "active" && drill?.queue?.length === 20;
+    }, topicKey);
+    const catchup = await topicPage.evaluate((storageKey) => {
+      const drill = JSON.parse(localStorage.getItem(storageKey) || "{}").practicalDrill;
+      const questions = window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS_BY_ID;
+      return {
+        presentationKey: drill.presentationKey,
+        ids: drill.queue,
+        sourceQuestionIds: drill.queue.map((id) => questions[id].sourceQuestionId)
+      };
+    }, topicKey);
+    const cityPlanningIds = new Set(["l001", "l002", "l003", "l004", "rs001", "rs002"]);
+    assert.match(catchup.presentationKey, /:topic-catchup:/, "catch-up identity must survive reload/restart");
+    assert.equal(catchup.ids.length, 20);
+    assert.equal(new Set(catchup.ids).size, 20);
+    assert.ok(catchup.sourceQuestionIds.every((id) => !cityPlanningIds.has(id)), "catch-up must exclude completed city-planning questions");
+
+    topicPage.once("dialog", (dialog) => dialog.accept());
+    await topicPage.locator("#practicalDrillDiscardButton").click();
+    await topicPage.locator("#practicalDrillSession").waitFor({ state: "hidden" });
+    await topicPage.evaluate(() =>
+      document.querySelector('[data-subject-sprint-topic="building"]')?.click()
+    );
+    await topicPage.waitForFunction((storageKey) =>
+      JSON.parse(localStorage.getItem(storageKey) || "{}").practicalDrill?.queue?.length === 6,
+    topicKey);
+    const buildingSources = await topicPage.evaluate((storageKey) => {
+      const drill = JSON.parse(localStorage.getItem(storageKey) || "{}").practicalDrill;
+      const questions = window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS_BY_ID;
+      return drill.queue.map((id) => questions[id].sourceQuestionId).sort();
+    }, topicKey);
+    assert.deepEqual(buildingSources, ["l005", "l006", "l007", "l008", "rs003", "rs004"]);
+    await topicPage.evaluate((storageKey) => {
+      const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
+      saved.practicalDrill.stage = "complete";
+      saved.practicalDrill.queue = [];
+      saved.practicalDrill.position = 0;
+      saved.practicalDrill.currentAttempt = null;
+      saved.practicalDrill.completedAt = new Date().toISOString();
+      localStorage.setItem(storageKey, JSON.stringify(saved));
+    }, topicKey);
+    await topicPage.reload({ waitUntil: "networkidle", timeout: 20000 });
+    await waitForApp(topicPage);
+    await topicPage.locator("#practicalDrillComplete").waitFor({ state: "visible" });
+    assert.match(await topicPage.locator("#practicalDrillRestartButton").textContent(), /建築基準法をもう一周/);
+    await topicPage.locator("#practicalDrillRestartButton").click();
+    await topicPage.waitForFunction((storageKey) => {
+      const drill = JSON.parse(localStorage.getItem(storageKey) || "{}").practicalDrill;
+      return drill?.stage === "active" && drill?.queue?.length === 6 && /:topic-building:/.test(drill.presentationKey || "");
+    }, topicKey);
+    await topicContext.close();
 
     const defaultReview = `lawdefault${Date.now().toString(36)}`;
     const defaultKey = saveKey(defaultReview);
