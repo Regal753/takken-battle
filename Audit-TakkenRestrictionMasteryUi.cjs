@@ -34,10 +34,30 @@ async function stored(page, key) {
   return page.evaluate((storageKey) => JSON.parse(localStorage.getItem(storageKey) || "{}"), key);
 }
 
+async function completeRestrictionGrounding(page, { required = true } = {}) {
+  const checklist = page.locator("#practicalGroundingChecklist");
+  if (!(await checklist.isVisible())) {
+    assert.equal(required, false, "precision question must expose the grounding checklist");
+    return false;
+  }
+  await checklist.waitFor({ state: "visible" });
+  const buttons = checklist.locator("[data-practical-grounding]");
+  assert.equal(await buttons.count(), 4, "confident restriction answer requires four grounding axes");
+  for (let index = 0; index < 4; index += 1) {
+    await buttons.nth(index).click();
+  }
+  await page.waitForFunction(() =>
+    [...document.querySelectorAll("[data-practical-grounding]")]
+      .every((button) => button.getAttribute("aria-pressed") === "true") &&
+    document.querySelectorAll(".practical-drill-choice:enabled").length === 4
+  );
+  return true;
+}
+
 async function waitForApp(page) {
   await page.waitForFunction(() =>
     Boolean(document.querySelector("#restrictionMasteryPanel")) &&
-    window.TAKKEN_SUBJECT_SPRINT_BANK?.VERSION >= 4
+    window.TAKKEN_SUBJECT_SPRINT_BANK?.VERSION >= 5
   );
 }
 
@@ -46,7 +66,7 @@ async function main() {
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   const errors = [];
   try {
-    const review = `restrictionv49${Date.now().toString(36)}`;
+    const review = `restrictionv50${Date.now().toString(36)}`;
     const key = saveKey(review);
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: "ja-JP", timezoneId: "Asia/Tokyo", reducedMotion: "reduce" });
     const page = await context.newPage();
@@ -75,7 +95,7 @@ async function main() {
       assert.equal(layout.overflow, 0, `${width}px restriction panel overflow`);
       assert.equal(layout.hidden, false, `${width}px restriction panel must be visible without PASS PLAN`);
       assert.notEqual(layout.display, "none", `${width}px restriction panel display`);
-      assert.equal(layout.heights.length, 3, `${width}px restriction action count`);
+      assert.equal(layout.heights.length, 4, `${width}px restriction action count`);
       assert.ok(layout.heights.every((height) => height >= 44), `${width}px restriction action targets: ${layout.heights.join(",")}`);
     }
 
@@ -106,7 +126,15 @@ async function main() {
     assert.match(started.presentationKey, /subject-sprint:restrictions:topic-exam:/, "exam session identity");
     assert.deepEqual(started.distribution, { city: 2, building: 2, national: 1, agriculture: 1, readjustment: 1, embankment: 1 });
     assert.equal(await page.locator(".practical-drill-choice:disabled").count(), 4, "forecast must lock choices");
+    await page.locator('[data-practical-forecast="confident"]').click();
+    const groundingBefore = await page.evaluate(() => ({
+      hidden: document.querySelector("#practicalGroundingChecklist")?.hidden,
+      enabled: document.querySelectorAll(".practical-drill-choice:enabled").length
+    }));
+    assert.equal(groundingBefore.hidden, true, "standard eight-question diagnosis must not impose the precision-only grounding gate");
+    assert.equal(groundingBefore.enabled, 4, "confident standard diagnosis unlocks choices");
     await page.locator('[data-practical-forecast="guess"]').click();
+    assert.equal(await page.locator("#practicalGroundingChecklist").isHidden(), true, "guess route must not retain a confident grounding draft");
     assert.equal(await page.locator(".practical-drill-choice:enabled").count(), 4, "guess unlocks choices");
     const first = await page.evaluate((storageKey) => {
       const state = JSON.parse(localStorage.getItem(storageKey) || "{}");
@@ -126,6 +154,7 @@ async function main() {
     await page.locator("#practicalDrillNextButton").click();
     for (let answered = 1; answered < 8; answered += 1) {
       await page.locator('[data-practical-forecast="confident"]').click();
+      await completeRestrictionGrounding(page, { required: false });
       const answer = await page.evaluate((storageKey) => {
         const state = JSON.parse(localStorage.getItem(storageKey) || "{}");
         const drill = state.practicalDrill;
@@ -154,6 +183,7 @@ async function main() {
     assert.match((await page.locator("#practicalDrillRetryStatus").textContent()).trim(), /^初回 \d{2}:\d{2} \/ 12:00・再出題 1$/);
 
     await page.locator('[data-practical-forecast="confident"]').click();
+    await completeRestrictionGrounding(page, { required: false });
     const retryAnswer = await page.evaluate((storageKey) => {
       const state = JSON.parse(localStorage.getItem(storageKey) || "{}");
       const drill = state.practicalDrill;
@@ -208,6 +238,74 @@ async function main() {
       viewport: innerHeight
     }));
     assert.ok(picker.targetTop >= -2 && picker.targetTop < picker.viewport, `topic picker must scroll restriction catch-up into view: ${JSON.stringify(picker)}`);
+
+    await page.locator("#restrictionPrecisionStart").click();
+    await page.waitForFunction((storageKey) => {
+      const drill = JSON.parse(localStorage.getItem(storageKey) || "{}").practicalDrill;
+      return drill?.stage === "active" && drill?.scope === "restrictions" &&
+        String(drill?.presentationKey || "").includes(":topic-precision:") && drill?.queue?.length === 8;
+    }, key);
+    const precision = await page.evaluate((storageKey) => {
+      const drill = JSON.parse(localStorage.getItem(storageKey) || "{}").practicalDrill;
+      const questions = window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS_BY_ID;
+      return drill.queue.map((id) => questions[id].sourceQuestionId).sort();
+    }, key);
+    assert.deepEqual(precision, ["rs015", "rs016", "rs017", "rs018", "rs019", "rs020", "rs021", "rs022"], "precision mode must be the boundary/actor eight");
+    await page.locator('[data-practical-forecast="confident"]').click();
+    assert.equal(await page.locator(".practical-drill-choice:enabled").count(), 0, "precision confidence alone must keep choices locked");
+    await page.setViewportSize({ width: 320, height: 700 });
+    const precisionMobile = await page.evaluate(() => ({
+      overflow: Math.max(0, document.documentElement.scrollWidth - innerWidth),
+      forecastLabel: document.querySelector("#practicalDrillForecast")?.getAttribute("aria-label"),
+      checklistLabel: document.querySelector(".practical-grounding-actions")?.getAttribute("aria-label"),
+      checklistVisible: !document.querySelector("#practicalGroundingChecklist")?.hidden,
+      axisAria: [...document.querySelectorAll("[data-practical-grounding]")]
+        .map((button) => button.getAttribute("aria-pressed")),
+      visibleTargets: [...document.querySelectorAll("#practicalDrillSession button")]
+        .filter((button) => !button.disabled && button.getBoundingClientRect().height > 0)
+        .map((button) => Math.round(button.getBoundingClientRect().height))
+    }));
+    assert.equal(precisionMobile.overflow, 0, "320px precision session must not overflow");
+    assert.equal(precisionMobile.checklistLabel, "自力で確認した根拠4点");
+    assert.equal(precisionMobile.checklistVisible, true, "precision confidence exposes the four-point checklist on mobile");
+    assert.deepEqual(precisionMobile.axisAria, ["false", "false", "false", "false"], "precision axes expose unselected ARIA state");
+    assert.ok(precisionMobile.visibleTargets.every((height) => height >= 44), `320px precision target under 44px: ${precisionMobile.visibleTargets.join(",")}`);
+    await completeRestrictionGrounding(page);
+    const precisionAnswer = await page.evaluate((storageKey) => {
+      const drill = JSON.parse(localStorage.getItem(storageKey) || "{}").practicalDrill;
+      const id = drill.queue[drill.position];
+      const question = window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS_BY_ID[id];
+      return window.TAKKEN_SUBJECT_SPRINT_BANK.presentQuestion(question, drill.presentationKey).answer;
+    }, key);
+    const scrollBeforePrecisionAnswer = await page.evaluate(() => window.scrollY);
+    await page.locator(".practical-drill-choice").nth(precisionAnswer).click();
+    await page.locator("#practicalDrillFeedback").waitFor({ state: "visible" });
+    const scrollAfterPrecisionAnswer = await page.evaluate(() => window.scrollY);
+    assert.ok(
+      Math.abs(scrollAfterPrecisionAnswer - scrollBeforePrecisionAnswer) <= 160,
+      `precision answer must not jump a material portion of the mobile viewport before the learner chooses Next: ${scrollBeforePrecisionAnswer} -> ${scrollAfterPrecisionAnswer}`
+    );
+    const fourPointFeedback = (await page.locator("#practicalDrillReasoning").textContent()).trim();
+    ["区域・対象", "行為", "主体・手続", "数値・期限"].forEach((label) =>
+      assert.match(fourPointFeedback, new RegExp(label), `precision feedback must expose ${label} grounding`)
+    );
+    await page.locator("#practicalDrillNextButton").click();
+    await page.waitForFunction(() => {
+      const prompt = document.querySelector("#practicalDrillPrompt");
+      if (!prompt) return false;
+      const rect = prompt.getBoundingClientRect();
+      return Boolean(prompt.textContent.trim()) && rect.bottom > 0 && rect.top < innerHeight;
+    });
+    const nextPrompt = await page.evaluate(() => {
+      const prompt = document.querySelector("#practicalDrillPrompt");
+      const rect = prompt.getBoundingClientRect();
+      return { top: rect.top, bottom: rect.bottom, viewport: innerHeight, text: prompt.textContent.trim() };
+    });
+    assert.ok(nextPrompt.text.length > 0, "next precision question must retain prompt text");
+    assert.ok(
+      nextPrompt.bottom > 0 && nextPrompt.top < nextPrompt.viewport,
+      `320px next precision prompt must remain in viewport: ${JSON.stringify(nextPrompt)}`
+    );
     assert.deepEqual(errors, []);
     await context.close();
     console.log(JSON.stringify({ status: "ok", session: started.distribution, guessedQuestion: first.id, errors: errors.length }, null, 2));

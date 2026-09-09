@@ -68,6 +68,15 @@ async function answerSprint(page, { wrong = false } = {}) {
   return question;
 }
 
+async function completeRestrictionGrounding(page) {
+  const checklist = page.locator("#practicalGroundingChecklist");
+  if (!(await checklist.isVisible())) return false;
+  const axes = page.locator("[data-practical-grounding]");
+  assert.equal(await axes.count(), 4, "confident restriction sprint requires four grounding checks");
+  for (let index = 0; index < 4; index += 1) await axes.nth(index).click();
+  return true;
+}
+
 async function startSprint(page, scope) {
   const panel = page.locator("#passPlanPanel");
   if (!(await panel.evaluate((node) => node.open))) await panel.locator(":scope > summary").click();
@@ -90,7 +99,9 @@ async function startSprint(page, scope) {
     assert.equal(await page.locator("#practicalDrillForecast").isHidden(), false, "restriction sprint must require pre-answer evidence");
     assert.equal(await page.locator(".practical-drill-choice:enabled").count(), 0, "restriction choices stay locked before evidence");
     await page.locator('[data-practical-forecast="confident"]').click();
-    assert.equal(await page.locator(".practical-drill-choice:enabled").count(), 4, "restriction evidence unlocks choices");
+    const grounded = await completeRestrictionGrounding(page);
+    assert.equal(await page.locator(".practical-drill-choice:enabled").count(), 4,
+      grounded ? "four-point restriction evidence unlocks precision choices" : "standard restriction confidence unlocks choices");
   } else {
     assert.equal(await page.locator("#practicalDrillForecast").isHidden(), true, "other subject sprints must not inherit the restriction forecast");
     assert.equal(await page.locator(".practical-drill-choice:enabled").count(), 4, "other subject sprint choices must remain immediately answerable");
@@ -154,7 +165,7 @@ async function main() {
     const review = `passreadiness${Date.now().toString(36)}`;
     const url = new URL(server.baseUrl); url.searchParams.set("review", review); url.searchParams.set("today", "1");
     await page.goto(url.toString(), { waitUntil: "networkidle", timeout: 20000 });
-    await page.waitForFunction(() => document.querySelector("#passReadinessTitle")?.textContent?.includes("50問") && window.TAKKEN_SUBJECT_SPRINT_BANK?.QUESTIONS?.length === 94);
+    await page.waitForFunction(() => document.querySelector("#passReadinessTitle")?.textContent?.includes("50問") && window.TAKKEN_SUBJECT_SPRINT_BANK?.QUESTIONS?.length === 102);
 
     const initial = await page.evaluate(() => ({
       targets: [...document.querySelectorAll("#passSubjectGrid strong")].map((node) => node.textContent.trim()),
@@ -351,7 +362,7 @@ async function main() {
     retentionPage.on("pageerror", (error) => errors.push(String(error)));
     retentionPage.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
     await retentionPage.goto(retentionUrl.toString(), { waitUntil: "networkidle", timeout: 20000 });
-    await retentionPage.waitForFunction(() => window.TAKKEN_SUBJECT_SPRINT_BANK?.QUESTIONS?.length === 94);
+    await retentionPage.waitForFunction(() => window.TAKKEN_SUBJECT_SPRINT_BANK?.QUESTIONS?.length === 102);
     const retentionFixture = await retentionPage.evaluate(() => {
       const review = new URL(location.href).searchParams.get("review") || "";
       const key = `takken-battle-study-clean-v2-hard-review-${review}`;

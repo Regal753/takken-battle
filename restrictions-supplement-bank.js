@@ -9,9 +9,9 @@
   root.TAKKEN_RESTRICTIONS_SUPPLEMENT_BANK = api;
   if (root.window && root.window !== root) root.window.TAKKEN_RESTRICTIONS_SUPPLEMENT_BANK = api;
 })(typeof globalThis !== "undefined" ? globalThis : this, function createRestrictionsSupplement() {
-  const VERSION = 1;
+  const VERSION = 2;
   const LEGAL_BASELINE = "2026-04-01";
-  const VERIFIED_AT = "2026-09-09";
+  const VERIFIED_AT = "2026-09-10";
   const kana = Object.freeze(["ア", "イ", "ウ", "エ"]);
   const countLabels = Object.freeze(["一つ", "二つ", "三つ", "四つ"]);
 
@@ -23,6 +23,12 @@
     const sourceUrls = (Array.isArray(input.sourceUrls) ? input.sourceUrls : [input.sourceUrl])
       .map(String)
       .filter(Boolean);
+    const groundingFrame = input.groundingFrame && typeof input.groundingFrame === "object"
+      ? Object.freeze(Object.fromEntries(["area", "action", "actor", "threshold"].map((key) => [
+          key,
+          String(input.groundingFrame[key] || "").trim()
+        ])))
+      : null;
     return {
       id: input.id,
       sectionId: "restrictions",
@@ -38,7 +44,8 @@
       legalBaseline: LEGAL_BASELINE,
       verifiedAt: VERIFIED_AT,
       level: input.level || "本試験標準・独立事例",
-      qualityVersion: 1
+      qualityVersion: 2,
+      ...(groundingFrame ? { groundingFrame } : {})
     };
   }
 
@@ -85,10 +92,16 @@
   const cityPlanningUrl = "https://laws.e-gov.go.jp/law/343AC0000000100?occasion_date=20260401";
   const buildingLawUrl = "https://laws.e-gov.go.jp/law/325AC0000000201?occasion_date=20260401";
   const buildingRevisionUrl = "https://www.mlit.go.jp/jutakukentiku/build/r4kaisei_kijunhou0001.html";
+  const buildingUseChangeUrl = "https://www.mlit.go.jp/sogoseisaku/kanminrenkei/content/001762205.pdf";
+  const floorAreaRatioUrl = "https://www.mlit.go.jp/common/001205298.pdf";
+  const northSlantUrl = "https://www.mlit.go.jp/jutakukentiku/house/content/001854167.pdf";
+  const developmentPermitUrl = "https://www.mlit.go.jp/toshi/city_plan/toshi_city_plan_fr_000046.html";
   const nationalLandUrl = "https://laws.e-gov.go.jp/law/349AC0000000092?occasion_date=20260401";
+  const nationalLandOperationalUrl = "https://www.mlit.go.jp/common/001199260.pdf";
   const nationalLandRevisionUrl = "https://www.mlit.go.jp/report/press/tochi_fudousan_kensetsugyo02_hh_000001_00106.html";
   const agriculturalUrl = "https://laws.e-gov.go.jp/law/327AC0000000229?occasion_date=20260401";
   const readjustmentUrl = "https://laws.e-gov.go.jp/law/329AC0000000119?occasion_date=20260401";
+  const readjustmentGuidanceUrl = "https://www.mlit.go.jp/notice/noticedata/sgml/043/77000130/77000130.html";
   const fillUrl = "https://laws.e-gov.go.jp/law/336AC0000000191?occasion_date=20260401";
   const culturalUrl = "https://laws.e-gov.go.jp/law/325AC1000000214?occasion_date=20260401";
   const roadUrl = "https://laws.e-gov.go.jp/law/327AC1000000180?occasion_date=20260401";
@@ -450,6 +463,261 @@
       sourceLocator: "道路法32条／道路交通法77条",
       sourceUrl: roadUrl,
       sourceUrls: [roadUrl, roadTrafficUrl]
+    }),
+    count({
+      id: "rs015",
+      tag: "開発許可の適用除外",
+      sourceAnchor: "都市計画法",
+      prompt: "都市計画法29条の開発許可と適用除外を、区域・目的・主体に分けて判定する。",
+      statements: [
+        "市街化区域、非線引き都市計画区域又は準都市計画区域では、区域ごとに政令で定める規模未満の開発行為が許可不要となる場合がある。",
+        "市街化調整区域では、開発区域が小さければ予定建築物の用途を問わず当然に開発許可が不要となる。",
+        "図書館や公民館等のうち、政令で定める公益上必要な建築物の建築目的の開発行為は許可不要となり得る。",
+        "国又は都道府県等が行う開発行為は、29条各号の適用除外に当たらなくても知事との協議を一切要しない。"
+      ],
+      truths: [true, false, true, false],
+      notes: [
+        "29条1項1号は、市街化区域・非線引き都市計画区域・準都市計画区域について区域別の小規模除外を置く。",
+        "市街化調整区域には、面積が小さいというだけで使える一律の小規模除外はない。予定建築物の用途等も確認する。",
+        "周辺の適正・合理的な土地利用や環境保全に支障がないものとして政令で定める公益施設は29条1項3号の対象となる。",
+        "国又は都道府県等の開発は、適用除外でなければ知事との協議成立をもって許可があったものとみなす。協議自体が不要になるわけではない。"
+      ],
+      explain: "『小規模・公益施設・公的主体』を一括で許可不要にせず、区域と例外条文を順番に当てはめる。",
+      trap: "調整区域の小規模開発と、公的主体の協議を自動的な許可不要へ置き換えない。",
+      memoryRule: "29条は原則許可。区域別小規模、政令所定の公益施設、国等の協議を別々に判定。",
+      groundingFrame: {
+        area: "市街化・調整・非線引き・準都市のどこか",
+        action: "建築物等のための土地の区画形質変更か",
+        actor: "原則は知事許可。国等は協議成立を許可扱い",
+        threshold: "小規模除外は区域別。調整区域に面積だけの一律除外なし"
+      },
+      sourceRef: "都市計画法／国土交通省 開発許可制度の概要",
+      sourceLocator: "都市計画法29条1項1号・3号、34条の2",
+      sourceUrl: cityPlanningUrl,
+      sourceUrls: [cityPlanningUrl, developmentPermitUrl]
+    }),
+    single({
+      id: "rs016",
+      tag: "市街化調整区域の立地基準",
+      sourceAnchor: "都市計画法",
+      prompt: "市街化調整区域内で開発許可を申請する場合の、都市計画法33条・34条の関係を判定する。",
+      choices: [
+        "33条の技術基準に適合すれば、予定建築物の用途を問わず必ず許可される。",
+        "周辺住民の日常生活に必要な物品を販売する店舗等のための開発行為は、34条の立地基準に該当し得る。",
+        "雇用が増える事業であれば、その内容を問わず34条の立地基準を満たす。",
+        "開発審査会の議を経れば、市街化を促進するおそれがある開発行為でも必ず許可される。"
+      ],
+      truths: [false, true, false, false],
+      notes: [
+        "市街化調整区域では33条の一般的な技術基準に加え、34条各号の立地基準への該当が必要となる。",
+        "周辺住民向けの公益施設や日常生活に必要な店舗・事業場等は34条1号の対象となり得る。",
+        "雇用創出だけを理由に全ての事業が許可対象となる包括的な規定ではない。",
+        "34条14号も、周辺の市街化を促進するおそれがないこと等が前提であり、審査会だけで要件を飛ばせない。"
+      ],
+      explain: "調整区域は『33条の技術基準＋34条の立地基準』の二段階で見る。",
+      trap: "建物の安全性や排水計画が適切でも、それだけで調整区域の立地が許されるとは限らない。",
+      memoryRule: "調整区域は33条だけで終わらない。34条各号に立地理由が必要。",
+      groundingFrame: {
+        area: "市街化調整区域",
+        action: "予定建築物等のための開発行為",
+        actor: "知事が33条と34条を審査",
+        threshold: "34条各号の用途・立地要件。14号も市街化促進のおそれなし"
+      },
+      sourceRef: "都市計画法",
+      sourceLocator: "都市計画法33条・34条1号・14号",
+      sourceUrl: cityPlanningUrl,
+      sourceUrls: [cityPlanningUrl, developmentPermitUrl]
+    }),
+    count({
+      id: "rs017",
+      tag: "特殊建築物への用途変更",
+      sourceAnchor: "建築基準法",
+      prompt: "既存建築物の用途を変更して特殊建築物とする場合の確認手続を判定する。",
+      statements: [
+        "類似用途相互間の変更でない場合、特殊建築物の用途に供する部分が200平方メートルを超える用途変更は原則として確認対象となる。",
+        "特殊建築物の用途に供する部分が200平方メートルちょうどであっても、面積だけで必ず確認対象となる。",
+        "政令で指定する類似用途相互間の変更でも、面積を問わず必ず用途変更の確認申請が必要である。",
+        "用途変更の確認申請が不要な規模でも、変更後の用途に応じた建築基準法上の実体規定を検討する必要がある。"
+      ],
+      truths: [true, false, false, true],
+      notes: [
+        "87条は、類似用途相互間を除き、6条1項1号の200平方メートル超の特殊建築物への用途変更へ確認手続を準用する。",
+        "基準は200平方メートル『超』であり、ちょうど200平方メートルを面積だけで対象にしない。",
+        "政令指定の類似用途相互間の変更は、87条の確認手続準用から除かれる。",
+        "確認申請の要否と、変更後用途に適用される防火・避難等の実体規定への適合は別に検討する。"
+      ],
+      explain: "用途変更は『変更後が特殊建築物か・200平方メートル超か・類似用途か』の三点で確認要否を判定する。",
+      trap: "確認不要を、建築基準法の規制が一切かからないという意味にしない。",
+      memoryRule: "特殊用途へ200平方メートル超、類似用途でなければ確認。200ちょうどは境界外。",
+      groundingFrame: {
+        area: "区域より変更後用途が特殊建築物かを先に確認",
+        action: "既存建築物の用途変更",
+        actor: "建築主が確認申請。類似用途相互間は除外",
+        threshold: "特殊用途部分が200平方メートル超。200ちょうどではない"
+      },
+      sourceRef: "建築基準法／国土交通省 用途変更資料",
+      sourceLocator: "建築基準法6条1項1号・87条1項",
+      sourceUrl: buildingLawUrl,
+      sourceUrls: [buildingLawUrl, buildingUseChangeUrl]
+    }),
+    single({
+      id: "rs018",
+      tag: "前面道路による容積率計算",
+      sourceAnchor: "建築基準法",
+      prompt: "住居系用途地域内で、指定容積率200％、前面道路幅員4メートル、法定乗数10分の4とする敷地について判定する。特例は考えない。",
+      choices: [
+        "指定容積率200％だけを使うので、容積率の上限は200％である。",
+        "前面道路幅員4メートルに10分の4を乗じた160％と指定容積率200％を比べ、上限は160％となる。",
+        "前面道路幅員4メートルに10分の6を乗じればよいので、上限は240％となる。",
+        "前面道路が12メートル未満なら、用途地域と指定容積率を問わず建築できない。"
+      ],
+      truths: [false, true, false, false],
+      notes: [
+        "前面道路幅員が12メートル未満のため、指定容積率と道路幅員による限度の厳しい方を使う。",
+        "4メートル×0.4＝1.6、すなわち160％。指定200％より厳しい160％が上限となる。",
+        "設問は住居系・法定乗数10分の4としているため、10分の6を使わない。",
+        "12メートル未満の道路では幅員による容積率制限を計算するのであり、直ちに建築禁止とはならない。"
+      ],
+      explain: "指定容積率と、前面道路幅員×法定乗数による基準容積率を計算し、小さい方を採る。",
+      trap: "建蔽率と混ぜず、パーセントへ直す。4×0.4＝1.6＝160％。",
+      memoryRule: "前面道路12メートル未満は幅員×乗数。指定値と比べて厳しい方。",
+      groundingFrame: {
+        area: "住居系用途地域",
+        action: "新築計画の容積率上限を計算",
+        actor: "建築主が指定値と道路幅員制限を照合",
+        threshold: "4m×0.4＝160％。指定200％との小さい方"
+      },
+      sourceRef: "建築基準法／国土交通省 容積率資料",
+      sourceLocator: "建築基準法52条2項／国土交通省『容積率（法第52条）』",
+      sourceUrl: buildingLawUrl,
+      sourceUrls: [buildingLawUrl, floorAreaRatioUrl]
+    }),
+    count({
+      id: "rs019",
+      tag: "北側斜線制限",
+      sourceAnchor: "建築基準法",
+      prompt: "建築基準法56条1項3号の北側斜線制限について判定する。特例許可・天空率は考えない。",
+      statements: [
+        "北側斜線制限は、建築物の北側にある敷地等への日照・採光等への影響を抑えるための高さ制限である。",
+        "第一種・第二種低層住居専用地域では、真北方向の境界線等から5メートルを起点に1.25の勾配で制限するのが原則である。",
+        "第一種・第二種中高層住居専用地域では、日影規制の対象区域内でも北側斜線制限が必ず重ねて適用される。",
+        "北側斜線の方向は磁北を基準とし、真北は用いない。"
+      ],
+      truths: [true, true, false, false],
+      notes: [
+        "建築物の北側にある敷地等への日照・採光等への影響が大きいため、真北方向の境界から各部分の高さを制限する。",
+        "低層住居専用地域は原則として、前面道路の反対側境界線又は隣地境界線から真北方向へ起点5メートル、勾配1.25で判定する。別途10メートル又は12メートルの絶対高さも確認する。",
+        "中高層住居専用地域では、条例による日影規制の対象区域内は北側斜線が適用除外となる。",
+        "方向は磁北ではなく真北を用いる。"
+      ],
+      explain: "北側斜線は、用途地域・真北方向・起点高さ・勾配・日影規制による除外の順で判定する。",
+      trap: "低層の5メートルと中高層の10メートル、真北と磁北を入れ替えない。",
+      memoryRule: "低層は真北へ5m＋1.25。第一・第二種中高層は10m＋1.25だが、日影規制対象区域は除外。",
+      groundingFrame: {
+        area: "低層又は中高層住居専用地域",
+        action: "建築物各部分の北側高さを判定",
+        actor: "真北方向の敷地境界線・道路反対側境界線を基準",
+        threshold: "低層5m、中高層10mを起点に勾配1.25。日影規制除外も確認"
+      },
+      sourceRef: "建築基準法／国土交通省 北側斜線制限資料",
+      sourceLocator: "建築基準法56条1項3号・別表第三／国土交通省「北側斜線制限」",
+      sourceUrl: buildingLawUrl,
+      sourceUrls: [buildingLawUrl, northSlantUrl]
+    }),
+    single({
+      id: "rs020",
+      tag: "一団の土地と面積合算",
+      sourceAnchor: "国土利用計画法",
+      prompt: "買主Aは市街化区域内で隣接する1,200平方メートルと900平方メートルの土地を別契約で取得し、一体利用する計画である。注視区域等ではなく、適用除外もない。",
+      choices: [
+        "各契約が2,000平方メートル未満なので、一体利用の計画があっても届出は不要である。",
+        "一団の土地として合計2,100平方メートルとなるため、Aは各契約について契約締結日から起算して2週間以内に事後届出をしなければならない。",
+        "売主だけが届出義務者なので、権利取得者Aは届出をしない。",
+        "届出期限は全ての土地の引渡し完了日から30日以内である。"
+      ],
+      truths: [false, true, false, false],
+      notes: [
+        "取得する土地を一体利用する一団の土地として基準面積以上となる場合、契約を分けても面積要件を免れない。",
+        "市街化区域の基準は2,000平方メートル以上。主体が同じA、隣接地、当初から一体利用する計画なので、合計2,100平方メートルの一団として、Aが各契約を2週間以内に届け出る。",
+        "事後届出の主体は買主等の権利取得者である。",
+        "期限は原則として土地売買等の契約を締結した日から2週間以内であり、引渡し完了から30日ではない。"
+      ],
+      explain: "国土法は契約書1枚ごとの面積だけでなく、一連の計画・物理的一体性・主体の同一性がある一団の土地で基準を判定する。",
+      trap: "分筆・別契約を、そのまま面積基準の分断に使わない。期限の起算点は契約締結日。",
+      memoryRule: "買主目線で一団を合算。市街化2,000、契約から2週間。",
+      groundingFrame: {
+        area: "市街化区域",
+        action: "隣接地を別契約で取得し一体利用",
+        actor: "権利取得者Aが事後届出",
+        threshold: "1,200＋900＝2,100平方メートル、契約締結日から2週間"
+      },
+      sourceRef: "国土利用計画法",
+      sourceLocator: "国土利用計画法23条1項・2項1号イ",
+      sourceUrl: nationalLandUrl,
+      sourceUrls: [nationalLandUrl, nationalLandOperationalUrl]
+    }),
+    count({
+      id: "rs021",
+      tag: "農地法3条・4条・5条の仕分け",
+      sourceAnchor: "農地法",
+      prompt: "市街化区域内の届出特例は考えず、農地法3条・4条・5条の対象行為を判定する。",
+      statements: [
+        "農地を農地のまま耕作者へ売買する権利移動は、3条の問題となる。",
+        "農地所有者が自分で駐車場へ転用する自己転用は、4条の問題となる。",
+        "宅地へ転用する目的で農地を不動産会社へ売買する権利移動は、5条の問題となる。",
+        "相続による農地取得は、常に3条許可を受けなければ効力が生じない。"
+      ],
+      truths: [true, true, true, false],
+      notes: [
+        "農地として使い続けるための所有権移転等は3条で判定する。",
+        "権利移動を伴わず、所有者自身が農地を農地以外へ変える自己転用は4条で判定する。",
+        "転用目的の所有権移転・賃借権設定等は5条で判定する。",
+        "相続は3条許可の対象外だが、農業委員会への届出が別に問題となる。"
+      ],
+      explain: "農地のまま権利移動は3条、自己転用は4条、転用目的の権利移動は5条。",
+      trap: "『売買なら全部3条』ではなく、取得後も農地として使うかを先に見る。",
+      memoryRule: "農地のまま移す3、自己で変える4、変えるために移す5。相続は許可不要・届出。",
+      groundingFrame: {
+        area: "農地。市街化区域の届出特例なし",
+        action: "農地のまま移転／自己転用／転用目的移転",
+        actor: "当事者と農業委員会・都道府県知事等",
+        threshold: "面積より、権利移動と転用の有無で3・4・5条を仕分け"
+      },
+      sourceRef: "農地法",
+      sourceLocator: "農地法3条・4条・5条・3条の3",
+      sourceUrl: agriculturalUrl
+    }),
+    single({
+      id: "rs022",
+      tag: "保留地の帰属時点",
+      sourceAnchor: "土地区画整理法",
+      prompt: "土地区画整理事業の換地計画で、事業費に充てるため保留地が定められた。",
+      choices: [
+        "保留地は必ず従前の特定宅地に対応する換地として定める。",
+        "保留地予定地を換地処分前に販売すれば、その契約時に施行者が当然に所有権を取得する。",
+        "保留地は換地処分公告の日の翌日に施行者が取得し、処分金を事業費等へ充てることができる。",
+        "保留地と清算金は同じ制度なので、保留地を定めた換地計画では清算金を定められない。"
+      ],
+      truths: [false, false, true, false],
+      notes: [
+        "保留地は換地計画で換地として定めず、施行者が事業費等のために処分する土地である。特定の従前地へ対応させない。",
+        "換地処分前の保留地予定地について施行者が設定できるのは使用収益権にとどまり、所有権取得は換地処分の効果を待つ。",
+        "保留地は換地処分公告日の翌日に施行者が原始取得し、換地計画に定め、施行規程等に従って処分金を事業費に充てることができる。",
+        "保留地は事業費等を生む土地、清算金は換地の不均衡を金銭調整する制度で、役割が異なる。"
+      ],
+      explain: "保留地予定地の処分契約と、施行者が所有権を取得する換地処分公告翌日を分ける。",
+      trap: "先行販売を所有権移転と考えず、仮換地・保留地・清算金の役割を混同しない。",
+      memoryRule: "保留地は従前地へ対応させず、公告翌日に施行者が取得して事業費へ。",
+      groundingFrame: {
+        area: "土地区画整理事業の施行地区",
+        action: "換地計画で保留地を設定・処分",
+        actor: "施行者が公告翌日に取得",
+        threshold: "契約時ではなく換地処分公告日の翌日"
+      },
+      sourceRef: "土地区画整理法／国土交通省通知",
+      sourceLocator: "土地区画整理法96条2項・104条11項・108条",
+      sourceUrl: readjustmentUrl,
+      sourceUrls: [readjustmentUrl, readjustmentGuidanceUrl]
     })
   ];
 

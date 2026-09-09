@@ -3,7 +3,7 @@
 const assert = require("node:assert/strict");
 const bank = require("./restrictions-supplement-bank.js");
 
-const expectedIds = Array.from({ length: 14 }, (_, index) =>
+const expectedIds = Array.from({ length: 22 }, (_, index) =>
   `rs${String(index + 1).padStart(3, "0")}`
 );
 const allowedHosts = new Set(["laws.e-gov.go.jp", "www.mlit.go.jp"]);
@@ -21,7 +21,15 @@ const golden = Object.freeze({
   rs011: [/用途・目的/, /二つの規制区域/, /土石の堆積/],
   rs012: [/周辺住民/, /全員の同意/, /中間検査/, /安全な状態/],
   rs013: [/60日前/, /遅滞なく/, /93条/, /96条/],
-  rs014: [/道路占用許可/, /道路使用許可/, /道路管理者/, /警察/]
+  rs014: [/道路占用許可/, /道路使用許可/, /道路管理者/, /警察/],
+  rs015: [/小規模/, /公益施設/, /国等/, /調整区域/],
+  rs016: [/33条/, /34条/, /日常生活/, /市街化/],
+  rs017: [/特殊建築物/, /200平方メートル超/, /類似用途/, /実体規定/],
+  rs018: [/12メートル未満/, /0\.4/, /160％/, /小さい方/],
+  rs019: [/真北/, /5メートル/, /1\.25/, /日影規制/],
+  rs020: [/一団/, /2,100/, /2週間/, /権利取得者/],
+  rs021: [/3条/, /4条/, /5条/, /相続/],
+  rs022: [/保留地/, /公告日の翌日/, /施行者/, /清算金/]
 });
 
 function normalize(value) {
@@ -47,16 +55,16 @@ function jaccard(left, right) {
   return intersection / Math.max(1, new Set([...a, ...b]).size);
 }
 
-assert.equal(bank.VERSION, 1);
+assert.equal(bank.VERSION, 2);
 assert.equal(bank.LEGAL_BASELINE, "2026-04-01");
 assert.deepEqual(bank.QUESTIONS.map((question) => question.id), expectedIds);
-assert.equal(new Set(bank.QUESTIONS.map((question) => question.id)).size, 14);
+assert.equal(new Set(bank.QUESTIONS.map((question) => question.id)).size, 22);
 assert.deepEqual(
   Object.fromEntries([...new Set(bank.QUESTIONS.map((question) => question.format))].sort().map((format) => [
     format,
     bank.QUESTIONS.filter((question) => question.format === format).length
   ])),
-  { "個数問題": 7, "単一選択": 7 }
+  { "個数問題": 11, "単一選択": 11 }
 );
 assert.deepEqual(
   Object.fromEntries([...new Set(bank.QUESTIONS.map((question) => question.sourceAnchor))].map((anchor) => [
@@ -64,11 +72,11 @@ assert.deepEqual(
     bank.QUESTIONS.filter((question) => question.sourceAnchor === anchor).length
   ])),
   {
-    "都市計画法": 2,
-    "建築基準法": 2,
-    "国土利用計画法": 2,
-    "農地法": 2,
-    "土地区画整理法": 2,
+    "都市計画法": 4,
+    "建築基準法": 5,
+    "国土利用計画法": 3,
+    "農地法": 3,
+    "土地区画整理法": 3,
     "宅地造成及び特定盛土等規制法": 2,
     "文化財保護法": 1,
     "道路法": 1
@@ -78,7 +86,7 @@ assert.deepEqual(
 for (const question of bank.QUESTIONS) {
   assert.equal(question.sectionId, "restrictions", `${question.id}: section`);
   assert.equal(question.legalBaseline, "2026-04-01", `${question.id}: legal baseline`);
-  assert.equal(question.verifiedAt, "2026-09-09", `${question.id}: verification date`);
+  assert.equal(question.verifiedAt, "2026-09-10", `${question.id}: verification date`);
   assert.equal(question.choices.length, 4, `${question.id}: choices`);
   assert.equal(question.choiceExplanations.length, 4, `${question.id}: explanations`);
   assert.ok(question.sourceLocator.length >= 8, `${question.id}: pinpoint source locator`);
@@ -98,6 +106,12 @@ for (const question of bank.QUESTIONS) {
   }
   const evidenceText = [question.text, question.explain, question.trap, question.memoryRule, question.sourceLocator, ...question.choiceExplanations].join(" ");
   golden[question.id].forEach((pattern) => assert.match(evidenceText, pattern, `${question.id}: golden rule ${pattern}`));
+  if (Number(question.id.slice(2)) >= 15) {
+    assert.ok(question.groundingFrame && typeof question.groundingFrame === "object", `${question.id}: grounding frame`);
+    ["area", "action", "actor", "threshold"].forEach((key) =>
+      assert.ok(String(question.groundingFrame[key] || "").trim().length >= 4, `${question.id}: grounding frame ${key}`)
+    );
+  }
 }
 
 assert.equal(bank.QUESTIONS_BY_ID.rs014.sourceUrls.length, 2, "rs014: both road-law sources");
@@ -113,4 +127,4 @@ for (let left = 0; left < bank.QUESTIONS.length; left += 1) {
   }
 }
 
-console.log("Takken restrictions supplement audit passed: 14 independent scenarios / 8 source anchors / 7 single + 7 count / official 2026 sources.");
+console.log("Takken restrictions supplement audit passed: 22 independent scenarios / 8 source anchors / 11 single + 11 count / 8 grounded precision scenarios / official 2026 sources.");

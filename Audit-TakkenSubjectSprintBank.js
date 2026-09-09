@@ -13,7 +13,7 @@ const bank = require("./subject-sprint-bank.js");
 
 const expectedSourceIds = Object.freeze({
   taxOther: ["t001","t002","t003","t004","t005","t006"],
-  restrictions: ["l001","l002","l003","l004","l005","l006","l007","l008","l009","l010","l011","l012","l013","l014","l015","l016","l101","l102","rs001","rs002","rs003","rs004","rs005","rs006","rs007","rs008","rs009","rs010","rs011","rs012","rs013","rs014"],
+  restrictions: ["l001","l002","l003","l004","l005","l006","l007","l008","l009","l010","l011","l012","l013","l014","l015","l016","l101","l102","rs001","rs002","rs003","rs004","rs005","rs006","rs007","rs008","rs009","rs010","rs011","rs012","rs013","rs014","rs015","rs016","rs017","rs018","rs019","rs020","rs021","rs022"],
   rights: ["r001","r002","r003","r004","r005","r006","r007","r008","r009","r010","r011","r012","r013","r014","r015","r016","r017","r018","r019","r020","r021","r022","r023","r024","r025","r026","r027","r028","r101","r102","r103","r104","r105","r106","r107","r108","r109","r110","r111","r112","r113","r114","r115","r116"],
   other: ["o001","o002","o003","o004","o005","o006","o007","o008","o009","o010","o101","o102"]
 });
@@ -23,7 +23,7 @@ function countPromptStatements(source) {
     .map((line) => line.match(/^\s*[アイウエ]\s+(.+)$/)?.[1]?.trim())
     .filter(Boolean);
 }
-assert.equal(bank.VERSION, 4, "bank version");
+assert.equal(bank.VERSION, 5, "bank version");
 assert.equal(bank.LEGAL_BASELINE, "2026-04-01", "legal baseline");
 assert.strictEqual(window.TAKKEN_SUBJECT_SPRINT_BANK, bank, "browser/CommonJS identity");
 assert.ok(Object.isFrozen(bank) && Object.isFrozen(bank.QUESTIONS), "frozen public API");
@@ -31,8 +31,8 @@ assert.equal(bank.QUESTIONS.length, expectedTotal, "one item for every approved 
 assert.equal(new Set(bank.QUESTIONS.map((question) => question.id)).size, expectedTotal, "unique sprint ids");
 assert.equal(new Set(bank.QUESTIONS.map((question) => question.sourceQuestionId)).size, expectedTotal, "no duplicate source rotations masquerade as coverage");
 assert.equal(bank.COVERAGE.sourceQuestionCount, expectedTotal, "coverage reports unique source count");
-assert.deepEqual(bank.COVERAGE.bySection, { taxOther: 6, restrictions: 32, rights: 44, other: 12 }, "all approved sources by subject");
-assert.deepEqual(bank.COVERAGE.byFormat, { "個数問題": 11, "単一選択": 83 }, "mixed single/count formats are retained from verified sources");
+assert.deepEqual(bank.COVERAGE.bySection, { taxOther: 6, restrictions: 40, rights: 44, other: 12 }, "all approved sources by subject");
+assert.deepEqual(bank.COVERAGE.byFormat, { "個数問題": 15, "単一選択": 87 }, "mixed single/count formats are retained from verified sources");
 const expectedAll = Object.values(expectedSourceIds).flat().sort();
 assert.deepEqual([...bank.COVERAGE.sourceQuestionIds].sort(), expectedAll, "exact source coverage: no hidden or omitted chapter");
 for (const [sectionId, ids] of Object.entries(expectedSourceIds)) {
@@ -115,6 +115,16 @@ splitDiversified.forEach((id) => {
   if (splitRecent.length > 2) splitRecent.shift();
 });
 assert.equal(bank.QUESTIONS_BY_ID["sprint-law-rs014"].sourceUrls.length, 2, "road question keeps both governing statutes");
+[
+  "sprint-law-rs015", "sprint-law-rs016", "sprint-law-rs017", "sprint-law-rs018",
+  "sprint-law-rs019", "sprint-law-rs020", "sprint-law-rs021", "sprint-law-rs022"
+].forEach((id) => {
+  const frame = bank.QUESTIONS_BY_ID[id]?.groundingFrame;
+  assert.ok(frame && typeof frame === "object", `${id}: grounded precision frame`);
+  ["area", "action", "actor", "threshold"].forEach((key) =>
+    assert.ok(String(frame[key] || "").trim().length >= 4, `${id}: grounded precision ${key}`)
+  );
+});
 // All learner-facing wording is copied from the fixed core or the separately
 // audited restrictions supplement; this sprint layer only routes/presents it.
-console.log("Takken Subject Sprint Bank audit passed: 94 unique verified sources / tax6 law32 rights44 other12 / 376 traced facts / source-anchor separation 2.");
+console.log("Takken Subject Sprint Bank audit passed: 102 unique verified sources / tax6 law40 rights44 other12 / 408 traced facts / source-anchor separation 2.");

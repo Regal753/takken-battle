@@ -466,7 +466,7 @@ async function assertFocusedInViewport(page, expectedSelector) {
       let lawSources = await routePage.evaluate((queue) => queue.map((id) =>
         window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS_BY_ID[id].sourceQuestionId
       ), routed.state.practicalDrill.queue);
-      assert.ok(lawSources.some((id) => ["l001", "l002", "l003", "l004", "rs001", "rs002"].includes(id)), "law route must include city planning while its saved coverage is incomplete");
+      assert.ok(lawSources.some((id) => ["l001", "l002", "l003", "l004", "rs001", "rs002", "rs015", "rs016"].includes(id)), "law route must include city planning while its saved coverage is incomplete");
 
       routePage.once("dialog", (dialog) => dialog.accept());
       await routePage.locator("#practicalDrillDiscardButton").click();
@@ -488,7 +488,7 @@ async function assertFocusedInViewport(page, expectedSelector) {
             };
           });
         localStorage.setItem(key, JSON.stringify(saved));
-      }, { key: routeFixture.key, cityPlanningIds: ["l001", "l002", "l003", "l004", "rs001", "rs002"] });
+      }, { key: routeFixture.key, cityPlanningIds: ["l001", "l002", "l003", "l004", "rs001", "rs002", "rs015", "rs016"] });
       await routePage.reload({ waitUntil: "networkidle", timeout: 20000 });
       await waitForApp(routePage);
       assert.match(await routePage.locator("#postTrainingRestrictions").textContent(), /都市計画法以外を20問で診断/);
@@ -499,7 +499,7 @@ async function assertFocusedInViewport(page, expectedSelector) {
       lawSources = await routePage.evaluate((queue) => queue.map((id) =>
         window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS_BY_ID[id].sourceQuestionId
       ), routed.state.practicalDrill.queue);
-      assert.ok(lawSources.every((id) => !["l001", "l002", "l003", "l004", "rs001", "rs002"].includes(id)), "post-training law route may skip city planning only after all six sources are in saved history");
+      assert.ok(lawSources.every((id) => !["l001", "l002", "l003", "l004", "rs001", "rs002", "rs015", "rs016"].includes(id)), "post-training law route may skip city planning only after all eight sources are in saved history");
 
       routePage.once("dialog", (dialog) => dialog.accept());
       await routePage.locator("#practicalDrillDiscardButton").click();

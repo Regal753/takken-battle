@@ -42,12 +42,21 @@
   const LEGACY_PRACTICAL_BANK_ID = "legacy-practical";
   const BUSINESS_FULLSCORE_EXPECTED_QUESTIONS = 134;
   const GUARANTEE_SPECIAL_EXPECTED_QUESTIONS = 33;
-  const SUBJECT_SPRINT_EXPECTED_QUESTIONS = 94;
+  const SUBJECT_SPRINT_EXPECTED_QUESTIONS = 102;
   const SUBJECT_SPRINT_RESTRICTIONS_SESSION_SIZE = 20;
   const RESTRICTION_EXAM_SESSION_SIZE = 8;
   const RESTRICTION_EXAM_TARGET_MINUTES = 12;
   const RESTRICTION_EXAM_TARGET_MS = RESTRICTION_EXAM_TARGET_MINUTES * 60 * 1000;
   const RESTRICTION_EXAM_TARGET_GROUNDED = 7;
+  const RESTRICTION_GROUNDING_AXES = Object.freeze([
+    Object.freeze({ id: "area", label: "区域・対象" }),
+    Object.freeze({ id: "action", label: "行為" }),
+    Object.freeze({ id: "actor", label: "主体・手続" }),
+    Object.freeze({ id: "threshold", label: "数値・期限" })
+  ]);
+  const RESTRICTION_PRECISION_SOURCE_IDS = Object.freeze([
+    "rs015", "rs016", "rs017", "rs018", "rs019", "rs020", "rs021", "rs022"
+  ]);
   const EXAM_PROFILE_GENERAL = "general";
   const EXAM_PROFILE_FIVE_EXEMPT = "fiveExempt";
   const EXAM_PROFILE_IDS = new Set([EXAM_PROFILE_GENERAL, EXAM_PROFILE_FIVE_EXEMPT]);
@@ -203,22 +212,27 @@
       id: "exam",
       label: "法令8問・12分",
       sourceQuestionIds: Object.freeze([
-        "l001", "l002", "l003", "l004", "rs001", "rs002",
-        "l005", "l006", "l007", "l008", "rs003", "rs004",
-        "l009", "l010", "rs005", "rs006",
-        "l011", "l012", "rs007", "rs008",
-        "l013", "l014", "rs009", "rs010",
+        "l001", "l002", "l003", "l004", "rs001", "rs002", "rs015", "rs016",
+        "l005", "l006", "l007", "l008", "rs003", "rs004", "rs017", "rs018", "rs019",
+        "l009", "l010", "rs005", "rs006", "rs020",
+        "l011", "l012", "rs007", "rs008", "rs021",
+        "l013", "l014", "rs009", "rs010", "rs022",
         "l015", "l016", "rs011", "rs012"
       ])
+    }),
+    precision: Object.freeze({
+      id: "precision",
+      label: "境界・主体8問",
+      sourceQuestionIds: RESTRICTION_PRECISION_SOURCE_IDS
     }),
     catchup: Object.freeze({
       id: "catchup",
       label: "都市計画法以外",
       sourceQuestionIds: Object.freeze([
-        "l005", "l006", "l007", "l008", "rs003", "rs004",
-        "l009", "l010", "rs005", "rs006",
-        "l011", "l012", "rs007", "rs008",
-        "l013", "l014", "rs009", "rs010",
+        "l005", "l006", "l007", "l008", "rs003", "rs004", "rs017", "rs018", "rs019",
+        "l009", "l010", "rs005", "rs006", "rs020",
+        "l011", "l012", "rs007", "rs008", "rs021",
+        "l013", "l014", "rs009", "rs010", "rs022",
         "l015", "l016", "rs011", "rs012",
         "l101", "l102", "rs013", "rs014"
       ])
@@ -226,27 +240,27 @@
     "city-planning": Object.freeze({
       id: "city-planning",
       label: "都市計画法",
-      sourceQuestionIds: Object.freeze(["l001", "l002", "l003", "l004", "rs001", "rs002"])
+      sourceQuestionIds: Object.freeze(["l001", "l002", "l003", "l004", "rs001", "rs002", "rs015", "rs016"])
     }),
     building: Object.freeze({
       id: "building",
       label: "建築基準法",
-      sourceQuestionIds: Object.freeze(["l005", "l006", "l007", "l008", "rs003", "rs004"])
+      sourceQuestionIds: Object.freeze(["l005", "l006", "l007", "l008", "rs003", "rs004", "rs017", "rs018", "rs019"])
     }),
     "national-land": Object.freeze({
       id: "national-land",
       label: "国土利用計画法",
-      sourceQuestionIds: Object.freeze(["l009", "l010", "rs005", "rs006"])
+      sourceQuestionIds: Object.freeze(["l009", "l010", "rs005", "rs006", "rs020"])
     }),
     agriculture: Object.freeze({
       id: "agriculture",
       label: "農地法",
-      sourceQuestionIds: Object.freeze(["l011", "l012", "rs007", "rs008"])
+      sourceQuestionIds: Object.freeze(["l011", "l012", "rs007", "rs008", "rs021"])
     }),
     readjustment: Object.freeze({
       id: "readjustment",
       label: "土地区画整理法",
-      sourceQuestionIds: Object.freeze(["l013", "l014", "rs009", "rs010"])
+      sourceQuestionIds: Object.freeze(["l013", "l014", "rs009", "rs010", "rs022"])
     }),
     embankment: Object.freeze({
       id: "embankment",
@@ -260,7 +274,7 @@
     })
   });
   const SUBJECT_SPRINT_CITY_PLANNING_SOURCE_IDS = Object.freeze([
-    "l001", "l002", "l003", "l004", "rs001", "rs002"
+    "l001", "l002", "l003", "l004", "rs001", "rs002", "rs015", "rs016"
   ]);
   const RESTRICTION_EXAM_TOPIC_PLAN = Object.freeze([
     Object.freeze({ topicId: "city-planning", count: 2 }),
@@ -959,6 +973,7 @@
     restrictionMasteryStatus: $("#restrictionMasteryStatus"),
     restrictionMasteryTopics: $("#restrictionMasteryTopics"),
     restrictionExamStart: $("#restrictionExamStart"),
+    restrictionPrecisionStart: $("#restrictionPrecisionStart"),
     restrictionMasteryTwenty: $("#restrictionMasteryTwenty"),
     restrictionTopicOpen: $("#restrictionTopicOpen"),
     passPlanPanel: $("#passPlanPanel"),
@@ -1072,6 +1087,8 @@
     practicalDrillPrompt: $("#practicalDrillPrompt"),
     practicalConfidenceHint: $("#practicalConfidenceHint"),
     practicalDrillForecast: $("#practicalDrillForecast"),
+    practicalGroundingChecklist: $("#practicalGroundingChecklist"),
+    practicalGroundingStatus: $("#practicalGroundingStatus"),
     practicalDrillChoices: $("#practicalDrillChoices"),
     practicalDrillSaveError: $("#practicalDrillSaveError"),
     practicalDrillFeedback: $("#practicalDrillFeedback"),
@@ -1271,6 +1288,7 @@
   }
   let isAdvancing = false;
   let isFlushingEvents = false;
+  let practicalGroundingDraft = { questionId: "", axes: new Set() };
   let activeDayKey = todayKey();
   const logConnection = {
     checked: false,
@@ -8660,12 +8678,15 @@
     const legalSessionActive = state.practicalDrill?.bankId === SUBJECT_SPRINT_BANK_ID &&
       state.practicalDrill?.scope === "restrictions" &&
       ["active", "retry"].includes(state.practicalDrill?.stage);
+    const legalSessionTopic = legalSessionActive ? subjectSprintSessionTopic(state.practicalDrill) : null;
     const anotherSessionActive = Boolean(activeLearningSession()) && !legalSessionActive;
     const latestExam = state.practicalDrill?.restrictionExamResult;
     if (legalSessionActive) {
       elements.restrictionMasteryStatus.textContent = isRestrictionExamDrill()
-        ? `8問診断進行中。${restrictionExamTimeText()}。答える前の根拠判定を続けてください。`
-        : `法令セット進行中。答える前の根拠判定を続けてください。現在の要再戦は${summary.review}問です。`;
+        ? `8問診断進行中。${restrictionExamTimeText()}。ヤマ勘を分けて記録してください。一時停止しても保存位置から再開できます。`
+        : legalSessionTopic?.id === "precision"
+          ? `境界・主体8問を特訓中。4点確認を続けてください。再開時は4点をもう一度確認します。`
+          : `法令セット進行中。要再戦は${summary.review}問。一時停止しても保存位置から再開できます。`;
     } else if (anotherSessionActive) {
       elements.restrictionMasteryStatus.textContent =
         "別の学習セットが進行中です。先に保存位置から完了すると、法令診断を開始できます。";
@@ -8682,21 +8703,26 @@
         `未接触${summary.total - summary.contacted}問。まず8問診断で、知識不足とヤマ勘を分けて測ります。`;
     } else if (summary.retained < summary.total) {
       elements.restrictionMasteryStatus.textContent =
-        `32問へ接触済み。別日定着は${summary.retained}/${summary.total}です。期限到来ごとに8問診断を回します。`;
+        `${summary.total}問へ接触済み。別日定着は${summary.retained}/${summary.total}です。期限到来ごとに8問診断を回します。`;
     } else {
       elements.restrictionMasteryStatus.textContent =
-        "32問すべて別日定着。法令8問を12分以内・根拠あり7/8以上で維持します。";
+        `${summary.total}問すべて別日定着。法令8問を12分以内・根拠あり7/8以上で維持します。`;
     }
 
     const controlsDisabled = !SUBJECT_SPRINT_READY;
     elements.restrictionExamStart.disabled = controlsDisabled;
-    elements.restrictionMasteryTwenty.disabled = controlsDisabled;
+    elements.restrictionPrecisionStart.disabled = controlsDisabled || legalSessionActive;
+    elements.restrictionMasteryTwenty.disabled = controlsDisabled || legalSessionActive;
+    elements.restrictionTopicOpen.disabled = controlsDisabled || legalSessionActive;
     elements.restrictionExamStart.textContent = legalSessionActive
       ? "進行中の法令セットを再開"
       : `法令${RESTRICTION_EXAM_SESSION_SIZE}問・${RESTRICTION_EXAM_TARGET_MINUTES}分 根拠診断`;
     elements.restrictionMasteryTwenty.textContent = legalSessionActive
-      ? "進行中の法令セットを再開"
+      ? "20問ノックはセット完了後"
       : "弱点・未接触を20問ノック";
+    elements.restrictionPrecisionStart.textContent = legalSessionActive
+      ? "境界8問はセット完了後"
+      : "境界・主体8問を特訓";
 
     elements.restrictionMasteryTopics.replaceChildren(...RESTRICTION_MASTERY_TOPIC_IDS.map((topicId) => {
       const topic = subjectSprintTopicDefinition("restrictions", topicId);
@@ -9080,6 +9106,76 @@
     return !attempt && practicalForecastValues(drill).length > 0;
   }
 
+  function restrictionGroundingRequired(
+    drill = state.practicalDrill,
+    attempt = drill?.currentAttempt,
+    question = currentPresentedPracticalQuestion()
+  ) {
+    return !attempt &&
+      drill?.bankId === SUBJECT_SPRINT_BANK_ID &&
+      drill?.scope === "restrictions" &&
+      drill?.preAnswerConfidence === "confident" &&
+      Boolean(question?.groundingFrame);
+  }
+
+  function groundingDraftFor(question = currentPracticalQuestion()) {
+    const questionId = String(question?.id || "");
+    if (practicalGroundingDraft.questionId !== questionId) {
+      practicalGroundingDraft = { questionId, axes: new Set() };
+    }
+    return practicalGroundingDraft;
+  }
+
+  function restrictionGroundingComplete(question = currentPracticalQuestion()) {
+    const draft = groundingDraftFor(question);
+    return RESTRICTION_GROUNDING_AXES.every(({ id }) => draft.axes.has(id));
+  }
+
+  function togglePracticalGrounding(axisId) {
+    const drill = state.practicalDrill;
+    const question = currentPracticalQuestion();
+    if (!restrictionGroundingRequired(drill) ||
+        !RESTRICTION_GROUNDING_AXES.some(({ id }) => id === axisId) || !question) return;
+    const draft = groundingDraftFor(question);
+    if (draft.axes.has(axisId)) draft.axes.delete(axisId);
+    else draft.axes.add(axisId);
+    renderPracticalDrill();
+    window.requestAnimationFrame(() => {
+      const target = restrictionGroundingComplete(question)
+        ? elements.practicalDrillChoices?.querySelector("button:not(:disabled)")
+        : elements.practicalGroundingChecklist?.querySelector(
+            `[data-practical-grounding]:not([aria-pressed="true"])`
+          );
+      target?.focus({ preventScroll: true });
+    });
+  }
+
+  function practicalGroundingFrameStep(question) {
+    const frame = question?.groundingFrame;
+    if (!frame || !RESTRICTION_GROUNDING_AXES.every(({ id }) => String(frame[id] || "").trim())) return null;
+    const item = document.createElement("li");
+    item.className = "practical-grounding-frame-step";
+    const marker = document.createElement("span");
+    marker.textContent = "3";
+    const copy = document.createElement("div");
+    const heading = document.createElement("strong");
+    heading.textContent = "根拠4点の正解";
+    const grid = document.createElement("dl");
+    grid.className = "practical-grounding-frame";
+    RESTRICTION_GROUNDING_AXES.forEach(({ id, label }) => {
+      const row = document.createElement("div");
+      const term = document.createElement("dt");
+      term.textContent = label;
+      const description = document.createElement("dd");
+      description.textContent = frame[id];
+      row.append(term, description);
+      grid.append(row);
+    });
+    copy.append(heading, grid);
+    item.append(marker, copy);
+    return item;
+  }
+
   function practicalForecastVerdict(question, attempt, guaranteeSpecialSession) {
     const retryTiming = guaranteeSpecialSession
       ? "3問以上空けるか翌日以降に再テストする。"
@@ -9172,7 +9268,7 @@
             ? `${completionLabel}を完了。初回は正答${restrictionExamResult.firstPassCorrect}/8、根拠あり${restrictionExamResult.groundedCorrect}/8、迷い${restrictionExamResult.uncertainAnswers}・ヤマ勘${restrictionExamResult.guessAnswers}、所要${formatElapsed(restrictionExamResult.elapsedMs)}/${RESTRICTION_EXAM_TARGET_MINUTES}:00。判定は${restrictionExamVerdict}です。迷い・ヤマ勘・誤答も再出題で回収しました。`
             : `${completionLabel}を完了しましたが、今回結果を復元できませんでした。もう一度測り直してください。`
         : subjectSprintSession
-          ? `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計${drill.attempts}解答、根拠クリア${grounded}問です。${subjectSprintTopic?.id === "catchup" ? `都市計画法以外26問の未接触は残り${subjectSprintTopicUntouched}問。${subjectSprintTopicUntouched ? "同じ20問診断を続けると未接触を優先して回収します。" : "26問すべてへ接触済みです。"}` : ""}`
+          ? `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計${drill.attempts}解答、根拠クリア${grounded}問です。${subjectSprintTopic?.id === "catchup" ? `都市計画法以外${subjectSprintTopic.sourceQuestionIds.length}問の未接触は残り${subjectSprintTopicUntouched}問。${subjectSprintTopicUntouched ? "同じ20問診断を続けると未接触を優先して回収します。" : `${subjectSprintTopic.sourceQuestionIds.length}問すべてへ接触済みです。`}` : ""}`
         : `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計${drill.attempts}解答、根拠クリア${grounded}問です。`;
       elements.practicalDrillRestartButton.textContent = knockSession
         ? nextKnockPlan?.size
@@ -9206,9 +9302,13 @@
     const forecastRequired = practicalForecastRequired(drill, attempt);
     const sessionRetryCount = drill.retryIds.filter((id) => drill.sessionIds.includes(id)).length;
     elements.practicalDrillStage.textContent = drill.stage === "retry"
-      ? restrictionSprintSession ? "ヤマ勘・迷い・誤答を再出題" : "迷い・誤答を再出題"
+      ? restrictionSprintSession
+        ? `${subjectSprintTopic?.label || "法令"}・ヤマ勘・迷い・誤答を再出題`
+        : "迷い・誤答を再出題"
       : restrictionExamSession
         ? `法令${RESTRICTION_EXAM_SESSION_SIZE}問・${RESTRICTION_EXAM_TARGET_MINUTES}分 根拠診断`
+      : subjectSprintTopic
+        ? `${subjectSprintTopic.label} 特訓`
       : unitSession
         ? `${unitSession.label}・${drill.sessionIds.length}問`
         : `${drill.sessionIds.length}問 ${bankLabel}セット`;
@@ -9231,8 +9331,10 @@
     if (elements.practicalConfidenceHint) {
       elements.practicalConfidenceHint.textContent = guaranteeSpecialSession
         ? "正誤・解説を見る前に手応えを選びます。根拠あり予想からの誤答は過信ミスとして残します。"
+        : restrictionSprintSession && question.groundingFrame
+          ? "根拠ありなら、区域→行為→主体→数値・期限を自力で言って4点を押す。2択・ヤマ勘は正解でも再出題します。"
         : restrictionSprintSession
-          ? "答える前に、区域→行為→主体→数値・期限の順で確認。2択・ヤマ勘は正解でも再出題します。"
+          ? "解説を見る前に手応えを選びます。2択・ヤマ勘の正解は同じセットで再出題します。"
         : "正解後に「根拠を言えた」か「迷った」かを記録し、迷いは復習へ戻します。";
     }
     if (elements.practicalDrillForecast) {
@@ -9245,6 +9347,24 @@
           button.setAttribute("aria-pressed", String(selected));
           button.classList.toggle("is-selected", selected);
         });
+    }
+    const groundingRequired = restrictionGroundingRequired(drill, attempt);
+    if (elements.practicalGroundingChecklist) {
+      elements.practicalGroundingChecklist.hidden = !groundingRequired;
+      if (groundingRequired) {
+        const draft = groundingDraftFor(question);
+        elements.practicalGroundingChecklist
+          .querySelectorAll("[data-practical-grounding]")
+          .forEach((button) => {
+            const selected = draft.axes.has(button.dataset.practicalGrounding);
+            button.setAttribute("aria-pressed", String(selected));
+            button.classList.toggle("is-selected", selected);
+          });
+        const checked = draft.axes.size;
+        elements.practicalGroundingStatus.textContent = checked === RESTRICTION_GROUNDING_AXES.length
+          ? "4 / 4確認。選択肢を開きました。"
+          : `${checked} / ${RESTRICTION_GROUNDING_AXES.length}確認。残り${RESTRICTION_GROUNDING_AXES.length - checked}点。`;
+      }
     }
     elements.practicalDrillChoices.replaceChildren();
     question.choices.forEach((choice, index) => {
@@ -9259,7 +9379,9 @@
         choiceBlocks[index],
         choiceBlocks.length ? sharedPremiseGroups : []
       );
-      button.disabled = Boolean(attempt) || (forecastRequired && !drill.preAnswerConfidence);
+      button.disabled = Boolean(attempt) ||
+        (forecastRequired && !drill.preAnswerConfidence) ||
+        (groundingRequired && !restrictionGroundingComplete(question));
       if (attempt) {
         button.classList.toggle("is-selected", attempt.selected === index);
         button.classList.toggle("is-correct", question.answer === index);
@@ -9276,11 +9398,15 @@
       : attempt.correct
         ? `正解。「${question.choices[question.answer]}」を根拠から再現する。`
         : `誤答。正解は「${question.choices[question.answer]}」。今回の再出題へ追加した。`;
+    const groundingFrameStep = restrictionSprintSession
+      ? practicalGroundingFrameStep(question)
+      : null;
     elements.practicalDrillReasoning.replaceChildren(
       practicalReasoningStep(1, "判定のまとめ", question.explain),
       practicalStatementReviewStep(question),
-      practicalReasoningStep(3, "間違いやすい境界", question.trap),
-      practicalReasoningStep(4, "次に再現する一文", question.memoryRule)
+      ...(groundingFrameStep ? [groundingFrameStep] : []),
+      practicalReasoningStep(groundingFrameStep ? 4 : 3, "間違いやすい境界", question.trap),
+      practicalReasoningStep(groundingFrameStep ? 5 : 4, "次に再現する一文", question.memoryRule)
     );
     const sourceLabels = String(question.sourceRef || "").split("／").filter(Boolean);
     elements.practicalDrillSources.replaceChildren(
@@ -9335,16 +9461,26 @@
 
   function currentPracticalInputTarget(drill = state.practicalDrill) {
     if (!drill || !["active", "retry"].includes(drill.stage)) return null;
-    return practicalForecastRequired(drill) && !drill.preAnswerConfidence
-      ? elements.practicalDrillForecast?.querySelector("button")
-      : elements.practicalDrillChoices?.querySelector("button:not(:disabled)");
+    if (practicalForecastRequired(drill) && !drill.preAnswerConfidence) {
+      return elements.practicalDrillForecast?.querySelector("button");
+    }
+    if (restrictionGroundingRequired(drill) && !restrictionGroundingComplete()) {
+      return elements.practicalGroundingChecklist?.querySelector(
+        `[data-practical-grounding]:not([aria-pressed="true"])`
+      );
+    }
+    return elements.practicalDrillChoices?.querySelector("button:not(:disabled)");
   }
 
   function focusCurrentPracticalInputWithMinimalScroll() {
     const target = currentPracticalInputTarget();
     if (!target) return;
     target.focus({ preventScroll: true });
-    target.scrollIntoView({ block: "nearest", inline: "nearest" });
+    const prompt = elements.practicalDrillPrompt;
+    const promptRect = prompt?.getBoundingClientRect();
+    if (prompt && promptRect && (promptRect.bottom <= 0 || promptRect.top >= window.innerHeight)) {
+      prompt.scrollIntoView({ block: "start", inline: "nearest" });
+    }
   }
 
   function focusCurrentPracticalContext({ force = false } = {}) {
@@ -10467,6 +10603,10 @@
     const drill = state.practicalDrill;
     if (drill.currentAttempt || !practicalForecastValues(drill).includes(confidence)) return;
     const previousState = cloneStateForSync(state);
+    if (drill.bankId === SUBJECT_SPRINT_BANK_ID && drill.scope === "restrictions" &&
+        drill.preAnswerConfidence !== confidence) {
+      practicalGroundingDraft = { questionId: currentPracticalQuestion()?.id || "", axes: new Set() };
+    }
     drill.preAnswerConfidence = confidence;
     if (!saveState()) {
       rollbackFailedPracticalDrillMutation(
@@ -10477,9 +10617,7 @@
     }
     clearPracticalDrillSaveError();
     renderPracticalDrill();
-    window.requestAnimationFrame(() =>
-      elements.practicalDrillChoices?.querySelector("button:not(:disabled)")?.focus({ preventScroll: true })
-    );
+    window.requestAnimationFrame(() => currentPracticalInputTarget(drill)?.focus({ preventScroll: true }));
   }
 
   function answerPracticalDrill(selected) {
@@ -10493,6 +10631,7 @@
       ? drill.preAnswerConfidence
       : "";
     if (forecastSession && !predictedConfidence) return;
+    if (restrictionGroundingRequired(drill) && !restrictionGroundingComplete(question)) return;
     const recordedConfidence = predictedConfidence === "confident" ? "confident" : "uncertain";
     const predictedWithoutGrounding = forecastSession && predictedConfidence !== "confident";
     const previousState = cloneStateForSync(state);
@@ -10546,6 +10685,7 @@
         )
     };
     drill.preAnswerConfidence = "";
+    practicalGroundingDraft = { questionId: "", axes: new Set() };
     if (!correct || predictedWithoutGrounding) {
       drill.retryIds = addPracticalId(drill.retryIds, question.id);
     } else if (forecastSession) {
@@ -14059,6 +14199,9 @@
     elements.restrictionExamStart?.addEventListener("click", () =>
       startSubjectSprint("restrictions", RESTRICTION_EXAM_SESSION_SIZE, "exam")
     );
+    elements.restrictionPrecisionStart?.addEventListener("click", () =>
+      startSubjectSprint("restrictions", RESTRICTION_PRECISION_SOURCE_IDS.length, "precision")
+    );
     elements.restrictionMasteryTwenty?.addEventListener("click", () =>
       startSubjectSprint("restrictions", SUBJECT_SPRINT_RESTRICTIONS_SESSION_SIZE)
     );
@@ -14112,6 +14255,10 @@
     elements.practicalDrillForecast?.addEventListener("click", (event) => {
       const button = event.target.closest("[data-practical-forecast]");
       if (button) setPracticalForecast(button.dataset.practicalForecast);
+    });
+    elements.practicalGroundingChecklist?.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-practical-grounding]");
+      if (button) togglePracticalGrounding(button.dataset.practicalGrounding);
     });
     elements.practicalDrillConfidence?.addEventListener("click", (event) => {
       const button = event.target.closest("[data-practical-confidence]");
