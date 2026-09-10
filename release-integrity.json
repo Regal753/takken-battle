@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20260910-final-stretch-v53-c804bf4af7d5",
-  "digest": "sha256:c804bf4af7d5e83a06e72487a7c7e96380a7e19470cd75940565627e125071f5",
-  "assetCount": 53,
+  "version": "20260910-hard-knock-v54-e5b5245c83e5",
+  "digest": "sha256:e5b5245c83e5d01b8bafbd1fa4b0652663ccb02f27950397c2c8ee6448ae2417",
+  "assetCount": 57,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "4ba263fb980ae500d1efbb4e3a98210db03ad632063447d7eb5e45ba72874f6b"
+      "sha256": "df24c7a7c6e2973eecf499da16ffad33cb2a9f62b0e99db4c257b63cd9f1b201"
     },
     {
       "path": "assets/battle/grassland-route.webp",
@@ -61,8 +61,24 @@
       "sha256": "7b292dcf6151b0d25a03b37f350bf3fc24ed5856ba496db62c65eac1de48e396"
     },
     {
+      "path": "business-hard-bank.js",
+      "sha256": "c9d5d54ef1542c238608fcf7b77f07386ed1084d18cac7de835203143f875d60"
+    },
+    {
+      "path": "business-hard-contracts.js",
+      "sha256": "6fd6bed1f49737a5ac5d66364430d4409bd267a673e0f55f5263c50f4acfbd1e"
+    },
+    {
+      "path": "business-hard-front.js",
+      "sha256": "e7551385c4b9ca8e8b54b921a4b5162488e8462999844d90122825ec343da41a"
+    },
+    {
+      "path": "business-hard-practice.js",
+      "sha256": "8e5c530c5398155c654eda4c7b2fc9aa751d5999312613486e35592b6df0524e"
+    },
+    {
       "path": "business-knock.js",
-      "sha256": "84c9c814e542c3203405d8ec2b93f4933e77d35abb0df5627fcb5b23cfb7c7e6"
+      "sha256": "51a1c7ecd1faeae870c827e70906581a37f7981ddd7aaa977607265288db0237"
     },
     {
       "path": "business-mastery.js",
@@ -134,7 +150,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "0056f5937b3b0a670746a5fd2879b34acc6b599caa53160f50a54230cc581207"
+      "sha256": "351f296028b22ca9910630ad32122abf63ecc2b41d1459611705cd55f20a80f5"
     },
     {
       "path": "manifest.webmanifest",
@@ -202,7 +218,7 @@
     },
     {
       "path": "service-worker.js",
-      "sha256": "fd54e3967d48202d9d7576a65dd6edda5888d7974339a12935e8fde6340bc19f"
+      "sha256": "325cf6cc0bdf0ecfbd5cdccd0fedf24ce3148a83df41877be23a7486e9733d0b"
     },
     {
       "path": "state-sync.js",
@@ -210,7 +226,7 @@
     },
     {
       "path": "styles.css",
-      "sha256": "9d82bf3e4ac5d304d1bc37783a2a7364fac635ac2074773d55d8ce8b62cd6eef"
+      "sha256": "d98fb4720b4781e4e1e23dbc33bbd1507e384603bc0f3fce3f28c784c7ffaaa8"
     },
     {
       "path": "subject-sprint-bank.js",

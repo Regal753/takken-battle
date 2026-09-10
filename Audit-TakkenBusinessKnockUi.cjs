@@ -67,8 +67,8 @@ async function readSavedState(page) {
   });
 }
 
-async function resetKnockState(page, history = {}) {
-  await page.evaluate((nextHistory) => {
+async function resetKnockState(page, history = {}, difficulty = "basic") {
+  await page.evaluate(({ nextHistory, nextDifficulty }) => {
     const key = Object.keys(localStorage).find((candidate) =>
       candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
       !candidate.includes("backup") && !candidate.includes("-before-") &&
@@ -83,7 +83,7 @@ async function resetKnockState(page, history = {}) {
       presentationKey: "",
       presentationOverrides: {},
       planMode: "",
-      knockPreset: { mode: "untouched", size: 20, unitId: "" },
+      knockPreset: { difficulty: nextDifficulty, mode: "untouched", size: 20, unitId: "" },
       stage: "idle",
       scope: "business",
       unitId: "",
@@ -99,7 +99,7 @@ async function resetKnockState(page, history = {}) {
       history: nextHistory
     };
     localStorage.setItem(key, JSON.stringify(saved));
-  }, history);
+  }, { nextHistory: history, nextDifficulty: difficulty });
   await page.reload({ waitUntil: "networkidle" });
   await waitForApp(page);
 }
@@ -144,9 +144,10 @@ async function currentPresented(page) {
     );
     const saved = JSON.parse(localStorage.getItem(key));
     const id = saved.practicalDrill.queue[saved.practicalDrill.position];
-    const question = window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS_BY_ID[id];
+    const bank = id.startsWith("hard54-") ? window.TAKKEN_BUSINESS_HARD_BANK : window.TAKKEN_BUSINESS_FULLSCORE_BANK;
+    const question = bank.QUESTIONS_BY_ID[id];
     const presentationKey = saved.practicalDrill.presentationOverrides?.[id] || saved.practicalDrill.presentationKey;
-    const presented = window.TAKKEN_BUSINESS_FULLSCORE_BANK.presentQuestion(question, presentationKey);
+    const presented = bank.presentQuestion(question, presentationKey);
     return { id, answer: presented.answer, choices: [...presented.choices] };
   });
 }
@@ -186,9 +187,9 @@ async function horizontalOverflow(page) {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 }
 
-async function assertNextQuestionViewport(page, viewport) {
+async function assertNextQuestionViewport(page, viewport, difficulty = "basic") {
   await page.setViewportSize(viewport);
-  await resetKnockState(page);
+  await resetKnockState(page, {}, difficulty);
   await startKnock(page, { mode: "all-random", size: 10 });
   const presented = await currentPresented(page);
   await page.locator(".practical-drill-choice").nth(presented.answer).click();
@@ -225,6 +226,7 @@ async function assertNextQuestionViewport(page, viewport) {
     return {
       calls,
       activeChoice: document.activeElement?.classList.contains("practical-drill-choice") || false,
+      activePrompt: document.activeElement?.id === "practicalDrillPrompt",
       choiceTop: choiceRect?.top ?? -1,
       choiceBottom: choiceRect?.bottom ?? -1,
       promptTop: promptRect?.top ?? -1,
@@ -234,8 +236,13 @@ async function assertNextQuestionViewport(page, viewport) {
   });
   const label = `${viewport.width}x${viewport.height}`;
   assert.deepEqual(nextViewport.calls, [], `${label}: next question must not force an upward window.scrollTo: ${JSON.stringify(nextViewport.calls)}`);
-  assert.equal(nextViewport.activeChoice, true, `${label}: next question must retain keyboard focus after the minimal edge correction`);
-  assert.ok(nextViewport.choiceBottom > 0 && nextViewport.choiceTop < nextViewport.viewportHeight, `${label}: next answer must remain in the viewport: ${JSON.stringify(nextViewport)}`);
+  if (difficulty === "hard") {
+    assert.equal(nextViewport.activePrompt, true, `${label}: hard next question must focus the scenario, not skip to the choices`);
+    assert.ok(nextViewport.promptTop >= 0 && nextViewport.promptTop < nextViewport.viewportHeight - 68, `${label}: the beginning of the new case must be visible: ${JSON.stringify(nextViewport)}`);
+  } else {
+    assert.equal(nextViewport.activeChoice, true, `${label}: next question must retain keyboard focus after the minimal edge correction`);
+    assert.ok(nextViewport.choiceBottom > 0 && nextViewport.choiceTop < nextViewport.viewportHeight, `${label}: next answer must remain in the viewport: ${JSON.stringify(nextViewport)}`);
+  }
   await cancelKnock(page);
   return nextViewport;
 }
@@ -290,18 +297,21 @@ async function presentedFixture(page) {
     );
     const saved = JSON.parse(localStorage.getItem(key));
     const fullScore = saved.practicalDrill.bankId === "business-fullscore";
+    const bank = saved.practicalDrill.queue[0]?.startsWith("hard54-")
+      ? window.TAKKEN_BUSINESS_HARD_BANK : window.TAKKEN_BUSINESS_FULLSCORE_BANK;
     const question = fullScore
-      ? window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS_BY_ID[saved.practicalDrill.queue[0]]
+      ? bank.QUESTIONS_BY_ID[saved.practicalDrill.queue[0]]
       : window.TAKKEN_PRACTICAL_VARIATIONS.QUESTIONS.find((item) => item.id === saved.practicalDrill.queue[0]);
     const presentationKey = saved.practicalDrill.presentationOverrides?.[question.id] || saved.practicalDrill.presentationKey;
     const presented = fullScore
-      ? window.TAKKEN_BUSINESS_FULLSCORE_BANK.presentQuestion(question, presentationKey)
+      ? bank.presentQuestion(question, presentationKey)
       : question;
     return {
       id: presented.id,
       formatKey: presented.formatKey || "legacy",
       text: presented.text,
       choices: [...presented.choices],
+      premise: presented.premise || "",
       displayModel: presented.displayModel || null
     };
   });
@@ -310,6 +320,8 @@ async function presentedFixture(page) {
 (async () => {
   const local = await startStaticServer(process.cwd());
   const browser = await chromium.launch({ channel: "chrome", headless: true });
+  const hardScreenshots = path.join(process.cwd(), "output", "playwright", "business-hard");
+  fs.mkdirSync(hardScreenshots, { recursive: true });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await page.addInitScript(() => {
     const NativeDate = Date;
@@ -337,6 +349,8 @@ async function presentedFixture(page) {
       "4 合格ロード・2026 PASS PLAN"
     );
     assert.equal(await page.locator("#businessKnockPanel").isVisible(), true);
+    assert.equal(await page.locator("#businessKnockDifficulty").inputValue(), "hard", "fresh manual sessions must default to hard cases");
+    assert.equal(await page.locator("#businessKnockUntouched").textContent(), "60");
     assert.match(await page.locator("#businessKnockPanel").textContent(), /宅建業法ノック道場/);
     assert.equal(await page.locator("#guaranteeSpecialCard").isHidden(), true, "the retired guarantee intensive card must not compete with the current dojo");
     assert.equal(await page.locator("#todayCommandGuaranteeButton").isHidden(), true, "the retired guarantee intensive CTA must stay out of today's command");
@@ -360,8 +374,9 @@ async function presentedFixture(page) {
     await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
     let commandSaved = await readSavedState(page);
     assert.equal(commandSaved.practicalDrill.sessionSize, 20);
+    assert.equal(commandSaved.practicalDrill.sessionIds.every((id) => /^hard54-\d{3}$/.test(id)), true, "daily20 must contain only new hard cases");
     const commandDiversity = await page.evaluate((ids) => ids.map((id) => {
-      const question = window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS_BY_ID[id];
+      const question = window.TAKKEN_BUSINESS_HARD_BANK.QUESTIONS_BY_ID[id];
       return { id, anchors: [...(question?.sourceAnchorIds || [])], unitId: question?.unitId || "" };
     }), commandSaved.practicalDrill.sessionIds);
     const adjacentAnchorRepeats = commandDiversity.slice(1).filter((item, index) =>
@@ -369,11 +384,13 @@ async function presentedFixture(page) {
     );
     assert.deepEqual(adjacentAnchorRepeats, [], `today's knock must separate variants of the same source rule: ${JSON.stringify(adjacentAnchorRepeats)}`);
     assert.equal(await page.locator("#practicalDrillProgress").textContent(), "第1問 / 全20問");
-    assert.match(await page.locator("#practicalDrillSummary").textContent(), /^業法ノック累計 接触 0 \/ 134/);
+    assert.match(await page.locator("#practicalDrillSummary").textContent(), /^高難度・事例ノック累計 接触 0 \/ 60/);
+    assert.match(await page.locator("#practicalDrillUnit").textContent(), /論点と根拠は解答後/);
+    assert.equal(commandDiversity.some((item) => item.unitId === "business-book-05"), false, "hard daily must exclude guarantee material");
     assert.equal(await page.locator("#practicalDrillCancelButton").textContent(), "一時停止して上へ");
     assert.match(await page.locator("#practicalDrillCancelButton").getAttribute("aria-label"), /問題順、解答、再出題は保存/);
     assert.equal(await page.locator("#practicalDrillDiscardButton").textContent(), "セットを破棄");
-    assert.equal(await page.evaluate(() => document.activeElement?.classList.contains("practical-drill-choice")), true);
+    assert.equal(await page.evaluate(() => document.activeElement?.id), "practicalDrillPrompt", "hard start must show the beginning of the scenario");
     const commandQuestion = await currentPresented(page);
     await page.locator(".practical-drill-choice").nth(commandQuestion.answer).scrollIntoViewIfNeeded();
     const practicalAnswerBefore = await page.evaluate(() => {
@@ -413,6 +430,32 @@ async function presentedFixture(page) {
     assert.equal(commandSaved.practicalDrill.correctAttempts, 1);
     assert.equal(Object.keys(commandSaved.practicalDrill.history || {}).length, 1);
     assert.equal(commandSaved.practicalDrill.currentAttempt?.id, commandQuestion.id, "reload must retain the single current attempt without duplicating it");
+    const hardSavedSnapshot = await page.evaluate(() => {
+      const key = Object.keys(localStorage).find((candidate) =>
+        candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+        !candidate.includes("backup") && !candidate.includes("-before-") &&
+        !candidate.includes("previous") && !candidate.includes("corrupt") &&
+        !candidate.endsWith("event-outbox"));
+      return { key, value: localStorage.getItem(key) };
+    });
+    const missingHardPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await missingHardPage.addInitScript(({ key, value }) => localStorage.setItem(key, value), hardSavedSnapshot);
+    await missingHardPage.route(/business-hard-bank\.js/, (route) => route.abort());
+    await missingHardPage.goto(page.url(), { waitUntil: "networkidle" });
+    await waitForApp(missingHardPage);
+    const missingHardSaved = await readSavedState(missingHardPage);
+    assert.deepEqual(missingHardSaved.practicalDrill.queue, commandSaved.practicalDrill.queue, "missing hard asset must retain the exact saved queue");
+    assert.deepEqual(missingHardSaved.practicalDrill.currentAttempt, commandSaved.practicalDrill.currentAttempt, "missing hard asset must preserve the saved selected answer");
+    assert.deepEqual(missingHardSaved.practicalDrill.history, commandSaved.practicalDrill.history, "missing hard asset must preserve hard answer history");
+    assert.match(await missingHardPage.locator("#practicalDrillPrompt").textContent(), /問題順・解答は保持/);
+    assert.equal(await missingHardPage.locator(".practical-drill-choice").count(), 0, "missing hard asset must not substitute easy questions");
+    await cancelKnock(missingHardPage);
+    assert.equal(await missingHardPage.locator("#businessKnockStart").isDisabled(), true, "a fresh hard start must fail closed when its asset is missing");
+    assert.match(await missingHardPage.locator("#businessKnockStatus").textContent(), /難度を自動で下げず/);
+    await missingHardPage.locator("#businessKnockDifficulty").selectOption("basic");
+    const explicitBasicFallback = await startKnock(missingHardPage, { mode: "untouched", size: 10 });
+    assert.equal(explicitBasicFallback.practicalDrill.sessionIds.every(id => id.startsWith("bf-business-")), true, "only an explicit basic choice may enter the intact legacy bank");
+    await missingHardPage.close();
     const todayAnsweredId = await page.evaluate(() => {
       Object.defineProperty(navigator, "share", {
         configurable: true,
@@ -489,7 +532,7 @@ async function presentedFixture(page) {
       );
       const saved = JSON.parse(localStorage.getItem(key));
       const id = Object.keys(window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS_BY_ID)[0];
-      saved.practicalDrill.knockPreset = { mode: "unit", size: 100, unitId: "business-book-01", lastPresentationOffset: null };
+      saved.practicalDrill.knockPreset = { difficulty: "basic", mode: "unit", size: 100, unitId: "business-book-01", lastPresentationOffset: null };
       saved.practicalDrill.history[id] = {
         attempts: 1,
         correct: 0,
@@ -507,6 +550,7 @@ async function presentedFixture(page) {
     const remainingSession = await readSavedState(page);
     assert.equal(remainingSession.practicalDrill.sessionSize, 19, "daily remaining CTA must start only the displayed remainder");
     assert.equal(remainingSession.practicalDrill.sessionIds.length, 19, "daily route must ignore a stale unit/100 preset");
+    assert.equal(remainingSession.practicalDrill.sessionIds.every((id) => id.startsWith("hard54-")), true, "daily route must ignore the manual basic preference");
     assert.equal(remainingSession.practicalDrill.sessionIds.includes(todayAnsweredId), false, "today's answered id must not consume one of the visible remaining questions");
     await cancelKnock(page);
 
@@ -514,7 +558,81 @@ async function presentedFixture(page) {
     // scroll. Prove the minimal edge correction on regular and narrow phones.
     await assertNextQuestionViewport(page, { width: 390, height: 844 });
     await assertNextQuestionViewport(page, { width: 320, height: 700 });
+    await assertNextQuestionViewport(page, { width: 390, height: 844 }, "hard");
+    await assertNextQuestionViewport(page, { width: 320, height: 700 }, "hard");
     await page.setViewportSize({ width: 390, height: 844 });
+
+    // Hard rounds use their own explanations and diagnostics, and never add
+    // their 60 IDs to the legacy134 retention gate.
+    await resetKnockState(page, {}, "hard");
+    await startKnock(page, { mode: "untouched", size: 10 });
+    const hardCompleted = await completeTenWithTwoRetries(page);
+    assert.equal(hardCompleted.saved.practicalDrill.sessionIds.every((id) => id.startsWith("hard54-")), true);
+    assert.equal(hardCompleted.saved.practicalDrill.history[hardCompleted.wrong.id].wrong, 1);
+    assert.ok(Object.keys(hardCompleted.saved.practicalDrill.history[hardCompleted.wrong.id].mistakeTags).length > 0, "hard wrong answers must record compatible diagnostic tags");
+    assert.equal(await page.locator("#businessTransferGate").textContent(), "0 / 134", "hard practice cannot inflate the134 gate");
+    assert.equal(await page.locator("#businessKnockAttempts").textContent(), "12");
+    assert.equal(await page.locator("#businessKnockUntouched").textContent(), "50");
+    const hardFixtures = await page.evaluate(() => ["single", "count", "combination"].map(formatKey => {
+      const question = window.TAKKEN_BUSINESS_HARD_BANK.QUESTIONS.find(q => q.formatKey === formatKey);
+      if (!question) throw new Error(`missing hard ${formatKey} fixture`);
+      return { id: question.id, formatKey };
+    }));
+    for (const fixture of hardFixtures) {
+      await forcePracticalQuestion(page, { bankId: "business-fullscore", id: fixture.id });
+      const expected = await presentedFixture(page);
+      const prompt = page.locator("#practicalDrillPrompt");
+      const visiblePrompt = await prompt.textContent();
+      assert.equal(visiblePrompt.split(expected.premise).length - 1, 1, `${fixture.formatKey}: shared case premise must occur exactly once before answering`);
+      if (fixture.formatKey === "single") {
+        assert.equal(await prompt.textContent(), expected.displayModel.intro);
+        assert.equal(await page.locator('.practical-drill-choice[data-structured="true"]').count(), 4);
+      } else {
+        assert.equal(await prompt.getAttribute("data-structured"), "true");
+        assert.equal(await prompt.locator(".practical-prompt-item").count(), 4, `${fixture.formatKey}: all4 statements must be visible`);
+        assert.deepEqual(await prompt.locator(".practical-prompt-judgment p").allTextContents(), expected.displayModel.items.map(item => item.judgment));
+      }
+      for (const width of [320, 390, 1440]) {
+        await page.setViewportSize({ width, height: 844 });
+        await prompt.evaluate(node => node.scrollIntoView({ block: "start" }));
+        assert.equal(await horizontalOverflow(page), 0, `${fixture.formatKey}: hard case overflow at ${width}`);
+        await page.screenshot({ path: path.join(hardScreenshots, `${fixture.formatKey}-${width}.png`) });
+      }
+      await page.setViewportSize({ width: 390, height: 844 });
+      const current = await currentPresented(page);
+      await page.locator(".practical-drill-choice").nth(current.answer).click();
+      assert.equal(await page.locator(".practical-statement-review-card").count(), 4);
+      if (fixture.formatKey !== "single") assert.deepEqual(await page.locator(".practical-statement-review-card header strong").allTextContents(), ["ア", "イ", "ウ", "エ"], "hard aggregate explanation labels must match the displayed statements");
+      assert.equal(await horizontalOverflow(page), 0);
+    }
+
+    // A genuine pre-v54 active queue has no difficulty field. Adding the new
+    // default must not rotate or erase the already selected legacy answer.
+    await resetKnockState(page);
+    await startKnock(page, { mode: "all-random", size: 20 });
+    const oldQuestion = await currentPresented(page);
+    await page.locator(".practical-drill-choice").nth(oldQuestion.answer).click();
+    await page.locator('[data-practical-confidence="confident"]').click();
+    const oldSaved = await readSavedState(page);
+    await page.evaluate(() => {
+      const key = Object.keys(localStorage).find((candidate) =>
+        candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+        !candidate.includes("backup") && !candidate.includes("-before-") &&
+        !candidate.includes("previous") && !candidate.includes("corrupt") &&
+        !candidate.endsWith("event-outbox"));
+      const saved = JSON.parse(localStorage.getItem(key));
+      delete saved.practicalDrill.knockPreset.difficulty;
+      localStorage.setItem(key, JSON.stringify(saved));
+    });
+    await page.reload({ waitUntil: "networkidle" });
+    await waitForApp(page);
+    const migratedOld = await readSavedState(page);
+    assert.deepEqual(migratedOld.practicalDrill.queue, oldSaved.practicalDrill.queue);
+    assert.deepEqual(migratedOld.practicalDrill.currentAttempt, oldSaved.practicalDrill.currentAttempt);
+    assert.deepEqual(migratedOld.practicalDrill.history, oldSaved.practicalDrill.history);
+    assert.equal(migratedOld.practicalDrill.knockPreset.difficulty, "hard", "future rounds adopt hard default while the current old round is retained");
+    assert.match(await page.locator("#practicalDrillSummary").textContent(), /^基礎変形ノック累計/);
+    await cancelKnock(page);
 
     // Fresh, untouched starts must select precisely the requested unique count.
     for (const size of [10, 20, 50, 100]) {
@@ -822,7 +940,7 @@ async function presentedFixture(page) {
     await fallbackPage.close();
 
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: "ok", sequentialTopCommand: true, explicitProgressLabels: true, knockOnlyTransferSummary: true, nextQuestionKeepsViewport: true, plannerSizes: [10, 20, 50, 100], unitFiltered: true, weakDuePrioritized: true, random100Unique: true, randomOrderPreserved: true, reloadPreserved: true, retryLoop: true, retryAnswerPositionsRotated: true, sameDayLevelCapped: true, structuredPromptFormats: ["combination", "count", "case"], singleChoiceBlocks: 4, legacyRawFallback: true, coreFallbackWithoutKnock: true, overflow390: 0, overflow320: 0, errors: 0 }));
+    console.log(JSON.stringify({ status: "ok", sequentialTopCommand: true, explicitProgressLabels: true, knockOnlyTransferSummary: true, hardDaily20: true, hardSeparate60Stats: true, hardMissingAssetSavePreserved: true, hardLegacyAnsweredMigration: true, hardFormats: ["single", "count", "combination"], hardCaseWidths: [320, 390, 1440], hardScreenshots, nextQuestionKeepsViewport: true, plannerSizes: [10, 20, 50, 100], unitFiltered: true, weakDuePrioritized: true, random100Unique: true, randomOrderPreserved: true, reloadPreserved: true, retryLoop: true, retryAnswerPositionsRotated: true, sameDayLevelCapped: true, structuredPromptFormats: ["combination", "count", "case"], singleChoiceBlocks: 4, legacyRawFallback: true, coreFallbackWithoutKnock: true, overflow390: 0, overflow320: 0, errors: 0 }));
   } finally {
     await browser.close();
     await local.close();

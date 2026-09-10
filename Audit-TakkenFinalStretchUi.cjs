@@ -66,6 +66,8 @@ async function main() {
     }
     await first.page.locator("#todayCommandStartButton").click();
     const activeBefore = (await stored(first.page)).practicalDrill;
+    assert.equal(activeBefore.sessionIds.length, 20);
+    assert.equal(activeBefore.sessionIds.every(id => /^hard54-\d{3}$/.test(id)), true, "the weekday command must use hard cases");
     await first.page.reload({ waitUntil: "networkidle" });
     const activeAfter = (await stored(first.page)).practicalDrill;
     assert.deepEqual(activeAfter.queue, activeBefore.queue);

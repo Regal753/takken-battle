@@ -112,7 +112,7 @@ async function currentPracticalQuestion(page) {
     const state = JSON.parse(localStorage.getItem(key));
     const id = state.practicalDrill.queue[state.practicalDrill.position];
     const bank = state.practicalDrill.bankId === "business-fullscore"
-      ? window.TAKKEN_BUSINESS_FULLSCORE_BANK
+      ? id.startsWith("hard54-") ? window.TAKKEN_BUSINESS_HARD_BANK : window.TAKKEN_BUSINESS_FULLSCORE_BANK
       : window.TAKKEN_PRACTICAL_VARIATIONS;
     const question = bank.QUESTIONS_BY_ID[id];
     const presented = state.practicalDrill.bankId === "business-fullscore"
@@ -771,7 +771,7 @@ async function installFullScoreProofFixture(page, mode) {
 
     await page.locator("#businessMasteryFull").click();
     let saved = await readSavedState(page);
-    assert.equal(saved.stateSchemaVersion, 13);
+    assert.equal(saved.stateSchemaVersion, 14);
     assert.equal(saved.practicalDrill.bankId, "business-fullscore");
     assert.equal(saved.practicalDrill.sessionSize, 134);
     assert.equal(saved.practicalDrill.queue.length, 134);

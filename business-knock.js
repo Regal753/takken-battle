@@ -77,7 +77,7 @@
       + (overlap(left.tags, right.tags) ? 4 : 0)
       + (left.unitId && left.unitId === right.unitId ? 1 : 0);
   }
-  function diversifyBucket(items, seed, recentQuestions = []) {
+  function diversifyBucket(items, seed, recentQuestions = [], unitCounts = new Map(), hard = false, unitWeights = new Map()) {
     const pending = seededOrder(items, seed).map((item) => ({
       item,
       metadata: diversityMetadata(item.question)
@@ -109,7 +109,12 @@
         // Prefer a repeated anchor early when the recent window is clear. This
         // leaves enough unrelated questions to separate its later variants,
         // instead of stranding a same-rule pair at the end of the bucket.
-        const score = [anchorPenalty, -(pendingAnchorCopies - 1), broadPenalty];
+        // Authored daily cases should cover the syllabus, not exhaust the
+        // largest unit first. Balance only equally urgent/attempted items:
+        // an overdue/wrong answer must still precede a fresh easy-to-schedule one.
+        const score = hard
+          ? [(unitCounts.get(candidate.unitId) || 0) / (unitWeights.get(candidate.unitId) || 1), anchorPenalty, broadPenalty, -(pendingAnchorCopies - 1)]
+          : [anchorPenalty, -(pendingAnchorCopies - 1), broadPenalty];
         // The seeded order is the deterministic tie-breaker, preserving the
         // existing behaviour when questions have no diversity metadata.
         if (scoreBefore(score, bestScore)) {
@@ -119,6 +124,7 @@
       }
       const [next] = pending.splice(bestIndex, 1);
       selected.push(next.item);
+      unitCounts.set(next.metadata.unitId, (unitCounts.get(next.metadata.unitId) || 0) + 1);
       recent.push(next.metadata);
       if (recent.length > 2) recent.shift();
       next.metadata.anchors.forEach((anchor) => {
@@ -175,7 +181,8 @@
     else if (mode === "untouched") candidates = classified.filter(({ entry }) => !attemptsFor(entry));
     else candidates = classified;
     const seed = clean(input.seed) || clean(input.presentationKey) || "default";
-    const ranked = mode === "all-random" && !dailyMixed
+    const hard = candidates.length > 0 && candidates.every(({ question }) => question.difficulty === "hard");
+    const ranked = mode === "all-random" && !dailyMixed && !hard
       ? seededOrder(candidates, seed)
       : candidates.sort((left, right) => {
         const priority = priorityFor(left.entry, now) - priorityFor(right.entry, now);
@@ -188,13 +195,28 @@
     // the retry/due/untouched ordering while avoiding consecutive variants of
     // the same rule whenever another equally urgent question is available.
     const queue = [];
+    const unitCounts = new Map();
+    const unitWeights = new Map();
+    eligible.forEach(question => unitWeights.set(question.unitId, (unitWeights.get(question.unitId) || 0) + 1));
     for (let start = 0; start < ranked.length;) {
       let end = start + 1;
       while (end < ranked.length && priorityFor(ranked[start].entry, now) === priorityFor(ranked[end].entry, now) && attemptsFor(ranked[start].entry) === attemptsFor(ranked[end].entry)) end += 1;
-      queue.push(...diversifyBucket(ranked.slice(start, end), `${seed}:${start}`, queue.slice(-2).map(({ question }) => question)));
+      queue.push(...diversifyBucket(ranked.slice(start, end), `${seed}:${start}`, queue.slice(-2).map(({ question }) => question), unitCounts, hard, unitWeights));
       start = end;
     }
-    const selected = queue.slice(0, Math.min(requestedSize, queue.length));
+    let selected = queue.slice(0, Math.min(requestedSize, queue.length));
+    if (hard && (dailyMixed || mode === "all-random")) {
+      // Keep a fresh-case lane while unseen material exists. Otherwise the
+      // first day's twenty due reviews can occupy the entire next day, giving
+      // the appearance of a larger bank without exposing its other cases.
+      // Explicit weak/due modes deliberately remain review-only.
+      const freshCount = queue.filter(({ entry }) => !attemptsFor(entry)).length;
+      const freshReserve = Math.min(freshCount, Math.ceil(requestedSize * 0.4));
+      const urgent = queue.filter(({ entry }) => priorityFor(entry, now) < 2);
+      const other = queue.filter(({ entry }) => priorityFor(entry, now) >= 2);
+      const head = urgent.slice(0, Math.max(0, requestedSize - freshReserve));
+      selected = [...head, ...other, ...urgent.slice(head.length)].slice(0, requestedSize);
+    }
     return Object.freeze({
       mode, unitId, requestedSize, size: selected.length, available: candidates.length,
       capped: selected.length < requestedSize, seed,

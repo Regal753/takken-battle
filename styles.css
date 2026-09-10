@@ -7676,6 +7676,7 @@ button.mission-step:disabled {
 
 .practical-prompt-intro {
   margin: 0;
+  white-space: pre-line;
   color: #f2f5ff;
   font-size: 15px;
   font-weight: 800;

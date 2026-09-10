@@ -10,11 +10,11 @@ const releaseIntegrity = require("./release-integrity.json");
 const ROOT = __dirname;
 const EXPECTED_CACHE_VERSION = releaseIntegrity.version;
 releaseIntegrityTools.assertVersionMatchesDigest(releaseIntegrity.version, releaseIntegrity.digest);
-// v52 adds 50 separately authored, sourced case questions (~148 KB raw),
-// while retaining legacy payloads to preserve saved answers. These measured
-// budgets allow that explicit content expansion, not unrelated feature growth.
-const MAX_PUBLIC_JS_BYTES = 1_720_000;
-const MAX_PUBLIC_JS_GZIP_BYTES = 430_000;
+// v54 adds sixty separately authored daily cases and a small adapter (~165 KB),
+// retaining the legacy 134-question bank and saved-answer contracts. Keep the
+// budget scoped to this explicit question-bank expansion, not feature growth.
+const MAX_PUBLIC_JS_BYTES = 1_905_000;
+const MAX_PUBLIC_JS_GZIP_BYTES = 482_000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
   "pwa-runtime.js",
