@@ -46,7 +46,7 @@ async function main() {
         const review = new URL(location.href).searchParams.get("review");
         const key = `takken-battle-study-clean-v2-hard-review-${review}`;
         const saved = JSON.parse(localStorage.getItem(key));
-        const bank = window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS;
+        const bank = window.TAKKEN_BUSINESS_HARD_BANK.QUESTIONS;
         const sprint = window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS;
         const questions = [...bank.slice(0, 20), ...sprint.filter(q => q.sectionId === "taxOther").slice(0, tax), ...sprint.filter(q => q.sectionId === "other").slice(0, other)];
         for (const q of questions) saved.practicalDrill.history[q.id] = { attempts: 1, correct: 1, wrong: 0, lastCorrect: true, lastConfidence: "confident", lastAnsweredAt: "2026-09-10T09:00:00+09:00" };

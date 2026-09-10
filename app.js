@@ -6754,7 +6754,7 @@
   }
 
   function businessAnsweredTodayIds() {
-    return BUSINESS_DRILL_QUESTION_IDS.filter((id) =>
+    return BUSINESS_HARD_QUESTION_IDS.filter((id) =>
       localDateKey(state.practicalDrill?.history?.[id]?.lastAnsweredAt) === todayKey()
     );
   }

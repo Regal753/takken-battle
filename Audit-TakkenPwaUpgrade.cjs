@@ -10,7 +10,7 @@ const path = require("node:path");
 const { chromium } = require("playwright");
 
 const ROOT = process.cwd();
-const CURRENT_VERSION = "20260911-archive-v56-414c6e8b511b";
+const CURRENT_VERSION = "20260911-archive-v56-08691ba9ae4e";
 const OLD_VERSION = "20260822-controlled-old-runtime";
 const SAVE_KEY = "takken-battle-study-clean-v2-hard";
 const SENTINEL_KEY = "takken-pwa-upgrade-sentinel";

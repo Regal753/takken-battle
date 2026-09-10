@@ -552,7 +552,7 @@ async function presentedFixture(page) {
         !candidate.endsWith("event-outbox")
       );
       const saved = JSON.parse(localStorage.getItem(key));
-      const id = Object.keys(window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS_BY_ID)[0];
+      const id = window.TAKKEN_BUSINESS_HARD_BANK.QUESTIONS[0].id;
       saved.practicalDrill.knockPreset = { difficulty: "basic", mode: "unit", size: 100, unitId: "business-book-01", lastPresentationOffset: null };
       saved.practicalDrill.history[id] = {
         attempts: 1,
