@@ -138,6 +138,7 @@ async function horizontalOverflow(page) {
 }
 
 async function assertFocusedInViewport(page, expectedSelector) {
+  try {
   await page.waitForFunction((selector) => {
     const active = document.activeElement;
     if (!active || !active.matches(selector)) return false;
@@ -150,6 +151,26 @@ async function assertFocusedInViewport(page, expectedSelector) {
     return { id: document.activeElement.id, top: rect.top, bottom: rect.bottom, height: window.visualViewport?.height || window.innerHeight };
   });
   assert.ok(position.top >= 0 && position.top < position.height, `focused target outside viewport: ${JSON.stringify(position)}`);
+  } catch (error) {
+    const diagnostic = await page.evaluate((selector) => {
+      const rect = (node) => {
+        if (!node) return null;
+        const box = node.getBoundingClientRect();
+        return { top: box.top, bottom: box.bottom, height: box.height };
+      };
+      const active = document.activeElement;
+      const target = document.querySelector(selector);
+      const review = new URL(location.href).searchParams.get("review");
+      const saved = JSON.parse(localStorage.getItem(`takken-battle-study-clean-v2-hard-review-${review}`) || "{}");
+      return { selector, active: active?.outerHTML?.slice(0, 500), activeRect: rect(active), targetRect: rect(target),
+        stage: saved.practicalDrill?.stage, bank: saved.practicalDrill?.bankId,
+        sessionHidden: document.querySelector("#practicalDrillSession")?.hidden,
+        completeHidden: document.querySelector("#practicalDrillComplete")?.hidden,
+        trace: window.__guaranteeFocusTrace || [] };
+    }, expectedSelector);
+    console.error("GUARANTEE_FOCUS_DIAGNOSTIC", JSON.stringify(diagnostic));
+    throw error;
+  }
 }
 
 (async () => {
@@ -157,6 +178,15 @@ async function assertFocusedInViewport(page, expectedSelector) {
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: "Asia/Tokyo" });
   const page = await context.newPage();
+  await page.addInitScript(() => {
+    window.__guaranteeFocusTrace = [];
+    document.addEventListener("focusin", event => {
+      const node = event.target;
+      window.__guaranteeFocusTrace.push({ at: Math.round(performance.now()), id: node.id, tag: node.tagName,
+        text: node.textContent?.trim().slice(0, 65), top: node.getBoundingClientRect().top });
+      window.__guaranteeFocusTrace = window.__guaranteeFocusTrace.slice(-15);
+    });
+  });
   const errors = [];
   page.on("pageerror", (error) => errors.push(`page: ${error.message}`));
   page.on("console", (message) => { if (message.type() === "error") errors.push(`console: ${message.text()}`); });
