@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20260910-reiwa-exam-v51-c8c37bf3c6f6",
-  "digest": "sha256:c8c37bf3c6f601419257a0bf960150346d83e53a1f038d6a57e8bcb5fd26363d",
-  "assetCount": 48,
+  "version": "20260910-case-exam-v52-11f4767b5e25",
+  "digest": "sha256:11f4767b5e2509d43da7cad4450d823e0d5e6209341e6c85e7007008e36bf679",
+  "assetCount": 53,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "14bd98ad10dee3b6c12278d0bbde364ff1783f9a5d776760d02e78aaa6c2a102"
+      "sha256": "9376ae427f7b8c1917db7b5c967504a6e9dd9583fb190644479f8d2da0f734d2"
     },
     {
       "path": "assets/battle/grassland-route.webp",
@@ -77,6 +77,26 @@
       "sha256": "4ba0154ec7e81f495a1b11073b6ce1b54389b5d21c483dc5e9273f62ef040bb4"
     },
     {
+      "path": "case-exam-bank.js",
+      "sha256": "f46b87a1fd50d897f7429bc760cc0ad9546fbae4dfd8974d214a6cd2cc93ade7"
+    },
+    {
+      "path": "case-exam-business.js",
+      "sha256": "78461315038e38885d0811cf9a0cc1c6acd3311831d561d935225cb1d1fa447a"
+    },
+    {
+      "path": "case-exam-restrictions.js",
+      "sha256": "916097164f4c495f853be1617050c123ef7c2ca67a4811655d27ad080facddcc"
+    },
+    {
+      "path": "case-exam-rights.js",
+      "sha256": "c516cab2a1ff2d7da1a4cbf1f2ce1da7f8b29f273de20d03c6efbd834bf8f7ec"
+    },
+    {
+      "path": "case-exam-tax-other.js",
+      "sha256": "3e166593d0186fc8c4517f2ba008da57e02fa530fb6b6c86bf7a44cbbc723660"
+    },
+    {
       "path": "current-law-source-ledger.js",
       "sha256": "c8b4cc5204c24904cfe141569b14a441f0fb5e9d7084c5f6ac8a78376e6360e6"
     },
@@ -114,7 +134,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "a1b3190bd2f56747d34d076543d746bf6122cb6a41d2a7dc9b0c0c57920d689d"
+      "sha256": "8342d2f91a282b646f1c15e21aa1328041dc9c458e773d122702daf28464ed44"
     },
     {
       "path": "manifest.webmanifest",
@@ -134,7 +154,7 @@
     },
     {
       "path": "pass-readiness.js",
-      "sha256": "7094d8baa3c705973c716a1450e2da08a394055c4a9fdc3ac40dcf7637dfeed3"
+      "sha256": "8f0e072254a5a7b77dcd26942d8f815e01513d94a66d016f8d25907d608a4cb5"
     },
     {
       "path": "practical-question-bank.js",
@@ -158,7 +178,7 @@
     },
     {
       "path": "reiwa-exam.css",
-      "sha256": "18838ec7f0195d5ee2918633631504af83e866f1452ff1d99a56a9eaaa2b74f7"
+      "sha256": "4b1541b4bcfd7d6b4ce73bf9528462d8374d0ee70feae4f1d388cacf2565b6d2"
     },
     {
       "path": "reiwa-question-view.js",
@@ -182,7 +202,7 @@
     },
     {
       "path": "service-worker.js",
-      "sha256": "ca2c3584d2c81b414a619ad7b9c876ad8f2298437d2e9cd752c9418908161a2f"
+      "sha256": "fd54e3967d48202d9d7576a65dd6edda5888d7974339a12935e8fde6340bc19f"
     },
     {
       "path": "state-sync.js",
@@ -190,7 +210,7 @@
     },
     {
       "path": "styles.css",
-      "sha256": "8bb0781aa5a416833b639b727f1bd7c280191d5306adb9d6574aa9a4b957659e"
+      "sha256": "edd5b12a26ca80501271bd7e29cb1a6294a6bff6b6c4cf98d0e3930553cdd4cb"
     },
     {
       "path": "subject-sprint-bank.js",

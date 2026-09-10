@@ -24,6 +24,7 @@ jobs:
         with:
           node-version: "22"
       - run: node Audit-TakkenFullExam.js
+      - run: node Audit-TakkenCaseExamBank.js
       - run: node Audit-TakkenChapter2Range.js
       - run: node Audit-TakkenTextbookRanges.js
       - run: node Audit-TakkenQuestionQuality.js
@@ -89,10 +90,10 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
       - name: Verify deployed page
-        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260910-reiwa-exam-v51-c8c37bf3c6f6"
+        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260910-case-exam-v52-11f4767b5e25"
       - name: Verify deployed browser boot
         env:
           TAKKEN_CHROME_PATH: /usr/bin/google-chrome
         run: |
           google-chrome --version
-          node scripts/verify-deployed-browser.cjs "${{ steps.deployment.outputs.page_url }}" "20260910-reiwa-exam-v51-c8c37bf3c6f6"
+          node scripts/verify-deployed-browser.cjs "${{ steps.deployment.outputs.page_url }}" "20260910-case-exam-v52-11f4767b5e25"

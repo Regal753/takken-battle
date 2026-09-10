@@ -42,7 +42,7 @@ async function main() {
     assert.equal(bank.styles, true);
     assert.equal(bank.invalidCompoundOptions, 0, "each displayed Reiwa option must contain two components from one source question");
 
-    assert.match(await page.locator("#mockAButton").textContent(), /令和実戦A/);
+    assert.match(await page.locator("#mockAButton").textContent(), /複合練習A/);
     // The launcher lives in the in-page quest drawer, which can be folded on
     // initial paint. Invoke its native click handler without coupling this
     // regression to that unrelated drawer animation.
@@ -56,7 +56,7 @@ async function main() {
       choices: document.querySelectorAll("#choices button").length,
       dockHidden: document.querySelector("#answerDock")?.hidden
     }));
-    assert.match(first.title, /令和実戦A\s+1\s*\/\s*50/);
+    assert.match(first.title, /複合練習A\s+1\s*\/\s*50/);
     assert.ok(first.question.length >= 10, "Reiwa prompt should render its lead/stem");
     assert.equal(first.question.includes(first.firstChoice), false, "choice text must not be duplicated in the prompt");
     assert.doesNotMatch(first.visibleQuizText, /\breiwa-[abc]-\d{2}\b|sourceQuestionIds|atomId/i, "internal source labels must never leak into the learner view");
@@ -115,7 +115,8 @@ async function main() {
     await page.waitForFunction(() => Boolean(window.TAKKEN_REIWA_EXAM_BANK));
     await waitForQuestion(page, "reiwa-a-02");
 
-    // Old v50 form IDs remain readable even though new forms own readiness.
+    // Old v50 form IDs remain readable; neither legacy nor composite practice
+    // is evidence of official unseen-exam readiness.
     await page.evaluate((storageId) => {
       const saved = JSON.parse(localStorage.getItem(storageId));
       saved.runMode = "mock";
@@ -172,7 +173,7 @@ async function main() {
       title: document.querySelector("#passReadinessTitle")?.textContent || "",
       subjectScores: [...document.querySelectorAll("#passSubjectGrid strong")].map((node) => node.textContent || "")
     }));
-    assert.match(legacyReadiness.title, /50問は未測定。令和実戦で現在地を出す/);
+    assert.match(legacyReadiness.title, /事例実戦50問は未測定。公式初見の合格証拠とは別枠/);
     assert.ok(legacyReadiness.subjectScores.every((value) => value.startsWith("未測定")),
       `legacy history must not populate Reiwa card scores: ${JSON.stringify(legacyReadiness.subjectScores)}`);
 

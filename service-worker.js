@@ -1,10 +1,11 @@
 "use strict";
 
-const VERSION = "20260910-reiwa-exam-v51-c8c37bf3c6f6";
+const VERSION = "20260910-case-exam-v52-11f4767b5e25";
 const CACHE_NAME = `takken-battle-${VERSION}`;
 const IMMUTABLE = [
   "styles.css", "reiwa-exam.css", "exam-blueprint.js", "exam-question-core.js", "exam-questions-rights.js",
   "exam-questions-restrictions.js", "exam-questions-tax-other.js", "exam-questions-business.js", "current-law-source-ledger.js", "reiwa-exam-bank.js", "reiwa-question-view.js",
+  "case-exam-rights.js", "case-exam-restrictions.js", "case-exam-tax-other.js", "case-exam-business.js", "case-exam-bank.js",
   "restrictions-supplement-bank.js", "subject-sprint-bank.js", "business-fullscore-supplement.js", "business-fullscore-bank.js",
   "guarantee-association-drill.js",
   "practical-question-bank.js", "question-bank.js", "question-balance.js", "reward-system.js",

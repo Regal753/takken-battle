@@ -10,11 +10,11 @@ const releaseIntegrity = require("./release-integrity.json");
 const ROOT = __dirname;
 const EXPECTED_CACHE_VERSION = releaseIntegrity.version;
 releaseIntegrityTools.assertVersionMatchesDigest(releaseIntegrity.version, releaseIntegrity.digest);
-// v51 adds the 150-question compound exam generator, current-law source ledger,
-// and structured long-question view. Keep only a narrow margin above the
-// measured release so later unrelated growth still fails closed.
-const MAX_PUBLIC_JS_BYTES = 1_560_000;
-const MAX_PUBLIC_JS_GZIP_BYTES = 380_000;
+// v52 adds 50 separately authored, sourced case questions (~148 KB raw),
+// while retaining legacy payloads to preserve saved answers. These measured
+// budgets allow that explicit content expansion, not unrelated feature growth.
+const MAX_PUBLIC_JS_BYTES = 1_720_000;
+const MAX_PUBLIC_JS_GZIP_BYTES = 430_000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
   "pwa-runtime.js",

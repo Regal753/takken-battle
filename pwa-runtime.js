@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20260910-reiwa-exam-v51-c8c37bf3c6f6";
+  const VERSION = "20260910-case-exam-v52-11f4767b5e25";
   const BANNER_ID = "pwaUpdateNotice";
   let reloadRequested = false;
 
