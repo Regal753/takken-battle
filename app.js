@@ -13855,7 +13855,12 @@
         });
       }
       const actions = resultElement("div", { className: "finish-actions mock-finish-actions" });
-      [["mockDailyButton", "next-button", "日課へ戻る"], ["mockOtherButton", "ghost-button", `${mockFormShortLabel(mockFormById(otherFormId))}へ`], ["mockRetryButton", "ghost-button", "同じフォームを再挑戦"]].forEach(([id, className, text]) => {
+      const finishActions = [["mockDailyButton", "next-button", "日課へ戻る"], ["mockRetryButton", "ghost-button", "同じフォームを再挑戦"]];
+      // A single authored form has no alternate. Do not advertise its retry
+      // as a second, different-form action or silently downgrade to old drills.
+      if (otherFormId !== form.id) finishActions.splice(1, 0,
+        ["mockOtherButton", "ghost-button", `${mockFormShortLabel(mockFormById(otherFormId))}へ`]);
+      finishActions.forEach(([id, className, text]) => {
         const button = resultElement("button", { id, className, text });
         button.type = "button";
         actions.append(button);

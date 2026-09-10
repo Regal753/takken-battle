@@ -55,12 +55,15 @@ async function main() {
     assert.match(await page.locator(".mock-score-hero strong").textContent(), /49\s*\/\s*50/);
     assert.match(await page.locator(".mock-evidence-note").first().textContent(), /難易度|換算/);
     assert.doesNotMatch(await page.locator(".mock-score-hero").textContent(), /演習安全圏\d/);
+    assert.equal(await page.locator("#mockOtherButton").count(), 0, "a sole case form must not be advertised as an alternate");
+    assert.equal(await page.locator("#mockRetryButton").isVisible(), true, "same-form retry remains explicit");
     const saved = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), storageId);
     assert.equal(saved.mock.results.length, 50);
     assert.equal(saved.mockHistory.at(-1).score, 49);
     assert.ok(Object.keys(saved.marked).length > 0, "case wrong answer must register base review");
     await page.reload({ waitUntil: "domcontentloaded" });
     assert.match(await page.locator(".mock-score-hero strong").textContent(), /49\s*\/\s*50/);
+    assert.equal(await page.locator("#mockOtherButton").count(), 0, "reload must not restore a duplicate alternate action");
     await page.locator(".mock-score-hero").scrollIntoViewIfNeeded();
     await page.screenshot({ path: path.join(output, "results-390.png"), fullPage: false });
     const beforeOfficial = await page.evaluate(key => {

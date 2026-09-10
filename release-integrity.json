@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20260910-case-exam-v52-ae29cf194864",
-  "digest": "sha256:ae29cf194864ac8de6c510c10653a7a37070f743f20cb4190ecdb93ccbaa7c77",
+  "version": "20260910-case-exam-v52-0814e436f18a",
+  "digest": "sha256:0814e436f18a9e515af62d4efeb835d979afa63520c93cb4c54e0d25179a69e8",
   "assetCount": 53,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "5a6930d04eed73e23db5aa57cc49be709418430777f1318643f6e73e2307b003"
+      "sha256": "9376ae427f7b8c1917db7b5c967504a6e9dd9583fb190644479f8d2da0f734d2"
     },
     {
       "path": "assets/battle/grassland-route.webp",
