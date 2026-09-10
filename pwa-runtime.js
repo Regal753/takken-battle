@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20260911-fresh-knock-v55-d20ca7babbfb";
+  const VERSION = "20260911-archive-v56-71c66d1f2e9c";
   const BANNER_ID = "pwaUpdateNotice";
   let reloadRequested = false;
 

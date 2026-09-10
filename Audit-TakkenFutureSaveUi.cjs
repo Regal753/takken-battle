@@ -43,6 +43,12 @@ function startStaticServer(root) {
   });
 }
 
+async function openLegacyDrawer(page) {
+  const drawer = page.locator("#businessLegacyDrawer");
+  await drawer.waitFor({ state: "attached" });
+  if (!await drawer.evaluate((node) => node.open)) await drawer.locator("summary").click();
+}
+
 (async () => {
   const local = await startStaticServer(process.cwd());
   const browser = await chromium.launch(chromePath
@@ -342,6 +348,7 @@ function startStaticServer(root) {
     const recoveryFromV36Url = new URL(local.baseUrl);
     recoveryFromV36Url.searchParams.set("review", "v36-guarantee-recovery");
     await recoveryFromV36Page.goto(recoveryFromV36Url.toString(), { waitUntil: "networkidle" });
+    await openLegacyDrawer(recoveryFromV36Page);
     await recoveryFromV36Page.locator("#guaranteeSpecialStart").dispatchEvent("click");
     await recoveryFromV36Page.locator('[data-practical-forecast="confident"]').click();
     await recoveryFromV36Page.locator(".practical-drill-choice").first().click();
@@ -414,6 +421,7 @@ function startStaticServer(root) {
     const recoveryFromV11Url = new URL(local.baseUrl);
     recoveryFromV11Url.searchParams.set("review", "v11-guarantee-live-wins");
     await recoveryFromV11Page.goto(recoveryFromV11Url.toString(), { waitUntil: "networkidle" });
+    await openLegacyDrawer(recoveryFromV11Page);
     await recoveryFromV11Page.locator("#guaranteeSpecialStart").dispatchEvent("click");
     const v11Fixture = await recoveryFromV11Page.evaluate(() => {
       const key = Object.keys(localStorage).find((candidate) =>

@@ -8996,10 +8996,31 @@ button.mission-step:disabled {
 .business-mastery-tile button:disabled { border-color: #b8c6c1; color: #586964; background: #e8eeeb; opacity: 1; }
 .business-mastery-law { margin: 13px 0 0; font-size: .9rem; }
 .business-mastery-law a { color: #2f54a3; font-weight: 800; }
+.business-legacy-drawer { margin-top: 14px; border: 1px solid #c1d8cf; border-radius: 12px; background: rgba(255, 255, 255, .64); color: #173d35; }
+.business-legacy-drawer > summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; min-height: 48px; padding: 10px 13px; color: #365c53; cursor: pointer; list-style: none; }
+.business-legacy-drawer > summary::-webkit-details-marker { display: none; }
+.business-legacy-drawer > summary::before { content: "▸"; flex: 0 0 auto; color: #5d8b7e; font-size: 1rem; transition: transform .16s ease; }
+.business-legacy-drawer[open] > summary::before { transform: rotate(90deg); }
+.business-legacy-drawer > summary span { margin-right: auto; font-size: .82rem; font-weight: 800; }
+.business-legacy-drawer > summary strong { color: #173d35; font-size: .88rem; text-align: right; overflow-wrap: anywhere; }
+.business-legacy-drawer > summary:focus-visible { outline: 3px solid #2d6a5a; outline-offset: -3px; border-radius: 11px; }
+.business-legacy-content { display: grid; gap: 12px; padding: 0 13px 14px; border-top: 1px solid #d7e7e0; }
+.business-legacy-intro { margin: 12px 0 0; color: #365c53; font-size: .88rem; line-height: 1.55; }
+.business-legacy-content .business-mastery-status { margin: 0; }
+.business-archive-toolbar { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.business-archive-toolbar label { display: grid; gap: 5px; min-width: 0; color: #365c53; font-size: .78rem; font-weight: 800; }
+.business-archive-toolbar label[hidden] { display: none; }
+.business-archive-toolbar select { width: 100%; min-width: 0; min-height: 44px; padding: 8px 30px 8px 10px; border: 1px solid #8eb5a8; border-radius: 9px; background: #fff; color: #173d35; font: inherit; }
+.business-archive-toolbar select:focus-visible, .business-archive-start:focus-visible { outline: 3px solid #2d6a5a; outline-offset: 3px; }
+.business-archive-start { width: 100%; min-height: 48px; padding: 10px 13px; border: 1px solid #5d8b7e; border-radius: 10px; color: #173d35; background: #edf8f3; font: inherit; font-weight: 850; cursor: pointer; }
+.business-archive-start:hover:not(:disabled) { border-color: #2d6a5a; background: #dcefe7; }
+.business-archive-start:disabled { border-color: #b8c6c1; color: #5d6b67; background: #e8eeeb; cursor: not-allowed; }
+.business-archive-status { margin: -3px 0 0; color: #365c53; font-size: .86rem; line-height: 1.5; }
 .official-exam-access-note { display: block; color: var(--muted); font-size: .9rem; line-height: 1.55; }
 #officialExamQuestionLink.is-disabled { border-color: #9aa9a4; color: #5d6b67; background: #e8eeeb; cursor: not-allowed; }
 @media (max-width: 520px) { .business-fullscore-gates { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 620px) { .business-knock-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } .business-knock-controls { grid-template-columns: minmax(0, 1fr); } }
+@media (max-width: 620px) { .business-archive-toolbar { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 620px) { .guarantee-special-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 420px) { .guarantee-special-actions { grid-template-columns: minmax(0, 1fr); } }
 @media (max-width: 620px) { .post-training-actions { grid-template-columns: minmax(0, 1fr); } }
@@ -9008,6 +9029,8 @@ button.mission-step:disabled {
   .business-knock-panel { padding: 12px; }
   .business-mastery-grid { grid-template-columns: minmax(0, 1fr); }
   .business-mastery-actions { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .business-legacy-drawer > summary { align-items: flex-start; }
+  .business-legacy-drawer > summary strong { font-size: .8rem; }
 
   .today-command-panel .daily-mission {
     grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -62,6 +62,10 @@ async function waitForApp(page) {
     return /変形/.test(metrics) &&
       document.querySelectorAll("#businessMasteryGrid article").length === 11;
   });
+  const drawer = page.locator("#businessLegacyDrawer");
+  await drawer.waitFor({ state: "attached" });
+  if (!await drawer.evaluate((node) => node.open)) await drawer.locator("summary").click();
+  await page.locator("#businessMasteryPanel").waitFor({ state: "visible" });
 }
 
 async function readSavedState(page) {

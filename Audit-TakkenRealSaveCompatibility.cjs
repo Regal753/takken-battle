@@ -12,6 +12,12 @@ const fixturePath = process.env.TAKKEN_REAL_SAVE_FIXTURE || "";
 const baseUrl = process.env.TAKKEN_BASE_URL || "http://127.0.0.1:8783/";
 const screenshotDir = process.env.TAKKEN_SCREENSHOT_DIR || "";
 
+async function openLegacyDrawer(page) {
+  const drawer = page.locator("#businessLegacyDrawer");
+  await drawer.waitFor({ state: "attached" });
+  if (!await drawer.evaluate((node) => node.open)) await drawer.locator("summary").click();
+}
+
 function practicalHistorySnapshot(state, businessIds = []) {
   const business = new Set(businessIds);
   const history = state.practicalDrill?.history && typeof state.practicalDrill.history === "object"
@@ -601,6 +607,7 @@ async function main() {
     , importStorageId);
     assert.deepEqual(practicalSnapshot(fullRestored, fullScoreIds), fullScoreExpected);
 
+    await openLegacyDrawer(importPage);
     await importPage.locator("#businessMasteryFull").click();
     await importPage.waitForFunction(() =>
       !document.querySelector("#practicalDrillSession")?.hidden

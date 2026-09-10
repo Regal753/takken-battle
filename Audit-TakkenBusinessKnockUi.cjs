@@ -52,6 +52,9 @@ async function waitForApp(page) {
     document.querySelector("#businessKnockStart") &&
     document.querySelector("#businessKnockUntouched")
   ));
+  const drawer = page.locator("#businessLegacyDrawer");
+  await drawer.waitFor({ state: "attached" });
+  if (!await drawer.evaluate((node) => node.open)) await drawer.locator("summary").click();
 }
 
 async function readSavedState(page) {
@@ -105,16 +108,16 @@ async function resetKnockState(page, history = {}, difficulty = "basic") {
 }
 
 async function setKnockPreset(page, { mode, size, unitId }) {
-  await page.locator("#businessKnockMode").selectOption(mode);
+  await page.locator("#businessArchiveMode").selectOption(mode);
   if (mode === "unit") {
-    await page.locator("#businessKnockUnit").selectOption(unitId);
+    await page.locator("#businessArchiveUnit").selectOption(unitId);
   }
-  await page.locator("#businessKnockSize").selectOption(String(size));
+  await page.locator("#businessArchiveSize").selectOption(String(size));
 }
 
 async function startKnock(page, preset) {
   await setKnockPreset(page, preset);
-  await page.locator("#businessKnockStart").click();
+  await page.locator("#businessArchiveKnockStart").click();
   await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
   assert.equal(await page.locator("#practicalDrillForecast").isHidden(), true, "business-fullscore must not inherit the guarantee pre-answer forecast");
   assert.equal(await page.locator(".practical-drill-choice:enabled").count(), 4, "business-fullscore choices must remain immediately answerable");
@@ -349,21 +352,21 @@ async function presentedFixture(page) {
       "4 合格ロード・2026 PASS PLAN"
     );
     assert.equal(await page.locator("#businessKnockPanel").isVisible(), true);
-    assert.equal(await page.locator("#businessKnockDifficulty").inputValue(), "hard", "fresh manual sessions must default to hard cases");
+    assert.equal(await page.locator("#businessArchiveMode").inputValue(), "all-random", "legacy drawer starts at its explicit all-random control");
     assert.equal(await page.locator("#businessKnockUntouched").textContent(), "180");
     assert.equal(await page.locator("#businessKnockFreshStart").textContent(), "新問20問を開始（未接触だけ）");
     assert.match(await page.locator("#businessKnockFreshStatus").textContent(), /未接触.*180問/);
     assert.match(await page.locator("#businessKnockPanel").textContent(), /宅建業法ノック道場/);
     assert.equal(await page.locator("#guaranteeSpecialCard").isHidden(), true, "the retired guarantee intensive card must not compete with the current dojo");
     assert.equal(await page.locator("#todayCommandGuaranteeButton").isHidden(), true, "the retired guarantee intensive CTA must stay out of today's command");
-    assert.equal(await page.locator("#businessKnockSize option").count(), 4);
-    assert.deepEqual(await page.locator("#businessKnockSize option").evaluateAll((options) => options.map((option) => option.value)), ["10", "20", "50", "100"]);
-    assert.equal(await page.locator("#businessKnockUnitField").isVisible(), false, "unit select must stay hidden outside unit mode");
-    await page.locator("#businessKnockMode").selectOption("unit");
-    assert.equal(await page.locator("#businessKnockUnitField").isVisible(), true, "unit mode must reveal its select");
-    await page.locator("#businessKnockMode").selectOption("untouched");
-    assert.equal(await page.locator("#businessKnockUnitField").isVisible(), false, "leaving unit mode must hide its select again");
-    const targetHeights = await page.locator("#businessKnockPanel button, #businessKnockPanel select").evaluateAll((nodes) => nodes
+    assert.equal(await page.locator("#businessArchiveSize option").count(), 4);
+    assert.deepEqual(await page.locator("#businessArchiveSize option").evaluateAll((options) => options.map((option) => option.value)), ["10", "20", "50", "100"]);
+    assert.equal(await page.locator("#businessArchiveUnitField").isVisible(), false, "archive unit select must stay hidden outside unit mode");
+    await page.locator("#businessArchiveMode").selectOption("unit");
+    assert.equal(await page.locator("#businessArchiveUnitField").isVisible(), true, "archive unit mode must reveal its select");
+    await page.locator("#businessArchiveMode").selectOption("untouched");
+    assert.equal(await page.locator("#businessArchiveUnitField").isVisible(), false, "leaving archive unit mode must hide its select again");
+    const targetHeights = await page.locator("#businessLegacyDrawer button, #businessLegacyDrawer select").evaluateAll((nodes) => nodes
       .filter((node) => !node.closest("[hidden]") && node.getBoundingClientRect().height > 0)
       .map((node) => Math.round(node.getBoundingClientRect().height)));
     assert.ok(targetHeights.every((height) => height >= 44), `touch target under 44px: ${targetHeights.join(", ")}`);
@@ -456,7 +459,6 @@ async function presentedFixture(page) {
     assert.equal(await missingHardPage.locator("#businessKnockFreshStart").isDisabled(), true, "direct fresh CTA must also fail closed when its asset is missing");
     assert.match(await missingHardPage.locator("#businessKnockFreshStatus").textContent(), /180問の読込を確認できません/);
     assert.match(await missingHardPage.locator("#businessKnockStatus").textContent(), /難度を自動で下げず/);
-    await missingHardPage.locator("#businessKnockDifficulty").selectOption("basic");
     const explicitBasicFallback = await startKnock(missingHardPage, { mode: "untouched", size: 10 });
     assert.equal(explicitBasicFallback.practicalDrill.sessionIds.every(id => id.startsWith("bf-business-")), true, "only an explicit basic choice may enter the intact legacy bank");
     await missingHardPage.close();
@@ -694,12 +696,11 @@ async function presentedFixture(page) {
     assert.equal(await page.locator("#businessKnockUntouched").textContent(), "120");
     for (const width of [320, 390, 1440]) {
       await page.setViewportSize({ width, height: 844 });
-      await page.locator("#businessKnockPanel").evaluate(node => node.scrollIntoView({ block: "start" }));
+      await page.locator("#businessLegacyDrawer").evaluate(node => node.scrollIntoView({ block: "start" }));
       assert.equal(await horizontalOverflow(page), 0);
       await page.screenshot({ path: path.join(hardScreenshots, `fresh-cta-${width}.png`) });
     }
     await page.setViewportSize({ width: 390, height: 844 });
-    await page.locator("#businessKnockDifficulty").selectOption("basic");
     await setKnockPreset(page, { mode: "weak-due", size: 100 });
     await page.locator("#businessKnockFreshStart").click();
     const fresh20 = await readSavedState(page);
@@ -767,7 +768,7 @@ async function presentedFixture(page) {
 
     // A unit plan cannot leak a question from another unit.
     await resetKnockState(page);
-    const unitId = await page.locator("#businessKnockUnit option").nth(3).getAttribute("value");
+    const unitId = await page.locator("#businessArchiveUnit option").nth(3).getAttribute("value");
     const unitSaved = await startKnock(page, { mode: "unit", unitId, size: 100 });
     const unitQueue = await page.evaluate((ids) => ids.map((id) => window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS_BY_ID[id].unitId), unitSaved.practicalDrill.queue);
     assert.ok(unitQueue.length > 0);
@@ -821,7 +822,7 @@ async function presentedFixture(page) {
       choices: await page.locator(".practical-drill-choice").allTextContents()
     };
     // Clicking the launcher while active must resume instead of replacing the session.
-    await page.locator("#businessKnockStart").click();
+    await page.locator("#businessArchiveKnockStart").click();
     let saved = await readSavedState(page);
     assert.deepEqual(saved.practicalDrill.queue, stableSession.queue);
     assert.equal(saved.practicalDrill.presentationKey, stableSession.key);
@@ -1041,9 +1042,9 @@ async function presentedFixture(page) {
 
     // Restore the launcher state before checking its compact controls.
     await resetKnockState(page);
-    await page.locator("#businessKnockPanel").scrollIntoViewIfNeeded();
+    await page.locator("#businessLegacyDrawer").scrollIntoViewIfNeeded();
     assert.equal(await horizontalOverflow(page), 0);
-    const compactHeights = await page.locator("#businessKnockPanel button, #businessKnockPanel select").evaluateAll((nodes) => nodes
+    const compactHeights = await page.locator("#businessLegacyDrawer button, #businessLegacyDrawer select").evaluateAll((nodes) => nodes
       .filter((node) => !node.closest("[hidden]") && node.getBoundingClientRect().height > 0)
       .map((node) => Math.round(node.getBoundingClientRect().height)));
     assert.ok(compactHeights.every((height) => height >= 44), `320px touch target under 44px: ${compactHeights.join(", ")}`);

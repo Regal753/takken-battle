@@ -6,7 +6,7 @@ const path = require("node:path");
 const { chromium } = require("playwright");
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260911-fresh-knock-v55-d20ca7babbfb";
+const expectedVersion = process.argv[3] || "20260911-archive-v56-71c66d1f2e9c";
 const chromePath = process.env.TAKKEN_CHROME_PATH || undefined;
 const canonicalIndex = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
 const expectedScriptCount = [...canonicalIndex.matchAll(/<script\b[^>]*\bsrc=/gi)].length;
@@ -67,9 +67,30 @@ assert.ok(expectedScriptCount > 0, "canonical index has no runtime scripts");
       assert.ok(result.scriptVersions.every((version) => version === expectedVersion), "deployed runtime versions are mixed");
     }
     assert.equal(mobile320.controlled, true, "deployed page is not controlled by its service worker after first load");
+    const drawer = page.locator("#businessLegacyDrawer");
+    assert.equal(await drawer.evaluate((node) => node.open), false, "legacy drawer must start closed");
+    assert.equal(await page.locator("#businessMasteryPrimary").isHidden(), true, "old primary entry must stay in drawer");
+    await page.locator("#businessKnockFreshStart").click();
+    await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
+    const readDrill = () => page.evaluate(() => JSON.parse(localStorage.getItem("takken-battle-study-clean-v2-hard")).practicalDrill);
+    const fresh = await readDrill();
+    assert.equal(fresh.sessionIds.length, 20);
+    assert.ok(fresh.sessionIds.every((id) => /^hard(?:54|55)-/.test(id)), "normal entry must use new questions");
+    await page.reload({ waitUntil: "networkidle" });
+    assert.deepEqual((await readDrill()).sessionIds, fresh.sessionIds, "published new session must survive reload");
+    page.once("dialog", (dialog) => dialog.accept());
+    await page.locator("#practicalDrillDiscardButton").click();
+    await drawer.locator("summary").click();
+    await page.locator("#businessArchiveKnockStart").click();
+    await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
+    const old = await readDrill();
+    assert.equal(old.sessionIds.length, 20);
+    assert.ok(old.sessionIds.every((id) => /^bf-business-/.test(id)), "explicit archive must retrieve old questions");
+    await page.reload({ waitUntil: "networkidle" });
+    assert.deepEqual((await readDrill()).sessionIds, old.sessionIds, "published archive session must survive reload");
     assert.deepEqual(consoleErrors, [], "deployed page emitted console errors");
     assert.deepEqual(pageErrors, [], "deployed page emitted page errors");
-    console.log(JSON.stringify({ status: "ok", expectedVersion, scripts: mobile320.scriptVersions.length, overflow390: mobile390.overflow, overflow320: mobile320.overflow, errors: 0 }));
+    console.log(JSON.stringify({ status: "ok", expectedVersion, scripts: mobile320.scriptVersions.length, overflow390: mobile390.overflow, overflow320: mobile320.overflow, archiveClosed: true, newAndLegacyReload: true, syntheticContextOnly: true, errors: 0 }));
   } finally {
     await browser.close();
   }
