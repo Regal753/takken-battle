@@ -78,7 +78,7 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.equal(`sha256:${sha256(Buffer.from(aggregate, "utf8"))}`, integrity.digest, "deployed aggregate release digest mismatch");
     const appReference = references.find((reference) => /(?:^|\/)app\.js\?/.test(reference));
     const appCode = await fetchAsset(appReference, response.url, "app");
-    assert.match(appCode, /const STATE_SCHEMA_VERSION = 14/, "save schema v14 missing");
+    assert.match(appCode, /const STATE_SCHEMA_VERSION = 15/, "save schema v15 missing");
     assert.match(appCode, /function renderPassReadinessCard/, "readiness renderer missing");
     console.log(JSON.stringify({ status: "ok", pageUrl: response.url, expectedVersion, attempt, references: references.length, htmlLength: html.length }));
     process.exit(0);

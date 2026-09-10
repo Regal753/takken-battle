@@ -28,6 +28,10 @@ const RELEASE_CONTRACT_PATHS = [
 
 const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), "utf8");
 const html = read("index.html");
+const appSchema = read("app.js").match(/const STATE_SCHEMA_VERSION = (\d+);/)?.[1];
+assert.ok(appSchema, "application save schema must be explicit");
+assert.ok(read("scripts/verify-deployed-page.mjs").includes(`/const STATE_SCHEMA_VERSION = ${appSchema}/`),
+  "deployed-page verifier must track the current save schema before a release is staged");
 
 assert.match(html, new RegExp(`manifest\\.webmanifest\\?v=${EXPECTED_CACHE_VERSION}`), "versioned manifest missing");
 assert.match(html, new RegExp(`pwa-runtime\\.js\\?v=${EXPECTED_CACHE_VERSION}`), "versioned PWA runtime missing");
