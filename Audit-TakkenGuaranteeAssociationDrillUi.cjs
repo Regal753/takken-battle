@@ -44,7 +44,7 @@ async function openLegacyDrawer(page) {
   const drawer = page.locator("#businessLegacyDrawer");
   await drawer.waitFor({ state: "attached" });
   if (!await drawer.evaluate((node) => node.open)) await drawer.locator("summary").click();
-  await page.locator("#guaranteeSpecialCard").waitFor({ state: "visible" });
+  await page.locator("#businessArchiveKnockStart").waitFor({ state: "visible" });
 }
 
 async function waitForApp(page, { openDrawer = true } = {}) {
@@ -216,7 +216,8 @@ async function assertFocusedInViewport(page, expectedSelector) {
     assert.equal(ids.length, 33);
     assert.ok(ids.every((id) => /^ga\d{3}$/.test(id)), `unexpected special ids: ${ids.join(", ")}`);
     assert.equal(new Set(ids).size, 33, "guarantee drill IDs must not duplicate");
-    assert.ok(await page.locator("#guaranteeSpecialCard button:visible").count() > 0, "explicit drawer opening must expose the legacy controls");
+    assert.equal(await page.locator("#guaranteeSpecialCard").isHidden(), true, "retired guarantee card remains hidden even inside the explicitly opened legacy drawer");
+    assert.equal(await page.locator("#guaranteeSpecialCard button:visible").count(), 0, "retired guarantee controls must not expose a touch target");
 
     const priorityWeakId = ids.at(-1);
     const currentHistoryId = ids.at(-2);

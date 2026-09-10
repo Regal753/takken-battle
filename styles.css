@@ -9001,7 +9001,7 @@ button.mission-step:disabled {
 .business-legacy-drawer > summary::-webkit-details-marker { display: none; }
 .business-legacy-drawer > summary::before { content: "▸"; flex: 0 0 auto; color: #5d8b7e; font-size: 1rem; transition: transform .16s ease; }
 .business-legacy-drawer[open] > summary::before { transform: rotate(90deg); }
-.business-legacy-drawer > summary span { margin-right: auto; font-size: .82rem; font-weight: 800; }
+.business-legacy-drawer > summary span { flex: 0 0 auto; margin-right: auto; font-size: .82rem; font-weight: 800; white-space: nowrap; }
 .business-legacy-drawer > summary strong { color: #173d35; font-size: .88rem; text-align: right; overflow-wrap: anywhere; }
 .business-legacy-drawer > summary:focus-visible { outline: 3px solid #2d6a5a; outline-offset: -3px; border-radius: 11px; }
 .business-legacy-content { display: grid; gap: 12px; padding: 0 13px 14px; border-top: 1px solid #d7e7e0; }

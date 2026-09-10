@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "20260911-archive-v56-71c66d1f2e9c",
-  "digest": "sha256:71c66d1f2e9c60b1a34010cda172b48d9f920757d6cf0f1b470d30b866fb4cf9",
+  "version": "20260911-archive-v56-414c6e8b511b",
+  "digest": "sha256:414c6e8b511b8d0753f68df84fac6e6665c66759c97890d7f0f787c7d09624c7",
   "assetCount": 60,
   "assets": [
     {
@@ -238,7 +238,7 @@
     },
     {
       "path": "styles.css",
-      "sha256": "4225f379c4e7fba6d6976cd46cd3adb60b5e79768705b1866423987544ddb4aa"
+      "sha256": "f2529f3cb101d52fc9049ea331346537d4a69a44bf833a33db40cd0017fb0855"
     },
     {
       "path": "subject-sprint-bank.js",

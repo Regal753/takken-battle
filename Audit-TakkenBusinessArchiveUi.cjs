@@ -64,7 +64,17 @@ async function answerCurrent(page, { advance = true } = {}) { const answer = awa
     await page.locator("#businessKnockStart").click(); await page.locator("#practicalDrillSession").waitFor({ state: "visible" }); state = (await saved(page)).state;
     assert.equal(state.practicalDrill.sessionIds.every(id => /^hard(?:54|55)-/.test(id)), true, "after an old completion, the normal CTA must still start hard only");
     page.once("dialog", d => d.accept()); await page.locator("#practicalDrillDiscardButton").click(); await page.locator("#practicalDrillSession").waitFor({ state: "hidden" });
-    for (const width of [320, 390, 1440]) { await page.setViewportSize({ width, height: 844 }); await open(page); await page.locator("#businessLegacyDrawer").scrollIntoViewIfNeeded(); assert.equal(await overflow(page), 0, `${width}px archive must not overflow`); await page.screenshot({ path: path.join(shots, `drawer-${width}.png`) }); }
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 844 });
+      const drawer = page.locator("#businessLegacyDrawer");
+      if (await drawer.evaluate(node => node.open)) await drawer.locator("summary").click();
+      await page.locator("#businessMasteryPanel").evaluate(node => node.scrollIntoView({ block: "start", behavior: "instant" }));
+      assert.equal(await overflow(page), 0, `${width}px closed archive must not overflow`);
+      await page.screenshot({ path: path.join(shots, `closed-${width}.png`) });
+      await open(page); await drawer.locator("summary").evaluate(node => node.scrollIntoView({ block: "start", behavior: "instant" }));
+      assert.equal(await overflow(page), 0, `${width}px opened archive must not overflow`);
+      await page.screenshot({ path: path.join(shots, `drawer-${width}.png`) });
+    }
     const missing = await browser.newPage({ viewport: { width: 390, height: 844 } }); await missing.route(/business-hard-bank\.js/, route => route.abort()); await missing.goto(url(local.base, "missing-hard"), { waitUntil: "networkidle" }); await app(missing); assert.equal(await missing.locator("#businessKnockStart").isDisabled(), true, "missing hard bank disables normal start"); await open(missing); await archiveStart(missing, "all-random", 10); state = (await saved(missing)).state; assert.equal(state.practicalDrill.sessionIds.every(id => /^bf-business-/.test(id)), true, "archive remains usable when hard asset is missing"); await missing.close();
     assert.deepEqual(errors, []); console.log(JSON.stringify({ status: "ok", defaultClosed: true, archiveOld134: true, hardPreferenceIsolated: true, oldResumeAndRestart: true, missingHardArchiveWorks: true, widths: [320, 390, 1440], screenshots: shots }));
   } finally { await browser.close(); await local.close(); }

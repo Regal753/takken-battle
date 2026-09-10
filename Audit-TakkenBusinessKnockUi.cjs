@@ -107,17 +107,21 @@ async function resetKnockState(page, history = {}, difficulty = "basic") {
   await waitForApp(page);
 }
 
-async function setKnockPreset(page, { mode, size, unitId }) {
-  await page.locator("#businessArchiveMode").selectOption(mode);
+async function setKnockPreset(page, { mode, size, unitId, difficulty = "basic" }) {
+  const archive = difficulty !== "hard";
+  const modeSelector = archive ? "#businessArchiveMode" : "#businessKnockMode";
+  const unitSelector = archive ? "#businessArchiveUnit" : "#businessKnockUnit";
+  const sizeSelector = archive ? "#businessArchiveSize" : "#businessKnockSize";
+  await page.locator(modeSelector).selectOption(mode);
   if (mode === "unit") {
-    await page.locator("#businessArchiveUnit").selectOption(unitId);
+    await page.locator(unitSelector).selectOption(unitId);
   }
-  await page.locator("#businessArchiveSize").selectOption(String(size));
+  await page.locator(sizeSelector).selectOption(String(size));
 }
 
 async function startKnock(page, preset) {
   await setKnockPreset(page, preset);
-  await page.locator("#businessArchiveKnockStart").click();
+  await page.locator(preset.difficulty === "hard" ? "#businessKnockStart" : "#businessArchiveKnockStart").click();
   await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
   assert.equal(await page.locator("#practicalDrillForecast").isHidden(), true, "business-fullscore must not inherit the guarantee pre-answer forecast");
   assert.equal(await page.locator(".practical-drill-choice:enabled").count(), 4, "business-fullscore choices must remain immediately answerable");
@@ -193,7 +197,7 @@ async function horizontalOverflow(page) {
 async function assertNextQuestionViewport(page, viewport, difficulty = "basic") {
   await page.setViewportSize(viewport);
   await resetKnockState(page, {}, difficulty);
-  await startKnock(page, { mode: "all-random", size: 10 });
+  await startKnock(page, { mode: "all-random", size: 10, difficulty });
   const presented = await currentPresented(page);
   await page.locator(".practical-drill-choice").nth(presented.answer).click();
   await page.locator("#practicalDrillFeedback").waitFor({ state: "visible" });
@@ -370,6 +374,17 @@ async function presentedFixture(page) {
       .filter((node) => !node.closest("[hidden]") && node.getBoundingClientRect().height > 0)
       .map((node) => Math.round(node.getBoundingClientRect().height)));
     assert.ok(targetHeights.every((height) => height >= 44), `touch target under 44px: ${targetHeights.join(", ")}`);
+    assert.equal(await page.locator("#businessKnockSize option").count(), 4);
+    assert.deepEqual(await page.locator("#businessKnockSize option").evaluateAll((options) => options.map((option) => option.value)), ["10", "20", "50", "100"]);
+    assert.equal(await page.locator("#businessKnockUnitField").isVisible(), false, "main hard unit select must stay hidden outside unit mode");
+    await page.locator("#businessKnockMode").selectOption("unit");
+    assert.equal(await page.locator("#businessKnockUnitField").isVisible(), true, "main hard unit mode must reveal its select");
+    await page.locator("#businessKnockMode").selectOption("untouched");
+    assert.equal(await page.locator("#businessKnockUnitField").isVisible(), false, "leaving main hard unit mode must hide its select again");
+    const hardTargetHeights = await page.locator("#businessKnockPanel button, #businessKnockPanel select").evaluateAll((nodes) => nodes
+      .filter((node) => !node.closest("[hidden]") && node.getBoundingClientRect().height > 0)
+      .map((node) => Math.round(node.getBoundingClientRect().height)));
+    assert.ok(hardTargetHeights.every((height) => height >= 44), `main hard touch target under 44px: ${hardTargetHeights.join(", ")}`);
     assert.equal(await horizontalOverflow(page), 0);
 
     // The top command must enter the required 20-question knock, label each
@@ -571,7 +586,7 @@ async function presentedFixture(page) {
     // Hard rounds use their own explanations and diagnostics, and never add
     // their180 IDs to the legacy134 retention gate.
     await resetKnockState(page, {}, "hard");
-    await startKnock(page, { mode: "untouched", size: 10 });
+    await startKnock(page, { mode: "untouched", size: 10, difficulty: "hard" });
     const hardCompleted = await completeTenWithTwoRetries(page);
     assert.equal(hardCompleted.saved.practicalDrill.sessionIds.every((id) => /^hard(?:54|55)-/.test(id)), true);
     assert.equal(hardCompleted.saved.practicalDrill.history[hardCompleted.wrong.id].wrong, 1);
@@ -696,7 +711,7 @@ async function presentedFixture(page) {
     assert.equal(await page.locator("#businessKnockUntouched").textContent(), "120");
     for (const width of [320, 390, 1440]) {
       await page.setViewportSize({ width, height: 844 });
-      await page.locator("#businessLegacyDrawer").evaluate(node => node.scrollIntoView({ block: "start" }));
+      await page.locator("#businessKnockPanel").evaluate(node => node.scrollIntoView({ block: "start" }));
       assert.equal(await horizontalOverflow(page), 0);
       await page.screenshot({ path: path.join(hardScreenshots, `fresh-cta-${width}.png`) });
     }
