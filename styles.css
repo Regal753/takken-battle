@@ -24,6 +24,7 @@
 .app-header { order: 0; }
 .public-mode-note { order: 1; }
 #todayCommandPanel { order: 2; }
+#restrictionMasteryPanel { order: 3; }
 #passPlanPanel { order: 3; }
 #businessMasteryPanel { order: 4; }
 #themeDrawer { order: 5; }

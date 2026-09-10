@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20260910-case-exam-v52-11f4767b5e25";
+  const VERSION = "20260910-final-stretch-v53-c804bf4af7d5";
   const BANNER_ID = "pwaUpdateNotice";
   let reloadRequested = false;
 

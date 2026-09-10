@@ -6689,7 +6689,7 @@
   }
 
   function passThemeScope(themeKey) {
-    return themeKey === "tax-other" ? "taxOther" : themeKey;
+    return ["tax-other", "tax"].includes(themeKey) ? "taxOther" : themeKey;
   }
 
   function businessAnsweredTodayIds() {
@@ -6703,6 +6703,11 @@
   }
 
   function themeAnswersToday(themeKey) {
+    if (themeKey === "tax-other") {
+      // Completing many "other" questions cannot hide an untouched tax lane.
+      return Math.min(6, themeAnswersToday("tax")) +
+        (state.examProfile === EXAM_PROFILE_FIVE_EXEMPT ? 0 : Math.min(6, themeAnswersToday("other")));
+    }
     if (themeKey === "mock") {
       const completed = [...(state.mockHistory || [])]
         .filter((item) =>
@@ -6760,7 +6765,7 @@
   function nextThemeSprintScope(themeKey) {
     if (themeKey !== "tax-other") return passThemeScope(themeKey);
     if (state.examProfile === EXAM_PROFILE_FIVE_EXEMPT) return "taxOther";
-    return sprintAnswersToday("taxOther") < 6 ? "taxOther" : "other";
+    return themeAnswersToday("tax") < 6 ? "taxOther" : "other";
   }
 
   function nextMockFormId() {
@@ -6913,7 +6918,7 @@
         : 8;
     const themeDone = themeCount >= themeTarget;
     const minutesDone = mission.minutes >= PASS_MIN_DAILY_MINUTES;
-    const nextChapter = nextPassThemeChapter(theme.key);
+    const nextChapter = snapshot.finalStretch?.active ? null : nextPassThemeChapter(theme.key);
     const sundayDay = ["choice", "required-full-mock"].includes(snapshot.dailyPlan.mode);
     const fullMeasurementRequired = snapshot.dailyPlan.mode === "required-full-mock";
     const officialMeasurementRequired = fullMeasurementRequired &&
@@ -6929,9 +6934,9 @@
     const shortCount = sundayDay ? shortSundayAnswersToday() : 0;
     const shortDone = businessDone && shortCount >= 8 && minutesDone;
     const mockDone = sundayDay && (officialMeasurementRequired ? officialInitialDoneToday : themeDone);
-    const completed = sundayDay
+    const completed = !active && (sundayDay
       ? sundayMode === "full-mock" ? mockDone : sundayMode === "short-review" ? shortDone : false
-      : businessDone && themeDone && minutesDone;
+      : businessDone && themeDone && minutesDone);
     let primary;
     let secondary = null;
     if (active) {
@@ -6973,13 +6978,16 @@
       secondary = null;
     }
 
-    elements.todayCommandKicker.textContent = `D-${snapshot.daysToExam}・8/31まで高速一周`;
+    elements.todayCommandKicker.textContent = snapshot.finalStretch?.active
+      ? `本試験まで${snapshot.daysToExam}日・${snapshot.finalStretch.label}`
+      : `D-${snapshot.daysToExam}・8/31まで高速一周`;
     elements.todayCommandTitle.textContent = active
       ? active.label
       : !businessDone && (!sundayDay || sundayMode === "short-review")
         ? `今日の宅建業法 残り${20 - businessDoneCount}問`
       : completed
         ? sundayDay && sundayMode === "full-mock" ? "本試験形式を完了" : "最低75分ライン完了"
+        : !sundayDay && businessDone && themeDone ? "問題は完了。今日の学習時間を記録"
         : primary.label;
     elements.todayCommandText.textContent = active
       ? "途中セットを上書きせず、保存位置から終わらせて次へ進みます。"
@@ -6993,10 +7001,12 @@
           : sundayMode === "short-review"
             ? "今日は短縮ルートだけ。宅建業法20問と非業法の弱点8問を、最低75分・標準90分で終えます。"
             : "今日は二者択一です。本試験形式か短縮復習のどちらか一方だけを選びます。"
-        : `${snapshot.dailyPlan.businessKnock.label}を固定。今日は${theme.label}、最後に誤答・迷いを同じセットで回収します。`;
+        : businessDone && themeDone
+          ? "今日の問題数を満たしました。実際に使った合計時間を入力します。誤答の再テストは翌日以降にも行います。"
+          : `${snapshot.dailyPlan.businessKnock.label}→${theme.label}${themeTarget}問→誤答・迷いの回収。${snapshot.finalStretch?.active ? snapshot.finalStretch.note : "分からなかった箇所だけ教科書へ戻ります。"}`;
     elements.todayCommandPanel.classList.toggle("is-complete", completed);
     setPassCommandAction(elements.todayCommandStartButton, primary.action, primary.label, primary);
-    elements.todayCommandStartButton.hidden = completed || (sundayDay && sundayMode === "short-review" && businessDone && shortCount >= 8);
+    elements.todayCommandStartButton.hidden = !active && (completed || (!sundayDay && businessDone && themeDone) || (sundayDay && sundayMode === "short-review" && businessDone && shortCount >= 8));
     elements.todayCommandPracticalButton.hidden = !secondary || Boolean(active);
     if (secondary) setPassCommandAction(elements.todayCommandPracticalButton, secondary.action, secondary.label, secondary);
     elements.todayCommandCalculationButton.hidden = true;
@@ -7006,11 +7016,11 @@
     // the pass-readiness command replaces the older daily command.
     elements.todayCommandOfficialActions.hidden = !foundationCoverageComplete() || Boolean(active);
     elements.todayCommandReviewActions.hidden = true;
-    const taskWorkDone = sundayDay
+    const taskWorkDone = !active && (sundayDay
       ? sundayMode === "full-mock"
         ? mockDone
         : sundayMode === "short-review" && businessDone && shortCount >= 8
-      : businessDone && themeDone;
+      : businessDone && themeDone);
     elements.todayCommandMinutesActions.hidden = completed || !taskWorkDone || minutesDone || sundayMode === "full-mock";
     if (elements.missionMinutesButton) elements.missionMinutesButton.textContent = "75分以上を記録";
     if (elements.missionMinutesInput && document.activeElement !== elements.missionMinutesInput) {
@@ -7236,8 +7246,12 @@
     const unitPace = textbookPlan.requiredUnitsPerDay ?? remainingUnits;
     const latestAt = latestStudyTimestamp();
     const staleDays = latestAt ? daysBetween(localDateKey(latestAt), todayKey()) : -1;
-    elements.passReadinessKicker.textContent = `8/31 一周締切まで${passDays > 0 ? `${passDays}日` : "期限超過"}`;
-    elements.passReadinessPace.textContent = remainingUnits
+    elements.passReadinessKicker.textContent = snapshot.finalStretch?.active
+      ? `10/18 本試験まで${snapshot.daysToExam}日・${snapshot.finalStretch.label}`
+      : `8/31 一周締切まで${passDays > 0 ? `${passDays}日` : "期限超過"}`;
+    elements.passReadinessPace.textContent = snapshot.finalStretch?.active
+      ? `基礎の未接触${remainingUnits}単元・今日は1テーマ8〜12問から補修`
+      : remainingUnits
       ? `残り${remainingUnits}単元・今日${Math.max(1, unitPace)}単元（最低${textbookPlan.requiredMinutesPerDay ?? "?"}分）`
       : "一周接触済み";
     elements.passReadinessTitle.textContent = snapshot.timed50.stable
@@ -7245,7 +7259,9 @@
       : latestMock
         ? `事例実戦 ${latestMock.score}/${snapshot.targets.questions}・本試験対応力は公式初見で確認`
         : `事例実戦${snapshot.targets.questions}問は未測定。公式初見の合格証拠とは別枠`;
-    elements.passReadinessNote.textContent = textbookPlan.status === "infeasible"
+    elements.passReadinessNote.textContent = snapshot.finalStretch?.active
+      ? `${snapshot.finalStretch.note} 基礎一周の完了を待たず公式未見を測定します。内部演習の点数は本試験の得点証拠に混ぜません。`
+      : textbookPlan.status === "infeasible"
       ? `現在の残数では最低${textbookPlan.requiredMinutesPerDay}分/日が必要です。90分枠のまま「8/31完了」とは表示せず、未接触単元を最優先にします。`
       : staleDays > 1
       ? `最終学習から${staleDays}日空いています。今日は未接触を減らしつつ、業法20問で再起動します。`
@@ -7279,14 +7295,16 @@
 
     const active = activeLearningSession();
     const theme = snapshot.dailyPlan.theme;
-    const nextChapter = nextPassThemeChapter(theme.key);
+    const nextChapter = snapshot.finalStretch?.active ? null : nextPassThemeChapter(theme.key);
     setPassCommandAction(
       elements.passBusinessAction,
       active ? "resume" : "business-knock",
       active ? activeResumeLabel(active) : `宅建業法を20問ノック`
     );
     if (elements.passThemeAction) {
-      const themeAction = theme.key === "mock" ? "mock" : nextChapter ? "foundation-theme" : "subject-sprint";
+      const themeAction = theme.key === "mock"
+        ? snapshot.dailyPlan.requiredMeasurement === "official-transfer" ? "official-exam" : "mock"
+        : nextChapter ? "foundation-theme" : "subject-sprint";
       setPassCommandAction(elements.passThemeAction, themeAction,
         theme.key === "mock" ? `今日の${snapshot.examProfile.questions}問・${snapshot.examProfile.minutes}分へ`
           : nextChapter ? `${theme.label}の未接触単元へ` : `${theme.label}を高速補強`,
@@ -7297,7 +7315,7 @@
         });
       elements.passThemeAction.disabled = Boolean(active);
     }
-    const officialActionNeeded = remainingUnits === 0 && !officialEvidence.passed;
+    const officialActionNeeded = (snapshot.finalStretch?.active || remainingUnits === 0) && !officialEvidence.passed;
     setPassCommandAction(
       elements.passMockAction,
       officialActionNeeded ? "official-exam" : "mock",

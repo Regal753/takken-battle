@@ -55,6 +55,18 @@ weekdayPriority.forEach(([todayKey, expectedTheme]) => {
   assert.equal(result.dailyPlan.businessKnock.count, 20, "business law stays in maintenance without taking the priority slot");
 });
 const stable = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts, officialHistory: officialAttempts, officialTransferHistory: officialTransfer, textbookFirstPass: textbookComplete, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: freshness });
+const finalCoverage = readiness.calculatePassReadiness({ todayKey: "2026-09-10" });
+assert.equal(finalCoverage.daysToExam, 38);
+assert.equal(finalCoverage.finalStretch.phase, "coverage");
+assert.equal(readiness.calculatePassReadiness({ todayKey: "2026-09-16" }).finalStretch.phase, "repair");
+assert.equal(readiness.calculatePassReadiness({ todayKey: "2026-10-11" }).finalStretch.phase, "final-week");
+for (const examProfile of ["general", "fiveExempt"]) {
+  const incompleteSeptember = readiness.calculatePassReadiness({ todayKey: "2026-09-13", examProfile, textbookFirstPass: { totalUnits: 45, completedUnits: 0 } });
+  assert.equal(incompleteSeptember.dailyPlan.requiredMeasurement, "official-transfer", "September must not postpone official measurement until the entire textbook is finished");
+  assert.equal(incompleteSeptember.dailyPlan.theme.requiredTimedMinutes, examProfile === "general" ? 120 : 110);
+  assert.equal(incompleteSeptember.timed50.stable, false, "a new route never manufactures official evidence");
+}
+assert.equal(blank.finalStretch.active, false, "August learning behavior stays compatible");
 assert.equal(stable.status, "on-track"); assert.equal(stable.timed50.stable, true); assert.equal(stable.currentLawGate.passed, true); assert.equal(stable.capacity.verified, true);
 assert.equal(stable.currentYearFreshness.passed, true);
 assert.equal(stable.timed50.mock.requiredDistinctForms, 2);

@@ -4,7 +4,7 @@
   const SCHEMA_VERSION = 2;
   const EXAM_YEAR = 2026;
   const LEGAL_BASELINE = "2026-04-01";
-  const REVIEWED_AT = "2026-08-16";
+  const REVIEWED_AT = "2026-09-10";
 
   function deepFreeze(value, seen = new WeakSet()) {
     if (value === null || (typeof value !== "object" && typeof value !== "function")) return value;
@@ -52,10 +52,10 @@
       id: "retio-2026-exam-guide",
       publisher: "一般財団法人 不動産適正取引推進機構",
       title: "令和8年度インターネット申込試験案内",
-      url: "https://moushikomi.retio.or.jp/",
+      url: "https://www.retio.or.jp/wp-content/uploads/2026/05/R8%E3%82%A4%E3%83%B3%E3%82%BF%E3%83%BC%E3%83%8D%E3%83%83%E3%83%88%E7%94%B3%E8%BE%BC%E8%A9%A6%E9%A8%93%E6%A1%88%E5%86%85.pdf",
       checkedAt: REVIEWED_AT,
-      snapshotId: "retio-2026-exam-guide@2026-08-16",
-      snapshotHash: "cee950c68844a2cb8a31e09cccc4b0d6508b5eb529eabbcf368614d2b9d24f70"
+      snapshotId: "retio-2026-exam-guide@2026-09-10",
+      snapshotHash: "c598fc9f1669fb8a13fc0f20ef4497bcc9f79d8302cee4d72714839cb96f9c96"
     },
     {
       id: "retio-2026-schedule",
@@ -63,8 +63,8 @@
       title: "令和8年度宅地建物取引士資格試験について",
       url: "https://www.retio.or.jp/exam/schedule/",
       checkedAt: REVIEWED_AT,
-      snapshotId: "retio-2026-schedule@2026-08-16",
-      snapshotHash: "cf77ec4bc3e441dca1be152f0f3a086653496f8960229bbe1fa2ed135ec9b18d"
+      snapshotId: "retio-2026-schedule@2026-09-10",
+      snapshotHash: "20cd159f238b4fdbb539ad1b038523289bfdb2d262e82142efe62a0b47690cd8"
     },
     {
       id: "retio-2025-official-question",
@@ -72,8 +72,8 @@
       title: "令和7年度 宅地建物取引士資格試験問題・正解番号表",
       url: "https://www.retio.or.jp/wp-content/uploads/2025/12/R7_question_answer.pdf",
       checkedAt: REVIEWED_AT,
-      snapshotId: "retio-2025-official-question@2026-08-16",
-      snapshotHash: "aa44578437d6eef63fff830c7b045647f6f7cddce5fa5a75b07afb21722e836f"
+      snapshotId: "retio-2025-official-question@2026-09-10",
+      snapshotHash: "a3c7b1d3c06c50c0f10bf44fe6e9d45fe3b3301cf55f9843f36295bda624c80a"
     },
     {
       id: "mlit-takken-law-2026",
@@ -81,8 +81,8 @@
       title: "宅地建物取引業法 法令改正・解釈について",
       url: "https://www.mlit.go.jp/totikensangyo/const/1_6_bt_000268.html",
       checkedAt: REVIEWED_AT,
-      snapshotId: "mlit-takken-law-2026@2026-08-16",
-      snapshotHash: "3b4ce2d4758a1078e4fe651f3ee2e95fbe0de512daf7df0158e71a706abaa2ff"
+      snapshotId: "mlit-takken-law-2026@2026-09-10",
+      snapshotHash: "99c17c2d993f049c5199fedf34cbe3e5086e2d1d01af400d0b0da10332f2e6dd"
     },
     {
       id: "mlit-2026-land-price",
@@ -90,8 +90,8 @@
       title: "令和8年地価公示データ更新",
       url: "https://www.mlit.go.jp/report/press/tochi_fudousan_kensetsugyo17_hh_000001_00078.html",
       checkedAt: REVIEWED_AT,
-      snapshotId: "mlit-2026-land-price@2026-08-16",
-      snapshotHash: "2a370cd6c8e6d820ada63f573cfda8a222458cdcbd508de83c394bd5c9f863b5"
+      snapshotId: "mlit-2026-land-price@2026-09-10",
+      snapshotHash: "e960c805b24901d85ac29d67fe729403f394cdb0f7c38a0fbf06c9686bc88572"
     },
     {
       id: "mlit-2026-land-white-paper",
@@ -99,8 +99,8 @@
       title: "令和8年版 土地白書",
       url: "https://www.mlit.go.jp/report/press/tochi_fudousan_kensetsugyo02_hh_000001_00116.html",
       checkedAt: REVIEWED_AT,
-      snapshotId: "mlit-2026-land-white-paper@2026-08-16",
-      snapshotHash: "d749925bf5a46607ccdc69c5f53430e6162e6a044b0b514adf09c8495adb560f"
+      snapshotId: "mlit-2026-land-white-paper@2026-09-10",
+      snapshotHash: "df13470ce26e1fdc49560ae6b0b2428b6c3914520615f5fe150698471f1db67c"
     },
     {
       id: "mlit-tax-acquisition",
@@ -108,8 +108,8 @@
       title: "土地の取得に係る税制の概要（参考）",
       url: "https://www.mlit.go.jp/totikensangyo/totikensangyo_tk5_000072.html",
       checkedAt: REVIEWED_AT,
-      snapshotId: "mlit-tax-acquisition@2026-08-16",
-      snapshotHash: "e0bca75d73e294e78061ca63ac092ba8c37358387a04a243103244db4c65b869"
+      snapshotId: "mlit-tax-acquisition@2026-09-10",
+      snapshotHash: "019e26026cf95b9657ba6ef26d6022cf964c6bb113ac8381bde77f8ea29ac2cf"
     },
     {
       id: "mlit-tax-holding",
@@ -117,8 +117,8 @@
       title: "土地の保有に係る税制",
       url: "https://www.mlit.go.jp/totikensangyo/totikensangyo_tk5_000073.html",
       checkedAt: REVIEWED_AT,
-      snapshotId: "mlit-tax-holding@2026-08-16",
-      snapshotHash: "d229c8be605f943c2ab11c39858d1be6e8241afe97b763d1129f0179a28dea4e"
+      snapshotId: "mlit-tax-holding@2026-09-10",
+      snapshotHash: "e5708c36178dd3df837ef086bcfc6e4067461b505c1e8beadd60f04cf2dfcb6d"
     },
     {
       id: "mlit-tax-reform-2026",
@@ -126,8 +126,8 @@
       title: "令和8年度 国土交通省税制改正概要",
       url: "https://www.mlit.go.jp/page/content/001975596.pdf",
       checkedAt: REVIEWED_AT,
-      snapshotId: "mlit-tax-reform-2026@2026-08-16",
-      snapshotHash: "6cc0399e7ebc5fe49f7b2c5f41e319262417c97b9cd9503f48a0897b50303481"
+      snapshotId: "mlit-tax-reform-2026@2026-09-10",
+      snapshotHash: "5eb34706232bbf29b43281554894487daf6953d8a48932274c05bd7dad0321e6"
     }
   ]);
   const SOURCE_BY_ID = deepFreeze(Object.fromEntries(SOURCES.map((source) => [source.id, source])));
@@ -185,7 +185,7 @@
       reviewedAt: REVIEWED_AT,
       checkedAt: REVIEWED_AT,
       maxAgeDays: 7,
-      effectiveOn: "2026-03-24",
+      effectiveOn: "2026-03-18",
       expiresOn: "2026-10-18",
       sourceIds: ["mlit-2026-land-price"],
       reviewReceipt: reviewReceiptFor(["mlit-2026-land-price"]),
