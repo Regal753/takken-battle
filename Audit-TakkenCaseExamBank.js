@@ -44,9 +44,11 @@ for (const q of questions) {
     });
   } else if (q.formatFamily === "count") {
     assert.equal(q.choices[q.answer], `${matching.length}個`, `${q.id}: count recomputed`);
+    assert.deepEqual(Array.from(q.choices).sort(), ["1個", "2個", "3個", "4個"], `${q.id}: offered counts must not disclose the answer`);
     assert.equal(q.statements.length, 4);
   } else {
     assert.equal(q.choices[q.answer], matching.map(i => ["ア", "イ", "ウ", "エ"][i]).join("・") || "該当なし", `${q.id}: combination recomputed`);
+    assert.ok(q.choices.every(choice => choice.split("・").length === matching.length), `${q.id}: no answer from label count or parity`);
     assert.equal(q.statements.length, 4);
   }
 }

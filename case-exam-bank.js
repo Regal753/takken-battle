@@ -48,15 +48,22 @@
       options = facts.map((fact, i) => ({ ...fact, correct: i === matching[0] }));
     } else if (source.format === "count") {
       const count = matching.length;
-      const omitted = count <= 2 ? 4 : 0;
-      options = Array.from({ length: 5 }, (_, n) => n).filter(n => n !== omitted).map(n => ({
+      // The offered range must not encode the answer. This form uses 1–4
+      // throughout; a zero-match item needs an explicitly redesigned question.
+      if (count < 1 || count > 4) throw new Error(`unsupported count answer: ${source.id}`);
+      options = [1, 2, 3, 4].map(n => ({
         text: `${n}個`, correct: n === count,
         reason: `${wanted ? "正しい" : "誤っている"}記述は${count}個。${factReasons.join(" ／ ")}`
       }));
       stem = `次のアからエの記述のうち、${wanted ? "正しい" : "誤っている"}ものはいくつあるか。`;
     } else if (source.format === "combination") {
       const correctMask = matching.reduce((mask, i) => mask | (1 << i), 0);
-      const distractors = shuffle([0, 1, 2, 3], 5200 + number).slice(0, 3).map(i => correctMask ^ (1 << i));
+      // All choices have the same number of labels: one-bit flips otherwise
+      // expose the sole even/odd-sized answer without reading any statements.
+      const masks = Array.from({ length: 16 }, (_, mask) => mask).filter(mask =>
+        mask !== correctMask && KANA.filter((_, i) => mask & (1 << i)).length === matching.length);
+      if (masks.length < 3) throw new Error(`insufficient combination distractors: ${source.id}`);
+      const distractors = shuffle(masks, 5200 + number).slice(0, 3);
       options = [correctMask, ...distractors].map(mask => ({
         text: combination(mask), correct: mask === correctMask,
         reason: `${wanted ? "正しい" : "誤っている"}記述の組合せは「${combination(correctMask)}」。${factReasons.join(" ／ ")}`

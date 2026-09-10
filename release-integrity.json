@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "20260910-case-exam-v52-11dcb7dbe710",
-  "digest": "sha256:11dcb7dbe710bd9668a1e1786cc3a0dbbde3eba68274fca52322b3584f18880c",
+  "version": "20260910-case-exam-v52-ae29cf194864",
+  "digest": "sha256:ae29cf194864ac8de6c510c10653a7a37070f743f20cb4190ecdb93ccbaa7c77",
   "assetCount": 53,
   "assets": [
     {
@@ -78,7 +78,7 @@
     },
     {
       "path": "case-exam-bank.js",
-      "sha256": "0188507fdd2dd2adf1b51ce4adc916c2a182924efcc9e87004056fedf3baa787"
+      "sha256": "f46b87a1fd50d897f7429bc760cc0ad9546fbae4dfd8974d214a6cd2cc93ade7"
     },
     {
       "path": "case-exam-business.js",
@@ -90,7 +90,7 @@
     },
     {
       "path": "case-exam-rights.js",
-      "sha256": "81f4ff6f02497114370f7c874a1438d8d2a889792e815e49553f5117b71c9530"
+      "sha256": "c516cab2a1ff2d7da1a4cbf1f2ce1da7f8b29f273de20d03c6efbd834bf8f7ec"
     },
     {
       "path": "case-exam-tax-other.js",
