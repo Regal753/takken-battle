@@ -42,7 +42,12 @@
   const SUBJECT_SPRINT_BANK_ID = "subject-sprint";
   const LEGACY_PRACTICAL_BANK_ID = "legacy-practical";
   const BUSINESS_FULLSCORE_EXPECTED_QUESTIONS = 134;
-  const BUSINESS_HARD_EXPECTED_QUESTIONS = 60;
+  const BUSINESS_HARD_EXPECTED_QUESTIONS = 180;
+  const BUSINESS_HARD_CANONICAL_IDS = Object.freeze([
+    ...Array.from({ length: 60 }, (_, index) => `hard54-${String(index + 1).padStart(3, "0")}`),
+    ...Array.from({ length: 120 }, (_, index) => `hard55-${String(index + 1).padStart(3, "0")}`)
+  ]);
+  const isHardBusinessQuestionId = (id) => BUSINESS_HARD_CANONICAL_IDS.includes(id);
   const GUARANTEE_SPECIAL_EXPECTED_QUESTIONS = 33;
   const SUBJECT_SPRINT_EXPECTED_QUESTIONS = 102;
   const SUBJECT_SPRINT_RESTRICTIONS_SESSION_SIZE = 20;
@@ -161,7 +166,7 @@
   });
   const BUSINESS_DRILL_QUESTION_IDS = Object.freeze([
     ...BUSINESS_FULLSCORE_QUESTION_IDS,
-    ...Array.from({ length: BUSINESS_HARD_EXPECTED_QUESTIONS }, (_, index) => `hard54-${String(index + 1).padStart(3, "0")}`)
+    ...BUSINESS_HARD_CANONICAL_IDS
   ]);
   const BUSINESS_FULLSCORE_UNITS = Object.freeze(
     (Array.isArray(BUSINESS_FULLSCORE_BANK?.UNITS) ? BUSINESS_FULLSCORE_BANK.UNITS : [])
@@ -223,7 +228,7 @@
     new Set(BUSINESS_HARD_QUESTION_IDS).size === BUSINESS_HARD_EXPECTED_QUESTIONS &&
     typeof BUSINESS_HARD_BANK?.presentQuestion === "function" &&
     typeof BUSINESS_HARD_BANK?.diagnosticsForSelection === "function" &&
-    BUSINESS_HARD_QUESTIONS.every((question) => /^hard54-\d{3}$/.test(question.id) &&
+    BUSINESS_HARD_QUESTIONS.every((question) => isHardBusinessQuestionId(question.id) &&
       question.unitId !== "business-book-05" &&
       BUSINESS_FULLSCORE_UNITS.some((unit) => unit.id === question.unitId))
   );
@@ -382,7 +387,8 @@
   // of normalizing away ga001..ga020 and saving that loss back to storage.
   // v13 adds pre-answer evidence and explicit guess counters to the legal-
   // restrictions sprint. Older open tabs must not erase that evidence.
-  const STATE_SCHEMA_VERSION = 14;
+  // v15 protects the added hard55 IDs from schema14 clients that only know hard54.
+  const STATE_SCHEMA_VERSION = 15;
   // Only runtimes older than v11 could strip ga001..ga020 from practicalDrill.
   // Do not tie this recovery boundary to the current schema: later schema
   // upgrades must keep the live v11+ history authoritative over its snapshot.
@@ -1191,6 +1197,8 @@
     businessKnockUnit: $("#businessKnockUnit"),
     businessKnockSize: $("#businessKnockSize"),
     businessKnockStart: $("#businessKnockStart"),
+    businessKnockFreshStart: $("#businessKnockFreshStart"),
+    businessKnockFreshStatus: $("#businessKnockFreshStatus"),
     businessKnockStatus: $("#businessKnockStatus"),
     guaranteeSpecialStart: $("#guaranteeSpecialStart"),
     guaranteeSpecialFullStart: $("#guaranteeSpecialFullStart"),
@@ -2413,7 +2421,7 @@
   }
 
   function normalizePracticalHistory(input, preserveUnknownIds = []) {
-    const preserved = new Set((Array.isArray(preserveUnknownIds) ? preserveUnknownIds : []).map(String).slice(0, 200));
+    const preserved = new Set((Array.isArray(preserveUnknownIds) ? preserveUnknownIds : []).map(String).slice(0, 1000));
     return Object.fromEntries(
       Object.entries(input && typeof input === "object" && !Array.isArray(input) ? input : {})
         .filter(([id]) => Boolean(ALL_PRACTICAL_QUESTION_BY_ID[id]) || preserved.has(id))
@@ -2555,7 +2563,7 @@
     const bankChanged = savedBankVersion !== currentBankVersion;
     const preserveUnknownIds = [
       ...(!BUSINESS_HARD_BANK_READY
-        ? Object.keys(input?.history || {}).filter((id) => /^hard54-\d{3}$/.test(id))
+        ? Object.keys(input?.history || {}).filter(isHardBusinessQuestionId)
         : []),
       ...(!BUSINESS_FULLSCORE_BANK_READY
         ? Object.keys(input?.history || {}).filter((id) => /^bf-business-book-(?:0[1-9]|1[01])-/.test(id))
@@ -2660,7 +2668,7 @@
     );
     // 問題IDと履歴は維持する。問題本文・正答が更新された場合だけ、
     // 途中で表示中だった一問の選択を外して旧正答の誤判定を防ぐ。
-    const unavailableCurrentHardQuestion = !BUSINESS_HARD_BANK_READY && /^hard54-\d{3}$/.test(currentId || "");
+    const unavailableCurrentHardQuestion = !BUSINESS_HARD_BANK_READY && isHardBusinessQuestionId(currentId);
     const attemptCorrect = presentedQuestion ? selected === presentedQuestion.answer : Boolean(rawAttempt?.correct);
     const currentAttempt = !bankChanged && (presentedQuestion || unavailableCurrentHardQuestion) && rawAttempt?.id === currentId &&
       Number.isInteger(selected) && selected >= 0 && selected < 4
@@ -8445,7 +8453,7 @@
 
   function activePracticalQuestions(drill = state.practicalDrill) {
     if (drill?.bankId === BUSINESS_FULLSCORE_BANK_ID) {
-      return drill.sessionIds?.some((id) => id.startsWith("hard54-"))
+      return drill.sessionIds?.some(isHardBusinessQuestionId)
         ? BUSINESS_HARD_QUESTIONS : BUSINESS_FULLSCORE_QUESTIONS;
     }
     if (drill?.bankId === GUARANTEE_SPECIAL_BANK_ID) return GUARANTEE_SPECIAL_QUESTIONS;
@@ -9334,7 +9342,7 @@
           !(drill.history[question.id]?.attempts > 0)
         ).length
       : 0;
-    const hardKnockSession = knockSession && drill.sessionIds.some((id) => id.startsWith("hard54-"));
+    const hardKnockSession = knockSession && drill.sessionIds.some(isHardBusinessQuestionId);
     const bankLabel = knockSession ? hardKnockSession ? "高難度・事例ノック" : "基礎変形ノック"
       : drill.bankId === BUSINESS_FULLSCORE_BANK_ID ? "満点変形"
       : guaranteeSpecialSession ? "保証協会特訓"
@@ -9585,7 +9593,7 @@
 
   function currentPracticalInputTarget(drill = state.practicalDrill) {
     if (!drill || !["active", "retry"].includes(drill.stage)) return null;
-    if (!drill.currentAttempt && drill.queue[drill.position]?.startsWith("hard54-")) {
+    if (!drill.currentAttempt && isHardBusinessQuestionId(drill.queue[drill.position])) {
       return elements.practicalDrillPrompt;
     }
     if (practicalForecastRequired(drill) && !drill.preAnswerConfidence) {
@@ -10060,7 +10068,7 @@
     if (!elements.businessKnockPanel) return;
     const preset = normalizeBusinessKnockPreset();
     const questions = businessKnockQuestions(preset);
-    const poolLabel = preset.difficulty === "basic" ? "基礎変形134問" : "高難度・事例60問";
+    const poolLabel = preset.difficulty === "basic" ? "基礎変形134問" : "高難度・事例180問";
     const eligibleUnits = BUSINESS_FULLSCORE_UNITS.filter((unit) =>
       preset.difficulty === "basic" || unit.id !== "business-book-05");
     if (elements.businessKnockUnit && elements.businessKnockUnit.options.length !== eligibleUnits.length) {
@@ -10096,6 +10104,24 @@
     elements.businessKnockUntouched.textContent = String(transfer.untouched || 0);
 
     const active = activeLearningSession();
+    const freshPlan = businessKnockPlan({ difficulty: "hard", mode: "untouched", size: 20 }, "fresh-preview");
+    if (elements.businessKnockFreshStart) {
+      elements.businessKnockFreshStart.disabled = !active && !(freshPlan?.size > 0);
+      elements.businessKnockFreshStart.textContent = active
+        ? activeResumeLabel(active)
+        : freshPlan?.size
+          ? `新問${freshPlan.size}問を開始（未接触だけ）`
+          : BUSINESS_KNOCK_READY ? "未接触の新問はありません" : "新問を読み込めません";
+    }
+    if (elements.businessKnockFreshStatus) {
+      elements.businessKnockFreshStatus.textContent = active
+        ? `${active.label}を先に再開します。途中の問題順・解答は上書きしません。`
+        : !BUSINESS_KNOCK_READY
+          ? "180問の読込を確認できません。既回答の問題に切り替えず開始を停止しています。"
+          : freshPlan?.size
+            ? `高難度180問のうち未接触は残り${freshPlan.available}問。日課の復習混合とは別に、未接触だけを最大20問ずつ出題します。迷い・誤答は同じセット内で再出題します。`
+            : "180問すべてに接触済みです。新問だけの出題は終了しました。復習する場合は下の「弱点・期限」などを選んでください。";
+    }
     const guaranteeSummary = guaranteeSpecialSummary();
     const postTrainingUnlocked = guaranteeSummary.contacted >= GUARANTEE_SPECIAL_EXPECTED_QUESTIONS;
     if (elements.postTrainingGuide) elements.postTrainingGuide.hidden = !postTrainingUnlocked;
@@ -10388,7 +10414,9 @@
 
   function startBusinessKnockSession(requestedSize = 0, options = {}) {
     if (resumeActiveLearningSession()) return;
-    const defaultPreset = normalizeBusinessKnockPreset();
+    const defaultPreset = normalizeBusinessKnockPreset(options?.freshOnly
+      ? { ...state.practicalDrill.knockPreset, difficulty: "hard", mode: "untouched", unitId: "", size: 20 }
+      : state.practicalDrill.knockPreset);
     const daily = Boolean(options?.daily);
     const preset = Number.isInteger(requestedSize) && requestedSize > 0
       ? {
@@ -14524,6 +14552,7 @@
     elements.postTrainingBusiness?.addEventListener("click", startPostTrainingBusinessKnock);
     elements.postTrainingExam?.addEventListener("click", openPostTrainingExamRoute);
     elements.businessKnockStart?.addEventListener("click", startBusinessKnockSession);
+    elements.businessKnockFreshStart?.addEventListener("click", () => startBusinessKnockSession(20, { freshOnly: true }));
     [elements.businessKnockDifficulty, elements.businessKnockMode, elements.businessKnockUnit, elements.businessKnockSize]
       .filter(Boolean)
       .forEach((control) => control.addEventListener("change", updateBusinessKnockPresetFromControls));

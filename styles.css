@@ -8933,6 +8933,7 @@ button.mission-step:disabled {
 .business-knock-heading span { color: #ffd77a; font-size: .76rem; font-weight: 800; letter-spacing: .13em; }
 .business-knock-heading strong { color: #fff7dc; font-size: clamp(1.08rem, 4vw, 1.42rem); }
 .business-knock-heading p { margin: 0; color: #d8eee7; font-size: .9rem; line-height: 1.55; }
+.business-knock-fresh { display: grid; gap: 10px; padding-bottom: 4px; }
 .business-knock-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .business-knock-stats > div { display: grid; gap: 3px; min-width: 0; padding: 10px; border: 1px solid rgba(255, 215, 122, .32); border-radius: 10px; background: rgba(255, 255, 255, .08); }
 .business-knock-stats span { color: #cfe3dd; font-size: .72rem; line-height: 1.35; }

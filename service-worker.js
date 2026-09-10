@@ -1,13 +1,14 @@
 "use strict";
 
-const VERSION = "20260910-hard-knock-v54-1156a3e892dc";
+const VERSION = "20260911-fresh-knock-v55-d20ca7babbfb";
 const CACHE_NAME = `takken-battle-${VERSION}`;
 const IMMUTABLE = [
   "styles.css", "reiwa-exam.css", "exam-blueprint.js", "exam-question-core.js", "exam-questions-rights.js",
   "exam-questions-restrictions.js", "exam-questions-tax-other.js", "exam-questions-business.js", "current-law-source-ledger.js", "reiwa-exam-bank.js", "reiwa-question-view.js",
   "case-exam-rights.js", "case-exam-restrictions.js", "case-exam-tax-other.js", "case-exam-business.js", "case-exam-bank.js",
   "restrictions-supplement-bank.js", "subject-sprint-bank.js", "business-fullscore-supplement.js", "business-fullscore-bank.js",
-  "business-hard-front.js", "business-hard-contracts.js", "business-hard-practice.js", "business-hard-bank.js",
+  "business-hard-front.js", "business-hard-contracts.js", "business-hard-practice.js",
+  "business-fresh-front.js", "business-fresh-contracts.js", "business-fresh-practice.js", "business-hard-bank.js",
   "guarantee-association-drill.js",
   "practical-question-bank.js", "question-bank.js", "question-balance.js", "reward-system.js",
   "official-exam-data.js", "official-law-baseline.js", "official-topic-map.js", "calculation-drill.js",

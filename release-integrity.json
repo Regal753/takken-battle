@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20260910-hard-knock-v54-1156a3e892dc",
-  "digest": "sha256:1156a3e892dc5a0e7673cf4469b720b705960d19eb91c1dbbb4d28d93227510c",
-  "assetCount": 57,
+  "version": "20260911-fresh-knock-v55-d20ca7babbfb",
+  "digest": "sha256:d20ca7babbfbaf5103babf618e16b2868064e12137552d12af93a56464eeab68",
+  "assetCount": 60,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "326b48bedbdb0ce5ff0e58dae691c8a68e0d74ae1c0591e7e6425746e00fca79"
+      "sha256": "798493c36e07700c95c300c3444f30b5dcbd89db834fc4c8e4f78c581fac8cbd"
     },
     {
       "path": "assets/battle/grassland-route.webp",
@@ -53,6 +53,18 @@
       "sha256": "f5f9041dff0f3ebd4c1bd9a25874ab32ef239a479cce66a8a6ed75d968258e15"
     },
     {
+      "path": "business-fresh-contracts.js",
+      "sha256": "4e0e57e92964560946925091b11eb62cf39b5261aede6bdebfa5e4b10e9d9580"
+    },
+    {
+      "path": "business-fresh-front.js",
+      "sha256": "be1d8f2b4378367263380f82fd6751a3b7c20ed32a68a2b02d86b1f5e94fa77f"
+    },
+    {
+      "path": "business-fresh-practice.js",
+      "sha256": "56eb7ad37132aa7da27b93610eba23a3d264308606a4f7bf4599fff19f7639df"
+    },
+    {
       "path": "business-fullscore-bank.js",
       "sha256": "7b12254fbd4d8a0e3479d4ba7525d58ddc4cbd21df9f9fc829df7d49f373ba81"
     },
@@ -62,7 +74,7 @@
     },
     {
       "path": "business-hard-bank.js",
-      "sha256": "c9d5d54ef1542c238608fcf7b77f07386ed1084d18cac7de835203143f875d60"
+      "sha256": "bd10383fe33c154a445d51feb4293ca01322c0177cec238a96779babd9cee72e"
     },
     {
       "path": "business-hard-contracts.js",
@@ -70,7 +82,7 @@
     },
     {
       "path": "business-hard-front.js",
-      "sha256": "e7551385c4b9ca8e8b54b921a4b5162488e8462999844d90122825ec343da41a"
+      "sha256": "891bb2f83902924a6398e7b7ebb7ff9b795a79bde9ab64a90e59415cc22e6e15"
     },
     {
       "path": "business-hard-practice.js",
@@ -126,11 +138,11 @@
     },
     {
       "path": "exam-question-core.js",
-      "sha256": "f204ac5ca3ad244e5acafbe0a33e819c347d8ed345ac484d0bb62463f1a742da"
+      "sha256": "c6ea092f1cbbe556be635e4086b050ce95150c612a36324710a315e78fb4e9f4"
     },
     {
       "path": "exam-questions-business.js",
-      "sha256": "5afb1f0e7ad2da84655241e9cc3b1272a63426eef1533c5fed122540a9a066e4"
+      "sha256": "b74ae2debe5a1bcca65281bab9d3f34d918bffca54dc7509c5fce63df3e9a715"
     },
     {
       "path": "exam-questions-restrictions.js",
@@ -150,7 +162,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "351f296028b22ca9910630ad32122abf63ecc2b41d1459611705cd55f20a80f5"
+      "sha256": "c9bfd43706a028b4413fc2e8c596fd3f00ee0e899008627920b8b2fb6ff3c7ff"
     },
     {
       "path": "manifest.webmanifest",
@@ -218,7 +230,7 @@
     },
     {
       "path": "service-worker.js",
-      "sha256": "325cf6cc0bdf0ecfbd5cdccd0fedf24ce3148a83df41877be23a7486e9733d0b"
+      "sha256": "a55d4b415238fd661c508d41a13904ab94dc7feaf30c7a9c203051add3fc6892"
     },
     {
       "path": "state-sync.js",
@@ -226,7 +238,7 @@
     },
     {
       "path": "styles.css",
-      "sha256": "d98fb4720b4781e4e1e23dbc33bbd1507e384603bc0f3fce3f28c784c7ffaaa8"
+      "sha256": "2b024276fa2fc492167cb8c8decf15906185659af3ea8d13343de83a8fd599b7"
     },
     {
       "path": "subject-sprint-bank.js",

@@ -3,11 +3,16 @@
 // Separate authored cases: legacy 134 questions and their answer contracts stay intact.
 (function attachBusinessHardBank(root) {
   const legacy = root.TAKKEN_BUSINESS_FULLSCORE_BANK;
-  const raw = [root.TAKKEN_BUSINESS_HARD_FRONT, root.TAKKEN_BUSINESS_HARD_CONTRACTS,
-    root.TAKKEN_BUSINESS_HARD_PRACTICE].flatMap(part => {
-    if (!Array.isArray(part) || part.length !== 20) throw new Error("hard knock requires three 20-case packs");
+  const packs = [
+    [root.TAKKEN_BUSINESS_HARD_FRONT, 20], [root.TAKKEN_BUSINESS_HARD_CONTRACTS, 20],
+    [root.TAKKEN_BUSINESS_HARD_PRACTICE, 20], [root.TAKKEN_BUSINESS_FRESH_FRONT, 40],
+    [root.TAKKEN_BUSINESS_FRESH_CONTRACTS, 40], [root.TAKKEN_BUSINESS_FRESH_PRACTICE, 40]
+  ];
+  const raw = packs.flatMap(([part, expected]) => {
+    if (!Array.isArray(part) || part.length !== expected) throw new Error(`authored knock requires every ${expected}-case pack`);
     return part;
   });
+  if (raw.length !== 180) throw new Error("authored knock requires every case slot across all 180 cases");
   if (!legacy?.UNITS) throw new Error("hard knock requires business units");
   const KANA = ["ア", "イ", "ウ", "エ"];
   const LABELS = { single: "事例・単一選択", count: "事例・個数問題", combination: "事例・組合せ問題" };
@@ -33,10 +38,18 @@
   const ids = new Set();
   // Balanced, non-cyclic stable answer positions. Presentation shuffles each
   // question independently; question number is never an answer shortcut.
-  const positions = shuffle(Array.from({ length: 60 }, (_, i) => i % 4), "hard54-answer-slots");
-  const questions = raw.map((source, index) => {
+  // Never rebalance the original sixty when adding cases: their saved choice
+  // indices and presentation keys must still identify the same judgments.
+  const positions = Object.fromEntries([
+    ...shuffle(Array.from({ length: 60 }, (_, i) => i % 4), "hard54-answer-slots")
+      .map((answer, i) => [`hard54-${String(i + 1).padStart(3, "0")}`, answer]),
+    ...shuffle(Array.from({ length: 120 }, (_, i) => i % 4), "hard55-answer-slots")
+      .map((answer, i) => [`hard55-${String(i + 1).padStart(3, "0")}`, answer])
+  ]);
+  const questions = raw.map(source => {
     const unit = legacy.UNITS.find(unit => unit.id === source.unitId);
-    if (!unit || unit.id === "business-book-05" || ids.has(source.id) || !/^hard54-\d{3}$/.test(source.id)) {
+    const answerPosition = positions[source.id];
+    if (!unit || unit.id === "business-book-05" || ids.has(source.id) || !Number.isInteger(answerPosition)) {
       throw new Error(`invalid hard case identity: ${source.id}`);
     }
     ids.add(source.id);
@@ -73,7 +86,7 @@
         reason: `${wanted ? "正しい" : "誤っている"}記述は「${maskLabel(correct)}」。${reasons.join(" ／ ")}` }));
     } else throw new Error(`invalid hard format: ${source.id}`);
     const ordered = shuffle(options.filter(option => !option.correct), `${source.id}:stable`);
-    ordered.splice(positions[index], 0, options.find(option => option.correct));
+    ordered.splice(answerPosition, 0, options.find(option => option.correct));
     const sourceFacts = facts.map((f, i) => ({
       key: `${source.id}:${i}`, sourceType: "authored-case", questionId: source.sourceQuestionIds[0],
       anchorId: source.id, choiceIndex: i, statementIndex: i, tag: source.topic,
@@ -93,7 +106,7 @@
       topic: source.topic, premise: source.premise, stem: source.stem, ask: source.ask,
       formatKey: source.format, format: LABELS[source.format], variationKind: "authored-hard-case",
       text: single ? intro : `${intro}\n${facts.map((fact, i) => `${KANA[i]} ${fact.text}`).join("\n")}`,
-      choices: ordered.map(option => option.text), answer: positions[index],
+      choices: ordered.map(option => option.text), answer: answerPosition,
       sourceFacts: displayedFacts, sourceQuestionIds: [...source.sourceQuestionIds],
       sourceAnchorIds: [...source.sourceQuestionIds], diagnosticTags: tags,
       choiceDiagnosticTags: ordered.map(() => tags),
@@ -104,7 +117,7 @@
       explain: source.explanation, trap: source.trap, memoryRule: source.explanation,
       sourceUrls: unique(source.sources.map(s => s.url)), sourceRef: source.sources.map(s => s.label).join("／"),
       sourceLocator: source.sources.map(s => s.reference).join("／"), legalSources: source.sources,
-      legalBaseline: "2026-04-01", verifiedAt: "2026-09-10", qualityVersion: 1,
+      legalBaseline: "2026-04-01", verifiedAt: [...source.sources.map(s => s.checkedAt)].sort().at(-1), qualityVersion: 1,
       changeNote: "日課用の個別作問。内部演習であり、本試験との難易度等価性・得点換算は未校正。"
     });
   });
@@ -135,7 +148,7 @@
     const q = value?.presentationKey ? presentQuestion(value.id, value.presentationKey) : resolve(value);
     return selected === q.answer ? [] : [...q.diagnosticTags];
   }
-  const api = freeze({ VERSION: 1, LEGAL_BASELINE: "2026-04-01", QUESTIONS: questions, QUESTIONS_BY_ID: byId,
+  const api = freeze({ VERSION: 2, LEGAL_BASELINE: "2026-04-01", QUESTIONS: questions, QUESTIONS_BY_ID: byId,
     UNITS: legacy.UNITS.filter(unit => unit.id !== "business-book-05"), presentQuestion, diagnosticsForSelection });
   root.TAKKEN_BUSINESS_HARD_BANK = api;
   if (typeof module === "object" && module.exports) module.exports = api;
