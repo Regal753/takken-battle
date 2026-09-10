@@ -111,8 +111,12 @@ async function currentPracticalQuestion(page) {
     );
     const state = JSON.parse(localStorage.getItem(key));
     const id = state.practicalDrill.queue[state.practicalDrill.position];
+    const canonicalHardIds = new Set([
+      ...Array.from({ length: 60 }, (_, index) => `hard54-${String(index + 1).padStart(3, "0")}`),
+      ...Array.from({ length: 120 }, (_, index) => `hard55-${String(index + 1).padStart(3, "0")}`)
+    ]);
     const bank = state.practicalDrill.bankId === "business-fullscore"
-      ? id.startsWith("hard54-") ? window.TAKKEN_BUSINESS_HARD_BANK : window.TAKKEN_BUSINESS_FULLSCORE_BANK
+      ? canonicalHardIds.has(id) ? window.TAKKEN_BUSINESS_HARD_BANK : window.TAKKEN_BUSINESS_FULLSCORE_BANK
       : window.TAKKEN_PRACTICAL_VARIATIONS;
     const question = bank.QUESTIONS_BY_ID[id];
     const presented = state.practicalDrill.bankId === "business-fullscore"

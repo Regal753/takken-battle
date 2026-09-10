@@ -4,6 +4,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 const http = require("node:http");
 const { chromium } = require("playwright");
+const canonicalHardIds = new Set([
+  ...Array.from({ length: 60 }, (_, index) => `hard54-${String(index + 1).padStart(3, "0")}`),
+  ...Array.from({ length: 120 }, (_, index) => `hard55-${String(index + 1).padStart(3, "0")}`)
+]);
 
 async function main() {
   const root = __dirname;
@@ -67,7 +71,7 @@ async function main() {
     await first.page.locator("#todayCommandStartButton").click();
     const activeBefore = (await stored(first.page)).practicalDrill;
     assert.equal(activeBefore.sessionIds.length, 20);
-    assert.equal(activeBefore.sessionIds.every(id => /^hard54-\d{3}$/.test(id)), true, "the weekday command must use hard cases");
+    assert.equal(activeBefore.sessionIds.every(id => canonicalHardIds.has(id)), true, "the weekday command must use one of the 180 canonical hard cases");
     await first.page.reload({ waitUntil: "networkidle" });
     const activeAfter = (await stored(first.page)).practicalDrill;
     assert.deepEqual(activeAfter.queue, activeBefore.queue);
