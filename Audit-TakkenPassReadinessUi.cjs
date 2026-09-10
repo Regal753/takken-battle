@@ -136,19 +136,22 @@ async function main() {
   // Static guards complement the browser journey: they make regressions in
   // the Sunday and evidence policies fail even if the suite is run on a
   // weekday fixture.
-  assert.match(runtimeSource, /sundayMode === "full-mock" \? mockDone : sundayMode === "short-review" \? shortDone : false/);
-  assert.match(runtimeSource, /公式初見3試験回/);
-  assert.match(runtimeSource, /required-full-mock/);
-  assert.match(runtimeSource, /official-exam/);
-  assert.match(runtimeSource, /旧フォーム履歴.*安定判定外/);
-  assert.match(runtimeSource, /evidenceClass: mockFormEvidenceClass\(form\)/);
-  assert.match(runtimeSource, /\.filter\(isStabilityMockForm\)/);
-  assert.match(runtimeSource, /function trimMockHistory\(input, limitPerBucket = 10\)/);
-  assert.match(runtimeSource, /mockFormEvidenceClass\(form\)\}:\$\{form\.id\}/);
-  assert.match(runtimeSource, /state\.mockHistory = trimMockHistory\(\[/);
-  assert.match(markupSource, />令和実戦C<\/button>/);
-  assert.match(markupSource, /<details id="passPlanPanel"/);
-  assert.doesNotMatch(markupSource, /<details id="passPlanPanel"[^>]*\bopen\b/);
+  // Do not dump the entire 600KB runtime into an assertion failure.
+  const runtimeHas = (pattern) => assert.ok(pattern.test(runtimeSource), `runtime guard: ${pattern}`);
+  runtimeHas(/sundayMode === "full-mock" \? mockDone : sundayMode === "short-review" \? shortDone : false/);
+  runtimeHas(/公式(?:初見|未見)3試験回/);
+  runtimeHas(/required-full-mock/);
+  runtimeHas(/official-exam/);
+  runtimeHas(/旧フォーム履歴.*安定判定外/);
+  runtimeHas(/evidenceClass: mockFormEvidenceClass\(form\)/);
+  runtimeHas(/evidenceClass: "recombined-practice"/);
+  runtimeHas(/"弱点診断用・合格証拠対象外"/);
+  runtimeHas(/function trimMockHistory\(input, limitPerBucket = 10\)/);
+  runtimeHas(/mockFormEvidenceClass\(form\)\}:\$\{form\.id\}/);
+  runtimeHas(/state\.mockHistory = trimMockHistory\(\[/);
+  assert.ok(/>新・事例実戦A<\/button>/.test(markupSource), "authored case launch button exists");
+  assert.ok(/<details id="passPlanPanel"/.test(markupSource), "pass plan disclosure exists");
+  assert.ok(!/<details id="passPlanPanel"[^>]*\bopen\b/.test(markupSource), "pass plan starts collapsed");
   const server = process.env.TAKKEN_BASE_URL ? { baseUrl: process.env.TAKKEN_BASE_URL, close: async () => {} } : await staticServer(process.cwd());
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   const errors = [];
@@ -173,6 +176,7 @@ async function main() {
       pace: document.querySelector("#passReadinessPace")?.textContent?.trim(),
       note: document.querySelector("#passReadinessNote")?.textContent?.trim(),
       mockDisabled: document.querySelector("#passMockAction")?.disabled,
+      caseDisabled: document.querySelector("#mockCaseButton")?.disabled,
       aDisabled: document.querySelector("#mockAButton")?.disabled,
       bDisabled: document.querySelector("#mockBButton")?.disabled,
       cDisabled: document.querySelector("#mockCButton")?.disabled,
@@ -189,6 +193,7 @@ async function main() {
     assert.match(initial.note, /未測定は弱点と決めつけず/);
     assert.match(initial.pace, /残り45単元・今日3単元/);
     assert.equal(initial.mockDisabled, false);
+    assert.equal(initial.caseDisabled, false);
     assert.equal(initial.aDisabled, false);
     assert.equal(initial.bDisabled, false);
     assert.equal(initial.cDisabled, false);
@@ -247,9 +252,8 @@ async function main() {
     assert.equal(forcedOfficial.pace, "一周接触済み");
     await officialGatePage.close();
 
-    // Legacy attempts stay readable and retained, but cannot contribute to
-    // v51 readiness.  Qualifying evidence comes only from the independent
-    // long-form Reiwa A/B/C bank, and every form keeps its own history cap.
+    // All internal forms are practice diagnostics, not pass evidence. Their
+    // separate history caps must still preserve old and recombined records.
     const historyRetentionPage = await context.newPage();
     historyRetentionPage.on("pageerror", (error) => errors.push(String(error)));
     historyRetentionPage.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
@@ -296,14 +300,13 @@ async function main() {
     const historyRetention = await stored(historyRetentionPage);
     const retainedReiwa = historyRetention.state.mockHistory.filter((item) => ["reiwa-form-a", "reiwa-form-b"].includes(item.formId));
     const retainedLegacy = historyRetention.state.mockHistory.filter((item) => item.formId === "form-c");
-    assert.equal(retainedReiwa.length, 3, "legacy practice must not evict qualifying Reiwa evidence");
+    assert.equal(retainedReiwa.length, 3, "legacy practice must not evict another practice form's history");
     assert.equal(retainedLegacy.length, 8);
-    assert.match(await historyRetentionPage.locator("#passReadinessStatus").textContent(), /令和実戦測定 通過.*旧フォーム履歴 8回は安定判定外/);
+    assert.match(await historyRetentionPage.locator("#passReadinessStatus").textContent(), /内部演習 弱点診断用・合格証拠対象外.*旧フォーム履歴 8回は安定判定外/);
     await historyRetentionPage.close();
 
-    // Repeating Reiwa A must not erase the only retained Reiwa B attempt. The
-    // newest three attempts are still all A, so readiness stays unstable while
-    // both qualifying form histories remain available for future evidence.
+    // Repeating A must not erase B. The UI must not demand a second internal
+    // form as a condition of readiness now that practice is diagnostic only.
     const formRetentionPage = await context.newPage();
     formRetentionPage.on("pageerror", (error) => errors.push(String(error)));
     formRetentionPage.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
@@ -343,13 +346,15 @@ async function main() {
     });
     await formRetentionPage.reload({ waitUntil: "networkidle" });
     await formRetentionPage.waitForFunction(() =>
-      (document.querySelector("#passReadinessStatus")?.textContent || "").includes("別2フォームが必要")
+      (document.querySelector("#passReadinessStatus")?.textContent || "").includes("弱点診断用・合格証拠対象外")
     );
     const formRetention = await stored(formRetentionPage);
     assert.equal(formRetention.state.mockHistory.filter((item) => item.formId === "reiwa-form-a").length, 10);
     assert.equal(formRetention.state.mockHistory.filter((item) => item.formId === "reiwa-form-b").length, 1);
     assert.equal(formRetention.state.mockHistory.length, 11);
-    assert.match(await formRetentionPage.locator("#passReadinessStatus").textContent(), /令和実戦測定 要再測定（別2フォームが必要）/);
+    const diagnosticStatus = await formRetentionPage.locator("#passReadinessStatus").textContent();
+    assert.match(diagnosticStatus, /内部演習 弱点診断用・合格証拠対象外/);
+    assert.doesNotMatch(diagnosticStatus, /別2フォームが必要|令和実戦測定 通過/);
     await formRetentionPage.close();
 
     // Retention is source-level evidence. A newer source failure must demote
@@ -454,6 +459,7 @@ async function main() {
     await page.waitForFunction(() => document.querySelector(".quest-card")?.classList.contains("is-mock"));
     const afterMock = await stored(page);
     assert.equal(afterMock.state.runMode, "mock");
+    assert.equal(afterMock.state.mock.formId, "case-form-2026-a", "readiness practice action must start the authored case form");
     assert.deepEqual(afterMock.state.officialExamExposure || {}, {}, "internal mock must not consume official exposure");
     // The launch control can be above the current viewport. Exercise the
     // actual cancel/resume guard so all mirrored save records stay in sync.
@@ -471,6 +477,7 @@ async function main() {
     await page.waitForFunction(() => document.querySelector(".quest-card")?.classList.contains("is-mock"));
     const fiveExemptMock = await stored(page);
     assert.equal(fiveExemptMock.state.mock.examProfile, "fiveExempt");
+    assert.equal(fiveExemptMock.state.mock.formId, "case-form-2026-a", "five-exempt practice must also start the authored case form");
     assert.match(await page.locator("#chapterProgressText").textContent(), /1 \/ 45問/);
     assert.match(await page.locator("#dailyWeakText").textContent(), /^110:/);
     await page.locator(".choice-button").first().click();

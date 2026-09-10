@@ -24,3 +24,12 @@
   .reiwa-answer-dock .reiwa-dock-explain, .reiwa-answer-dock .reiwa-dock-unsure { grid-row: 2; }
 }
 @media (prefers-reduced-motion: reduce) { .reiwa-question-view * { scroll-behavior: auto !important; transition: none !important; animation: none !important; } }
+.mock-evidence-note {
+  font-size: .85rem;
+  line-height: 1.6;
+  color: var(--text-muted, #b8c4c8);
+  margin: .75rem 0;
+  overflow-wrap: anywhere;
+}
+.mock-practice-archive { margin: .75rem 0; }
+.mock-practice-archive summary { cursor: pointer; line-height: 1.6; }

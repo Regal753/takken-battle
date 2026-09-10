@@ -802,28 +802,36 @@
     id: String(form.id),
     label: String(form.label || form.id),
     ids: (Array.isArray(form.questions) ? form.questions : []).map((question) => String(question.id)),
-    evidenceClass: "independent-current-law",
+    evidenceClass: "recombined-practice",
     reiwaOriginal: true
   })) : [];
+  const CASE_FORMS = (window.TAKKEN_CASE_EXAM_BANK?.forms || []).map(form => ({
+    id: form.id, label: form.label, shortLabel: form.shortLabel,
+    ids: form.questions.map(question => question.id),
+    evidenceClass: form.evidenceClass, authoredCase: true
+  }));
+  const CASE_QUESTIONS = Object.fromEntries((window.TAKKEN_CASE_EXAM_BANK?.forms || [])
+    .flatMap(form => form.questions.map(question => [question.id, question])));
   const REIWA_QUESTIONS = Object.fromEntries(
     (REIWA_BANK?.forms || []).flatMap((form) => (form.questions || []).map((question) => [question.id, question]))
   );
   const QUESTIONS = {
     ...(window.TAKKEN_QUESTIONS || {}),
     ...(window.TAKKEN_EXAM_QUESTIONS || {}),
-    ...REIWA_QUESTIONS
+    ...REIWA_QUESTIONS,
+    ...CASE_QUESTIONS
   };
-  const ALL_MOCK_FORMS = [...(EXAM_BLUEPRINT?.mockForms || []), ...REIWA_FORMS];
+  const ALL_MOCK_FORMS = [...(EXAM_BLUEPRINT?.mockForms || []), ...REIWA_FORMS, ...CASE_FORMS];
   const idToChapter = new Map();
   CHAPTERS.forEach((chapter, chapterIndex) => {
     chapter.ids.forEach((id) => idToChapter.set(id, { ...chapter, chapterIndex }));
   });
-  REIWA_FORMS.forEach((form, formIndex) => {
+  [...REIWA_FORMS, ...CASE_FORMS].forEach((form, formIndex) => {
     (EXAM_BLUEPRINT?.sections || []).forEach((section, sectionIndex) => {
-      const ids = form.ids.filter((id) => REIWA_QUESTIONS[id]?.sectionId === section.id);
+      const ids = form.ids.filter((id) => QUESTIONS[id]?.sectionId === section.id);
       const chapter = {
         id: `${form.id}-${section.id}`,
-        label: `令和実戦 / ${section.label}`,
+        label: `${form.authoredCase ? "事例実戦" : "複合練習"} / ${section.label}`,
         topicLabel: `${form.label} ${section.label}`,
         ids,
         chapterIndex: CHAPTERS.length + formIndex * 5 + sectionIndex
@@ -935,6 +943,7 @@
     dailyWeakLabel: $("#dailyWeakLabel"),
     dailyWeakText: $("#dailyWeakText"),
     dailyQuestButton: $("#dailyQuestButton"),
+    mockCaseButton: $("#mockCaseButton"),
     mockAButton: $("#mockAButton"),
     mockBButton: $("#mockBButton"),
     mockCButton: $("#mockCButton"),
@@ -4738,9 +4747,10 @@
 
   function mockFormShortLabel(form = currentMockForm()) {
     if (!form) return "模試";
+    if (form.authoredCase) return form.shortLabel;
     const suffix = String(form.id || "").split("-").at(-1)?.toUpperCase() || "";
     if (!form.reiwaOriginal) return `旧フォーム${suffix}`;
-    return `令和実戦${suffix}`;
+    return `複合練習${suffix}`;
   }
 
   function mockQuestionIds() {
@@ -4815,7 +4825,7 @@
       },
       {
         id: "tax",
-        label: "税",
+        label: "税・価格",
         correct: scoreFor("tax"),
         total: 3,
         target: STUDY_TARGETS.tax
@@ -4850,7 +4860,7 @@
     return [...(state.mockHistory || [])]
       .filter((item) => {
         const form = mockFormById(item.formId);
-        return form?.reiwaOriginal && item.examProfile === state.examProfile;
+        return form?.authoredCase && item.examProfile === state.examProfile;
       })
       .sort((left, right) =>
         (Date.parse(right.completedAt) || 0) - (Date.parse(left.completedAt) || 0)
@@ -5062,7 +5072,7 @@
       return {
         id: "foundation",
         title: "8/31まで高速一周",
-        text: `業法20問は維持し、税その他→法令→権利の順で未接触単元を潰す。令和実戦${examProfileSummary()}は現行法診断に使い、RETIO公式未見は保全する。`
+        text: `業法20問は維持し、税その他→法令→権利の順で未接触単元を潰す。事例実戦${examProfileSummary()}は弱点診断に使い、RETIO公式未見は保全する。`
       };
     }
     if (date <= "2026-08-31") {
@@ -5076,7 +5086,7 @@
       return {
         id: "september",
         title: "本試験演習",
-        text: "週1回以上、本試験と同じ問題数・制限時間で測定し、令和実戦A・B・Cのうち別2フォーム以上で合計と科目別目標を3日へそろえる。同一フォームの再測定は7日以上空ける。"
+        text: "本試験の測定は未見の公式過去問で行い、別3試験回・別3日で得点を確認する。事例実戦と複合練習は弱点診断用で、合格の証拠には算入しない。"
       };
     }
     if (date <= "2026-10-11") {
@@ -6656,7 +6666,7 @@
       currentLawGate: { attempts: currentLawGateAttempts() },
       studyMinutesHistory: passStudyMinutesHistory(),
       currentYearFreshness,
-      // RETIO過去問は当時法の採点。現行法40点の安定判定には令和実戦フォームだけを使う。
+      // RETIO過去問は当時法の採点。現行法の確認は専用ゲートで分ける。
       officialHistory: []
     });
   }
@@ -6754,10 +6764,7 @@
   }
 
   function nextMockFormId() {
-    const currentForm = currentMockForm();
-    const candidateForms = currentForm && !currentForm.reiwaOriginal
-      ? (EXAM_BLUEPRINT?.mockForms || []).filter(isStabilityMockForm)
-      : REIWA_FORMS;
+    const candidateForms = CASE_FORMS;
     const counts = new Map(candidateForms
       .map((form) => [form.id, 0]));
     (state.mockHistory || []).forEach((item) => {
@@ -6765,7 +6772,7 @@
         counts.set(item.formId, counts.get(item.formId) + 1);
       }
     });
-    return [...counts.entries()].sort((left, right) => left[1] - right[1] || left[0].localeCompare(right[0]))[0]?.[0] || "reiwa-form-a";
+    return [...counts.entries()].sort((left, right) => left[1] - right[1] || left[0].localeCompare(right[0]))[0]?.[0] || "case-form-2026-a";
   }
 
   function setPassCommandAction(button, action, label, { scope = "", unitId = "", size = 0 } = {}) {
@@ -6932,7 +6939,7 @@
     } else if (sundayDay && fullMeasurementRequired) {
       primary = officialMeasurementRequired
         ? { action: "official-exam", label: `公式未見${snapshot.examProfile.questions}問・${snapshot.examProfile.minutes}分を開始` }
-        : { action: "mock", label: `令和実戦A/B/C ${snapshot.examProfile.questions}問・${snapshot.examProfile.minutes}分を開始` };
+        : { action: "mock", label: `事例実戦A ${snapshot.examProfile.questions}問・${snapshot.examProfile.minutes}分を開始` };
     } else if (sundayDay && !sundayMode) {
       primary = {
         action: "mock",
@@ -6980,7 +6987,7 @@
         ? fullMeasurementRequired
           ? officialMeasurementRequired
             ? `公式未見3試験回の転移証拠が未達です。今日は公式${snapshot.examProfile.questions}問を本試験時間で測り、短縮復習では完了にしません。`
-            : `全45単元の一周が未完了です。今日は令和実戦A/B/Cを本試験時間で測り、短縮復習では完了にしません。`
+            : `全45単元の一周が未完了です。今日は事例実戦Aを本試験時間で解き、誤答と未測定の論点を確認します。`
           : sundayMode === "full-mock"
             ? `${snapshot.examProfile.questions}問・${snapshot.examProfile.minutes}分だけに集中します。業法ノックは今日は必須にしません。途中保存できます。`
           : sundayMode === "short-review"
@@ -7012,12 +7019,12 @@
     elements.missionBattleLabel.textContent = sundayDay ? "日曜モード" : "業法ノック";
     elements.missionBattleStatus.textContent = sundayDay
       ? fullMeasurementRequired
-        ? officialMeasurementRequired ? "公式初見必須" : "令和実戦必須"
+        ? officialMeasurementRequired ? "公式初見必須" : "事例演習"
         : sundayMode === "full-mock" ? "本試験形式" : sundayMode === "short-review" ? "短縮復習" : "未選択"
       : `解答済 ${Math.min(20, businessDoneCount)} / 20`;
     elements.missionOfficialLabel.textContent = sundayDay
       ? sundayMode === "full-mock"
-        ? officialMeasurementRequired ? `公式未見${snapshot.examProfile.questions}問` : `令和実戦${snapshot.examProfile.questions}問`
+        ? officialMeasurementRequired ? `公式未見${snapshot.examProfile.questions}問` : `事例実戦${snapshot.examProfile.questions}問`
         : "業法20＋弱点8"
       : theme.label;
     elements.missionOfficialStatus.textContent = sundayDay
@@ -7234,32 +7241,18 @@
       ? `残り${remainingUnits}単元・今日${Math.max(1, unitPace)}単元（最低${textbookPlan.requiredMinutesPerDay ?? "?"}分）`
       : "一周接触済み";
     elements.passReadinessTitle.textContent = snapshot.timed50.stable
-      ? `令和実戦＋公式初見3回で${snapshot.targets.total}点を再現`
-      : snapshot.timed50.mock.stable && !snapshot.timed50.officialTransfer.passed
-        ? `令和実戦通過・公式初見 ${snapshot.timed50.officialTransfer.validAttemptCount}/3回`
+      ? "公式初見3回と現行法確認を通過"
       : latestMock
-        ? `直近の令和実戦${snapshot.targets.questions}問 ${latestMock.score}/${snapshot.targets.questions}・厳格安定は未達`
-        : `${snapshot.targets.questions}問は未測定。令和実戦で現在地を出す`;
+        ? `事例実戦 ${latestMock.score}/${snapshot.targets.questions}・本試験対応力は公式初見で確認`
+        : `事例実戦${snapshot.targets.questions}問は未測定。公式初見の合格証拠とは別枠`;
     elements.passReadinessNote.textContent = textbookPlan.status === "infeasible"
       ? `現在の残数では最低${textbookPlan.requiredMinutesPerDay}分/日が必要です。90分枠のまま「8/31完了」とは表示せず、未接触単元を最優先にします。`
       : staleDays > 1
       ? `最終学習から${staleDays}日空いています。今日は未接触を減らしつつ、業法20問で再起動します。`
-      : `令和実戦目標は${snapshot.targets.total}/${snapshot.targets.questions}。未測定は弱点と決めつけず、接触→時間測定→不足点補強の順で処理します。`;
+      : `演習目標は${snapshot.targets.total}/${snapshot.targets.questions}。内部演習は弱点診断用です。未測定は弱点と決めつけず、公式初見の結果と現行法確認を分けて扱います。`;
     const mockEvidence = snapshot.timed50.mock;
     const officialEvidence = snapshot.timed50.officialTransfer;
-    const formEvidenceLabel = mockEvidence.passedRecentCount < mockEvidence.requiredAttempts
-      ? `${mockEvidence.passedRecentCount}/${mockEvidence.requiredAttempts}`
-      : mockEvidence.distinctFormCount < mockEvidence.requiredDistinctForms
-        ? "要再測定（別2フォームが必要）"
-        : !mockEvidence.repeatSpacingSatisfied
-          ? `要再測定（同一フォームは${mockEvidence.minimumRepeatGapDays}日以上空ける）`
-      : !mockEvidence.latestRecentEnough
-        ? mockEvidence.latestAgeDays !== null && mockEvidence.latestAgeDays < 0
-          ? "要再測定（未来日付を除外）"
-          : `要再測定（最新が${mockEvidence.latestAgeDays ?? "不明"}日前）`
-        : !mockEvidence.withinRollingWindow
-          ? `要再測定（3回が${(mockEvidence.windowSpanDays ?? 0) + 1}日間）`
-          : "通過";
+    const formEvidenceLabel = "弱点診断用・合格証拠対象外";
     const lawEvidenceLabel = snapshot.currentLawGate.passed
       ? "通過"
       : snapshot.currentLawGate.validAttemptCount < 2
@@ -7280,8 +7273,8 @@
       ? `・旧フォーム履歴 ${mockEvidence.excludedTimedCount}回は安定判定外`
       : "";
     elements.passReadinessStatus.textContent = snapshot.timed50.stable && snapshot.currentYearFreshness.passed && snapshot.capacity.verified
-      ? `別2フォーム・3日、公式初見3試験回、改正確認2日、当年資料、直近7日の学習時間をすべて通過しました。`
-      : `令和実戦測定 ${formEvidenceLabel}${excludedMockNote}・公式初見 ${officialEvidenceLabel}・改正確認 ${lawEvidenceLabel}・当年資料 ${snapshot.currentYearFreshness.passed ? "確認済" : "要再確認"}・学習時間 ${snapshot.capacity.verified ? "確認済" : `${snapshot.capacity.observedDays}/4日`}`;
+      ? "公式初見の別3試験回・別3日、改正確認2日、当年資料、直近7日の学習時間を確認済み。合格を保証する表示ではありません。"
+      : `内部演習 ${formEvidenceLabel}${excludedMockNote}・公式初見 ${officialEvidenceLabel}・改正確認 ${lawEvidenceLabel}・当年資料 ${snapshot.currentYearFreshness.passed ? "確認済" : "要再確認"}・学習時間 ${snapshot.capacity.verified ? "確認済" : `${snapshot.capacity.observedDays}/4日`}`;
     elements.passReadinessStatus.classList.toggle("is-urgent", snapshot.urgent || remainingUnits > 0);
 
     const active = activeLearningSession();
@@ -11040,7 +11033,9 @@
     elements.enemyName.textContent = battleProfile.name;
     elements.enemyClassLabel.textContent = battleProfile.classLabel;
     const sourceLocator = question.sourceLocator || question.sourceRef;
-    elements.sourceLabel.textContent = sourceLocator
+    elements.sourceLabel.textContent = isMockMode() && !state.mock.finalized
+      ? "時間演習中・根拠条文と解説は終了後に表示"
+      : sourceLocator
       ? `令和8年度 / ${sourceLocator} / ${chapterText} / 基準日 ${question.legalBaseline}`
       : `旧問題アーカイブ / 参考用・現行の定着判定外 / ${chapterText}`;
     elements.enemyStateLabel.textContent = isMockMode() && answered
@@ -11204,7 +11199,7 @@
   function renderQuestionPrompt(question) {
     removeStructuredQuestionPrompt();
     const normalizeReiwaQuestion = window.TAKKEN_REIWA_QUESTION_VIEW?.normalizeQuestion;
-    if (normalizeReiwaQuestion && String(question?.id || "").startsWith("reiwa-")) {
+    if (normalizeReiwaQuestion && (question?.authoredCase || String(question?.id || "").startsWith("reiwa-"))) {
       const view = normalizeReiwaQuestion(question);
       elements.questionText.textContent = [view.premise, view.stem].filter(Boolean).join("\n\n");
       if (!view.statements.length || shouldCutCheck(question.id)) return;
@@ -12067,10 +12062,10 @@
     state.daily = normalizeDailyState(state.daily);
     elements.questCard?.classList.toggle("is-mock", isMockMode());
     elements.questCard?.classList.toggle("is-first-pass", isFirstPassMode());
-    [elements.mockAButton, elements.mockBButton, elements.mockCButton].forEach((button) => {
+    [elements.mockCaseButton, elements.mockAButton, elements.mockBButton, elements.mockCButton].forEach((button) => {
       if (!button) return;
       button.disabled = false;
-      button.title = "独自作問・令和現行法の本試験配分測定です。公式過去問とは別に扱います。";
+      button.title = "独自問題による演習です。本試験との難易度・得点の等価性は未校正です。";
       button.classList.remove("is-active");
     });
     if (isMockMode()) {
@@ -12097,6 +12092,7 @@
       elements.weakQuestButton.disabled = true;
       elements.sprintButton.disabled = true;
       const activeButton = {
+        "case-form-2026-a": elements.mockCaseButton,
         "reiwa-form-a": elements.mockAButton,
         "reiwa-form-b": elements.mockBButton,
         "reiwa-form-c": elements.mockCButton
@@ -12107,10 +12103,10 @@
     elements.dailyQuestButton.disabled = false;
     elements.passQuestButton.disabled = false;
     elements.sprintButton.disabled = false;
-    [elements.mockAButton, elements.mockBButton, elements.mockCButton].forEach((button) => {
+    [elements.mockCaseButton, elements.mockAButton, elements.mockBButton, elements.mockCButton].forEach((button) => {
       if (!button) return;
       button.disabled = false;
-      button.title = "独自作問・令和現行法の本試験配分測定です。公式過去問とは別に扱います。";
+      button.title = "独自問題による演習です。本試験との難易度・得点の等価性は未校正です。";
     });
     const target = state.daily.target || DAILY_TARGET;
     const fixedIds = dailyQuestIds();
@@ -12401,7 +12397,7 @@
     if (!elements.coachTitle || !elements.coachText) return;
 
     if (isMockMode()) {
-      elements.coachTitle.textContent = `${mockFormShortLabel()}・安全圏目標${MOCK_SAFE_TARGET}点`;
+      elements.coachTitle.textContent = `${mockFormShortLabel()}・演習目標${MOCK_SAFE_TARGET}点`;
       elements.coachText.textContent =
         `${mockQuestionIds().length}問を${examProfileDurationMinutes(state.mock.examProfile)}分で解く。途中の正誤・解説は隠す。既習問題の定着確認なので、初見実力は公式過去問で別に測る。`;
       return;
@@ -13687,6 +13683,7 @@
     const legacySourceIds = Array.isArray(question?.sourceQuestionIds)
       ? question.sourceQuestionIds.filter((id) => STUDY_ORDER.includes(id))
       : [];
+    if (question?.authoredCase) return [...new Set(legacySourceIds)];
     const optionSourceIds = (index) => {
       const components = question?.sourceChoices?.[index]?.components;
       if (Array.isArray(components) && components.length) {
@@ -13775,10 +13772,10 @@
     const strategyRows = mockStrategyRows(sectionScores);
     const priority = mockPriorityRow(sectionScores);
     const scoreMessage = targetReached
-      ? `演習安全圏${safeTarget}点を達成`
+      ? `この演習の目標${safeTarget}点を達成（合否判定ではありません）`
       : (strategyTargetReached
-          ? `令和実戦目標${passTarget}点を達成。演習安全圏${safeTarget}点まであと${safeTarget - score}点`
-          : `令和実戦目標${passTarget}点まであと${passTarget - score}点`);
+          ? `演習目標${passTarget}点を達成。上位目標${safeTarget}点まであと${safeTarget - score}点`
+          : `演習目標${passTarget}点まであと${passTarget - score}点`);
     const historyItems = [...(state.mockHistory || [])]
       .sort((left, right) => (Date.parse(right.completedAt) || 0) - (Date.parse(left.completedAt) || 0))
       .slice(0, 3);
@@ -13790,9 +13787,12 @@
       const hero = resultElement("div", { className: `mock-score-hero ${targetReached ? "is-target" : "is-below"}` });
       const scoreValue = resultElement("strong", { text: String(score) });
       scoreValue.append(resultElement("small", { text: ` / ${questionCount}` }));
-      hero.append(resultElement("span", { text: "得点" }), scoreValue, resultElement("p", { text: scoreMessage }));
+      hero.append(resultElement("span", { text: "得点" }), scoreValue, resultElement("p", { text: scoreMessage }),
+        resultElement("p", { className: "mock-evidence-note", text: form.authoredCase
+          ? "条件差を判断する独自の事例演習です。本試験の何点相当かは換算できません。初見実力は未見の公式過去問で確認します。"
+          : "基礎・既習命題の再構成による練習結果です。出題範囲や難易度に偏りがあり、本試験の安全圏判定には使いません。" }));
       const meta = resultElement("div", { className: "mock-result-meta" });
-      [["所要時間", formatElapsed(state.mock.elapsedMs)], ["誤答", `${wrongResults.length}問`], ["基礎弱点へ登録", `${weakSourceCount}論点`]].forEach(([label, value]) => {
+      [["経過時間（中断を含む）", formatElapsed(state.mock.elapsedMs)], ["誤答", `${wrongResults.length}問`], ["基礎弱点へ登録", `${weakSourceCount}論点`]].forEach(([label, value]) => {
         const item = resultElement("span", { text: `${label} ` });
         item.append(resultElement("strong", { text: value }));
         meta.append(item);
@@ -13809,8 +13809,8 @@
       const priorityPanel = resultElement("section", { className: `mock-priority ${priority ? "is-below-target" : "is-on-target"}` });
       priorityPanel.append(
         resultElement("span", { text: priority ? "次の最優先" : "次の目標" }),
-        resultElement("strong", { text: priority ? `${priority.label} ${priority.correct}/${priority.total} → 目標${priority.target}` : "4分野すべて目標達成" }),
-        resultElement("p", { text: priority ? "今日は誤答の解説と根拠を確認して終了。翌日の日課で本試験比率を保ちながら、弱点を優先して再テストする。" : `定着ロードで弱点と最終接触が古い問題を回し、演習安全圏${safeTarget}点を別フォームでも再現する。` })
+        resultElement("strong", { text: priority ? `${priority.label} ${priority.correct}/${priority.total} → 目標${priority.target}` : "今回の出題範囲で科目別目標を達成" }),
+        resultElement("p", { text: priority ? "誤答の条件・根拠を確認し、翌日以降に別事例で再テストする。" : "未出の論点・例外は未測定です。まだ解いていない公式過去問で時間と科目別得点を確認してください。" })
       );
       const history = resultElement("section", { className: "mock-history" });
       const historyGrid = resultElement("div", { className: "mock-history-grid" });
@@ -13827,7 +13827,7 @@
       const calibration = resultElement("section", { className: "mock-calibration" });
       const officialButton = resultElement("button", { className: "ghost-button", id: "mockOfficialExamButton", text: `露出記録つき公式${examProfileQuestionCount(state.examProfile)}問へ` });
       officialButton.type = "button";
-      calibration.append(resultElement("strong", { text: "初見実力は公式過去問で確認" }), resultElement("p", { text: "令和実戦A・B・Cは独自作問の現行法フォーム。別フォームを含む3日測定とし、同じフォームの再測定は7日以上空ける。公式過去問とは混同しない。" }), officialButton);
+      calibration.append(resultElement("strong", { text: "初見実力は公式過去問で確認" }), resultElement("p", { text: "事例実戦Aは個別作問、複合練習A・B・Cは既習命題の再構成です。どちらも公式未見試験の代用ではありません。旧セーブの得点・選択肢順は変更していません。" }), officialButton);
       const wrongReview = resultElement("section", { className: "mock-wrong-review" });
       wrongReview.append(resultElement("h3", { text: "誤答レビュー" }), resultElement("p", { text: "誤答に関係する基礎論点は弱点リストへ登録済み。各問を開くと全肢の判定理由と公式根拠を確認できます。" }));
       if (!wrongResults.length) {
@@ -13886,7 +13886,17 @@
       state.answered = null;
       setFirstPassUrl(false);
       saveState();
-      window.location.reload();
+      render();
+      if (elements.passPlanPanel) elements.passPlanPanel.open = true;
+      if (elements.officialLedgerPanel) elements.officialLedgerPanel.open = true;
+      const ledger = document.querySelector(".official-ledger");
+      if (ledger) ledger.open = true;
+      window.requestAnimationFrame(() => {
+        const target = elements.officialExamStartButton?.disabled
+          ? elements.officialExamId : elements.officialExamStartButton;
+        target?.focus({ preventScroll: true });
+        target?.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
     });
     $("#mockDailyButton")?.addEventListener("click", () => {
       state.runMode = "quest";
@@ -14334,6 +14344,7 @@
       }
     });
     elements.passQuestButton?.addEventListener("click", startFirstPass);
+    elements.mockCaseButton?.addEventListener("click", () => startMock("case-form-2026-a"));
     elements.mockAButton?.addEventListener("click", () => startMock("reiwa-form-a"));
     elements.mockBButton?.addEventListener("click", () => startMock("reiwa-form-b"));
     elements.mockCButton?.addEventListener("click", () => startMock("reiwa-form-c"));

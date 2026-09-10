@@ -62,12 +62,12 @@ requireText(app, "function foundationCoverageComplete", "foundation coverage gat
 requireText(app, "planMode: \"unit\"", "unit plan persistence is missing");
 requireText(app, "const FIRST_PASS_DEADLINE_LABEL = \"8/31\";", "first-pass deadline is missing");
 requireText(app, "const MIN_INTERNAL_MOCK_ELAPSED_MINUTES = 30;", "implausibly fast mock results are not excluded from stability evidence");
-requireText(app, "要再測定（最新が", "stale three-form evidence is not explained to the learner");
+requireText(app, "弱点診断用・合格証拠対象外", "internal practice evidence boundary is not explained to the learner");
 requireText(app, "要再確認（両日14日以内）", "stale current-law evidence is not explained to the learner");
 requireText(app, "localDateKey(completedAt) === dayKey", "mock evidence does not bind the saved JST day to its completion timestamp");
 requireText(app, "examProfileQuestionCount(state.examProfile)", "mock-day progress does not honor the selected 45/50-question profile");
 requireText(app, "function startMock(formId)", "internal 50-question diagnostic is missing");
-requireText(app, "令和実戦${examProfileSummary()}は現行法診断に使い、RETIO公式未見は保全する。", "profile-aware Reiwa diagnostic / official-reserve policy is missing");
+requireText(app, "事例実戦${examProfileSummary()}は弱点診断に使い、RETIO公式未見は保全する。", "profile-aware case diagnostic / official-reserve policy is missing");
 requireText(app, "!foundationComplete && !businessUnlocked", "official full-exam protection gate is missing");
 if (/function startMock\(formId\)[\s\S]{0,900}foundationCoverageComplete\(\)/.test(app)) {
   issues.push("internal 50-question diagnostic must remain available before full foundation coverage");
@@ -87,8 +87,8 @@ if (app.includes("JULY_GATE_DEADLINE") || html.includes("7/31学習ゲート")) 
 ].forEach((id) => requireText(html, `id=\"${id}\"`, `${id} is missing from the page`));
 requireText(html, "本文＋読後問題", "foundation-first mission label is missing");
 requireText(html, "8/31まで高速一周", "8/31 fast-first-pass copy is missing");
-requireText(html, "令和実戦は診断として今すぐ利用可", "profile-aware Reiwa diagnostic availability copy is missing");
-requireText(html, "20260910-reiwa-exam-v51-c8c37bf3c6f6", "pass readiness cache version is missing");
+requireText(html, "事例実戦は弱点診断として今すぐ利用可", "profile-aware case diagnostic availability copy is missing");
+requireText(html, "20260910-case-exam-v52-11dcb7dbe710", "pass readiness cache version is missing");
 requireText(html, '<details class="quest-card"', "review-10 menu must be collapsed by default");
 requireText(html, 'id="nextButton"', "inline next-question button is missing");
 requireText(css, ".quest-card:not([open]) > .quest-card-body", "collapsed review menu rule is missing");

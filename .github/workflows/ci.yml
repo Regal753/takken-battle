@@ -18,6 +18,7 @@ jobs:
         with:
           node-version: "22"
       - run: node Audit-TakkenFullExam.js
+      - run: node Audit-TakkenCaseExamBank.js
       - run: node Audit-TakkenChapter2Range.js
       - run: node Audit-TakkenTextbookRanges.js
       - run: node Audit-TakkenQuestionQuality.js
@@ -104,6 +105,7 @@ jobs:
           node Audit-TakkenAccessibilityUi.cjs
           node Audit-TakkenQuestCoreUi.cjs
           node Audit-TakkenReiwaExamUi.cjs
+          node Audit-TakkenCaseExamUi.cjs
 
   validate:
     if: ${{ always() }}

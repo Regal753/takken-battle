@@ -155,7 +155,7 @@ async function main() {
       !foundationEntry.action.includes("読後2問") ||
       foundationEntry.gate !== "単元 0 / 45" ||
       foundationEntry.mockDisabled ||
-      !foundationEntry.mockTitle.includes("令和現行法") ||
+      !foundationEntry.mockTitle.includes("難易度・得点の等価性は未校正") ||
       !foundationEntry.formCExists
     ) {
       throw new Error(`Foundation entry mismatch: ${JSON.stringify(foundationEntry)}`);
@@ -196,7 +196,7 @@ async function main() {
       !blueprintAudit.coachText.includes("全問接触済み") ||
       blueprintAudit.scopeValue !== "business" ||
       blueprintAudit.mockDisabled ||
-      !blueprintAudit.mockTitle.includes("令和現行法") ||
+      !blueprintAudit.mockTitle.includes("難易度・得点の等価性は未校正") ||
       blueprintAudit.roundLabel !== "今日 1 / 10" ||
       blueprintAudit.commandTitle !== "固定10問を解く" ||
       blueprintAudit.commandStep !== "今やる・STEP 1 / 4" ||
@@ -641,6 +641,7 @@ async function main() {
     if (!await mockMenu.evaluate((panel) => panel.open)) {
       await page.locator("details.quest-card > summary").click();
     }
+    await page.locator(".mock-practice-archive > summary").click();
     await page.locator("#mockAButton").waitFor({ state: "visible" });
     await page.locator("#mockAButton").click();
     await page.waitForFunction(
@@ -807,7 +808,7 @@ async function main() {
     };
     if (
       !mockResult.scoreText.includes("40 / 50") ||
-      !mockResult.targetText.includes("令和実戦目標40点を達成") ||
+      !mockResult.targetText.includes("演習目標40点を達成") ||
       mockResult.wrongItems !== 10 ||
       JSON.stringify(mockResult.sections) !== JSON.stringify(expectedSections) ||
       !mockResult.priorityText.includes("宅建業法 16/20 → 目標18") ||
@@ -854,7 +855,7 @@ async function main() {
     }
     await page.locator("#mockOtherButton").click();
     await page.waitForFunction(
-      () => document.querySelector("#quizCard")?.dataset.questionId === "reiwa-b-01"
+      () => document.querySelector("#quizCard")?.dataset.questionId === "case52-r01"
     );
     const formBStart = await page.evaluate((id) => {
       const saved = JSON.parse(localStorage.getItem(id) || "{}");
@@ -864,8 +865,8 @@ async function main() {
         current: document.querySelector("#roundLabel")?.textContent?.trim() || ""
       };
     }, storageId);
-    if (formBStart.formId !== "reiwa-form-b" || formBStart.position !== 0 || formBStart.current !== "1 / 50") {
-      throw new Error(`Mock B did not start correctly: ${JSON.stringify(formBStart)}`);
+    if (formBStart.formId !== "case-form-2026-a" || formBStart.position !== 0 || formBStart.current !== "1 / 50") {
+      throw new Error(`Case A did not start correctly: ${JSON.stringify(formBStart)}`);
     }
     const formCPage = await context.newPage();
     const formCReview = `formc${Date.now().toString(36)}`.slice(0, 24);
@@ -875,6 +876,7 @@ async function main() {
     await formCPage.goto(formCUrl.toString(), { waitUntil: "networkidle" });
     const questMenu = formCPage.locator(".quest-card");
     if (!(await questMenu.evaluate((node) => node.open))) await questMenu.locator(":scope > summary").click();
+    await formCPage.locator(".mock-practice-archive > summary").click();
     await formCPage.locator("#mockCButton").click();
     await formCPage.waitForFunction(() => document.querySelector(".quest-card")?.classList.contains("is-mock"));
     const formCStart = await formCPage.evaluate((id) => {

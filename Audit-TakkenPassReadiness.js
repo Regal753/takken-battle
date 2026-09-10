@@ -13,7 +13,8 @@ assert.equal(readiness.FIRST_PASS_FIXED_DAILY_MINUTES, 30);
 assert.equal(readiness.STABILITY_LATEST_MAX_AGE_DAYS, 14);
 assert.equal(readiness.STABILITY_WINDOW_DAYS, 21);
 assert.equal(readiness.CURRENT_LAW_ATTEMPT_MAX_AGE_DAYS, 14);
-assert.deepEqual(readiness.MOCK_STABILITY_POLICY.eligibleFormIds, ["reiwa-form-a", "reiwa-form-b", "reiwa-form-c"]);
+assert.equal(readiness.MOCK_STABILITY_POLICY.requiredForReadiness, false);
+assert.deepEqual(readiness.MOCK_STABILITY_POLICY.eligibleFormIds, ["reiwa-form-a", "reiwa-form-b", "reiwa-form-c", "case-form-2026-a"]);
 assert.equal(readiness.validDayKey("2026-02-29"), ""); assert.equal(readiness.validDayKey("2028-02-29"), "2028-02-29");
 assert.equal(readiness.dayKey(new Date("2026-08-29T15:30:00Z")), "2026-08-30", "Date inputs use JST regardless of host timezone");
 
@@ -61,6 +62,35 @@ assert.equal(stable.timed50.mock.minimumRepeatGapDays, 7);
 assert.equal(stable.timed50.mock.repeatSpacingSatisfied, true);
 assert.equal(stable.timed50.official.stable, true, "generic official stability keeps the existing three-distinct-form rule");
 assert.equal(stable.timed50.officialTransfer.passed, true, "official historical transfer proof is required separately from current-law evidence");
+assert.equal(stable.timed50.mock.requiredForReadiness, false);
+assert.equal(stable.timed50.mock.evidenceUse, "practice-diagnostics");
+const readinessInputs = { todayKey: "2026-09-04", subjects, officialTransferHistory: officialTransfer, textbookFirstPass: textbookComplete, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: freshness };
+const withoutInternalMock = readiness.calculatePassReadiness(readinessInputs);
+assert.equal(withoutInternalMock.onTrack, true, "official transfer and existing other gates must not require internal practice forms");
+assert.equal(withoutInternalMock.timed50.mock.stable, false, "the absence of an internal practice streak stays visible as diagnostic data");
+assert.equal(withoutInternalMock.timed50.baseStable, true, "baseStable is official transfer, not an internal mock score");
+const singleAuthored = { ...attempts[2], formId: "case-form-2026-a", evidenceClass: "authored-case-practice" };
+const withSingleAuthored = readiness.calculatePassReadiness({ ...readinessInputs, mockHistory: [singleAuthored] });
+assert.equal(withSingleAuthored.onTrack, true, "only one authored case form exists and must not create an impossible multi-form gate");
+assert.equal(withSingleAuthored.timed50.mock.eligibleTimedCount, 1);
+const noTransferInputs = { ...readinessInputs, officialTransferHistory: undefined };
+const old46 = { ...attempts[2], formId: "form-a", total: 46, sections: { business: 20, rights: 11, restrictions: 8, tax: 3, other: 4 } };
+for (const mockHistory of [[old46], [singleAuthored], attempts.map((attempt) => ({ ...attempt, evidenceClass: "recombined-practice" }))]) {
+  const practiceOnly = readiness.calculatePassReadiness({ ...noTransferInputs, mockHistory });
+  assert.equal(practiceOnly.onTrack, false, "neither old 46/50, authored cases, nor a recombined streak may replace official unseen evidence");
+  assert.equal(practiceOnly.timed50.baseStable, false);
+  assert.equal(practiceOnly.reason, "official-transfer-unverified");
+}
+for (const transfer of [
+  { ...officialTransfer, initialCount: 2 },
+  { ...officialTransfer, latestThreeInitial: officialTransfer.latestThreeInitial.slice(0, 2) },
+  { ...officialTransfer, latestThreeInitial: officialTransfer.latestThreeInitial.map((entry) => ({ ...entry, dayKey: "2026-09-01" })) },
+  { ...officialTransfer, latestThreeInitial: officialTransfer.latestThreeInitial.map((entry) => ({ ...entry, score50: 39 })) }
+]) {
+  const insufficient = readiness.calculatePassReadiness({ ...readinessInputs, officialTransferHistory: transfer });
+  assert.equal(insufficient.onTrack, false, "three initial exams, three separate dates and mean 40 remain mandatory without internal mocks");
+  assert.equal(insufficient.reason, "official-transfer-unverified");
+}
 const noOfficialTransfer = readiness.calculatePassReadiness({ todayKey: "2026-09-06", subjects, mockHistory: attempts, textbookFirstPass: textbookComplete, currentLawGate: gate, studyMinutesHistory: capacity, currentYearFreshness: freshness });
 assert.equal(noOfficialTransfer.onTrack, false); assert.equal(noOfficialTransfer.reason, "official-transfer-unverified");
 assert.equal(noOfficialTransfer.dailyPlan.requiredMeasurement, "official-transfer");
@@ -87,9 +117,9 @@ assert.equal(sameForm.timed50.stable, false); assert.equal(sameForm.timed50.mock
 const allA = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts.map((a) => ({ ...a, formId: "reiwa-form-a" })), currentLawGate: gate, studyMinutesHistory: capacity });
 assert.equal(allA.timed50.mock.eligibleTimedCount, 3);
 assert.equal(allA.timed50.mock.distinctFormCount, 1);
-assert.equal(allA.timed50.stable, false, "three eligible attempts still need both independent forms");
+assert.equal(allA.timed50.stable, false, "three internal attempts do not substitute for official transfer evidence");
 const legacyOnly = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts.map((a, index) => ({ ...a, formId: ["form-a", "form-b", "form-c"][index] })), currentLawGate: gate, studyMinutesHistory: capacity });
-assert.equal(legacyOnly.timed50.mock.eligibleTimedCount, 0, "legacy A/B/C history remains readable but cannot certify v51 stability");
+assert.equal(legacyOnly.timed50.mock.eligibleTimedCount, 0, "legacy A/B/C history remains readable but is outside the long-form practice diagnostic");
 assert.equal(legacyOnly.timed50.mock.excludedTimedCount, 3);
 const tooSoonRepeat = readiness.calculatePassReadiness({ todayKey: "2026-09-04", subjects, mockHistory: attempts.map((a, index) => ({ ...a, dayKey: `2026-09-0${index + 1}`, completedAt: `2026-09-0${index + 1}T10:00:00+09:00` })), currentLawGate: gate, studyMinutesHistory: capacity });
 assert.equal(tooSoonRepeat.timed50.mock.repeatSpacingSatisfied, false, "a repeated A/B form needs a seven-day calendar gap");
