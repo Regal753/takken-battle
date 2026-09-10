@@ -139,18 +139,20 @@ async function horizontalOverflow(page) {
 
 async function assertFocusedInViewport(page, expectedSelector) {
   try {
-  await page.waitForFunction((selector) => {
-    const active = document.activeElement;
-    if (!active || !active.matches(selector)) return false;
-    const rect = active.getBoundingClientRect();
-    const height = window.visualViewport?.height || window.innerHeight;
-    return rect.top >= 0 && rect.top < height;
-  }, expectedSelector);
-  const position = await page.evaluate(() => {
-    const rect = document.activeElement.getBoundingClientRect();
-    return { id: document.activeElement.id, top: rect.top, bottom: rect.bottom, height: window.visualViewport?.height || window.innerHeight };
-  });
-  assert.ok(position.top >= 0 && position.top < position.height, `focused target outside viewport: ${JSON.stringify(position)}`);
+    await page.waitForFunction((selector) => {
+      const active = document.activeElement;
+      if (!active || !active.matches(selector)) return false;
+      const rect = active.getBoundingClientRect();
+      const height = window.visualViewport?.height || window.innerHeight;
+      return rect.top >= 0 && rect.top < height;
+    }, expectedSelector);
+    const position = await page.evaluate((selector) => {
+      const active = document.activeElement;
+      const rect = active.getBoundingClientRect();
+      return { id: active.id, matchesExpected: active.matches(selector), top: rect.top, bottom: rect.bottom, height: window.visualViewport?.height || window.innerHeight };
+    }, expectedSelector);
+    assert.ok(position.matchesExpected, `focus moved before the viewport check: ${JSON.stringify(position)}`);
+    assert.ok(position.top >= 0 && position.top < position.height, `focused target outside viewport: ${JSON.stringify(position)}`);
   } catch (error) {
     const diagnostic = await page.evaluate((selector) => {
       const rect = (node) => {
@@ -357,6 +359,17 @@ async function assertFocusedInViewport(page, expectedSelector) {
 
     await page.locator("#practicalDrillChangeButton").click();
     await page.locator("#guaranteeSpecialCard").waitFor({ state: "hidden" });
+    const afterChange = await readSavedState(page);
+    assert.equal(afterChange.state.practicalDrill.stage, "idle", "changing settings must end the completed session");
+    // The retired full-round control is intentionally hidden. Launch its
+    // compatibility fixture from a fresh idle view, not while the real return
+    // route is still smoothly scrolling to the visible business-law dojo.
+    await page.reload({ waitUntil: "networkidle", timeout: 20000 });
+    await waitForApp(page);
+    const afterChangeReload = await readSavedState(page);
+    assert.equal(afterChangeReload.state.practicalDrill.stage, "idle");
+    assert.deepEqual(afterChangeReload.state.practicalDrill.history, afterChange.state.practicalDrill.history,
+      "preparing the retired full-round fixture must retain every answer and mastery record");
     await page.locator("#guaranteeSpecialFullStart").dispatchEvent("click");
     await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
     await assertFocusedInViewport(page, "[data-practical-forecast]");
