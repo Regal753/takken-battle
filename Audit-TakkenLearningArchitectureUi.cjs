@@ -235,6 +235,7 @@ async function main() {
     const initial = await desktop.evaluate(() => ({
       title: document.querySelector("#todayCommandTitle")?.textContent || "",
       text: document.querySelector("#todayCommandText")?.textContent || "",
+      commandAction: document.querySelector("#todayCommandStartButton")?.dataset.commandAction || "",
       foundationTitle: document.querySelector("#foundationRouteTitle")?.textContent || "",
       foundationText: document.querySelector("#foundationRouteText")?.textContent || "",
       source: document.querySelector("#dailyQuestSource")?.textContent || "",
@@ -251,7 +252,8 @@ async function main() {
       }
     }));
     assert.match(initial.title, /宅建業法 残り20問/);
-    assert.match(initial.text, /固定/);
+    assert.equal(initial.commandAction, "business-knock", "the first action must start the required business-law knock");
+    assert.match(initial.text, /宅建業法ノック20→権利関係8問→誤答・迷いの回収/, "the fixed Saturday plan must retain its ordered question targets");
     assert.match(initial.foundationTitle, /01-01 宅建業法の基本/);
     assert.match(initial.foundationText, /p\.3/);
     assert.match(initial.source, /読後2問/);

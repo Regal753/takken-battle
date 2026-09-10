@@ -621,12 +621,14 @@ async function presentedFixture(page) {
         !candidate.includes("previous") && !candidate.includes("corrupt") &&
         !candidate.endsWith("event-outbox"));
       const saved = JSON.parse(localStorage.getItem(key));
+      saved.stateSchemaVersion = 13;
       delete saved.practicalDrill.knockPreset.difficulty;
       localStorage.setItem(key, JSON.stringify(saved));
     });
     await page.reload({ waitUntil: "networkidle" });
     await waitForApp(page);
     const migratedOld = await readSavedState(page);
+    assert.equal(migratedOld.stateSchemaVersion, 14, "the answered v53 session must migrate to schema14");
     assert.deepEqual(migratedOld.practicalDrill.queue, oldSaved.practicalDrill.queue);
     assert.deepEqual(migratedOld.practicalDrill.currentAttempt, oldSaved.practicalDrill.currentAttempt);
     assert.deepEqual(migratedOld.practicalDrill.history, oldSaved.practicalDrill.history);

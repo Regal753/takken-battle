@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20260910-hard-knock-v54-e5b5245c83e5",
-  "digest": "sha256:e5b5245c83e5d01b8bafbd1fa4b0652663ccb02f27950397c2c8ee6448ae2417",
+  "version": "20260910-hard-knock-v54-1156a3e892dc",
+  "digest": "sha256:1156a3e892dc5a0e7673cf4469b720b705960d19eb91c1dbbb4d28d93227510c",
   "assetCount": 57,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "df24c7a7c6e2973eecf499da16ffad33cb2a9f62b0e99db4c257b63cd9f1b201"
+      "sha256": "326b48bedbdb0ce5ff0e58dae691c8a68e0d74ae1c0591e7e6425746e00fca79"
     },
     {
       "path": "assets/battle/grassland-route.webp",

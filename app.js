@@ -9375,7 +9375,7 @@
       const restrictionExamResult = restrictionExamSession ? currentRestrictionExamResult(drill) : null;
       const restrictionExamVerdict = restrictionExamResult?.passed ? "合格圏目安" : "要再診断";
       elements.practicalDrillCompleteText.textContent = knockSession
-        ? `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計${drill.attempts}解答です。${nextKnockPlan?.size ? `同じ条件の次セットは${nextKnockPlan.size}問。` : "この条件の対象はすべて回収しました。"}同日正答だけでは長期定着レベルは進みません。`
+        ? `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。${nextKnockPlan?.size ? `同じ条件の次セットは${nextKnockPlan.size}問。` : "この条件の対象はすべて回収しました。"}同日正答だけでは長期定着レベルは進みません。`
         : guaranteeSpecialSession
           ? `${completionLabel}の今回${drill.sessionIds.length}問を完了。累計接触${guaranteeSummary.contacted}/${GUARANTEE_SPECIAL_EXPECTED_QUESTIONS}、根拠あり正答${guaranteeSummary.grounded}、日を空けて定着${guaranteeSummary.retained}、要復習${guaranteeSummary.review}問です。${guaranteeSummary.contacted >= GUARANTEE_SPECIAL_EXPECTED_QUESTIONS ? "33問への接触は完了。1周だけで定着とは判定しません。" : ""}${guaranteeSummary.nextDueKey ? `次の優先復習は${guaranteeSummary.nextDueKey.replaceAll("-", "/")}以降。` : ""}`
         : restrictionExamSession
