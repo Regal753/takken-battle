@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20260910-case-exam-v52-11f4767b5e25",
-  "digest": "sha256:11f4767b5e2509d43da7cad4450d823e0d5e6209341e6c85e7007008e36bf679",
+  "version": "20260910-final-stretch-v53-c804bf4af7d5",
+  "digest": "sha256:c804bf4af7d5e83a06e72487a7c7e96380a7e19470cd75940565627e125071f5",
   "assetCount": 53,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "9376ae427f7b8c1917db7b5c967504a6e9dd9583fb190644479f8d2da0f734d2"
+      "sha256": "4ba263fb980ae500d1efbb4e3a98210db03ad632063447d7eb5e45ba72874f6b"
     },
     {
       "path": "assets/battle/grassland-route.webp",
@@ -106,7 +106,7 @@
     },
     {
       "path": "exam-current-year-2026.js",
-      "sha256": "716d85d82e9eda33ababc054371b2c57e46a24d24460073f36b360850ca081a1"
+      "sha256": "2635e204d0b17949be41b3593b059ff3ac673de62f1f3821a492aeecd867cb72"
     },
     {
       "path": "exam-question-core.js",
@@ -134,7 +134,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "8342d2f91a282b646f1c15e21aa1328041dc9c458e773d122702daf28464ed44"
+      "sha256": "0056f5937b3b0a670746a5fd2879b34acc6b599caa53160f50a54230cc581207"
     },
     {
       "path": "manifest.webmanifest",
@@ -154,7 +154,7 @@
     },
     {
       "path": "pass-readiness.js",
-      "sha256": "8f0e072254a5a7b77dcd26942d8f815e01513d94a66d016f8d25907d608a4cb5"
+      "sha256": "4dff8695ff1573c00abec15272e927f06943ecdde40bb96bbab87ba145ba2939"
     },
     {
       "path": "practical-question-bank.js",
@@ -210,7 +210,7 @@
     },
     {
       "path": "styles.css",
-      "sha256": "edd5b12a26ca80501271bd7e29cb1a6294a6bff6b6c4cf98d0e3930553cdd4cb"
+      "sha256": "9d82bf3e4ac5d304d1bc37783a2a7364fac635ac2074773d55d8ce8b62cd6eef"
     },
     {
       "path": "subject-sprint-bank.js",

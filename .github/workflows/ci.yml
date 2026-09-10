@@ -92,6 +92,7 @@ jobs:
           node Audit-TakkenGuaranteeAssociationDrillUi.cjs
           node Audit-TakkenFullExamUi.cjs
           node Audit-TakkenPassReadinessUi.cjs
+          node Audit-TakkenFinalStretchUi.cjs
           node Audit-TakkenSubjectSprintUi.cjs
           node Audit-TakkenRestrictionMasteryUi.cjs
           node Audit-TakkenCalculationDrillUi.cjs

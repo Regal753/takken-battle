@@ -8,7 +8,7 @@
   "background_color": "#0b1020",
   "theme_color": "#0b1020",
   "icons": [
-    { "src": "./assets/pwa-icon-192.svg?v=20260910-case-exam-v52-11f4767b5e25", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "./assets/pwa-icon-512.svg?v=20260910-case-exam-v52-11f4767b5e25", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any" }
+    { "src": "./assets/pwa-icon-192.svg?v=20260910-final-stretch-v53-c804bf4af7d5", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./assets/pwa-icon-512.svg?v=20260910-final-stretch-v53-c804bf4af7d5", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any" }
   ]
 }

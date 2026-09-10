@@ -603,7 +603,12 @@ async function main() {
     assert.equal(migratedOnLoad, 13, "schema migration must persist during initial load");
     // Normalization is persisted on the first ordinary state-changing action.
     await openPassPanel(legacyPage);
-    await legacyPage.locator("#passMockAction").click();
+    // The recommended action changes to official measurement in September.
+    // This migration probe intentionally starts the explicit internal case form.
+    if (!(await legacyPage.locator(".quest-card").evaluate((node) => node.open))) {
+      await legacyPage.locator(".quest-card > summary").click();
+    }
+    await legacyPage.locator("#mockCaseButton").click();
     await legacyPage.waitForFunction(() => document.querySelector(".quest-card")?.classList.contains("is-mock"));
     const legacy = await legacyPage.evaluate((key) => ({
       key,
