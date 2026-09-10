@@ -4,6 +4,10 @@ const fs = require("node:fs");
 const path = require("node:path");
 const http = require("node:http");
 const { chromium } = require("playwright");
+const canonicalHardIds = new Set([
+  ...Array.from({ length: 60 }, (_, index) => `hard54-${String(index + 1).padStart(3, "0")}`),
+  ...Array.from({ length: 120 }, (_, index) => `hard55-${String(index + 1).padStart(3, "0")}`)
+]);
 
 async function main() {
   const root = __dirname;
@@ -42,7 +46,7 @@ async function main() {
         const review = new URL(location.href).searchParams.get("review");
         const key = `takken-battle-study-clean-v2-hard-review-${review}`;
         const saved = JSON.parse(localStorage.getItem(key));
-        const bank = window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS;
+        const bank = window.TAKKEN_BUSINESS_HARD_BANK.QUESTIONS;
         const sprint = window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS;
         const questions = [...bank.slice(0, 20), ...sprint.filter(q => q.sectionId === "taxOther").slice(0, tax), ...sprint.filter(q => q.sectionId === "other").slice(0, other)];
         for (const q of questions) saved.practicalDrill.history[q.id] = { attempts: 1, correct: 1, wrong: 0, lastCorrect: true, lastConfidence: "confident", lastAnsweredAt: "2026-09-10T09:00:00+09:00" };
@@ -66,6 +70,8 @@ async function main() {
     }
     await first.page.locator("#todayCommandStartButton").click();
     const activeBefore = (await stored(first.page)).practicalDrill;
+    assert.equal(activeBefore.sessionIds.length, 20);
+    assert.equal(activeBefore.sessionIds.every(id => canonicalHardIds.has(id)), true, "the weekday command must use one of the 180 canonical hard cases");
     await first.page.reload({ waitUntil: "networkidle" });
     const activeAfter = (await stored(first.page)).practicalDrill;
     assert.deepEqual(activeAfter.queue, activeBefore.queue);

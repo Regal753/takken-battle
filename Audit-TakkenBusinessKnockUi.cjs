@@ -52,6 +52,9 @@ async function waitForApp(page) {
     document.querySelector("#businessKnockStart") &&
     document.querySelector("#businessKnockUntouched")
   ));
+  const drawer = page.locator("#businessLegacyDrawer");
+  await drawer.waitFor({ state: "attached" });
+  if (!await drawer.evaluate((node) => node.open)) await drawer.locator("summary").click();
 }
 
 async function readSavedState(page) {
@@ -67,8 +70,8 @@ async function readSavedState(page) {
   });
 }
 
-async function resetKnockState(page, history = {}) {
-  await page.evaluate((nextHistory) => {
+async function resetKnockState(page, history = {}, difficulty = "basic") {
+  await page.evaluate(({ nextHistory, nextDifficulty }) => {
     const key = Object.keys(localStorage).find((candidate) =>
       candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
       !candidate.includes("backup") && !candidate.includes("-before-") &&
@@ -83,7 +86,7 @@ async function resetKnockState(page, history = {}) {
       presentationKey: "",
       presentationOverrides: {},
       planMode: "",
-      knockPreset: { mode: "untouched", size: 20, unitId: "" },
+      knockPreset: { difficulty: nextDifficulty, mode: "untouched", size: 20, unitId: "" },
       stage: "idle",
       scope: "business",
       unitId: "",
@@ -99,22 +102,26 @@ async function resetKnockState(page, history = {}) {
       history: nextHistory
     };
     localStorage.setItem(key, JSON.stringify(saved));
-  }, history);
+  }, { nextHistory: history, nextDifficulty: difficulty });
   await page.reload({ waitUntil: "networkidle" });
   await waitForApp(page);
 }
 
-async function setKnockPreset(page, { mode, size, unitId }) {
-  await page.locator("#businessKnockMode").selectOption(mode);
+async function setKnockPreset(page, { mode, size, unitId, difficulty = "basic" }) {
+  const archive = difficulty !== "hard";
+  const modeSelector = archive ? "#businessArchiveMode" : "#businessKnockMode";
+  const unitSelector = archive ? "#businessArchiveUnit" : "#businessKnockUnit";
+  const sizeSelector = archive ? "#businessArchiveSize" : "#businessKnockSize";
+  await page.locator(modeSelector).selectOption(mode);
   if (mode === "unit") {
-    await page.locator("#businessKnockUnit").selectOption(unitId);
+    await page.locator(unitSelector).selectOption(unitId);
   }
-  await page.locator("#businessKnockSize").selectOption(String(size));
+  await page.locator(sizeSelector).selectOption(String(size));
 }
 
 async function startKnock(page, preset) {
   await setKnockPreset(page, preset);
-  await page.locator("#businessKnockStart").click();
+  await page.locator(preset.difficulty === "hard" ? "#businessKnockStart" : "#businessArchiveKnockStart").click();
   await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
   assert.equal(await page.locator("#practicalDrillForecast").isHidden(), true, "business-fullscore must not inherit the guarantee pre-answer forecast");
   assert.equal(await page.locator(".practical-drill-choice:enabled").count(), 4, "business-fullscore choices must remain immediately answerable");
@@ -144,9 +151,10 @@ async function currentPresented(page) {
     );
     const saved = JSON.parse(localStorage.getItem(key));
     const id = saved.practicalDrill.queue[saved.practicalDrill.position];
-    const question = window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS_BY_ID[id];
+    const bank = window.TAKKEN_BUSINESS_HARD_BANK.QUESTIONS_BY_ID[id] ? window.TAKKEN_BUSINESS_HARD_BANK : window.TAKKEN_BUSINESS_FULLSCORE_BANK;
+    const question = bank.QUESTIONS_BY_ID[id];
     const presentationKey = saved.practicalDrill.presentationOverrides?.[id] || saved.practicalDrill.presentationKey;
-    const presented = window.TAKKEN_BUSINESS_FULLSCORE_BANK.presentQuestion(question, presentationKey);
+    const presented = bank.presentQuestion(question, presentationKey);
     return { id, answer: presented.answer, choices: [...presented.choices] };
   });
 }
@@ -186,10 +194,10 @@ async function horizontalOverflow(page) {
   return page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 }
 
-async function assertNextQuestionViewport(page, viewport) {
+async function assertNextQuestionViewport(page, viewport, difficulty = "basic") {
   await page.setViewportSize(viewport);
-  await resetKnockState(page);
-  await startKnock(page, { mode: "all-random", size: 10 });
+  await resetKnockState(page, {}, difficulty);
+  await startKnock(page, { mode: "all-random", size: 10, difficulty });
   const presented = await currentPresented(page);
   await page.locator(".practical-drill-choice").nth(presented.answer).click();
   await page.locator("#practicalDrillFeedback").waitFor({ state: "visible" });
@@ -225,6 +233,7 @@ async function assertNextQuestionViewport(page, viewport) {
     return {
       calls,
       activeChoice: document.activeElement?.classList.contains("practical-drill-choice") || false,
+      activePrompt: document.activeElement?.id === "practicalDrillPrompt",
       choiceTop: choiceRect?.top ?? -1,
       choiceBottom: choiceRect?.bottom ?? -1,
       promptTop: promptRect?.top ?? -1,
@@ -234,8 +243,13 @@ async function assertNextQuestionViewport(page, viewport) {
   });
   const label = `${viewport.width}x${viewport.height}`;
   assert.deepEqual(nextViewport.calls, [], `${label}: next question must not force an upward window.scrollTo: ${JSON.stringify(nextViewport.calls)}`);
-  assert.equal(nextViewport.activeChoice, true, `${label}: next question must retain keyboard focus after the minimal edge correction`);
-  assert.ok(nextViewport.choiceBottom > 0 && nextViewport.choiceTop < nextViewport.viewportHeight, `${label}: next answer must remain in the viewport: ${JSON.stringify(nextViewport)}`);
+  if (difficulty === "hard") {
+    assert.equal(nextViewport.activePrompt, true, `${label}: hard next question must focus the scenario, not skip to the choices`);
+    assert.ok(nextViewport.promptTop >= 0 && nextViewport.promptTop < nextViewport.viewportHeight - 68, `${label}: the beginning of the new case must be visible: ${JSON.stringify(nextViewport)}`);
+  } else {
+    assert.equal(nextViewport.activeChoice, true, `${label}: next question must retain keyboard focus after the minimal edge correction`);
+    assert.ok(nextViewport.choiceBottom > 0 && nextViewport.choiceTop < nextViewport.viewportHeight, `${label}: next answer must remain in the viewport: ${JSON.stringify(nextViewport)}`);
+  }
   await cancelKnock(page);
   return nextViewport;
 }
@@ -290,18 +304,21 @@ async function presentedFixture(page) {
     );
     const saved = JSON.parse(localStorage.getItem(key));
     const fullScore = saved.practicalDrill.bankId === "business-fullscore";
+    const bank = window.TAKKEN_BUSINESS_HARD_BANK.QUESTIONS_BY_ID[saved.practicalDrill.queue[0]]
+      ? window.TAKKEN_BUSINESS_HARD_BANK : window.TAKKEN_BUSINESS_FULLSCORE_BANK;
     const question = fullScore
-      ? window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS_BY_ID[saved.practicalDrill.queue[0]]
+      ? bank.QUESTIONS_BY_ID[saved.practicalDrill.queue[0]]
       : window.TAKKEN_PRACTICAL_VARIATIONS.QUESTIONS.find((item) => item.id === saved.practicalDrill.queue[0]);
     const presentationKey = saved.practicalDrill.presentationOverrides?.[question.id] || saved.practicalDrill.presentationKey;
     const presented = fullScore
-      ? window.TAKKEN_BUSINESS_FULLSCORE_BANK.presentQuestion(question, presentationKey)
+      ? bank.presentQuestion(question, presentationKey)
       : question;
     return {
       id: presented.id,
       formatKey: presented.formatKey || "legacy",
       text: presented.text,
       choices: [...presented.choices],
+      premise: presented.premise || "",
       displayModel: presented.displayModel || null
     };
   });
@@ -310,6 +327,8 @@ async function presentedFixture(page) {
 (async () => {
   const local = await startStaticServer(process.cwd());
   const browser = await chromium.launch({ channel: "chrome", headless: true });
+  const hardScreenshots = path.join(process.cwd(), "output", "playwright", "business-hard");
+  fs.mkdirSync(hardScreenshots, { recursive: true });
   const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
   await page.addInitScript(() => {
     const NativeDate = Date;
@@ -337,20 +356,35 @@ async function presentedFixture(page) {
       "4 合格ロード・2026 PASS PLAN"
     );
     assert.equal(await page.locator("#businessKnockPanel").isVisible(), true);
+    assert.equal(await page.locator("#businessArchiveMode").inputValue(), "all-random", "legacy drawer starts at its explicit all-random control");
+    assert.equal(await page.locator("#businessKnockUntouched").textContent(), "180");
+    assert.equal(await page.locator("#businessKnockFreshStart").textContent(), "新問20問を開始（未接触だけ）");
+    assert.match(await page.locator("#businessKnockFreshStatus").textContent(), /未接触.*180問/);
     assert.match(await page.locator("#businessKnockPanel").textContent(), /宅建業法ノック道場/);
     assert.equal(await page.locator("#guaranteeSpecialCard").isHidden(), true, "the retired guarantee intensive card must not compete with the current dojo");
     assert.equal(await page.locator("#todayCommandGuaranteeButton").isHidden(), true, "the retired guarantee intensive CTA must stay out of today's command");
-    assert.equal(await page.locator("#businessKnockSize option").count(), 4);
-    assert.deepEqual(await page.locator("#businessKnockSize option").evaluateAll((options) => options.map((option) => option.value)), ["10", "20", "50", "100"]);
-    assert.equal(await page.locator("#businessKnockUnitField").isVisible(), false, "unit select must stay hidden outside unit mode");
-    await page.locator("#businessKnockMode").selectOption("unit");
-    assert.equal(await page.locator("#businessKnockUnitField").isVisible(), true, "unit mode must reveal its select");
-    await page.locator("#businessKnockMode").selectOption("untouched");
-    assert.equal(await page.locator("#businessKnockUnitField").isVisible(), false, "leaving unit mode must hide its select again");
-    const targetHeights = await page.locator("#businessKnockPanel button, #businessKnockPanel select").evaluateAll((nodes) => nodes
+    assert.equal(await page.locator("#businessArchiveSize option").count(), 4);
+    assert.deepEqual(await page.locator("#businessArchiveSize option").evaluateAll((options) => options.map((option) => option.value)), ["10", "20", "50", "100"]);
+    assert.equal(await page.locator("#businessArchiveUnitField").isVisible(), false, "archive unit select must stay hidden outside unit mode");
+    await page.locator("#businessArchiveMode").selectOption("unit");
+    assert.equal(await page.locator("#businessArchiveUnitField").isVisible(), true, "archive unit mode must reveal its select");
+    await page.locator("#businessArchiveMode").selectOption("untouched");
+    assert.equal(await page.locator("#businessArchiveUnitField").isVisible(), false, "leaving archive unit mode must hide its select again");
+    const targetHeights = await page.locator("#businessLegacyDrawer button, #businessLegacyDrawer select").evaluateAll((nodes) => nodes
       .filter((node) => !node.closest("[hidden]") && node.getBoundingClientRect().height > 0)
       .map((node) => Math.round(node.getBoundingClientRect().height)));
     assert.ok(targetHeights.every((height) => height >= 44), `touch target under 44px: ${targetHeights.join(", ")}`);
+    assert.equal(await page.locator("#businessKnockSize option").count(), 4);
+    assert.deepEqual(await page.locator("#businessKnockSize option").evaluateAll((options) => options.map((option) => option.value)), ["10", "20", "50", "100"]);
+    assert.equal(await page.locator("#businessKnockUnitField").isVisible(), false, "main hard unit select must stay hidden outside unit mode");
+    await page.locator("#businessKnockMode").selectOption("unit");
+    assert.equal(await page.locator("#businessKnockUnitField").isVisible(), true, "main hard unit mode must reveal its select");
+    await page.locator("#businessKnockMode").selectOption("untouched");
+    assert.equal(await page.locator("#businessKnockUnitField").isVisible(), false, "leaving main hard unit mode must hide its select again");
+    const hardTargetHeights = await page.locator("#businessKnockPanel button, #businessKnockPanel select").evaluateAll((nodes) => nodes
+      .filter((node) => !node.closest("[hidden]") && node.getBoundingClientRect().height > 0)
+      .map((node) => Math.round(node.getBoundingClientRect().height)));
+    assert.ok(hardTargetHeights.every((height) => height >= 44), `main hard touch target under 44px: ${hardTargetHeights.join(", ")}`);
     assert.equal(await horizontalOverflow(page), 0);
 
     // The top command must enter the required 20-question knock, label each
@@ -360,8 +394,9 @@ async function presentedFixture(page) {
     await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
     let commandSaved = await readSavedState(page);
     assert.equal(commandSaved.practicalDrill.sessionSize, 20);
+    assert.equal(commandSaved.practicalDrill.sessionIds.every((id) => /^hard(?:54|55)-\d{3}$/.test(id)), true, "daily20 must contain only hard cases");
     const commandDiversity = await page.evaluate((ids) => ids.map((id) => {
-      const question = window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS_BY_ID[id];
+      const question = window.TAKKEN_BUSINESS_HARD_BANK.QUESTIONS_BY_ID[id];
       return { id, anchors: [...(question?.sourceAnchorIds || [])], unitId: question?.unitId || "" };
     }), commandSaved.practicalDrill.sessionIds);
     const adjacentAnchorRepeats = commandDiversity.slice(1).filter((item, index) =>
@@ -369,11 +404,13 @@ async function presentedFixture(page) {
     );
     assert.deepEqual(adjacentAnchorRepeats, [], `today's knock must separate variants of the same source rule: ${JSON.stringify(adjacentAnchorRepeats)}`);
     assert.equal(await page.locator("#practicalDrillProgress").textContent(), "第1問 / 全20問");
-    assert.match(await page.locator("#practicalDrillSummary").textContent(), /^業法ノック累計 接触 0 \/ 134/);
+    assert.match(await page.locator("#practicalDrillSummary").textContent(), /^高難度・事例ノック累計 接触 0 \/ 180/);
+    assert.match(await page.locator("#practicalDrillUnit").textContent(), /論点と根拠は解答後/);
+    assert.equal(commandDiversity.some((item) => item.unitId === "business-book-05"), false, "hard daily must exclude guarantee material");
     assert.equal(await page.locator("#practicalDrillCancelButton").textContent(), "一時停止して上へ");
     assert.match(await page.locator("#practicalDrillCancelButton").getAttribute("aria-label"), /問題順、解答、再出題は保存/);
     assert.equal(await page.locator("#practicalDrillDiscardButton").textContent(), "セットを破棄");
-    assert.equal(await page.evaluate(() => document.activeElement?.classList.contains("practical-drill-choice")), true);
+    assert.equal(await page.evaluate(() => document.activeElement?.id), "practicalDrillPrompt", "hard start must show the beginning of the scenario");
     const commandQuestion = await currentPresented(page);
     await page.locator(".practical-drill-choice").nth(commandQuestion.answer).scrollIntoViewIfNeeded();
     const practicalAnswerBefore = await page.evaluate(() => {
@@ -413,7 +450,34 @@ async function presentedFixture(page) {
     assert.equal(commandSaved.practicalDrill.correctAttempts, 1);
     assert.equal(Object.keys(commandSaved.practicalDrill.history || {}).length, 1);
     assert.equal(commandSaved.practicalDrill.currentAttempt?.id, commandQuestion.id, "reload must retain the single current attempt without duplicating it");
-    const todayAnsweredId = await page.evaluate(() => {
+    const hardSavedSnapshot = await page.evaluate(() => {
+      const key = Object.keys(localStorage).find((candidate) =>
+        candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+        !candidate.includes("backup") && !candidate.includes("-before-") &&
+        !candidate.includes("previous") && !candidate.includes("corrupt") &&
+        !candidate.endsWith("event-outbox"));
+      return { key, value: localStorage.getItem(key) };
+    });
+    const missingHardPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await missingHardPage.addInitScript(({ key, value }) => localStorage.setItem(key, value), hardSavedSnapshot);
+    await missingHardPage.route(/business-hard-bank\.js/, (route) => route.abort());
+    await missingHardPage.goto(page.url(), { waitUntil: "networkidle" });
+    await waitForApp(missingHardPage);
+    const missingHardSaved = await readSavedState(missingHardPage);
+    assert.deepEqual(missingHardSaved.practicalDrill.queue, commandSaved.practicalDrill.queue, "missing hard asset must retain the exact saved queue");
+    assert.deepEqual(missingHardSaved.practicalDrill.currentAttempt, commandSaved.practicalDrill.currentAttempt, "missing hard asset must preserve the saved selected answer");
+    assert.deepEqual(missingHardSaved.practicalDrill.history, commandSaved.practicalDrill.history, "missing hard asset must preserve hard answer history");
+    assert.match(await missingHardPage.locator("#practicalDrillPrompt").textContent(), /問題順・解答は保持/);
+    assert.equal(await missingHardPage.locator(".practical-drill-choice").count(), 0, "missing hard asset must not substitute easy questions");
+    await cancelKnock(missingHardPage);
+    assert.equal(await missingHardPage.locator("#businessKnockStart").isDisabled(), true, "a fresh hard start must fail closed when its asset is missing");
+    assert.equal(await missingHardPage.locator("#businessKnockFreshStart").isDisabled(), true, "direct fresh CTA must also fail closed when its asset is missing");
+    assert.match(await missingHardPage.locator("#businessKnockFreshStatus").textContent(), /180問の読込を確認できません/);
+    assert.match(await missingHardPage.locator("#businessKnockStatus").textContent(), /難度を自動で下げず/);
+    const explicitBasicFallback = await startKnock(missingHardPage, { mode: "untouched", size: 10 });
+    assert.equal(explicitBasicFallback.practicalDrill.sessionIds.every(id => id.startsWith("bf-business-")), true, "only an explicit basic choice may enter the intact legacy bank");
+    await missingHardPage.close();
+    await page.evaluate(() => {
       Object.defineProperty(navigator, "share", {
         configurable: true,
         value: async (payload) => { window.__takkenKnockShare = payload; }
@@ -480,7 +544,7 @@ async function presentedFixture(page) {
     // The visible remaining label must start exactly that many new questions,
     // not silently restore the default 20-question selector value.
     await resetKnockState(page);
-    await page.evaluate(() => {
+    const todayAnsweredId = await page.evaluate(() => {
       const key = Object.keys(localStorage).find((candidate) =>
         candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
         !candidate.includes("backup") && !candidate.includes("-before-") &&
@@ -488,8 +552,8 @@ async function presentedFixture(page) {
         !candidate.endsWith("event-outbox")
       );
       const saved = JSON.parse(localStorage.getItem(key));
-      const id = Object.keys(window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS_BY_ID)[0];
-      saved.practicalDrill.knockPreset = { mode: "unit", size: 100, unitId: "business-book-01", lastPresentationOffset: null };
+      const id = window.TAKKEN_BUSINESS_HARD_BANK.QUESTIONS[0].id;
+      saved.practicalDrill.knockPreset = { difficulty: "basic", mode: "unit", size: 100, unitId: "business-book-01", lastPresentationOffset: null };
       saved.practicalDrill.history[id] = {
         attempts: 1,
         correct: 0,
@@ -507,6 +571,7 @@ async function presentedFixture(page) {
     const remainingSession = await readSavedState(page);
     assert.equal(remainingSession.practicalDrill.sessionSize, 19, "daily remaining CTA must start only the displayed remainder");
     assert.equal(remainingSession.practicalDrill.sessionIds.length, 19, "daily route must ignore a stale unit/100 preset");
+    assert.equal(remainingSession.practicalDrill.sessionIds.every((id) => /^hard(?:54|55)-/.test(id)), true, "daily route must ignore the manual basic preference");
     assert.equal(remainingSession.practicalDrill.sessionIds.includes(todayAnsweredId), false, "today's answered id must not consume one of the visible remaining questions");
     await cancelKnock(page);
 
@@ -514,7 +579,195 @@ async function presentedFixture(page) {
     // scroll. Prove the minimal edge correction on regular and narrow phones.
     await assertNextQuestionViewport(page, { width: 390, height: 844 });
     await assertNextQuestionViewport(page, { width: 320, height: 700 });
+    await assertNextQuestionViewport(page, { width: 390, height: 844 }, "hard");
+    await assertNextQuestionViewport(page, { width: 320, height: 700 }, "hard");
     await page.setViewportSize({ width: 390, height: 844 });
+
+    // Hard rounds use their own explanations and diagnostics, and never add
+    // their180 IDs to the legacy134 retention gate.
+    await resetKnockState(page, {}, "hard");
+    await startKnock(page, { mode: "untouched", size: 10, difficulty: "hard" });
+    const hardCompleted = await completeTenWithTwoRetries(page);
+    assert.equal(hardCompleted.saved.practicalDrill.sessionIds.every((id) => /^hard(?:54|55)-/.test(id)), true);
+    assert.equal(hardCompleted.saved.practicalDrill.history[hardCompleted.wrong.id].wrong, 1);
+    assert.ok(Object.keys(hardCompleted.saved.practicalDrill.history[hardCompleted.wrong.id].mistakeTags).length > 0, "hard wrong answers must record compatible diagnostic tags");
+    assert.equal(await page.locator("#businessTransferGate").textContent(), "0 / 134", "hard practice cannot inflate the134 gate");
+    assert.equal(await page.locator("#businessKnockAttempts").textContent(), "12");
+    assert.equal(await page.locator("#businessKnockUntouched").textContent(), "170");
+    const hardFixtures = await page.evaluate(() => ["hard54", "hard55"].flatMap(generation => ["single", "count", "combination"].map(formatKey => {
+      const question = window.TAKKEN_BUSINESS_HARD_BANK.QUESTIONS.find(q => q.formatKey === formatKey && q.id.startsWith(`${generation}-`));
+      if (!question) throw new Error(`missing ${generation} ${formatKey} fixture`);
+      return { id: question.id, generation, formatKey };
+    })));
+    for (const fixture of hardFixtures) {
+      await forcePracticalQuestion(page, { bankId: "business-fullscore", id: fixture.id });
+      const expected = await presentedFixture(page);
+      const prompt = page.locator("#practicalDrillPrompt");
+      const visiblePrompt = await prompt.textContent();
+      assert.equal(visiblePrompt.split(expected.premise).length - 1, 1, `${fixture.formatKey}: shared case premise must occur exactly once before answering`);
+      if (fixture.formatKey === "single") {
+        assert.equal(await prompt.textContent(), expected.displayModel.intro);
+        assert.equal(await page.locator('.practical-drill-choice[data-structured="true"]').count(), 4);
+      } else {
+        assert.equal(await prompt.getAttribute("data-structured"), "true");
+        assert.equal(await prompt.locator(".practical-prompt-item").count(), 4, `${fixture.formatKey}: all4 statements must be visible`);
+        assert.deepEqual(await prompt.locator(".practical-prompt-judgment p").allTextContents(), expected.displayModel.items.map(item => item.judgment));
+      }
+      for (const width of [320, 390, 1440]) {
+        await page.setViewportSize({ width, height: 844 });
+        await prompt.evaluate(node => node.scrollIntoView({ block: "start" }));
+        assert.equal(await horizontalOverflow(page), 0, `${fixture.formatKey}: hard case overflow at ${width}`);
+        await page.screenshot({ path: path.join(hardScreenshots, `${fixture.generation}-${fixture.formatKey}-${width}.png`) });
+      }
+      await page.setViewportSize({ width: 390, height: 844 });
+      const current = await currentPresented(page);
+      await page.locator(".practical-drill-choice").nth(current.answer).click();
+      assert.equal(await page.locator(".practical-statement-review-card").count(), 4);
+      if (fixture.formatKey !== "single") assert.deepEqual(await page.locator(".practical-statement-review-card header strong").allTextContents(), ["ア", "イ", "ウ", "エ"], "hard aggregate explanation labels must match the displayed statements");
+      assert.equal(await horizontalOverflow(page), 0);
+    }
+
+    // A genuine pre-v54 active queue has no difficulty field. Adding the new
+    // default must not rotate or erase the already selected legacy answer.
+    await resetKnockState(page);
+    await startKnock(page, { mode: "all-random", size: 20 });
+    const oldQuestion = await currentPresented(page);
+    await page.locator(".practical-drill-choice").nth(oldQuestion.answer).click();
+    await page.locator('[data-practical-confidence="confident"]').click();
+    const oldSaved = await readSavedState(page);
+    await page.evaluate(() => {
+      const key = Object.keys(localStorage).find((candidate) =>
+        candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
+        !candidate.includes("backup") && !candidate.includes("-before-") &&
+        !candidate.includes("previous") && !candidate.includes("corrupt") &&
+        !candidate.endsWith("event-outbox"));
+      const saved = JSON.parse(localStorage.getItem(key));
+      saved.stateSchemaVersion = 13;
+      delete saved.practicalDrill.knockPreset.difficulty;
+      localStorage.setItem(key, JSON.stringify(saved));
+    });
+    await page.reload({ waitUntil: "networkidle" });
+    await waitForApp(page);
+    const migratedOld = await readSavedState(page);
+    assert.equal(migratedOld.stateSchemaVersion, 15, "the answered v53 session must migrate to schema15");
+    assert.deepEqual(migratedOld.practicalDrill.queue, oldSaved.practicalDrill.queue);
+    assert.deepEqual(migratedOld.practicalDrill.currentAttempt, oldSaved.practicalDrill.currentAttempt);
+    assert.deepEqual(migratedOld.practicalDrill.history, oldSaved.practicalDrill.history);
+    assert.equal(migratedOld.practicalDrill.knockPreset.difficulty, "hard", "future rounds adopt hard default while the current old round is retained");
+    assert.match(await page.locator("#practicalDrillSummary").textContent(), /^基礎変形ノック累計/);
+    await cancelKnock(page);
+
+    // A v54/schema14 hard54 set keeps its nonzero position, rotated choices,
+    // answered state, history, and exact pre-upgrade backup in schema15.
+    await forcePracticalQuestion(page, { bankId: "business-fullscore", id: "hard54-001", presentationKey: "v54-saved-hard54-order" });
+    await page.evaluate(() => {
+      const key = Object.keys(localStorage).find(key => /^takken-battle-study-clean-v2-hard-review-/.test(key) && !/backup|-before-|previous|corrupt|event-outbox/.test(key));
+      const saved = JSON.parse(localStorage.getItem(key));
+      saved.practicalDrill.sessionIds = ["hard54-001", "hard54-002", "hard54-003"];
+      saved.practicalDrill.queue = [...saved.practicalDrill.sessionIds];
+      saved.practicalDrill.position = 1;
+      saved.practicalDrill.sessionSize = 3;
+      localStorage.setItem(key, JSON.stringify(saved));
+    });
+    await page.reload({ waitUntil: "networkidle" });
+    const v54Question = await currentPresented(page);
+    assert.equal(v54Question.id, "hard54-002");
+    await page.locator(".practical-drill-choice").nth(v54Question.answer).click();
+    await page.locator('[data-practical-confidence="confident"]').click();
+    const v54Saved = await readSavedState(page);
+    const v54Raw = await page.evaluate(() => {
+      const key = Object.keys(localStorage).find(key => /^takken-battle-study-clean-v2-hard-review-/.test(key) && !/backup|-before-|previous|corrupt|event-outbox/.test(key));
+      const saved = JSON.parse(localStorage.getItem(key));
+      saved.stateSchemaVersion = 14;
+      const raw = JSON.stringify(saved);
+      localStorage.setItem(key, raw);
+      return { key, raw };
+    });
+    await page.reload({ waitUntil: "networkidle" });
+    const migratedV54 = await readSavedState(page);
+    assert.equal(migratedV54.stateSchemaVersion, 15);
+    assert.deepEqual(migratedV54.practicalDrill, v54Saved.practicalDrill, "schema14 hard54 progress must survive without queue, answer, rotation, or history changes");
+    assert.deepEqual(await currentPresented(page), v54Question);
+    assert.equal(await page.locator("#practicalDrillFeedback").isVisible(), true);
+    assert.equal(await page.evaluate(({ key }) => localStorage.getItem(`${key}-before-upgrade-v14-to-v15`), v54Raw), v54Raw.raw);
+    await cancelKnock(page);
+
+    // The direct fresh CTA ignores a basic/weak preset and completed daily20:
+    // all old60 are already answered today, so all20 must come from new120.
+    const freshFixtures = await page.evaluate(() => {
+      const questions = window.TAKKEN_BUSINESS_HARD_BANK.QUESTIONS;
+      const entry = { attempts: 1, correct: 0, wrong: 1, uncertain: 0, lastCorrect: false, lastConfidence: "wrong", lastAnsweredAt: "2026-08-24T01:00:00.000Z" };
+      return {
+        allIds: questions.map(q => q.id),
+        oldHistory: Object.fromEntries(questions.filter(q => q.id.startsWith("hard54-")).map(q => [q.id, { ...entry }])),
+        almostHistory: Object.fromEntries(questions.slice(0, -7).map(q => [q.id, { ...entry }])),
+        allHistory: Object.fromEntries(questions.map(q => [q.id, { ...entry }]))
+      };
+    });
+    assert.equal(freshFixtures.allIds.length, 180);
+    assert.equal(Object.keys(freshFixtures.oldHistory).length, 60);
+    await resetKnockState(page, freshFixtures.oldHistory, "hard");
+    assert.match(await page.locator("#businessKnockFreshStatus").textContent(), /未接触は残り120問/);
+    assert.equal(await page.locator("#businessKnockUntouched").textContent(), "120");
+    for (const width of [320, 390, 1440]) {
+      await page.setViewportSize({ width, height: 844 });
+      await page.locator("#businessKnockPanel").evaluate(node => node.scrollIntoView({ block: "start" }));
+      assert.equal(await horizontalOverflow(page), 0);
+      await page.screenshot({ path: path.join(hardScreenshots, `fresh-cta-${width}.png`) });
+    }
+    await page.setViewportSize({ width: 390, height: 844 });
+    await setKnockPreset(page, { mode: "weak-due", size: 100 });
+    await page.locator("#businessKnockFreshStart").click();
+    const fresh20 = await readSavedState(page);
+    assert.equal(fresh20.practicalDrill.sessionSize, 20, "fresh CTA is not capped by the already-completed daily remainder");
+    assert.equal(fresh20.practicalDrill.sessionIds.length, 20);
+    assert.equal(new Set(fresh20.practicalDrill.sessionIds).size, 20);
+    assert.equal(fresh20.practicalDrill.sessionIds.every(id => /^hard55-/.test(id)), true);
+    assert.equal(fresh20.practicalDrill.knockPreset.mode, "untouched");
+    assert.equal(fresh20.practicalDrill.knockPreset.difficulty, "hard");
+    assert.equal(await page.locator("#businessKnockUntouched").textContent(), "120");
+    const freshQuestion = await currentPresented(page);
+    await page.locator(".practical-drill-choice").nth(freshQuestion.answer).click();
+    await page.locator('[data-practical-confidence="confident"]').click();
+    const freshAnswered = await readSavedState(page);
+    await page.locator("#practicalDrillCancelButton").click();
+    await page.locator("#businessKnockFreshStart").click();
+    assert.deepEqual((await readSavedState(page)).practicalDrill, freshAnswered.practicalDrill, "fresh CTA must resume an active answered set, not overwrite it");
+    assert.equal(await page.locator("#practicalDrillFeedback").isVisible(), true);
+    await page.reload({ waitUntil: "networkidle" });
+    assert.deepEqual((await readSavedState(page)).practicalDrill, freshAnswered.practicalDrill, "hard55 queue and answered state must survive reload");
+    const freshSavedSnapshot = await page.evaluate(() => {
+      const key = Object.keys(localStorage).find(key => /^takken-battle-study-clean-v2-hard-review-/.test(key) && !/backup|-before-|previous|corrupt|event-outbox/.test(key));
+      return { key, value: localStorage.getItem(key) };
+    });
+    const missingFreshPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await missingFreshPage.addInitScript(({ key, value }) => localStorage.setItem(key, value), freshSavedSnapshot);
+    await missingFreshPage.route(/business-hard-bank\.js/, route => route.abort());
+    await missingFreshPage.goto(page.url(), { waitUntil: "networkidle" });
+    const missingFresh = await readSavedState(missingFreshPage);
+    assert.deepEqual(missingFresh.practicalDrill.queue, freshAnswered.practicalDrill.queue);
+    assert.deepEqual(missingFresh.practicalDrill.currentAttempt, freshAnswered.practicalDrill.currentAttempt);
+    assert.deepEqual(missingFresh.practicalDrill.history, freshAnswered.practicalDrill.history, "missing hard asset must retain both old60 and new55 answer history");
+    assert.equal(await missingFreshPage.locator(".practical-drill-choice").count(), 0);
+    await missingFreshPage.close();
+    await cancelKnock(page);
+
+    await resetKnockState(page, freshFixtures.almostHistory, "hard");
+    assert.equal(await page.locator("#businessKnockFreshStart").textContent(), "新問7問を開始（未接触だけ）");
+    assert.match(await page.locator("#businessKnockFreshStatus").textContent(), /未接触は残り7問/);
+    await page.locator("#businessKnockFreshStart").click();
+    const fresh7 = await readSavedState(page);
+    assert.equal(fresh7.practicalDrill.sessionSize, 7);
+    assert.deepEqual([...fresh7.practicalDrill.sessionIds].sort(), freshFixtures.allIds.slice(-7).sort(), "the last partial set cannot backfill answered questions");
+    await cancelKnock(page);
+    await resetKnockState(page, freshFixtures.allHistory, "hard");
+    assert.equal(await page.locator("#businessKnockFreshStart").isDisabled(), true);
+    assert.equal(await page.locator("#businessKnockFreshStart").textContent(), "未接触の新問はありません");
+    assert.match(await page.locator("#businessKnockFreshStatus").textContent(), /180問すべてに接触済み/);
+    assert.equal(await page.locator("#businessKnockUntouched").textContent(), "0");
+    const exhausted = await readSavedState(page);
+    await page.locator("#businessKnockFreshStart").evaluate(button => button.click());
+    assert.deepEqual((await readSavedState(page)).practicalDrill, exhausted.practicalDrill, "exhausted fresh CTA must not silently start an answered review set");
 
     // Fresh, untouched starts must select precisely the requested unique count.
     for (const size of [10, 20, 50, 100]) {
@@ -530,7 +783,7 @@ async function presentedFixture(page) {
 
     // A unit plan cannot leak a question from another unit.
     await resetKnockState(page);
-    const unitId = await page.locator("#businessKnockUnit option").nth(3).getAttribute("value");
+    const unitId = await page.locator("#businessArchiveUnit option").nth(3).getAttribute("value");
     const unitSaved = await startKnock(page, { mode: "unit", unitId, size: 100 });
     const unitQueue = await page.evaluate((ids) => ids.map((id) => window.TAKKEN_BUSINESS_FULLSCORE_BANK.QUESTIONS_BY_ID[id].unitId), unitSaved.practicalDrill.queue);
     assert.ok(unitQueue.length > 0);
@@ -584,7 +837,7 @@ async function presentedFixture(page) {
       choices: await page.locator(".practical-drill-choice").allTextContents()
     };
     // Clicking the launcher while active must resume instead of replacing the session.
-    await page.locator("#businessKnockStart").click();
+    await page.locator("#businessArchiveKnockStart").click();
     let saved = await readSavedState(page);
     assert.deepEqual(saved.practicalDrill.queue, stableSession.queue);
     assert.equal(saved.practicalDrill.presentationKey, stableSession.key);
@@ -804,9 +1057,9 @@ async function presentedFixture(page) {
 
     // Restore the launcher state before checking its compact controls.
     await resetKnockState(page);
-    await page.locator("#businessKnockPanel").scrollIntoViewIfNeeded();
+    await page.locator("#businessLegacyDrawer").scrollIntoViewIfNeeded();
     assert.equal(await horizontalOverflow(page), 0);
-    const compactHeights = await page.locator("#businessKnockPanel button, #businessKnockPanel select").evaluateAll((nodes) => nodes
+    const compactHeights = await page.locator("#businessLegacyDrawer button, #businessLegacyDrawer select").evaluateAll((nodes) => nodes
       .filter((node) => !node.closest("[hidden]") && node.getBoundingClientRect().height > 0)
       .map((node) => Math.round(node.getBoundingClientRect().height)));
     assert.ok(compactHeights.every((height) => height >= 44), `320px touch target under 44px: ${compactHeights.join(", ")}`);
@@ -822,7 +1075,7 @@ async function presentedFixture(page) {
     await fallbackPage.close();
 
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: "ok", sequentialTopCommand: true, explicitProgressLabels: true, knockOnlyTransferSummary: true, nextQuestionKeepsViewport: true, plannerSizes: [10, 20, 50, 100], unitFiltered: true, weakDuePrioritized: true, random100Unique: true, randomOrderPreserved: true, reloadPreserved: true, retryLoop: true, retryAnswerPositionsRotated: true, sameDayLevelCapped: true, structuredPromptFormats: ["combination", "count", "case"], singleChoiceBlocks: 4, legacyRawFallback: true, coreFallbackWithoutKnock: true, overflow390: 0, overflow320: 0, errors: 0 }));
+    console.log(JSON.stringify({ status: "ok", sequentialTopCommand: true, explicitProgressLabels: true, knockOnlyTransferSummary: true, hardDaily20: true, hardSeparate180Stats: true, freshOnly20: true, freshPartial7: true, freshExhaustionNoFallback: true, freshActiveResumePreserved: true, hard54Schema14Migration: true, hard55AnsweredReload: true, hardMissingAssetSavePreserved: true, hardLegacyAnsweredMigration: true, hardFormats: ["single", "count", "combination"], hardCaseWidths: [320, 390, 1440], hardScreenshots, nextQuestionKeepsViewport: true, plannerSizes: [10, 20, 50, 100], unitFiltered: true, weakDuePrioritized: true, random100Unique: true, randomOrderPreserved: true, reloadPreserved: true, retryLoop: true, retryAnswerPositionsRotated: true, sameDayLevelCapped: true, structuredPromptFormats: ["combination", "count", "case"], singleChoiceBlocks: 4, legacyRawFallback: true, coreFallbackWithoutKnock: true, overflow390: 0, overflow320: 0, errors: 0 }));
   } finally {
     await browser.close();
     await local.close();

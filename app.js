@@ -27,6 +27,7 @@
   const BUSINESS_KNOCK = window.TAKKEN_BUSINESS_KNOCK;
   const BUSINESS_PACE = window.TAKKEN_BUSINESS_PACE;
   const BUSINESS_FULLSCORE_BANK = window.TAKKEN_BUSINESS_FULLSCORE_BANK;
+  const BUSINESS_HARD_BANK = window.TAKKEN_BUSINESS_HARD_BANK;
   const GUARANTEE_ASSOCIATION_DRILL = window.TAKKEN_GUARANTEE_ASSOCIATION_DRILL;
   const SUBJECT_SPRINT_BANK = window.TAKKEN_SUBJECT_SPRINT_BANK;
   const PASS_READINESS = window.TAKKEN_PASS_READINESS;
@@ -41,6 +42,12 @@
   const SUBJECT_SPRINT_BANK_ID = "subject-sprint";
   const LEGACY_PRACTICAL_BANK_ID = "legacy-practical";
   const BUSINESS_FULLSCORE_EXPECTED_QUESTIONS = 134;
+  const BUSINESS_HARD_EXPECTED_QUESTIONS = 180;
+  const BUSINESS_HARD_CANONICAL_IDS = Object.freeze([
+    ...Array.from({ length: 60 }, (_, index) => `hard54-${String(index + 1).padStart(3, "0")}`),
+    ...Array.from({ length: 120 }, (_, index) => `hard55-${String(index + 1).padStart(3, "0")}`)
+  ]);
+  const isHardBusinessQuestionId = (id) => BUSINESS_HARD_CANONICAL_IDS.includes(id);
   const GUARANTEE_SPECIAL_EXPECTED_QUESTIONS = 33;
   const SUBJECT_SPRINT_EXPECTED_QUESTIONS = 102;
   const SUBJECT_SPRINT_RESTRICTIONS_SESSION_SIZE = 20;
@@ -145,6 +152,22 @@
     BUSINESS_FULLSCORE_QUESTIONS.map((item) => [item.id, item])
   ));
   const BUSINESS_FULLSCORE_QUESTION_IDS = Object.freeze(BUSINESS_FULLSCORE_QUESTIONS.map((item) => item.id));
+  const BUSINESS_HARD_QUESTIONS = Object.freeze(
+    (Array.isArray(BUSINESS_HARD_BANK?.QUESTIONS) ? BUSINESS_HARD_BANK.QUESTIONS : [])
+      .map(normalizeFullScoreQuestion).filter(Boolean)
+  );
+  const BUSINESS_HARD_QUESTION_BY_ID = Object.freeze(Object.fromEntries(
+    BUSINESS_HARD_QUESTIONS.map((item) => [item.id, item])
+  ));
+  const BUSINESS_HARD_QUESTION_IDS = Object.freeze(BUSINESS_HARD_QUESTIONS.map((item) => item.id));
+  // Save resolution includes both generations; the 134-question mastery gate remains separate.
+  const BUSINESS_DRILL_QUESTION_BY_ID = Object.freeze({
+    ...BUSINESS_FULLSCORE_QUESTION_BY_ID, ...BUSINESS_HARD_QUESTION_BY_ID
+  });
+  const BUSINESS_DRILL_QUESTION_IDS = Object.freeze([
+    ...BUSINESS_FULLSCORE_QUESTION_IDS,
+    ...BUSINESS_HARD_CANONICAL_IDS
+  ]);
   const BUSINESS_FULLSCORE_UNITS = Object.freeze(
     (Array.isArray(BUSINESS_FULLSCORE_BANK?.UNITS) ? BUSINESS_FULLSCORE_BANK.UNITS : [])
       .filter((unit) => unit && String(unit.id || ""))
@@ -199,8 +222,17 @@
     typeof GUARANTEE_ASSOCIATION_DRILL?.presentQuestion === "function" &&
     GUARANTEE_SPECIAL_QUESTIONS.every((question) => question.unitId === GUARANTEE_SPECIAL_UNITS[0].id)
   );
-  const BUSINESS_KNOCK_READY = BUSINESS_FULLSCORE_BANK_READY &&
-    Boolean(BUSINESS_KNOCK?.plan && typeof BUSINESS_FULLSCORE_BANK?.presentQuestion === "function");
+  const BUSINESS_HARD_BANK_READY = Boolean(
+    BUSINESS_FULLSCORE_BANK_READY && BUSINESS_HARD_BANK?.LEGAL_BASELINE === "2026-04-01" &&
+    BUSINESS_HARD_QUESTIONS.length === BUSINESS_HARD_EXPECTED_QUESTIONS &&
+    new Set(BUSINESS_HARD_QUESTION_IDS).size === BUSINESS_HARD_EXPECTED_QUESTIONS &&
+    typeof BUSINESS_HARD_BANK?.presentQuestion === "function" &&
+    typeof BUSINESS_HARD_BANK?.diagnosticsForSelection === "function" &&
+    BUSINESS_HARD_QUESTIONS.every((question) => isHardBusinessQuestionId(question.id) &&
+      question.unitId !== "business-book-05" &&
+      BUSINESS_FULLSCORE_UNITS.some((unit) => unit.id === question.unitId))
+  );
+  const BUSINESS_KNOCK_READY = BUSINESS_HARD_BANK_READY && Boolean(BUSINESS_KNOCK?.plan);
   const SUBJECT_SPRINT_UNIT_DEFINITIONS = Object.freeze([
     Object.freeze({ id: "subject-sprint-rights", scopeId: "rights", label: "権利関係の得点源", page: 0, part: 2 }),
     Object.freeze({ id: "subject-sprint-restrictions", scopeId: "restrictions", label: "法令上の制限の得点源", page: 0, part: 2 }),
@@ -335,6 +367,7 @@
   const ALL_PRACTICAL_QUESTION_BY_ID = Object.freeze({
     ...PRACTICAL_QUESTION_BY_ID,
     ...BUSINESS_FULLSCORE_QUESTION_BY_ID,
+    ...BUSINESS_HARD_QUESTION_BY_ID,
     ...GUARANTEE_SPECIAL_QUESTION_BY_ID,
     ...SUBJECT_SPRINT_QUESTION_BY_ID
   });
@@ -354,7 +387,8 @@
   // of normalizing away ga001..ga020 and saving that loss back to storage.
   // v13 adds pre-answer evidence and explicit guess counters to the legal-
   // restrictions sprint. Older open tabs must not erase that evidence.
-  const STATE_SCHEMA_VERSION = 13;
+  // v15 protects the added hard55 IDs from schema14 clients that only know hard54.
+  const STATE_SCHEMA_VERSION = 15;
   // Only runtimes older than v11 could strip ga001..ga020 from practicalDrill.
   // Do not tie this recovery boundary to the current schema: later schema
   // upgrades must keep the live v11+ history authoritative over its snapshot.
@@ -1151,6 +1185,9 @@
     businessMasteryPrimary: $("#businessMasteryPrimary"),
     businessMasteryFull: $("#businessMasteryFull"),
     businessKnockPanel: $("#businessKnockPanel"),
+    businessKnockDifficulty: $("#businessKnockDifficulty"),
+    businessKnockStats: $("#businessKnockStats"),
+    businessKnockScope: $("#businessKnockScope"),
     businessKnockAttempts: $("#businessKnockAttempts"),
     businessKnockAccuracy: $("#businessKnockAccuracy"),
     businessKnockRecovery: $("#businessKnockRecovery"),
@@ -1160,7 +1197,16 @@
     businessKnockUnit: $("#businessKnockUnit"),
     businessKnockSize: $("#businessKnockSize"),
     businessKnockStart: $("#businessKnockStart"),
+    businessKnockFreshStart: $("#businessKnockFreshStart"),
+    businessKnockFreshStatus: $("#businessKnockFreshStatus"),
     businessKnockStatus: $("#businessKnockStatus"),
+    businessLegacyDrawer: $("#businessLegacyDrawer"),
+    businessArchiveMode: $("#businessArchiveMode"),
+    businessArchiveUnitField: $("#businessArchiveUnitField"),
+    businessArchiveUnit: $("#businessArchiveUnit"),
+    businessArchiveSize: $("#businessArchiveSize"),
+    businessArchiveKnockStart: $("#businessArchiveKnockStart"),
+    businessArchiveStatus: $("#businessArchiveStatus"),
     guaranteeSpecialStart: $("#guaranteeSpecialStart"),
     guaranteeSpecialFullStart: $("#guaranteeSpecialFullStart"),
     postTrainingGuide: $("#postTrainingGuide"),
@@ -1217,6 +1263,7 @@
       presentationOverrides: {},
       planMode: "",
       knockPreset: {
+        difficulty: "hard",
         mode: "untouched",
         size: 20,
         unitId: "",
@@ -2282,14 +2329,16 @@
   }
 
   function practicalQuestionSet(bankId = LEGACY_PRACTICAL_BANK_ID) {
-    if (bankId === BUSINESS_FULLSCORE_BANK_ID) return new Set(BUSINESS_FULLSCORE_QUESTION_IDS);
+    // The canonical hard IDs survive an asset-load failure. Rendering stops,
+    // but a successful reload can resume the exact question and selected answer.
+    if (bankId === BUSINESS_FULLSCORE_BANK_ID) return new Set(BUSINESS_DRILL_QUESTION_IDS);
     if (bankId === GUARANTEE_SPECIAL_BANK_ID) return new Set(GUARANTEE_SPECIAL_QUESTION_IDS);
     if (bankId === SUBJECT_SPRINT_BANK_ID) return new Set(SUBJECT_SPRINT_QUESTION_IDS);
     return new Set(PRACTICAL_QUESTION_IDS);
   }
 
   function practicalQuestionFor(id, bankId = state?.practicalDrill?.bankId) {
-    if (bankId === BUSINESS_FULLSCORE_BANK_ID) return BUSINESS_FULLSCORE_QUESTION_BY_ID[id] || null;
+    if (bankId === BUSINESS_FULLSCORE_BANK_ID) return BUSINESS_DRILL_QUESTION_BY_ID[id] || null;
     if (bankId === GUARANTEE_SPECIAL_BANK_ID) return GUARANTEE_SPECIAL_QUESTION_BY_ID[id] || null;
     if (bankId === SUBJECT_SPRINT_BANK_ID) return SUBJECT_SPRINT_QUESTION_BY_ID[id] || null;
     return PRACTICAL_QUESTION_BY_ID[id] || null;
@@ -2379,7 +2428,7 @@
   }
 
   function normalizePracticalHistory(input, preserveUnknownIds = []) {
-    const preserved = new Set((Array.isArray(preserveUnknownIds) ? preserveUnknownIds : []).map(String).slice(0, 200));
+    const preserved = new Set((Array.isArray(preserveUnknownIds) ? preserveUnknownIds : []).map(String).slice(0, 1000));
     return Object.fromEntries(
       Object.entries(input && typeof input === "object" && !Array.isArray(input) ? input : {})
         .filter(([id]) => Boolean(ALL_PRACTICAL_QUESTION_BY_ID[id]) || preserved.has(id))
@@ -2520,6 +2569,9 @@
     const savedBankVersion = Number(input?.bankVersion || input?.version || 1);
     const bankChanged = savedBankVersion !== currentBankVersion;
     const preserveUnknownIds = [
+      ...(!BUSINESS_HARD_BANK_READY
+        ? Object.keys(input?.history || {}).filter(isHardBusinessQuestionId)
+        : []),
       ...(!BUSINESS_FULLSCORE_BANK_READY
         ? Object.keys(input?.history || {}).filter((id) => /^bf-business-book-(?:0[1-9]|1[01])-/.test(id))
         : []),
@@ -2611,7 +2663,7 @@
         input?.presentationOverrides && typeof input.presentationOverrides === "object" &&
         !Array.isArray(input.presentationOverrides)) {
       Object.entries(input.presentationOverrides).forEach(([id, key]) => {
-        if (!practicalQuestionFor(id, bankId)) return;
+        if (!practicalQuestionFor(id, bankId) && !practicalQuestionSet(bankId).has(id)) return;
         const normalizedKey = String(key || "").replace(/[^0-9a-z:_-]/gi, "").slice(0, 80);
         if (normalizedKey) presentationOverrides[id] = normalizedKey;
       });
@@ -2623,13 +2675,15 @@
     );
     // 問題IDと履歴は維持する。問題本文・正答が更新された場合だけ、
     // 途中で表示中だった一問の選択を外して旧正答の誤判定を防ぐ。
-    const currentAttempt = !bankChanged && presentedQuestion && rawAttempt?.id === currentId &&
+    const unavailableCurrentHardQuestion = !BUSINESS_HARD_BANK_READY && isHardBusinessQuestionId(currentId);
+    const attemptCorrect = presentedQuestion ? selected === presentedQuestion.answer : Boolean(rawAttempt?.correct);
+    const currentAttempt = !bankChanged && (presentedQuestion || unavailableCurrentHardQuestion) && rawAttempt?.id === currentId &&
       Number.isInteger(selected) && selected >= 0 && selected < 4
       ? {
           id: currentId,
           selected,
-          correct: selected === presentedQuestion.answer,
-          confidence: selected === presentedQuestion.answer
+          correct: attemptCorrect,
+          confidence: attemptCorrect
             ? (["confident", "uncertain"].includes(rawAttempt?.confidence) ? rawAttempt.confidence : "")
             : "wrong",
           predictedConfidence: ["confident", "uncertain", "guess"].includes(rawAttempt?.predictedConfidence)
@@ -2666,6 +2720,7 @@
       presentationOverrides,
       planMode,
       knockPreset: {
+        difficulty: rawKnockPreset?.difficulty === "basic" ? "basic" : "hard",
         mode: knockMode,
         size: knockSize,
         unitId: knockUnitId,
@@ -4711,6 +4766,12 @@
     return null;
   }
 
+  function isLegacyBusinessSession(drill = state.practicalDrill) {
+    return drill?.bankId === BUSINESS_FULLSCORE_BANK_ID &&
+      Array.isArray(drill.sessionIds) && drill.sessionIds.length > 0 &&
+      drill.sessionIds.every((id) => !isHardBusinessQuestionId(id));
+  }
+
   function activeResumeLabel(active = activeLearningSession()) {
     if (active?.kind === "practical" && state.practicalDrill?.bankId === GUARANTEE_SPECIAL_BANK_ID) {
       return "保証協会特訓を保存位置から再開";
@@ -6693,7 +6754,7 @@
   }
 
   function businessAnsweredTodayIds() {
-    return BUSINESS_FULLSCORE_QUESTION_IDS.filter((id) =>
+    return BUSINESS_HARD_QUESTION_IDS.filter((id) =>
       localDateKey(state.practicalDrill?.history?.[id]?.lastAnsweredAt) === todayKey()
     );
   }
@@ -8314,7 +8375,7 @@
 
   function practicalRetryIdsForBank(bankId) {
     const ids = bankId === BUSINESS_FULLSCORE_BANK_ID
-      ? BUSINESS_FULLSCORE_QUESTION_IDS
+      ? BUSINESS_DRILL_QUESTION_IDS
       : bankId === GUARANTEE_SPECIAL_BANK_ID
         ? GUARANTEE_SPECIAL_QUESTION_IDS
         : bankId === SUBJECT_SPRINT_BANK_ID
@@ -8343,10 +8404,11 @@
       return normalizeBusinessTagList(question.diagnosticTags);
     }
     if (state.practicalDrill?.bankId !== BUSINESS_FULLSCORE_BANK_ID) return [];
-    if (!uncertain && typeof BUSINESS_FULLSCORE_BANK?.diagnosticsForSelection === "function") {
+    const bank = BUSINESS_HARD_QUESTION_BY_ID[question.id] ? BUSINESS_HARD_BANK : BUSINESS_FULLSCORE_BANK;
+    if (!uncertain && typeof bank?.diagnosticsForSelection === "function") {
       try {
         return normalizeBusinessTagList(
-          BUSINESS_FULLSCORE_BANK.diagnosticsForSelection(question, selected)
+          bank.diagnosticsForSelection(question, selected)
         );
       } catch {
         // A malformed diagnostic payload must not enter the save.
@@ -8403,7 +8465,10 @@
   }
 
   function activePracticalQuestions(drill = state.practicalDrill) {
-    if (drill?.bankId === BUSINESS_FULLSCORE_BANK_ID) return BUSINESS_FULLSCORE_QUESTIONS;
+    if (drill?.bankId === BUSINESS_FULLSCORE_BANK_ID) {
+      return drill.sessionIds?.some(isHardBusinessQuestionId)
+        ? BUSINESS_HARD_QUESTIONS : BUSINESS_FULLSCORE_QUESTIONS;
+    }
     if (drill?.bankId === GUARANTEE_SPECIAL_BANK_ID) return GUARANTEE_SPECIAL_QUESTIONS;
     if (drill?.bankId === SUBJECT_SPRINT_BANK_ID) return SUBJECT_SPRINT_QUESTIONS;
     return PRACTICAL_QUESTIONS;
@@ -8451,10 +8516,11 @@
       }
     }
     if (bankId !== BUSINESS_FULLSCORE_BANK_ID) return question;
-    if (typeof BUSINESS_FULLSCORE_BANK?.presentQuestion === "function") {
+    const bank = BUSINESS_HARD_QUESTION_BY_ID[question.id] ? BUSINESS_HARD_BANK : BUSINESS_FULLSCORE_BANK;
+    if (typeof bank?.presentQuestion === "function") {
       try {
         const presented = normalizeFullScoreQuestion(
-          BUSINESS_FULLSCORE_BANK.presentQuestion(question, presentationKey)
+          bank.presentQuestion(question, presentationKey)
         );
         if (presented?.id === question.id && presented.choices.length === 4) return presented;
       } catch {
@@ -8876,7 +8942,7 @@
         : question.format === "個数問題" ? "count" : "");
     const labels = formatKey === "single"
       ? ["1", "2", "3", "4"]
-      : formatKey === "combination" && sourceFacts.length === 4
+      : formatKey === "combination" && sourceFacts.length === 4 && !BUSINESS_HARD_QUESTION_BY_ID[question.id]
         ? ["ア-1", "ア-2", "イ-1", "イ-2"]
         : ["ア", "イ", "ウ", "エ"];
     if (sourceFacts.length) {
@@ -8987,11 +9053,11 @@
     return item;
   }
 
-  function validPracticalDisplayBlock(block) {
+  function validPracticalDisplayBlock(block, sharedCasePremise = false) {
     return Boolean(
       block &&
       Array.isArray(block.premises) &&
-      block.premises.length &&
+      (block.premises.length || sharedCasePremise === true) &&
       block.premises.every((premise) => typeof premise === "string" && premise.trim()) &&
       typeof block.judgment === "string" &&
       block.judgment.trim()
@@ -9094,7 +9160,8 @@
   function renderPracticalPrompt(question, sharedPremiseGroups = []) {
     const model = question?.displayModel;
     const items = Array.isArray(model?.items) ? model.items : [];
-    const hasItems = items.length && items.every(validPracticalDisplayBlock);
+    const hasItems = items.length && items.every((block) =>
+      validPracticalDisplayBlock(block, Boolean(BUSINESS_HARD_QUESTION_BY_ID[question.id])));
     const structured = typeof model?.intro === "string" && model.intro.trim() &&
       (hasItems || sharedPremiseGroups.length);
     if (!structured) {
@@ -9118,8 +9185,8 @@
     elements.practicalDrillPrompt.replaceChildren(...parts);
   }
 
-  function renderPracticalChoice(button, choice, index, block, sharedPremiseGroups = []) {
-    if (!validPracticalDisplayBlock(block)) {
+  function renderPracticalChoice(button, choice, index, block, sharedPremiseGroups = [], sharedCasePremise = false) {
+    if (!validPracticalDisplayBlock(block, sharedCasePremise)) {
       button.removeAttribute("data-structured");
       button.removeAttribute("aria-describedby");
       button.textContent = `${index + 1}. ${choice}`;
@@ -9288,13 +9355,14 @@
           !(drill.history[question.id]?.attempts > 0)
         ).length
       : 0;
-    const bankLabel = knockSession ? "業法ノック"
+    const hardKnockSession = knockSession && drill.sessionIds.some(isHardBusinessQuestionId);
+    const bankLabel = knockSession ? hardKnockSession ? "高難度・事例ノック" : "基礎変形ノック"
       : drill.bankId === BUSINESS_FULLSCORE_BANK_ID ? "満点変形"
       : guaranteeSpecialSession ? "保証協会特訓"
         : subjectSprintSession ? "科目補強" : "実践";
     const summaryPrefix = drill.bankId === LEGACY_PRACTICAL_BANK_ID ? "" : `${bankLabel}累計 `;
     elements.practicalDrillSummary.textContent =
-      `${summaryPrefix}接触 ${contacted} / ${activeIds.length}・根拠クリア ${grounded}・再出題 ${drill.retryIds.length}`;
+      `${summaryPrefix}接触 ${contacted} / ${activeIds.length}・根拠クリア ${grounded}・再出題 ${drill.retryIds.filter((id) => activeIds.includes(id)).length}`;
     if (elements.practicalDrillScope?.querySelector(`option[value="${drill.scope}"]`)) {
       elements.practicalDrillScope.value = drill.scope;
     }
@@ -9328,7 +9396,7 @@
       const restrictionExamResult = restrictionExamSession ? currentRestrictionExamResult(drill) : null;
       const restrictionExamVerdict = restrictionExamResult?.passed ? "合格圏目安" : "要再診断";
       elements.practicalDrillCompleteText.textContent = knockSession
-        ? `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計${drill.attempts}解答です。${nextKnockPlan?.size ? `同じ条件の次セットは${nextKnockPlan.size}問。` : "この条件の対象はすべて回収しました。"}同日正答だけでは長期定着レベルは進みません。`
+        ? `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。${nextKnockPlan?.size ? `同じ条件の次セットは${nextKnockPlan.size}問。` : "この条件の対象はすべて回収しました。"}同日正答だけでは長期定着レベルは進みません。`
         : guaranteeSpecialSession
           ? `${completionLabel}の今回${drill.sessionIds.length}問を完了。累計接触${guaranteeSummary.contacted}/${GUARANTEE_SPECIAL_EXPECTED_QUESTIONS}、根拠あり正答${guaranteeSummary.grounded}、日を空けて定着${guaranteeSummary.retained}、要復習${guaranteeSummary.review}問です。${guaranteeSummary.contacted >= GUARANTEE_SPECIAL_EXPECTED_QUESTIONS ? "33問への接触は完了。1周だけで定着とは判定しません。" : ""}${guaranteeSummary.nextDueKey ? `次の優先復習は${guaranteeSummary.nextDueKey.replaceAll("-", "/")}以降。` : ""}`
         : restrictionExamSession
@@ -9365,7 +9433,13 @@
     }
 
     const question = currentPresentedPracticalQuestion();
-    if (!question) return;
+    if (!question) {
+      elements.practicalDrillPrompt.textContent = "このセットの問題を読み込めません。途中の問題順・解答は保持しています。再読込して再開してください。";
+      elements.practicalDrillChoices.replaceChildren();
+      elements.practicalDrillFeedback.hidden = true;
+      elements.practicalDrillNextButton.disabled = true;
+      return;
+    }
     const attempt = drill.currentAttempt;
     const forecastRequired = practicalForecastRequired(drill, attempt);
     const sessionRetryCount = drill.retryIds.filter((id) => drill.sessionIds.includes(id)).length;
@@ -9377,11 +9451,13 @@
         ? `法令${RESTRICTION_EXAM_SESSION_SIZE}問・${RESTRICTION_EXAM_TARGET_MINUTES}分 根拠診断`
       : subjectSprintTopic
         ? `${subjectSprintTopic.label} 特訓`
-      : unitSession
+      : unitSession && !hardKnockSession
         ? `${unitSession.label}・${drill.sessionIds.length}問`
         : `${drill.sessionIds.length}問 ${bankLabel}セット`;
     elements.practicalDrillProgress.textContent = `第${drill.position + 1}問 / 全${drill.queue.length}問`;
-    elements.practicalDrillUnit.textContent = question.unitPage
+    elements.practicalDrillUnit.textContent = hardKnockSession && !attempt
+      ? "高難度・事例判断（論点と根拠は解答後）"
+      : question.unitPage
       ? `${question.unitLabel}・p.${question.unitPage}`
       : question.unitLabel;
     if (!renderPracticalDrillTimer(drill)) {
@@ -9445,7 +9521,8 @@
         choice,
         index,
         choiceBlocks[index],
-        choiceBlocks.length ? sharedPremiseGroups : []
+        choiceBlocks.length ? sharedPremiseGroups : [],
+        Boolean(BUSINESS_HARD_QUESTION_BY_ID[question.id])
       );
       button.disabled = Boolean(attempt) ||
         (forecastRequired && !drill.preAnswerConfidence) ||
@@ -9529,6 +9606,9 @@
 
   function currentPracticalInputTarget(drill = state.practicalDrill) {
     if (!drill || !["active", "retry"].includes(drill.stage)) return null;
+    if (!drill.currentAttempt && isHardBusinessQuestionId(drill.queue[drill.position])) {
+      return elements.practicalDrillPrompt;
+    }
     if (practicalForecastRequired(drill) && !drill.preAnswerConfidence) {
       return elements.practicalDrillForecast?.querySelector("button");
     }
@@ -9546,7 +9626,10 @@
     target.focus({ preventScroll: true });
     const prompt = elements.practicalDrillPrompt;
     const promptRect = prompt?.getBoundingClientRect();
-    if (prompt && promptRect && (promptRect.bottom <= 0 || promptRect.top >= window.innerHeight)) {
+    const hardCase = target === prompt;
+    if (prompt && promptRect && (hardCase
+      ? promptRect.top < 68 || promptRect.top >= window.innerHeight - 68
+      : promptRect.bottom <= 0 || promptRect.top >= window.innerHeight)) {
       prompt.scrollIntoView({ block: "start", inline: "nearest" });
     }
   }
@@ -9830,16 +9913,77 @@
   }
 
   function normalizeBusinessKnockPreset(input = state.practicalDrill?.knockPreset) {
+    const difficulty = input?.difficulty === "basic" ? "basic" : "hard";
     const mode = BUSINESS_KNOCK_MODES.includes(input?.mode) ? String(input.mode) : "untouched";
     const size = BUSINESS_KNOCK_SIZES.includes(Number(input?.size)) ? Number(input.size) : 20;
-    const unitId = BUSINESS_FULLSCORE_UNITS.some((unit) => unit.id === input?.unitId)
+    const unitId = BUSINESS_FULLSCORE_UNITS.some((unit) => unit.id === input?.unitId &&
+      (difficulty === "basic" || unit.id !== "business-book-05"))
       ? String(input.unitId)
       : BUSINESS_FULLSCORE_UNITS[0]?.id || "";
     const lastPresentationOffset = Number.isInteger(input?.lastPresentationOffset) &&
       input.lastPresentationOffset >= 0 && input.lastPresentationOffset <= 3
       ? input.lastPresentationOffset
       : null;
-    return { mode, size, unitId, lastPresentationOffset };
+    return { difficulty, mode, size, unitId, lastPresentationOffset };
+  }
+
+  function businessKnockQuestions(preset) {
+    return normalizeBusinessKnockPreset(preset).difficulty === "basic"
+      ? BUSINESS_FULLSCORE_QUESTIONS : BUSINESS_HARD_QUESTIONS;
+  }
+
+  // Old saved preferences remain valid for resuming an archive session, but
+  // never select the legacy bank through the normal daily/new-question entry.
+  function normalBusinessKnockPreset() {
+    return normalizeBusinessKnockPreset({ ...state.practicalDrill?.knockPreset, difficulty: "hard" });
+  }
+
+  function archiveBusinessKnockPreset() {
+    return normalizeBusinessKnockPreset({
+      difficulty: "basic",
+      mode: elements.businessArchiveMode?.value || "all-random",
+      size: Number(elements.businessArchiveSize?.value || 20),
+      unitId: elements.businessArchiveUnit?.value,
+      lastPresentationOffset: state.practicalDrill?.knockPreset?.lastPresentationOffset
+    });
+  }
+
+  function renderBusinessArchive() {
+    if (!elements.businessArchiveKnockStart) return;
+    if (elements.businessArchiveUnit && elements.businessArchiveUnit.options.length !== BUSINESS_FULLSCORE_UNITS.length) {
+      elements.businessArchiveUnit.replaceChildren(...BUSINESS_FULLSCORE_UNITS.map((unit) => {
+        const option = document.createElement("option");
+        option.value = unit.id;
+        option.textContent = unit.label;
+        return option;
+      }));
+    }
+    const preset = archiveBusinessKnockPreset();
+    const active = activeLearningSession();
+    const ready = businessKnockReady(preset);
+    const plan = businessKnockPlan(preset, "archive-preview");
+    if (elements.businessArchiveUnitField) elements.businessArchiveUnitField.hidden = preset.mode !== "unit";
+    [elements.businessArchiveMode, elements.businessArchiveUnit, elements.businessArchiveSize]
+      .filter(Boolean).forEach((control) => { control.disabled = Boolean(active) || !ready; });
+    elements.businessArchiveKnockStart.disabled = !active && !(plan?.size > 0);
+    elements.businessArchiveKnockStart.textContent = active ? activeResumeLabel(active)
+      : plan?.size ? `旧変形134問から${plan.size}問を取り出す` : ready ? "この条件の旧問はありません" : "旧問を読み込めません";
+    if (elements.businessArchiveStatus) elements.businessArchiveStatus.textContent = active
+      ? `${isLegacyBusinessSession() ? "旧問タンスの" : ""}${active.label}を先に再開します。途中の問題順・解答は上書きしません。`
+      : !ready ? "旧変形134問または選問エンジンを読み込めません。旧問ノックの開始を停止しています。"
+        : `旧変形134問・${businessKnockModeLabel(preset.mode)}の対象${plan?.available || 0}問。通常の新作180問には混ぜません。これまでの履歴は下に保存しています。`;
+  }
+
+  function businessKnockReady(preset) {
+    return normalizeBusinessKnockPreset(preset).difficulty === "basic"
+      ? BUSINESS_FULLSCORE_BANK_READY && Boolean(BUSINESS_KNOCK?.plan)
+      : BUSINESS_KNOCK_READY;
+  }
+
+  function businessKnockHistory(preset) {
+    return Object.fromEntries(businessKnockQuestions(preset)
+      .filter((question) => state.practicalDrill?.history?.[question.id])
+      .map((question) => [question.id, state.practicalDrill.history[question.id]]));
   }
 
   function businessKnockModeLabel(mode) {
@@ -9955,15 +10099,15 @@
   }
 
   function businessKnockPlan(preset, seed = "preview") {
-    if (!BUSINESS_KNOCK_READY) return null;
+    if (!businessKnockReady(preset)) return null;
     const normalized = normalizeBusinessKnockPreset(preset);
     const requestedDailyRemainder = Number(preset?.dailyRemainder);
     const dailyRemainder = Number.isInteger(requestedDailyRemainder) && requestedDailyRemainder > 0
       ? Math.min(BUSINESS_FULLSCORE_EXPECTED_QUESTIONS, requestedDailyRemainder)
       : 0;
     return BUSINESS_KNOCK.plan({
-      questions: BUSINESS_FULLSCORE_QUESTIONS,
-      history: businessFullScoreHistory(),
+      questions: businessKnockQuestions(normalized),
+      history: businessKnockHistory(normalized),
       mode: normalized.mode,
       unitId: normalized.unitId,
       size: normalized.size,
@@ -9977,31 +10121,63 @@
 
   function renderBusinessKnock() {
     if (!elements.businessKnockPanel) return;
-    const preset = normalizeBusinessKnockPreset();
-    if (elements.businessKnockUnit && elements.businessKnockUnit.options.length !== BUSINESS_FULLSCORE_UNITS.length) {
-      elements.businessKnockUnit.replaceChildren(...BUSINESS_FULLSCORE_UNITS.map((unit) => {
+    renderBusinessArchive();
+    const preset = normalBusinessKnockPreset();
+    const questions = businessKnockQuestions(preset);
+    const poolLabel = preset.difficulty === "basic" ? "基礎変形134問" : "高難度・事例180問";
+    const eligibleUnits = BUSINESS_FULLSCORE_UNITS.filter((unit) =>
+      preset.difficulty === "basic" || unit.id !== "business-book-05");
+    if (elements.businessKnockUnit && elements.businessKnockUnit.options.length !== eligibleUnits.length) {
+      elements.businessKnockUnit.replaceChildren(...eligibleUnits.map((unit) => {
         const option = document.createElement("option");
         option.value = unit.id;
         option.textContent = unit.label;
         return option;
       }));
     }
+    if (elements.businessKnockDifficulty) elements.businessKnockDifficulty.value = preset.difficulty;
     if (elements.businessKnockMode) elements.businessKnockMode.value = preset.mode;
     if (elements.businessKnockSize) elements.businessKnockSize.value = String(preset.size);
     if (elements.businessKnockUnit) elements.businessKnockUnit.value = preset.unitId;
     if (elements.businessKnockUnitField) elements.businessKnockUnitField.hidden = preset.mode !== "unit";
+    const allOption = elements.businessKnockMode?.querySelector('option[value="all-random"]');
+    if (allOption) allOption.textContent = `${poolLabel}から混合`;
+    if (elements.businessKnockScope) elements.businessKnockScope.textContent = `${poolLabel}だけの累計。基礎134問の定着判定とは別集計です。`;
+    if (elements.businessKnockStats) elements.businessKnockStats.setAttribute("aria-label", `${poolLabel}の累計`);
 
-    const historySummary = BUSINESS_KNOCK?.summarizeHistory?.(businessFullScoreHistory(), new Date()) || {
+    const historySummary = BUSINESS_KNOCK?.summarizeHistory?.(businessKnockHistory(preset), new Date()) || {
       attempts: 0,
       accuracy: 0
     };
-    const transfer = businessTransferSummary().questions || {};
+    const transfer = questions.reduce((counts, question) => {
+      const status = BUSINESS_MASTERY?.stateFor(state.practicalDrill?.history?.[question.id] || {}, new Date());
+      if (status) counts[status] = (counts[status] || 0) + 1;
+      return counts;
+    }, {});
     elements.businessKnockAttempts.textContent = String(historySummary.attempts || 0);
     elements.businessKnockAccuracy.textContent = `${historySummary.accuracy || 0}%`;
     elements.businessKnockRecovery.textContent = String((transfer.retry || 0) + (transfer.due || 0));
     elements.businessKnockUntouched.textContent = String(transfer.untouched || 0);
 
     const active = activeLearningSession();
+    const freshPlan = businessKnockPlan({ difficulty: "hard", mode: "untouched", size: 20 }, "fresh-preview");
+    if (elements.businessKnockFreshStart) {
+      elements.businessKnockFreshStart.disabled = !active && !(freshPlan?.size > 0);
+      elements.businessKnockFreshStart.textContent = active
+        ? activeResumeLabel(active)
+        : freshPlan?.size
+          ? `新問${freshPlan.size}問を開始（未接触だけ）`
+          : BUSINESS_KNOCK_READY ? "未接触の新問はありません" : "新問を読み込めません";
+    }
+    if (elements.businessKnockFreshStatus) {
+      elements.businessKnockFreshStatus.textContent = active
+        ? `${active.label}を先に再開します。途中の問題順・解答は上書きしません。`
+        : !BUSINESS_KNOCK_READY
+          ? "180問の読込を確認できません。既回答の問題に切り替えず開始を停止しています。"
+          : freshPlan?.size
+            ? `高難度180問のうち未接触は残り${freshPlan.available}問。日課の復習混合とは別に、未接触だけを最大20問ずつ出題します。迷い・誤答は同じセット内で再出題します。`
+            : "180問すべてに接触済みです。新問だけの出題は終了しました。復習する場合は下の「弱点・期限」などを選んでください。";
+    }
     const guaranteeSummary = guaranteeSpecialSummary();
     const postTrainingUnlocked = guaranteeSummary.contacted >= GUARANTEE_SPECIAL_EXPECTED_QUESTIONS;
     if (elements.postTrainingGuide) elements.postTrainingGuide.hidden = !postTrainingUnlocked;
@@ -10052,7 +10228,8 @@
       }
     }
     const plan = businessKnockPlan(preset);
-    const controlsDisabled = Boolean(active) || !BUSINESS_KNOCK_READY;
+    const controlsDisabled = Boolean(active) || !businessKnockReady(preset);
+    if (elements.businessKnockDifficulty) elements.businessKnockDifficulty.disabled = Boolean(active);
     [elements.businessKnockMode, elements.businessKnockUnit, elements.businessKnockSize]
       .filter(Boolean)
       .forEach((control) => { control.disabled = controlsDisabled; });
@@ -10063,23 +10240,23 @@
       elements.businessKnockStatus.textContent = `${active.label}があります。新しいノックで上書きせず、先に再開します。`;
       return;
     }
-    if (!BUSINESS_KNOCK_READY || !plan) {
+    if (!businessKnockReady(preset) || !plan) {
       elements.businessKnockStart.disabled = true;
       elements.businessKnockStart.textContent = "ノック問題を読み込めません";
-      elements.businessKnockStatus.textContent = "変形134問またはノック選問エンジンの読込を確認してください。";
+      elements.businessKnockStatus.textContent = `${poolLabel}または選問エンジンを読み込めません。問題の難度を自動で下げず、開始を停止しています。再読込してください。`;
       return;
     }
     const modeLabel = businessKnockModeLabel(preset.mode);
     elements.businessKnockStart.disabled = plan.size === 0;
     elements.businessKnockStart.textContent = plan.size
-      ? `${modeLabel}を${plan.size}問ノック開始`
+      ? `${preset.difficulty === "hard" ? "高難度・" : "基礎・"}${modeLabel}を${plan.size}問ノック開始`
       : `${modeLabel}の対象なし`;
     elements.businessKnockStatus.textContent = plan.size
-      ? `対象${plan.available}問から${plan.size}問を出題。完了後も同じ条件で次セットへ進めます。`
+      ? `${poolLabel}の対象${plan.available}問から${plan.size}問を出題。完了後も同じ条件で次セットへ進めます。${preset.difficulty === "hard" ? "保証協会は含めません。日課20問では、未接触が8問以上あれば少なくとも8問を新規に。残りは誤答・期限を優先します。" : ""}`
       : preset.mode === "weak-due"
         ? "現在、誤答・不安・期限到来はありません。未接触または全範囲を選べます。"
         : preset.mode === "untouched"
-          ? "134問すべてに接触済みです。弱点・期限、単元、全範囲を選べます。"
+          ? `${poolLabel}の対象すべてに接触済みです。弱点・期限、単元、全範囲を選べます。`
           : "この条件で出題できる問題がありません。";
   }
 
@@ -10089,6 +10266,7 @@
       return;
     }
     state.practicalDrill.knockPreset = normalizeBusinessKnockPreset({
+      difficulty: elements.businessKnockDifficulty?.value,
       mode: elements.businessKnockMode?.value,
       size: Number(elements.businessKnockSize?.value),
       unitId: elements.businessKnockUnit?.value,
@@ -10216,7 +10394,7 @@
       ? [...new Set(questionIds.map((id) => String(id || "").trim()).filter(Boolean))]
       : null;
     const requestedIds = requestedOrder ? new Set(requestedOrder) : null;
-    const questionsById = new Map(BUSINESS_FULLSCORE_QUESTIONS.map((question) => [question.id, question]));
+    const questionsById = new Map(Object.entries(BUSINESS_DRILL_QUESTION_BY_ID));
     const eligible = sessionPlanMode === "knock" && requestedOrder
       ? requestedOrder.map((id) => questionsById.get(id)).filter(Boolean)
       : requestedIds
@@ -10242,7 +10420,7 @@
       ? String(presentationKey || `${todayKey()}:knock:${createOpaqueId("cycle")}`)
         .replace(/[^0-9a-z:_-]/gi, "").slice(0, 80)
       : `${todayKey()}:bank-${BUSINESS_FULLSCORE_BANK.VERSION}`;
-    const retryIds = BUSINESS_FULLSCORE_QUESTION_IDS.filter((id) =>
+    const retryIds = BUSINESS_DRILL_QUESTION_IDS.filter((id) =>
       ["wrong", "uncertain"].includes(state.practicalDrill?.history?.[id]?.lastConfidence)
     );
     state.practicalDrill = {
@@ -10276,13 +10454,14 @@
     focusCurrentPracticalContext({ force: true });
   }
 
-  function nextBusinessKnockPresentation(cycleId, previousOffset) {
+  function nextBusinessKnockPresentation(cycleId, previousOffset, preset) {
     const base = `${todayKey()}:knock:${cycleId}`
       .replace(/[^0-9a-z:_-]/gi, "")
       .slice(0, 76);
     for (const suffix of ["a", "b", "c", "d"]) {
       const key = `${base}:${suffix}`;
-      const offset = BUSINESS_FULLSCORE_BANK.presentQuestion(BUSINESS_FULLSCORE_QUESTION_IDS[0], key)
+      const bank = normalizeBusinessKnockPreset(preset).difficulty === "basic" ? BUSINESS_FULLSCORE_BANK : BUSINESS_HARD_BANK;
+      const offset = bank.presentQuestion(businessKnockQuestions(preset)[0], key)
         .presentationOffset;
       if (!Number.isInteger(previousOffset) || offset !== previousOffset) return { key, offset };
     }
@@ -10291,12 +10470,16 @@
 
   function startBusinessKnockSession(requestedSize = 0, options = {}) {
     if (resumeActiveLearningSession()) return;
-    const defaultPreset = normalizeBusinessKnockPreset();
+    const defaultPreset = normalizeBusinessKnockPreset(options?.freshOnly
+      ? { ...state.practicalDrill.knockPreset, difficulty: "hard", mode: "untouched", unitId: "", size: 20 }
+      : options?.archive
+        ? { ...(options.preset || archiveBusinessKnockPreset()), difficulty: "basic" }
+        : normalBusinessKnockPreset());
     const daily = Boolean(options?.daily);
     const preset = Number.isInteger(requestedSize) && requestedSize > 0
       ? {
           ...defaultPreset,
-          ...(daily ? { mode: "all-random", unitId: "", dailyRemainder: requestedSize } : {}),
+          ...(daily ? { difficulty: "hard", mode: "all-random", unitId: "", dailyRemainder: requestedSize } : {}),
           size: requestedSize
         }
       : defaultPreset;
@@ -10306,7 +10489,7 @@
       renderBusinessKnock();
       return;
     }
-    const presentation = nextBusinessKnockPresentation(cycleId, preset.lastPresentationOffset);
+    const presentation = nextBusinessKnockPresentation(cycleId, preset.lastPresentationOffset, preset);
     startBusinessFullScoreSession({
       size: plan.size,
       unitId: preset.mode === "unit" ? preset.unitId : "",
@@ -10622,7 +10805,8 @@
     }
     if (state.practicalDrill?.bankId === BUSINESS_FULLSCORE_BANK_ID) {
       if (state.practicalDrill.planMode === "knock") {
-        startBusinessKnockSession();
+        startBusinessKnockSession(0, isLegacyBusinessSession()
+          ? { archive: true, preset: state.practicalDrill.knockPreset } : {});
         return;
       }
       if (state.practicalDrill.unitId) {
@@ -10972,12 +11156,23 @@
   }
 
   function changePracticalDrillSettings() {
+    const wasLegacyBusiness = isLegacyBusinessSession();
+    const previousPreset = normalizeBusinessKnockPreset();
     const wasBusinessKnock = state.practicalDrill?.bankId === BUSINESS_FULLSCORE_BANK_ID &&
       state.practicalDrill?.planMode === "knock";
     const wasGuaranteeSpecial = state.practicalDrill?.bankId === GUARANTEE_SPECIAL_BANK_ID;
     const wasSubjectSprint = state.practicalDrill?.bankId === SUBJECT_SPRINT_BANK_ID;
     if (!cancelPracticalDrill()) return;
-    if (wasBusinessKnock) {
+    if (wasLegacyBusiness) {
+      if (elements.businessLegacyDrawer) elements.businessLegacyDrawer.open = true;
+      if (elements.businessArchiveMode) elements.businessArchiveMode.value = previousPreset.mode;
+      if (elements.businessArchiveUnit) elements.businessArchiveUnit.value = previousPreset.unitId;
+      if (elements.businessArchiveSize) elements.businessArchiveSize.value = String(previousPreset.size);
+      renderBusinessArchive();
+      window.requestAnimationFrame(() => {
+        if (!activeLearningSession()) elements.businessArchiveKnockStart?.scrollIntoView({ block: "center", behavior: "smooth" });
+      });
+    } else if (wasBusinessKnock) {
       window.requestAnimationFrame(() => {
         if (!activeLearningSession()) {
           elements.businessKnockPanel?.scrollIntoView({ block: "center", behavior: "smooth" });
@@ -14427,7 +14622,12 @@
     elements.postTrainingBusiness?.addEventListener("click", startPostTrainingBusinessKnock);
     elements.postTrainingExam?.addEventListener("click", openPostTrainingExamRoute);
     elements.businessKnockStart?.addEventListener("click", startBusinessKnockSession);
-    [elements.businessKnockMode, elements.businessKnockUnit, elements.businessKnockSize]
+    elements.businessArchiveKnockStart?.addEventListener("click", () => startBusinessKnockSession(0, { archive: true }));
+    [elements.businessArchiveMode, elements.businessArchiveUnit, elements.businessArchiveSize]
+      .filter(Boolean)
+      .forEach((control) => control.addEventListener("change", renderBusinessArchive));
+    elements.businessKnockFreshStart?.addEventListener("click", () => startBusinessKnockSession(20, { freshOnly: true }));
+    [elements.businessKnockDifficulty, elements.businessKnockMode, elements.businessKnockUnit, elements.businessKnockSize]
       .filter(Boolean)
       .forEach((control) => control.addEventListener("change", updateBusinessKnockPresetFromControls));
     elements.practicalDrillScope?.addEventListener("change", renderPracticalDrillLauncher);

@@ -10,11 +10,11 @@ const releaseIntegrity = require("./release-integrity.json");
 const ROOT = __dirname;
 const EXPECTED_CACHE_VERSION = releaseIntegrity.version;
 releaseIntegrityTools.assertVersionMatchesDigest(releaseIntegrity.version, releaseIntegrity.digest);
-// v52 adds 50 separately authored, sourced case questions (~148 KB raw),
-// while retaining legacy payloads to preserve saved answers. These measured
-// budgets allow that explicit content expansion, not unrelated feature growth.
-const MAX_PUBLIC_JS_BYTES = 1_720_000;
-const MAX_PUBLIC_JS_GZIP_BYTES = 430_000;
+// v55 adds 120 separately authored cases (~319 KB raw / 84 KB gzip), retaining
+// the previous sixty cases, legacy 134-question bank and saved-answer contracts. Keep the
+// budget scoped to this explicit question-bank expansion, not feature growth.
+const MAX_PUBLIC_JS_BYTES = 2_230_000;
+const MAX_PUBLIC_JS_GZIP_BYTES = 570_000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
   "pwa-runtime.js",
@@ -28,6 +28,10 @@ const RELEASE_CONTRACT_PATHS = [
 
 const read = (relativePath) => fs.readFileSync(path.join(ROOT, relativePath), "utf8");
 const html = read("index.html");
+const appSchema = read("app.js").match(/const STATE_SCHEMA_VERSION = (\d+);/)?.[1];
+assert.ok(appSchema, "application save schema must be explicit");
+assert.ok(read("scripts/verify-deployed-page.mjs").includes(`/const STATE_SCHEMA_VERSION = ${appSchema}/`),
+  "deployed-page verifier must track the current save schema before a release is staged");
 
 assert.match(html, new RegExp(`manifest\\.webmanifest\\?v=${EXPECTED_CACHE_VERSION}`), "versioned manifest missing");
 assert.match(html, new RegExp(`pwa-runtime\\.js\\?v=${EXPECTED_CACHE_VERSION}`), "versioned PWA runtime missing");

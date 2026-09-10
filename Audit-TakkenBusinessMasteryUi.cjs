@@ -62,6 +62,10 @@ async function waitForApp(page) {
     return /変形/.test(metrics) &&
       document.querySelectorAll("#businessMasteryGrid article").length === 11;
   });
+  const drawer = page.locator("#businessLegacyDrawer");
+  await drawer.waitFor({ state: "attached" });
+  if (!await drawer.evaluate((node) => node.open)) await drawer.locator("summary").click();
+  await page.locator("#businessMasteryPanel").waitFor({ state: "visible" });
 }
 
 async function readSavedState(page) {
@@ -111,8 +115,12 @@ async function currentPracticalQuestion(page) {
     );
     const state = JSON.parse(localStorage.getItem(key));
     const id = state.practicalDrill.queue[state.practicalDrill.position];
+    const canonicalHardIds = new Set([
+      ...Array.from({ length: 60 }, (_, index) => `hard54-${String(index + 1).padStart(3, "0")}`),
+      ...Array.from({ length: 120 }, (_, index) => `hard55-${String(index + 1).padStart(3, "0")}`)
+    ]);
     const bank = state.practicalDrill.bankId === "business-fullscore"
-      ? window.TAKKEN_BUSINESS_FULLSCORE_BANK
+      ? canonicalHardIds.has(id) ? window.TAKKEN_BUSINESS_HARD_BANK : window.TAKKEN_BUSINESS_FULLSCORE_BANK
       : window.TAKKEN_PRACTICAL_VARIATIONS;
     const question = bank.QUESTIONS_BY_ID[id];
     const presented = state.practicalDrill.bankId === "business-fullscore"
@@ -771,7 +779,7 @@ async function installFullScoreProofFixture(page, mode) {
 
     await page.locator("#businessMasteryFull").click();
     let saved = await readSavedState(page);
-    assert.equal(saved.stateSchemaVersion, 13);
+    assert.equal(saved.stateSchemaVersion, 15);
     assert.equal(saved.practicalDrill.bankId, "business-fullscore");
     assert.equal(saved.practicalDrill.sessionSize, 134);
     assert.equal(saved.practicalDrill.queue.length, 134);

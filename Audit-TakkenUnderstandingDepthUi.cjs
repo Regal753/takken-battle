@@ -141,7 +141,7 @@ async function runDirectExplanationLoop(browser, baseUrl) {
   assert.equal(direct.overflow, 0);
 
   const firstSave = await savedState(page);
-  assert.equal(firstSave.state.stateSchemaVersion, 13);
+  assert.equal(firstSave.state.stateSchemaVersion, 15);
   assert.equal(firstSave.state.questionStats.b029.attempts, 1);
   assert.equal(firstSave.state.questionStats.b029.correct, 1);
   assert.equal(firstSave.state.questionStats.b029.clearDayKeys.length, 1);
@@ -223,7 +223,7 @@ async function runV7Migration(browser, baseUrl) {
   const page = await context.newPage();
   await gotoFresh(page, baseUrl, "direct-migrate-");
   const before = await savedState(page);
-  await page.evaluate(({ key, state }) => {
+  const legacyRaw = await page.evaluate(({ key, state }) => {
     state.stateSchemaVersion = 7;
     state.answered = null;
     state.questionStats = {
@@ -236,18 +236,26 @@ async function runV7Migration(browser, baseUrl) {
         lastClearAt: "2026-07-31T09:00:00+09:00"
       }
     };
-    localStorage.setItem(key, JSON.stringify(state));
+    const raw = JSON.stringify(state);
+    localStorage.setItem(key, raw);
+    return raw;
   }, before);
   await page.reload({ waitUntil: "networkidle" });
   const after = await savedState(page);
-  const migration = await page.evaluate((key) => ({
-    backupExists: Boolean(localStorage.getItem(`${key}-before-upgrade-v7-to-v12`)),
-    notice: document.querySelector("#saveTransferStatus")?.textContent || ""
-  }), after.key);
-  assert.equal(after.state.stateSchemaVersion, 13);
+  const migration = await page.evaluate(({ key, schemaVersion, expectedRaw }) => {
+    const backup = localStorage.getItem(`${key}-before-upgrade-v7-to-v${schemaVersion}`);
+    return {
+      backupExists: Boolean(backup),
+      backupExact: backup === expectedRaw,
+      backupSchema: schemaVersion,
+      notice: document.querySelector("#saveTransferStatus")?.textContent || ""
+    };
+  }, { key: after.key, schemaVersion: after.state.stateSchemaVersion, expectedRaw: legacyRaw });
+  assert.equal(after.state.stateSchemaVersion, 15);
   assert.deepEqual(after.state.questionStats.b029.correctDayKeys, ["2026-07-30", "2026-07-31"]);
   assert.deepEqual(after.state.questionStats.b029.clearDayKeys, ["2026-07-30", "2026-07-31"]);
   assert.equal(migration.backupExists, true);
+  assert.equal(migration.backupExact, true, "migration must retain the exact original schema7 raw save before normalization");
   assert.match(migration.notice, /更新前のセーブを自動退避/);
   await context.close();
   return migration;

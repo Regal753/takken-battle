@@ -133,7 +133,7 @@ async function main() {
         supplementIndex: ids.findIndex((id, index) => id.includes("-rs") && index < ids.length - 1)
       };
     }, key);
-    assert.equal(started.stateSchemaVersion, 13);
+    assert.equal(started.stateSchemaVersion, 15);
     assert.equal(started.bankVersion, 5);
     assert.equal(started.scope, "restrictions");
     assert.equal(started.sessionSize, 20);
@@ -664,7 +664,7 @@ async function main() {
     }, migrationKey);
     const migrated = await readSaved(migrationPage, migrationKey);
     assert.equal(migrated.practicalDrill.stage, "active");
-    assert.equal(migrated.stateSchemaVersion, 13);
+    assert.equal(migrated.stateSchemaVersion, 15);
     assert.equal(migrated.practicalDrill.bankVersion, 5);
     assert.deepEqual(migrated.practicalDrill.sessionIds, oldIds);
     assert.deepEqual(migrated.practicalDrill.queue, oldIds);
@@ -701,7 +701,7 @@ async function main() {
     });
     await importPage.waitForFunction(() => (document.querySelector("#saveTransferStatus")?.textContent || "").includes("引継ぎ完了"));
     const imported = await readSaved(importPage, importKey);
-    assert.equal(imported.stateSchemaVersion, 13);
+    assert.equal(imported.stateSchemaVersion, 15);
     assert.equal(imported.practicalDrill.bankVersion, 5);
     assert.deepEqual(imported.practicalDrill.queue, oldIds);
     assert.equal(imported.practicalDrill.currentAttempt, null);

@@ -40,7 +40,7 @@ if (practical.QUESTIONS.filter((question) => question.format === "単一選択")
   issues.push("practical bank must mix single-choice, combination, and count formats");
 }
 
-requireText(app, "const STATE_SCHEMA_VERSION = 13;", "save schema must be v13 for legal-restriction pre-answer evidence and confidence-order protection");
+requireText(app, "const STATE_SCHEMA_VERSION = 15;", "save schema must be v15 for hard-knock case history and existing confidence-order protection");
 requireText(app, "const PRACTICAL_SESSION_SIZES = Object.freeze([4, 10, 20, 45]);", "four-question unit session size is missing");
 requireText(app, "const FOUNDATION_UNIT_BATCH_MAX = 4;", "read-after batch cap is missing");
 requireText(app, "function foundationUnitBatchIds", "bounded read-after batching is missing");
@@ -88,7 +88,7 @@ if (app.includes("JULY_GATE_DEADLINE") || html.includes("7/31学習ゲート")) 
 requireText(html, "本文＋読後問題", "foundation-first mission label is missing");
 requireText(html, "8/31まで高速一周", "8/31 fast-first-pass copy is missing");
 requireText(html, "事例実戦は弱点診断として今すぐ利用可", "profile-aware case diagnostic availability copy is missing");
-requireText(html, "20260910-final-stretch-v53-c804bf4af7d5", "pass readiness cache version is missing");
+requireText(html, "20260911-archive-v56-08691ba9ae4e", "pass readiness cache version is missing");
 requireText(html, '<details class="quest-card"', "review-10 menu must be collapsed by default");
 requireText(html, 'id="nextButton"', "inline next-question button is missing");
 requireText(css, ".quest-card:not([open]) > .quest-card-body", "collapsed review menu rule is missing");
@@ -102,7 +102,7 @@ requireText(css, ".quest-card { order: 6; }", "question workspace order is missi
 
 const report = {
   status: issues.length ? "error" : "ok",
-  stateSchema: 13,
+  stateSchema: 15,
   textbookUnits: textbookUnits.length,
   textbookQuestions: textbookIds.length,
   practicalQuestions: practical.QUESTIONS.length,

@@ -40,12 +40,20 @@ function reviewUrl(baseUrl) {
   return url.toString();
 }
 
-async function waitForApp(page) {
+async function openLegacyDrawer(page) {
+  const drawer = page.locator("#businessLegacyDrawer");
+  await drawer.waitFor({ state: "attached" });
+  if (!await drawer.evaluate((node) => node.open)) await drawer.locator("summary").click();
+  await page.locator("#businessArchiveKnockStart").waitFor({ state: "visible" });
+}
+
+async function waitForApp(page, { openDrawer = true } = {}) {
   await page.waitForFunction(() => Boolean(
     window.TAKKEN_GUARANTEE_ASSOCIATION_DRILL?.QUESTIONS?.length === 33 &&
     document.querySelector("#guaranteeSpecialCard") &&
     document.querySelector("#guaranteeSpecialStart")
   ));
+  if (openDrawer) await openLegacyDrawer(page);
 }
 
 async function readSavedState(page) {
@@ -194,8 +202,10 @@ async function assertFocusedInViewport(page, expectedSelector) {
   page.on("console", (message) => { if (message.type() === "error") errors.push(`console: ${message.text()}`); });
   try {
     await page.goto(reviewUrl(local.baseUrl), { waitUntil: "networkidle", timeout: 20000 });
-    await waitForApp(page);
-    assert.equal(await page.locator("#guaranteeSpecialCard").isHidden(), true, "retired special card must stay out of the learner-facing dojo");
+    await waitForApp(page, { openDrawer: false });
+    assert.equal(await page.locator("#businessLegacyDrawer").evaluate((node) => node.open), false, "legacy drawer must be closed by default");
+    assert.equal(await page.locator("#guaranteeSpecialCard").isHidden(), true, "retired special card must stay out of the learner-facing dojo until the drawer is explicitly opened");
+    await openLegacyDrawer(page);
     assert.match(await page.locator("#guaranteeSpecialTitle").textContent(), /保証協会・営業保証金 特訓33問/);
     assert.equal(await page.locator("#guaranteeSpecialContacted").textContent(), "0 / 33");
     assert.equal(await page.locator("#guaranteeSpecialRetained").textContent(), "0 / 33");
@@ -206,6 +216,7 @@ async function assertFocusedInViewport(page, expectedSelector) {
     assert.equal(ids.length, 33);
     assert.ok(ids.every((id) => /^ga\d{3}$/.test(id)), `unexpected special ids: ${ids.join(", ")}`);
     assert.equal(new Set(ids).size, 33, "guarantee drill IDs must not duplicate");
+    assert.equal(await page.locator("#guaranteeSpecialCard").isHidden(), true, "retired guarantee card remains hidden even inside the explicitly opened legacy drawer");
     assert.equal(await page.locator("#guaranteeSpecialCard button:visible").count(), 0, "retired guarantee controls must not expose a touch target");
 
     const priorityWeakId = ids.at(-1);

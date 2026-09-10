@@ -102,10 +102,10 @@ const amendmentSpecs = [
   {
     key: "building-survey-2024-04-01",
     questionIds: ["b024"],
-    contentTerms: ["1年以内", "鉄筋コンクリート造", "鉄骨鉄筋コンクリート造", "共同住宅等", "2年以内"],
+    contentTerms: ["1年を経過していない", "鉄筋コンクリート造", "鉄骨鉄筋コンクリート造", "共同住宅等", "2年", "貸借も"],
     locatorTermsByQuestion: { b024: ["35条1項6号の2イ", "16条の2の2", "令和6年4月1日施行"] },
     sourcesByQuestion: { b024: MLIT_BUILDING_SURVEY_ORDER },
-    forbiddenTermsByQuestion: { b024: ["一定期間", "35条（貸借）"] }
+    forbiddenTermsByQuestion: { b024: ["一定期間", "貸借ではなく"] }
   },
   {
     key: "manager-ordinary-2026-04-01",
