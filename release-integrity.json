@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "20260910-case-exam-v52-0814e436f18a",
-  "digest": "sha256:0814e436f18a9e515af62d4efeb835d979afa63520c93cb4c54e0d25179a69e8",
+  "version": "20260910-case-exam-v52-11f4767b5e25",
+  "digest": "sha256:11f4767b5e2509d43da7cad4450d823e0d5e6209341e6c85e7007008e36bf679",
   "assetCount": 53,
   "assets": [
     {
@@ -210,7 +210,7 @@
     },
     {
       "path": "styles.css",
-      "sha256": "8bb0781aa5a416833b639b727f1bd7c280191d5306adb9d6574aa9a4b957659e"
+      "sha256": "edd5b12a26ca80501271bd7e29cb1a6294a6bff6b6c4cf98d0e3930553cdd4cb"
     },
     {
       "path": "subject-sprint-bank.js",

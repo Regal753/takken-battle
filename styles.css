@@ -748,6 +748,11 @@ body.has-answer-dock {
   gap: 12px;
 }
 
+.quiz-card > .quiz-meta[hidden] {
+  /* Results hide the old question header; flex/grid must not override hidden. */
+  display: none !important;
+}
+
 .battle-copy h2 {
   margin: 0;
   font-size: 20px;

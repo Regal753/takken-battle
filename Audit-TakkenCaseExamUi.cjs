@@ -52,6 +52,7 @@ async function main() {
       if (index < 49) await waitId(page, questions[index + 1].id);
     }
     await page.locator(".mock-results").waitFor();
+    assert.equal(await page.locator("#quizCard > .quiz-meta").isVisible(), false, "completed mock must hide the old question header");
     assert.match(await page.locator(".mock-score-hero strong").textContent(), /49\s*\/\s*50/);
     assert.match(await page.locator(".mock-evidence-note").first().textContent(), /難易度|換算/);
     assert.doesNotMatch(await page.locator(".mock-score-hero").textContent(), /演習安全圏\d/);
@@ -63,6 +64,7 @@ async function main() {
     assert.ok(Object.keys(saved.marked).length > 0, "case wrong answer must register base review");
     await page.reload({ waitUntil: "domcontentloaded" });
     assert.match(await page.locator(".mock-score-hero strong").textContent(), /49\s*\/\s*50/);
+    assert.equal(await page.locator("#quizCard > .quiz-meta").isVisible(), false, "result reload must not reveal initial 1/100 metadata");
     assert.equal(await page.locator("#mockOtherButton").count(), 0, "reload must not restore a duplicate alternate action");
     await page.locator(".mock-score-hero").scrollIntoViewIfNeeded();
     await page.screenshot({ path: path.join(output, "results-390.png"), fullPage: false });
@@ -97,11 +99,13 @@ async function main() {
     }, storageId);
     await page.reload({ waitUntil: "domcontentloaded" });
     assert.match(await page.locator(".mock-score-hero strong").textContent(), /46\s*\/\s*50/);
+    assert.equal(await page.locator("#quizCard > .quiz-meta").isVisible(), false, "legacy results must hide stale question metadata too");
     assert.match(await page.locator(".mock-score-hero").textContent(), /基礎・既習命題/);
     assert.match(await page.locator(".mock-result-meta").textContent(), /中断を含む/);
     assert.match(await page.locator("#mockOtherButton").textContent(), /事例実戦A/);
     // Start the new form from old results; test headers/choices stay in bounds.
     await page.locator("#mockOtherButton").click(); await waitId(page, questions[0].id);
+    assert.equal(await page.locator("#quizCard > .quiz-meta").isVisible(), true, "starting a new attempt must restore its question header");
     const geometry = [];
     for (const width of [320, 390, 480, 1440]) {
       await page.setViewportSize({ width, height: 900 });
