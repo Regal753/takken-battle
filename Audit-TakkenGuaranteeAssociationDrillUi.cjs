@@ -138,18 +138,41 @@ async function horizontalOverflow(page) {
 }
 
 async function assertFocusedInViewport(page, expectedSelector) {
-  await page.waitForFunction((selector) => {
-    const active = document.activeElement;
-    if (!active || !active.matches(selector)) return false;
-    const rect = active.getBoundingClientRect();
-    const height = window.visualViewport?.height || window.innerHeight;
-    return rect.top >= 0 && rect.top < height;
-  }, expectedSelector);
-  const position = await page.evaluate(() => {
-    const rect = document.activeElement.getBoundingClientRect();
-    return { id: document.activeElement.id, top: rect.top, bottom: rect.bottom, height: window.visualViewport?.height || window.innerHeight };
-  });
-  assert.ok(position.top >= 0 && position.top < position.height, `focused target outside viewport: ${JSON.stringify(position)}`);
+  try {
+    await page.waitForFunction((selector) => {
+      const active = document.activeElement;
+      if (!active || !active.matches(selector)) return false;
+      const rect = active.getBoundingClientRect();
+      const height = window.visualViewport?.height || window.innerHeight;
+      return rect.top >= 0 && rect.top < height;
+    }, expectedSelector);
+    const position = await page.evaluate((selector) => {
+      const active = document.activeElement;
+      const rect = active.getBoundingClientRect();
+      return { id: active.id, matchesExpected: active.matches(selector), top: rect.top, bottom: rect.bottom, height: window.visualViewport?.height || window.innerHeight };
+    }, expectedSelector);
+    assert.ok(position.matchesExpected, `focus moved before the viewport check: ${JSON.stringify(position)}`);
+    assert.ok(position.top >= 0 && position.top < position.height, `focused target outside viewport: ${JSON.stringify(position)}`);
+  } catch (error) {
+    const diagnostic = await page.evaluate((selector) => {
+      const rect = (node) => {
+        if (!node) return null;
+        const box = node.getBoundingClientRect();
+        return { top: box.top, bottom: box.bottom, height: box.height };
+      };
+      const active = document.activeElement;
+      const target = document.querySelector(selector);
+      const review = new URL(location.href).searchParams.get("review");
+      const saved = JSON.parse(localStorage.getItem(`takken-battle-study-clean-v2-hard-review-${review}`) || "{}");
+      return { selector, active: active?.outerHTML?.slice(0, 500), activeRect: rect(active), targetRect: rect(target),
+        stage: saved.practicalDrill?.stage, bank: saved.practicalDrill?.bankId,
+        sessionHidden: document.querySelector("#practicalDrillSession")?.hidden,
+        completeHidden: document.querySelector("#practicalDrillComplete")?.hidden,
+        trace: window.__guaranteeFocusTrace || [] };
+    }, expectedSelector);
+    console.error("GUARANTEE_FOCUS_DIAGNOSTIC", JSON.stringify(diagnostic));
+    throw error;
+  }
 }
 
 (async () => {
@@ -157,6 +180,15 @@ async function assertFocusedInViewport(page, expectedSelector) {
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: "Asia/Tokyo" });
   const page = await context.newPage();
+  await page.addInitScript(() => {
+    window.__guaranteeFocusTrace = [];
+    document.addEventListener("focusin", event => {
+      const node = event.target;
+      window.__guaranteeFocusTrace.push({ at: Math.round(performance.now()), id: node.id, tag: node.tagName,
+        text: node.textContent?.trim().slice(0, 65), top: node.getBoundingClientRect().top });
+      window.__guaranteeFocusTrace = window.__guaranteeFocusTrace.slice(-15);
+    });
+  });
   const errors = [];
   page.on("pageerror", (error) => errors.push(`page: ${error.message}`));
   page.on("console", (message) => { if (message.type() === "error") errors.push(`console: ${message.text()}`); });
@@ -327,6 +359,17 @@ async function assertFocusedInViewport(page, expectedSelector) {
 
     await page.locator("#practicalDrillChangeButton").click();
     await page.locator("#guaranteeSpecialCard").waitFor({ state: "hidden" });
+    const afterChange = await readSavedState(page);
+    assert.equal(afterChange.state.practicalDrill.stage, "idle", "changing settings must end the completed session");
+    // The retired full-round control is intentionally hidden. Launch its
+    // compatibility fixture from a fresh idle view, not while the real return
+    // route is still smoothly scrolling to the visible business-law dojo.
+    await page.reload({ waitUntil: "networkidle", timeout: 20000 });
+    await waitForApp(page);
+    const afterChangeReload = await readSavedState(page);
+    assert.equal(afterChangeReload.state.practicalDrill.stage, "idle");
+    assert.deepEqual(afterChangeReload.state.practicalDrill.history, afterChange.state.practicalDrill.history,
+      "preparing the retired full-round fixture must retain every answer and mastery record");
     await page.locator("#guaranteeSpecialFullStart").dispatchEvent("click");
     await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
     await assertFocusedInViewport(page, "[data-practical-forecast]");
