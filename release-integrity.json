@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "20260912-tax-polish-v59-843da601e72d",
-  "digest": "sha256:843da601e72d686c56c9d1438b790d59619cbc46111d9c10f72e81acf128aaad",
+  "version": "20260912-tax-polish-v59-2512ef2bbe6e",
+  "digest": "sha256:2512ef2bbe6ee8b612ddde921824c610f2d366514d0983bca79a12f56342634b",
   "assetCount": 66,
   "assets": [
     {
@@ -254,7 +254,7 @@
     },
     {
       "path": "styles.css",
-      "sha256": "260ea26fe1314a042b064e26ec1f73ea06d861d10ce0f79e22b77c55247482d2"
+      "sha256": "fc0c53e660dbc9640023296a27db6dff57e7a3d2b355b93662c3dd48223450d8"
     },
     {
       "path": "subject-sprint-bank.js",

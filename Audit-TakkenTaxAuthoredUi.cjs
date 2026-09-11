@@ -52,6 +52,19 @@ async function main(){
     await page.goto(`${server.url}?review=${review}&today=1`,{waitUntil:"networkidle"});await boot(page);
     await page.locator("#passPlanPanel").evaluate(node=>node.open=true);
     assert.match(await page.locator("#taxRevisionGuide").textContent(),/2026年4月1日/);
+    const guide=page.locator("#taxRevisionGuide");
+    await guide.locator("summary").click();
+    assert.equal(await guide.evaluate(node=>node.open),true);
+    for(const width of [1280,390,320]){
+      await page.setViewportSize({width,height:900});
+      const layout=await guide.evaluate(node=>({overflow:document.documentElement.scrollWidth-innerWidth,
+        links:[...node.querySelectorAll("a")].map(a=>({height:a.getBoundingClientRect().height,url:a.href,rel:a.rel}))}));
+      assert.ok(layout.overflow<=1,`open tax revision guide/${width}: overflow`);
+      assert.equal(layout.links.length,4);
+      assert.ok(layout.links.every(a=>a.height>=44&&a.url.startsWith("https://")&&a.rel.includes("noopener")),"official links must be visible, touch-sized and safe");
+      if(shots)await guide.screenshot({path:path.join(shots,`tax-revision-guide-${width}.png`)});
+    }
+    await guide.locator("summary").click();
     await page.locator("#taxAuthoredTen").click();await page.locator("#practicalDrillSession").waitFor({state:"visible"});
     const start=await saved(page,key),ids=start.practicalDrill.queue;
     assert.equal(start.stateSchemaVersion,17);assert.equal(ids.length,10);assert.equal(new Set(ids).size,10);
@@ -108,7 +121,7 @@ async function main(){
     await context.setOffline(true);await page.reload({waitUntil:"domcontentloaded"});await boot(page);
     assert.deepEqual((await saved(page,key)).practicalDrill.queue,restarted.queue,"offline tax session survives");
     assert.deepEqual(errors,[]);
-    console.log(JSON.stringify({status:"ok",newSet:10,topicCounts:counts,samples:exercised,viewports:[1280,390,320],answerReload:true,legacyTaxReload:true,newTopicRestart:true,offlineAssets:2,syntheticOnly:true}));
+    console.log(JSON.stringify({status:"ok",newSet:10,topicCounts:counts,samples:exercised,viewports:[1280,390,320],revisionGuideLinks:4,answerReload:true,legacyTaxReload:true,newTopicRestart:true,offlineAssets:2,syntheticOnly:true}));
   }finally{await browser.close();await server.close();}
 }
 main().catch(e=>{console.error(e.stack||e);process.exitCode=1;});
