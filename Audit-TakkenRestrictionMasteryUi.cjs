@@ -283,20 +283,59 @@ async function main() {
     await precisionChoice.click({ trial: true });
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const precisionViewportBefore = await page.evaluate((answerIndex) => {
+      window.__takkenPrecisionScrollOriginals = {
+        by: window.scrollBy, to: window.scrollTo, reveal: Element.prototype.scrollIntoView
+      };
+      window.__takkenPrecisionScrollCalls = { corrections: [], scrolls: [], reveals: [] };
+      window.scrollBy = function (...args) {
+        window.__takkenPrecisionScrollCalls.corrections.push(args);
+        return window.__takkenPrecisionScrollOriginals.by.apply(this, args);
+      };
+      window.scrollTo = function (...args) {
+        window.__takkenPrecisionScrollCalls.scrolls.push(args);
+        return window.__takkenPrecisionScrollOriginals.to.apply(this, args);
+      };
+      Element.prototype.scrollIntoView = function (...args) {
+        window.__takkenPrecisionScrollCalls.reveals.push(args);
+        return window.__takkenPrecisionScrollOriginals.reveal.apply(this, args);
+      };
       const node = document.querySelectorAll(".practical-drill-choice")[answerIndex];
       const rect = node.getBoundingClientRect();
       return { scrollY: window.scrollY, top: rect.top, bottom: rect.bottom, absoluteTop: window.scrollY + rect.top, viewport: innerHeight };
     }, precisionAnswer);
     const scrollBeforePrecisionAnswer = precisionViewportBefore.scrollY;
-    await precisionChoice.click();
+    const precisionChoiceBox = await precisionChoice.boundingBox();
+    assert.ok(precisionChoiceBox, "precision answer must have a visible click box");
+    await page.mouse.click(
+      precisionChoiceBox.x + precisionChoiceBox.width / 2,
+      precisionChoiceBox.y + precisionChoiceBox.height / 2,
+    );
     await page.locator("#practicalDrillFeedback").waitFor({ state: "visible" });
     await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     const precisionViewportAfter = await page.evaluate((answerIndex) => {
       const node = document.querySelectorAll(".practical-drill-choice")[answerIndex];
       const rect = node.getBoundingClientRect();
-      return { scrollY: window.scrollY, top: rect.top, bottom: rect.bottom, absoluteTop: window.scrollY + rect.top, viewport: innerHeight };
+      const result = {
+        scrollY: window.scrollY, top: rect.top, bottom: rect.bottom,
+        absoluteTop: window.scrollY + rect.top, viewport: innerHeight,
+        ...window.__takkenPrecisionScrollCalls,
+        activeId: document.activeElement?.id || ""
+      };
+      window.scrollBy = window.__takkenPrecisionScrollOriginals.by;
+      window.scrollTo = window.__takkenPrecisionScrollOriginals.to;
+      Element.prototype.scrollIntoView = window.__takkenPrecisionScrollOriginals.reveal;
+      delete window.__takkenPrecisionScrollOriginals;
+      delete window.__takkenPrecisionScrollCalls;
+      return result;
     }, precisionAnswer);
     const scrollAfterPrecisionAnswer = precisionViewportAfter.scrollY;
+    assert.equal(precisionViewportAfter.activeId, "practicalDrillFeedback", "precision feedback must still receive accessible focus");
+    assert.ok(precisionViewportAfter.corrections.length <= 2, "precision viewport correction must be bounded to two frames");
+    assert.ok(precisionViewportAfter.corrections.every(([x, y]) => x === 0 && Number.isFinite(y)), "precision viewport correction must remain vertical and finite");
+    assert.deepEqual(precisionViewportAfter.scrolls, [], "precision answer must not call window.scrollTo");
+    assert.deepEqual(precisionViewportAfter.reveals, [], "precision answer must not reveal feedback by scrolling");
+    assert.equal(await page.locator("#practicalDrillVerdict").getAttribute("role"), "status", "precision verdict must remain an announced status");
+    assert.equal(await page.locator("#practicalDrillVerdict").getAttribute("aria-live"), "polite", "precision verdict must remain politely announced");
     assert.ok(
       Math.abs(precisionViewportAfter.top - precisionViewportBefore.top) <= 2 &&
         precisionViewportAfter.top >= -1 && precisionViewportAfter.bottom <= precisionViewportAfter.viewport + 1,

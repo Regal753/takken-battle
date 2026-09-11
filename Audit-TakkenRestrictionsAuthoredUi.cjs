@@ -15,7 +15,7 @@ function serve() {
   });
   return new Promise(resolve=>server.listen(0,"127.0.0.1",()=>resolve({url:`http://127.0.0.1:${server.address().port}/`,close:()=>new Promise(done=>{server.closeAllConnections?.();server.close(done);})})));
 }
-const waitApp=page=>page.waitForFunction(()=>window.TAKKEN_RESTRICTIONS_AUTHORED_BANK?.QUESTIONS.length===72 && window.TAKKEN_SUBJECT_SPRINT_BANK?.QUESTIONS.length===174 && document.querySelector("#restrictionAuthoredTwenty"));
+const waitApp=page=>page.waitForFunction(()=>window.TAKKEN_RESTRICTIONS_AUTHORED_BANK?.QUESTIONS.length===72 && window.TAKKEN_SUBJECT_SPRINT_BANK?.QUESTIONS.length===198 && document.querySelector("#restrictionAuthoredTwenty"));
 async function state(page,key) { return page.evaluate(k=>JSON.parse(localStorage.getItem(k)),key); }
 async function expected(page,key) {
   return page.evaluate(k=>{

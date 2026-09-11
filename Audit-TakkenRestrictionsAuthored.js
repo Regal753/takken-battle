@@ -99,7 +99,7 @@ for (const [id, expected] of Object.entries(legacy.questions)) {
   assert.equal(digest(current),expected.canonical,`${id}: legacy canonical contract`);
   legacy.keys.forEach((key,i)=>assert.equal(digest(sprint.presentQuestion(current,key)),expected.presented[i],`${id}: legacy presentation ${key}`));
 }
-assert.equal(sprint.QUESTIONS.length,174);
+assert.equal(sprint.QUESTIONS.length,198);
 assert.equal(sprint.COVERAGE.bySection.restrictions,112);
 // Browser loader must fail closed for missing or corrupt author packs.
 const names=["TAKKEN_RESTRICTIONS_CASES_CITY_LAND","TAKKEN_RESTRICTIONS_CASES_BUILDING_READJUSTMENT","TAKKEN_RESTRICTIONS_CASES_AGRICULTURE_FILL"];

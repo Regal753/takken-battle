@@ -14,17 +14,23 @@
       try { return require("./restrictions-authored-bank.js"); } catch { return null; }
     })() : null
   );
-  const api = factory(root, supplement, authored);
+  const taxAuthored = root.TAKKEN_TAX_AUTHORED_BANK || root.window?.TAKKEN_TAX_AUTHORED_BANK || (
+    typeof require === "function" ? (() => {
+      try { return require("./tax-authored-bank.js"); } catch { return null; }
+    })() : null
+  );
+  const api = factory(root, supplement, authored, taxAuthored);
   if (typeof module === "object" && module.exports) module.exports = api;
   root.TAKKEN_SUBJECT_SPRINT_BANK = api;
   if (root.window && root.window !== root) root.window.TAKKEN_SUBJECT_SPRINT_BANK = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function createSubjectSprintBank(runtime, requiredSupplement, requiredAuthored) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function createSubjectSprintBank(runtime, requiredSupplement, requiredAuthored, requiredTaxAuthored) {
   const blueprint = runtime.TAKKEN_EXAM_BLUEPRINT || runtime.window?.TAKKEN_EXAM_BLUEPRINT;
   const baseQuestions = runtime.TAKKEN_EXAM_QUESTIONS || runtime.window?.TAKKEN_EXAM_QUESTIONS;
   const restrictionsSupplement = requiredSupplement || runtime.TAKKEN_RESTRICTIONS_SUPPLEMENT_BANK || runtime.window?.TAKKEN_RESTRICTIONS_SUPPLEMENT_BANK;
   const restrictionsAuthored = requiredAuthored || runtime.TAKKEN_RESTRICTIONS_AUTHORED_BANK || runtime.window?.TAKKEN_RESTRICTIONS_AUTHORED_BANK;
-  if (!blueprint || !baseQuestions || !restrictionsSupplement || !restrictionsAuthored) {
-    throw new Error("subject sprint bank requires the blueprint, base questions and restriction banks");
+  const taxAuthored = requiredTaxAuthored || runtime.TAKKEN_TAX_AUTHORED_BANK || runtime.window?.TAKKEN_TAX_AUTHORED_BANK;
+  if (!blueprint || !baseQuestions || !restrictionsSupplement || !restrictionsAuthored || !taxAuthored) {
+    throw new Error("subject sprint bank requires the blueprint, base questions and restriction banks plus the tax authored bank");
   }
   if (restrictionsSupplement.LEGAL_BASELINE !== "2026-04-01" || restrictionsSupplement.QUESTIONS.length !== 22) {
     throw new Error("restrictions supplement is incompatible");
@@ -32,7 +38,10 @@
   if (restrictionsAuthored.LEGAL_BASELINE !== "2026-04-01" || restrictionsAuthored.QUESTIONS.length !== 72) {
     throw new Error("restrictions authored bank is incompatible");
   }
-  const sourceQuestions = Object.freeze({ ...baseQuestions, ...restrictionsSupplement.QUESTIONS_BY_ID, ...restrictionsAuthored.QUESTIONS_BY_ID });
+  if (taxAuthored.LEGAL_BASELINE !== "2026-04-01" || taxAuthored.QUESTIONS.length !== 24) {
+    throw new Error("tax authored bank is incompatible");
+  }
+  const sourceQuestions = Object.freeze({ ...baseQuestions, ...restrictionsSupplement.QUESTIONS_BY_ID, ...restrictionsAuthored.QUESTIONS_BY_ID, ...taxAuthored.QUESTIONS_BY_ID });
 
   const VERSION = 5;
   const LEGAL_BASELINE = "2026-04-01";
@@ -69,7 +78,7 @@
 
   // Explicit source lists make every new chapter addition reviewable.
   const sourceGroups = Object.freeze([
-    ["taxOther", "tax", ["t001", "t002", "t003", "t004", "t005", "t006"]],
+    ["taxOther", "tax", ["t001", "t002", "t003", "t004", "t005", "t006", ...taxAuthored.QUESTION_IDS]],
     ["restrictions", "law", ["l001", "l002", "l003", "l004", "l005", "l006", "l007", "l008", "l009", "l010", "l011", "l012", "l013", "l014", "l015", "l016", "l101", "l102", "rs001", "rs002", "rs003", "rs004", "rs005", "rs006", "rs007", "rs008", "rs009", "rs010", "rs011", "rs012", "rs013", "rs014", "rs015", "rs016", "rs017", "rs018", "rs019", "rs020", "rs021", "rs022", ...restrictionsAuthored.QUESTION_IDS]],
     ["rights", "rights", ["r001", "r002", "r003", "r004", "r005", "r006", "r007", "r008", "r009", "r010", "r011", "r012", "r013", "r014", "r015", "r016", "r017", "r018", "r019", "r020", "r021", "r022", "r023", "r024", "r025", "r026", "r027", "r028", "r101", "r102", "r103", "r104", "r105", "r106", "r107", "r108", "r109", "r110", "r111", "r112", "r113", "r114", "r115", "r116"]],
     ["other", "other", ["o001", "o002", "o003", "o004", "o005", "o006", "o007", "o008", "o009", "o010", "o101", "o102"]]
@@ -83,7 +92,7 @@
   };
   const topicAliases = Object.freeze({
     ...baseTopicAliases,
-    ...Object.fromEntries(restrictionsAuthored.QUESTIONS.map((question) => [question.id, [question.tag, question.diagnosticTags]]))
+    ...Object.fromEntries([...restrictionsAuthored.QUESTIONS, ...taxAuthored.QUESTIONS].map((question) => [question.id, [question.tag, question.diagnosticTags]]))
   });
   if (clean(blueprint.legalBaseline) !== LEGAL_BASELINE) throw new Error("subject sprint bank legal baseline is incompatible");
   const definitions = Object.freeze(sourceGroups.flatMap(([sectionId, prefix, sourceIds]) => sourceIds.map((baseId, index) => {

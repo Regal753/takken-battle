@@ -10,11 +10,11 @@ const releaseIntegrity = require("./release-integrity.json");
 const ROOT = __dirname;
 const EXPECTED_CACHE_VERSION = releaseIntegrity.version;
 releaseIntegrityTools.assertVersionMatchesDigest(releaseIntegrity.version, releaseIntegrity.digest);
-// v58 adds 72 authored restrictions and their builder (~214 KB raw / 57.5 KB
-// gzip). Retain all prior banks and saved-answer contracts; the extra allowance
-// is scoped to this measured content expansion, not general feature growth.
-const MAX_PUBLIC_JS_BYTES = 2_480_000;
-const MAX_PUBLIC_JS_GZIP_BYTES = 635_000;
+// v59 adds only 24 authored tax cases and their builder: 81,533 raw / 22,674
+// level-9 gzip bytes. Add that measured content cost (rounded up to 1 KB) to
+// the v58 limits; retain its existing headroom and every old saved-answer bank.
+const MAX_PUBLIC_JS_BYTES = 2_562_000;
+const MAX_PUBLIC_JS_GZIP_BYTES = 658_000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
   "pwa-runtime.js",

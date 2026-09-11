@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { extname } from "node:path";
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260912-restrictions-v58-c1c17441255c";
+const expectedVersion = process.argv[3] || "20260912-tax-polish-v59-843da601e72d";
 const attempts = Math.max(1, Number(process.env.TAKKEN_DEPLOY_VERIFY_ATTEMPTS) || 12);
 const intervalMs = Math.max(0, Number(process.env.TAKKEN_DEPLOY_VERIFY_INTERVAL_MS) || 10000);
 assert.ok(pageUrl, "usage: node scripts/verify-deployed-page.mjs <page-url> [expected-version]");
@@ -37,7 +37,7 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const response = await fetch(url, { redirect: "follow", headers: { "cache-control": "no-cache", "user-agent": "takken-battle-deploy-verifier" } });
     const html = await response.text();
     assert.equal(response.status, 200, `HTTP ${response.status}`);
-    for (const id of ["mockAButton", "mockBButton", "mockCButton", "passPlanPanel", "passReadinessCard", "todayCommandPanel", "officialDrillOpenButton", "saveRestorePreviousButton", "businessMasteryPanel", "businessKnockPanel", "businessLegacyDrawer", "businessArchiveKnockStart", "restrictionAuthoredTwenty"]) {
+    for (const id of ["mockAButton", "mockBButton", "mockCButton", "passPlanPanel", "passReadinessCard", "todayCommandPanel", "officialDrillOpenButton", "saveRestorePreviousButton", "businessMasteryPanel", "businessKnockPanel", "businessLegacyDrawer", "businessArchiveKnockStart", "restrictionAuthoredTwenty", "taxAuthoredTen", "taxRevisionGuide"]) {
       assert.match(html, new RegExp(`id="${id}"`), `${id} missing`);
     }
     assert.match(html, /name="takken-runtime" content="public-static"/, "public-static marker missing");
@@ -78,7 +78,7 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     assert.equal(`sha256:${sha256(Buffer.from(aggregate, "utf8"))}`, integrity.digest, "deployed aggregate release digest mismatch");
     const appReference = references.find((reference) => /(?:^|\/)app\.js\?/.test(reference));
     const appCode = await fetchAsset(appReference, response.url, "app");
-    assert.match(appCode, /const STATE_SCHEMA_VERSION = 16/, "save schema v16 missing");
+    assert.match(appCode, /const STATE_SCHEMA_VERSION = 17/, "save schema v17 missing");
     assert.match(appCode, /function renderPassReadinessCard/, "readiness renderer missing");
     console.log(JSON.stringify({ status: "ok", pageUrl: response.url, expectedVersion, attempt, references: references.length, htmlLength: html.length }));
     process.exit(0);

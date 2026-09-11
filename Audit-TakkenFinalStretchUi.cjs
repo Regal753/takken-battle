@@ -86,7 +86,7 @@ async function main() {
     const sprint = (await stored(gap.page)).practicalDrill;
     assert.equal(sprint.bankId, "subject-sprint");
     assert.equal(sprint.scope, "taxOther");
-    assert.equal(sprint.sessionSize, 6);
+    assert.equal(sprint.sessionSize, 6, "daily catch-up remains six; the separate normal/new tax launchers offer ten");
     await seed(gap.page, { tax: 6, other: 12, minutes: 75 });
     assert.equal(await gap.page.locator("#todayCommandStartButton").isVisible(), true, "unfinished retry/session must remain resumable even after counts are reached");
     assert.equal(await gap.page.locator("#todayCommandPanel").evaluate(n => n.classList.contains("is-complete")), false);

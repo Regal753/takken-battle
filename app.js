@@ -31,6 +31,7 @@
   const GUARANTEE_ASSOCIATION_DRILL = window.TAKKEN_GUARANTEE_ASSOCIATION_DRILL;
   const SUBJECT_SPRINT_BANK = window.TAKKEN_SUBJECT_SPRINT_BANK;
   const RESTRICTIONS_AUTHORED_BANK = window.TAKKEN_RESTRICTIONS_AUTHORED_BANK;
+  const TAX_AUTHORED_BANK = window.TAKKEN_TAX_AUTHORED_BANK;
   const PASS_READINESS = window.TAKKEN_PASS_READINESS;
   const EXAM_CURRENT_YEAR = window.TAKKEN_EXAM_CURRENT_YEAR_2026;
   const PRACTICAL_QUESTIONS = PRACTICAL_VARIATIONS?.QUESTIONS || [];
@@ -50,8 +51,12 @@
   ]);
   const isHardBusinessQuestionId = (id) => BUSINESS_HARD_CANONICAL_IDS.includes(id);
   const GUARANTEE_SPECIAL_EXPECTED_QUESTIONS = 33;
-  const SUBJECT_SPRINT_EXPECTED_QUESTIONS = 174;
+  const SUBJECT_SPRINT_EXPECTED_QUESTIONS = 198;
   const SUBJECT_SPRINT_RESTRICTIONS_SESSION_SIZE = 20;
+  const SUBJECT_SPRINT_TAX_SESSION_SIZE = 10;
+  const SUBJECT_SPRINT_TAX_TOPICS = Object.freeze({
+    authored: Object.freeze({ id: "authored", label: "税の新作24問", sourceQuestionIds: Object.freeze([...(TAX_AUTHORED_BANK?.QUESTION_IDS || [])]) })
+  });
   const RESTRICTION_EXAM_SESSION_SIZE = 8;
   const RESTRICTION_EXAM_TARGET_MINUTES = 12;
   const RESTRICTION_EXAM_TARGET_MS = RESTRICTION_EXAM_TARGET_MINUTES * 60 * 1000;
@@ -407,7 +412,8 @@
   // v15 protects the added hard55 IDs from schema14 clients that only know hard54.
   // v16 protects rc58 authored restriction IDs from an already-open v57 tab.
   // The sprint presentation version stays 5 so old in-progress answers survive.
-  const STATE_SCHEMA_VERSION = 16;
+  // v17 also protects the tc59 tax cases from clients that only know v58.
+  const STATE_SCHEMA_VERSION = 17;
   // Only runtimes older than v11 could strip ga001..ga020 from practicalDrill.
   // Do not tie this recovery boundary to the current schema: later schema
   // upgrades must keep the live v11+ history authoritative over its snapshot.
@@ -8691,6 +8697,7 @@
   }
 
   function subjectSprintTopicDefinition(scope, topicId) {
+    if (scope === "taxOther") return SUBJECT_SPRINT_TAX_TOPICS[String(topicId || "")] || null;
     if (scope !== "restrictions") return null;
     const topic = SUBJECT_SPRINT_RESTRICTION_TOPICS[String(topicId || "")];
     return topic || null;
@@ -8702,11 +8709,11 @@
   }
 
   function subjectSprintSessionTopic(drill = state.practicalDrill) {
-    if (drill?.bankId !== SUBJECT_SPRINT_BANK_ID || drill?.scope !== "restrictions") return null;
+    if (drill?.bankId !== SUBJECT_SPRINT_BANK_ID || !["restrictions", "taxOther"].includes(drill?.scope)) return null;
     const token = String(drill.presentationKey || "")
       .split(":")
       .find((part) => part.startsWith("topic-"));
-    return subjectSprintTopicDefinition("restrictions", token?.slice(6));
+    return subjectSprintTopicDefinition(drill.scope, token?.slice(6));
   }
 
   function isRestrictionExamDrill(drill = state.practicalDrill) {
@@ -8805,10 +8812,10 @@
       units,
       { ...state.practicalDrill, bankId: SUBJECT_SPRINT_BANK_ID }
     );
-    if (scope === "restrictions" && topic?.id === "authored") {
-      // Every fresh daily set spans the six laws. Keep the existing unseen /
-      // retry ranking within each law, without letting larger packs crowd out
-      // agriculture, embankments, readjustment or land-transaction notices.
+    if (["restrictions", "taxOther"].includes(scope) && topic?.id === "authored") {
+      // Fresh sets span all six laws or five taxes. Preserve unseen / retry
+      // ranking within each group without letting larger packs crowd out
+      // the smaller topics.
       const pools = new Map();
       for (const id of rankedIds) {
         const anchor = SUBJECT_SPRINT_QUESTION_BY_ID[id].sourceAnchor;
@@ -9677,8 +9684,8 @@
   function currentPracticalInputTarget(drill = state.practicalDrill) {
     if (!drill || !["active", "retry"].includes(drill.stage)) return null;
     const currentId = drill.queue[drill.position];
-    const unreadAuthoredRestriction = SUBJECT_SPRINT_QUESTION_BY_ID[currentId]?.authoredCase && !drill.preAnswerConfidence;
-    if (!drill.currentAttempt && (isHardBusinessQuestionId(currentId) || unreadAuthoredRestriction)) {
+    const unreadAuthoredCase = SUBJECT_SPRINT_QUESTION_BY_ID[currentId]?.authoredCase && !drill.preAnswerConfidence;
+    if (!drill.currentAttempt && (isHardBusinessQuestionId(currentId) || unreadAuthoredCase)) {
       return elements.practicalDrillPrompt;
     }
     if (practicalForecastRequired(drill) && !drill.preAnswerConfidence) {
@@ -10692,6 +10699,7 @@
     ).length;
     const defaultSessionSize = normalizedScope === "restrictions"
       ? Math.min(SUBJECT_SPRINT_RESTRICTIONS_SESSION_SIZE, eligibleCount)
+      : normalizedScope === "taxOther" ? Math.min(SUBJECT_SPRINT_TAX_SESSION_SIZE, eligibleCount)
       : eligibleCount;
     const sessionSize = Number.isInteger(Number(requestedSize)) && Number(requestedSize) > 0
       ? Math.min(eligibleCount, Number(requestedSize))
@@ -10956,6 +10964,9 @@
       : "";
     if (forecastSession && !predictedConfidence) return;
     if (restrictionGroundingRequired(drill) && !restrictionGroundingComplete(question)) return;
+    const selectedChoiceTop = elements.practicalDrillChoices
+      ?.querySelectorAll(".practical-drill-choice")[selected]
+      ?.getBoundingClientRect().top;
     const recordedConfidence = predictedConfidence === "confident" ? "confident" : "uncertain";
     const predictedWithoutGrounding = forecastSession && predictedConfidence !== "confident";
     const previousState = cloneStateForSync(state);
@@ -11023,11 +11034,25 @@
       return;
     }
     clearPracticalDrillSaveError();
+    // Saving can replace state with its normalized snapshot.
+    const answeredDrill = state.practicalDrill;
+    const answeredAttempt = answeredDrill.currentAttempt;
     renderPracticalDrill();
     renderBusinessMastery();
     renderPassPlan();
+    const keepSelectedChoiceInPlace = () => {
+      if (state.practicalDrill !== answeredDrill || answeredDrill.currentAttempt !== answeredAttempt ||
+          answeredAttempt?.id !== question.id || !Number.isFinite(selectedChoiceTop)) return;
+      const renderedChoice = elements.practicalDrillChoices
+        ?.querySelectorAll(".practical-drill-choice")[selected];
+      const delta = renderedChoice?.getBoundingClientRect().top - selectedChoiceTop;
+      if (Number.isFinite(delta) && Math.abs(delta) > 1) window.scrollBy(0, delta);
+    };
     window.requestAnimationFrame(() => {
       elements.practicalDrillFeedback?.focus({ preventScroll: true });
+      keepSelectedChoiceInPlace();
+      // Forecast/grounding panels can collapse before native anchoring settles.
+      window.requestAnimationFrame(keepSelectedChoiceInPlace);
     });
   }
 

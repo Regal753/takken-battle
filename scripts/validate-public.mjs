@@ -37,6 +37,7 @@ const required = [
   "reiwa-question-view.js",
   "restrictions-supplement-bank.js",
   "restrictions-cases-city-land.js", "restrictions-cases-building-readjustment.js", "restrictions-cases-agriculture-fill.js", "restrictions-authored-bank.js",
+  "tax-cases-v59.js", "tax-authored-bank.js",
   "Audit-TakkenRestrictionsAuthored.js", "Audit-TakkenRestrictionsAuthoredUi.cjs",
   "subject-sprint-bank.js",
   "pass-readiness.js",
@@ -123,11 +124,11 @@ const pagesWorkflow = text(".github/workflows/pages.yml");
 const ciWorkflow = text(".github/workflows/ci.yml");
 
 assert.match(index, /name="takken-runtime" content="public-static"/);
-assert.match(index, /manifest\.webmanifest\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /pwa-runtime\.js\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(text("service-worker.js"), /const VERSION = "20260912-restrictions-v58-c1c17441255c"/);
-assert.match(manifest, /pwa-icon-192\.svg\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(manifest, /pwa-icon-512\.svg\?v=20260912-restrictions-v58-c1c17441255c/);
+assert.match(index, /manifest\.webmanifest\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /pwa-runtime\.js\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(text("service-worker.js"), /const VERSION = "20260912-tax-polish-v59-843da601e72d"/);
+assert.match(manifest, /pwa-icon-192\.svg\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(manifest, /pwa-icon-512\.svg\?v=20260912-tax-polish-v59-843da601e72d/);
 assert.match(app, /const PUBLIC_STATIC_MODE/);
 assert.match(app, /function publicTodayQuest/);
 assert.match(app, /const DEFAULT_STUDY_SCOPE = "business"/);
@@ -166,7 +167,7 @@ assert.match(app, /各記述を1つずつ判定/);
 assert.match(text("styles.css"), /\.practical-statement-review-card/);
 assert.match(text("business-fullscore-bank.js"), /function sourceStatementExplanations/);
 assert.match(app, /const PRACTICAL_SESSION_SIZES = Object\.freeze\(\[4, 10, 20, 45\]\)/);
-assert.match(app, /const STATE_SCHEMA_VERSION = 16/);
+assert.match(app, /const STATE_SCHEMA_VERSION = 17/);
 assert.match(app, /const BUSINESS_FULLSCORE_EXPECTED_QUESTIONS = 134/);
 assert.match(app, /const OFFICIAL_EXAM_EVIDENCE_VERSION = 3/);
 assert.match(app, /const OFFICIAL_DAILY_DRILL_DEFINITIONS/);
@@ -265,19 +266,19 @@ assert.match(index, /① 宅建業法を固める/);
 assert.match(index, /② 第2分冊・権利関係を固める/);
 assert.match(index, /③ 法令・税その他へ進む/);
 assert.match(index, /④ 全分野を混ぜる/);
-assert.match(index, /styles\.css\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /reiwa-exam\.css\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /current-law-source-ledger\.js\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /reiwa-exam-bank\.js\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /reiwa-question-view\.js\?v=20260912-restrictions-v58-c1c17441255c/);
+assert.match(index, /styles\.css\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /reiwa-exam\.css\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /current-law-source-ledger\.js\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /reiwa-exam-bank\.js\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /reiwa-question-view\.js\?v=20260912-tax-polish-v59-843da601e72d/);
 assert.ok(
   index.indexOf("current-law-source-ledger.js") < index.indexOf("reiwa-exam-bank.js")
     && index.indexOf("reiwa-exam-bank.js") < index.indexOf("reiwa-question-view.js")
     && index.indexOf("reiwa-question-view.js") < index.indexOf("app.js"),
   "Reiwa current-law sources, bank, and view must load before the app",
 );
-assert.match(index, /restrictions-supplement-bank\.js\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /subject-sprint-bank\.js\?v=20260912-restrictions-v58-c1c17441255c/);
+assert.match(index, /restrictions-supplement-bank\.js\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /subject-sprint-bank\.js\?v=20260912-tax-polish-v59-843da601e72d/);
 assert.ok(
   index.indexOf("restrictions-supplement-bank.js") < index.indexOf("subject-sprint-bank.js"),
   "restrictions supplement must load before the subject sprint bank",
@@ -287,22 +288,22 @@ for (const [position, asset] of restrictionAssets.entries()) {
   assert.ok(index.includes(`${asset}?v=`), `missing authored restriction dependency: ${asset}`);
   if (position) assert.ok(index.indexOf(restrictionAssets[position - 1]) < index.indexOf(asset), `authored dependency order: ${asset}`);
 }
-assert.match(index, /pass-readiness\.js\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /exam-current-year-2026\.js\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /official-topic-map\.js\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /business-mastery\.js\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /business-knock\.js\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /business-pace\.js\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /business-fullscore-supplement\.js\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /business-fullscore-bank\.js\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /guarantee-association-drill\.js\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /practical-question-bank\.js\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /calculation-drill\.js\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /app\.js\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /save-store\.js\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /official-exam-data\.js\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /official-law-baseline\.js\?v=20260912-restrictions-v58-c1c17441255c/);
-assert.match(index, /state-sync\.js\?v=20260912-restrictions-v58-c1c17441255c/);
+assert.match(index, /pass-readiness\.js\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /exam-current-year-2026\.js\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /official-topic-map\.js\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /business-mastery\.js\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /business-knock\.js\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /business-pace\.js\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /business-fullscore-supplement\.js\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /business-fullscore-bank\.js\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /guarantee-association-drill\.js\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /practical-question-bank\.js\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /calculation-drill\.js\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /app\.js\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /save-store\.js\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /official-exam-data\.js\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /official-law-baseline\.js\?v=20260912-tax-polish-v59-843da601e72d/);
+assert.match(index, /state-sync\.js\?v=20260912-tax-polish-v59-843da601e72d/);
 assert.match(index, /save-transfer\.js/);
 assert.doesNotMatch(index, /href="\.\/study-state\//);
 assert.doesNotMatch(index, /understanding-system\.js/);
@@ -373,7 +374,7 @@ assert.match(ciWorkflow, /node Audit-TakkenCurrentLawSources\.js/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-page\.mjs/);
 assert.match(pagesWorkflow, /node scripts\/verify-deployed-browser\.cjs/);
 assert.match(pagesWorkflow, /playwright@1\.62\.1/);
-assert.match(pagesWorkflow, /20260912-restrictions-v58-c1c17441255c/);
+assert.match(pagesWorkflow, /20260912-tax-polish-v59-843da601e72d/);
 assert.match(pagesWorkflow, /node scripts\/assemble-site\.mjs/);
 assert.match(ciWorkflow, /node Audit-TakkenPwaOffline\.cjs/);
 assert.match(ciWorkflow, /node Audit-TakkenSaveLeaseRaceUi\.cjs/);

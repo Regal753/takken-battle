@@ -412,34 +412,69 @@ async function presentedFixture(page) {
     assert.equal(await page.locator("#practicalDrillDiscardButton").textContent(), "セットを破棄");
     assert.equal(await page.evaluate(() => document.activeElement?.id), "practicalDrillPrompt", "hard start must show the beginning of the scenario");
     const commandQuestion = await currentPresented(page);
-    await page.locator(".practical-drill-choice").nth(commandQuestion.answer).scrollIntoViewIfNeeded();
-    const practicalAnswerBefore = await page.evaluate(() => {
+    const commandChoice = page.locator(".practical-drill-choice").nth(commandQuestion.answer);
+    await page.evaluate(() => document.fonts.ready);
+    await commandChoice.scrollIntoViewIfNeeded();
+    await commandChoice.click({ trial: true });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const practicalAnswerBefore = await page.evaluate((answerIndex) => {
       window.__takkenOriginalPracticalScrollTo = window.scrollTo;
+      window.__takkenOriginalPracticalScrollBy = window.scrollBy;
+      window.__takkenOriginalPracticalReveal = Element.prototype.scrollIntoView;
       window.__takkenPracticalAnswerScrollCalls = [];
+      window.__takkenPracticalAnswerCorrections = [];
+      window.__takkenPracticalAnswerReveals = [];
       window.scrollTo = function (...args) {
         window.__takkenPracticalAnswerScrollCalls.push(args);
         return window.__takkenOriginalPracticalScrollTo.apply(window, args);
       };
-      return window.scrollY;
-    });
-    await page.locator(".practical-drill-choice").nth(commandQuestion.answer).click();
+      window.scrollBy = function (...args) {
+        window.__takkenPracticalAnswerCorrections.push(args);
+        return window.__takkenOriginalPracticalScrollBy.apply(this, args);
+      };
+      Element.prototype.scrollIntoView = function (...args) {
+        window.__takkenPracticalAnswerReveals.push(args);
+        return window.__takkenOriginalPracticalReveal.apply(this, args);
+      };
+      const rect = document.querySelectorAll(".practical-drill-choice")[answerIndex].getBoundingClientRect();
+      return { scrollY: window.scrollY, top: rect.top, bottom: rect.bottom, viewport: innerHeight };
+    }, commandQuestion.answer);
+    const commandChoiceBox = await commandChoice.boundingBox();
+    assert.ok(commandChoiceBox, "practical answer must have a visible click box");
+    await page.mouse.click(commandChoiceBox.x + commandChoiceBox.width / 2, commandChoiceBox.y + commandChoiceBox.height / 2);
     await page.locator("#practicalDrillFeedback").waitFor({ state: "visible" });
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    const practicalAnswerAfter = await page.evaluate(() => {
+    const practicalAnswerAfter = await page.evaluate((answerIndex) => {
+      const rect = document.querySelectorAll(".practical-drill-choice")[answerIndex].getBoundingClientRect();
       const result = {
         scrollY: window.scrollY,
+        top: rect.top, bottom: rect.bottom, viewport: innerHeight,
         calls: [...(window.__takkenPracticalAnswerScrollCalls || [])],
+        corrections: [...window.__takkenPracticalAnswerCorrections],
+        reveals: [...window.__takkenPracticalAnswerReveals],
         activeId: document.activeElement?.id || ""
       };
       window.scrollTo = window.__takkenOriginalPracticalScrollTo;
+      window.scrollBy = window.__takkenOriginalPracticalScrollBy;
+      Element.prototype.scrollIntoView = window.__takkenOriginalPracticalReveal;
       delete window.__takkenOriginalPracticalScrollTo;
       delete window.__takkenPracticalAnswerScrollCalls;
+      delete window.__takkenOriginalPracticalScrollBy;
+      delete window.__takkenOriginalPracticalReveal;
+      delete window.__takkenPracticalAnswerCorrections;
+      delete window.__takkenPracticalAnswerReveals;
       return result;
-    });
+    }, commandQuestion.answer);
     assert.equal(practicalAnswerAfter.activeId, "practicalDrillFeedback");
     assert.deepEqual(practicalAnswerAfter.calls, [], `practical answer must not force window.scrollTo: ${JSON.stringify(practicalAnswerAfter)}`);
+    assert.deepEqual(practicalAnswerAfter.reveals, [], "practical answer must not reveal feedback by scrolling");
+    assert.ok(practicalAnswerAfter.corrections.length <= 2, "practical viewport correction must be bounded to two frames");
+    assert.ok(practicalAnswerAfter.corrections.every(([x, y]) => x === 0 && Number.isFinite(y)), "practical correction must remain vertical and finite");
+    assert.equal(await page.locator("#practicalDrillVerdict").getAttribute("role"), "status");
+    assert.equal(await page.locator("#practicalDrillVerdict").getAttribute("aria-live"), "polite");
     assert.ok(
-      Math.abs(practicalAnswerAfter.scrollY - practicalAnswerBefore) <= 1,
+      Math.abs(practicalAnswerAfter.top - practicalAnswerBefore.top) <= 2 &&
+        practicalAnswerAfter.top >= -1 && practicalAnswerAfter.bottom <= practicalAnswerAfter.viewport + 1,
       `practical answer must preserve the selected-choice viewport: ${JSON.stringify({ practicalAnswerBefore, practicalAnswerAfter })}`
     );
     await page.reload({ waitUntil: "networkidle" });
@@ -649,7 +684,7 @@ async function presentedFixture(page) {
     await page.reload({ waitUntil: "networkidle" });
     await waitForApp(page);
     const migratedOld = await readSavedState(page);
-    assert.equal(migratedOld.stateSchemaVersion, 16, "the answered v53 session must migrate to schema16");
+    assert.equal(migratedOld.stateSchemaVersion, 17, "the answered v53 session must migrate to schema17");
     assert.deepEqual(migratedOld.practicalDrill.queue, oldSaved.practicalDrill.queue);
     assert.deepEqual(migratedOld.practicalDrill.currentAttempt, oldSaved.practicalDrill.currentAttempt);
     assert.deepEqual(migratedOld.practicalDrill.history, oldSaved.practicalDrill.history);
@@ -658,7 +693,7 @@ async function presentedFixture(page) {
     await cancelKnock(page);
 
     // A v54/schema14 hard54 set keeps its nonzero position, rotated choices,
-    // answered state, history, and exact pre-upgrade backup in schema16.
+    // answered state, history, and exact pre-upgrade backup in schema17.
     await forcePracticalQuestion(page, { bankId: "business-fullscore", id: "hard54-001", presentationKey: "v54-saved-hard54-order" });
     await page.evaluate(() => {
       const key = Object.keys(localStorage).find(key => /^takken-battle-study-clean-v2-hard-review-/.test(key) && !/backup|-before-|previous|corrupt|event-outbox/.test(key));
@@ -685,11 +720,11 @@ async function presentedFixture(page) {
     });
     await page.reload({ waitUntil: "networkidle" });
     const migratedV54 = await readSavedState(page);
-    assert.equal(migratedV54.stateSchemaVersion, 16);
+    assert.equal(migratedV54.stateSchemaVersion, 17);
     assert.deepEqual(migratedV54.practicalDrill, v54Saved.practicalDrill, "schema14 hard54 progress must survive without queue, answer, rotation, or history changes");
     assert.deepEqual(await currentPresented(page), v54Question);
     assert.equal(await page.locator("#practicalDrillFeedback").isVisible(), true);
-    assert.equal(await page.evaluate(({ key }) => localStorage.getItem(`${key}-before-upgrade-v14-to-v16`), v54Raw), v54Raw.raw);
+    assert.equal(await page.evaluate(({ key }) => localStorage.getItem(`${key}-before-upgrade-v14-to-v17`), v54Raw), v54Raw.raw);
     await cancelKnock(page);
 
     // The direct fresh CTA ignores a basic/weak preset and completed daily20:
