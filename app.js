@@ -10956,6 +10956,9 @@
       : "";
     if (forecastSession && !predictedConfidence) return;
     if (restrictionGroundingRequired(drill) && !restrictionGroundingComplete(question)) return;
+    const selectedChoiceTop = elements.practicalDrillChoices
+      ?.querySelectorAll(".practical-drill-choice")[selected]
+      ?.getBoundingClientRect().top;
     const recordedConfidence = predictedConfidence === "confident" ? "confident" : "uncertain";
     const predictedWithoutGrounding = forecastSession && predictedConfidence !== "confident";
     const previousState = cloneStateForSync(state);
@@ -11023,11 +11026,25 @@
       return;
     }
     clearPracticalDrillSaveError();
+    // Saving can replace state with its normalized snapshot.
+    const answeredDrill = state.practicalDrill;
+    const answeredAttempt = answeredDrill.currentAttempt;
     renderPracticalDrill();
     renderBusinessMastery();
     renderPassPlan();
+    const keepSelectedChoiceInPlace = () => {
+      if (state.practicalDrill !== answeredDrill || answeredDrill.currentAttempt !== answeredAttempt ||
+          answeredAttempt?.id !== question.id || !Number.isFinite(selectedChoiceTop)) return;
+      const renderedChoice = elements.practicalDrillChoices
+        ?.querySelectorAll(".practical-drill-choice")[selected];
+      const delta = renderedChoice?.getBoundingClientRect().top - selectedChoiceTop;
+      if (Number.isFinite(delta) && Math.abs(delta) > 1) window.scrollBy(0, delta);
+    };
     window.requestAnimationFrame(() => {
       elements.practicalDrillFeedback?.focus({ preventScroll: true });
+      keepSelectedChoiceInPlace();
+      // Forecast/grounding panels can collapse before native anchoring settles.
+      window.requestAnimationFrame(keepSelectedChoiceInPlace);
     });
   }
 
