@@ -1002,41 +1002,69 @@ async function presentedFixture(page) {
       text: group.text
     })), "repeated premises must render once with the correct choice numbers");
     const singleChoices = page.locator(".practical-drill-choice");
+    const singleChoiceOptions = page.locator(".practical-choice-option");
     assert.equal(await singleChoices.count(), 4);
-    assert.deepEqual(await singleChoices.evaluateAll((buttons) => buttons.map((button) => ({
-      structured: button.getAttribute("data-structured"),
-      aria: button.getAttribute("aria-label"),
-      describedBy: button.getAttribute("aria-describedby"),
-      premise: button.querySelector(".practical-choice-premise")?.textContent.replace(/^前提/, "") || null,
-      judgment: button.querySelector(".practical-choice-judgment")?.textContent.replace(/^判断/, "")
-    }))), singleExpected.choices.map((_choice, index) => ({
-      structured: "true",
-      aria: null,
-      describedBy: expectedShared.filter((group) => group.choiceIndexes.includes(index)).map((group) => group.id).join(" ") || null,
-      premise: singleExpected.displayModel.choiceBlocks[index].premises.filter((text) => !sharedTexts.has(text)).join("／") || null,
-      judgment: singleExpected.displayModel.choiceBlocks[index].judgment
-    })), "single choices must preserve their presented order and matching structured source block");
+    assert.equal(
+      await singleChoiceOptions.count(),
+      singleExpected.displayModel.choiceBlocks.filter((block) => block.premises.some((text) => !sharedTexts.has(text))).length,
+      "only structured choices with a unique premise need a noninteractive option wrapper"
+    );
+    assert.deepEqual(await singleChoices.evaluateAll((buttons) => buttons.map((button, index) => {
+      const option = button.closest(".practical-choice-option");
+      const premise = option?.querySelector(".practical-choice-premise");
+      return {
+        structured: button?.getAttribute("data-structured") || null,
+        aria: button?.getAttribute("aria-label") || null,
+        describedBy: button?.getAttribute("aria-describedby") || null,
+        premiseId: premise?.id || null,
+        premiseLabel: premise?.querySelector(".practical-choice-label")?.textContent || null,
+        premise: premise?.querySelector(".practical-choice-premise-text")?.textContent || null,
+        judgment: button?.querySelector(".practical-choice-judgment")?.textContent || "",
+        index
+      };
+    })), singleExpected.choices.map((_choice, index) => {
+      const ownPremise = singleExpected.displayModel.choiceBlocks[index].premises
+        .filter((text) => !sharedTexts.has(text)).join("／") || null;
+      const sharedIds = expectedShared.filter((group) => group.choiceIndexes.includes(index)).map((group) => group.id);
+      const premiseId = ownPremise ? `practicalChoicePremise${index + 1}` : null;
+      return {
+        structured: "true",
+        aria: null,
+        describedBy: [...sharedIds, ...(premiseId ? [premiseId] : [])].join(" ") || null,
+        premiseId,
+        premiseLabel: ownPremise ? `選択肢 ${index + 1} の前提` : null,
+        premise: ownPremise,
+        judgment: singleExpected.displayModel.choiceBlocks[index].judgment,
+        index
+      };
+    }), "single choices must preserve their presented order and keep each unique premise outside its answer button");
 
     assert.equal(await horizontalOverflow(page), 0, "390px structured question must not horizontally overflow");
-    const structuredMetrics390 = await singleChoices.evaluateAll((buttons) => buttons.map((button) => ({
-      height: Math.round(button.getBoundingClientRect().height),
-      premiseFont: button.querySelector(".practical-choice-premise")
-        ? Number.parseFloat(getComputedStyle(button.querySelector(".practical-choice-premise")).fontSize)
+    const structuredMetrics390 = await singleChoices.evaluateAll((buttons) => buttons.map((button) => {
+      const option = button.closest(".practical-choice-option");
+      return {
+      height: Math.round(button.getBoundingClientRect().height || 0),
+      premiseFont: option?.querySelector(".practical-choice-premise")
+        ? Number.parseFloat(getComputedStyle(option.querySelector(".practical-choice-premise")).fontSize)
         : null,
       judgmentFont: Number.parseFloat(getComputedStyle(button.querySelector(".practical-choice-judgment")).fontSize)
-    })));
+      };
+    }));
     assert.ok(structuredMetrics390.every((item) => item.height >= 44 && (item.premiseFont === null || item.premiseFont >= 13) && item.judgmentFont >= 15), `390px structured choice metrics too small: ${JSON.stringify(structuredMetrics390)}`);
 
     await page.setViewportSize({ width: 320, height: 700 });
     await page.locator("#practicalDrillSession").scrollIntoViewIfNeeded();
     assert.equal(await horizontalOverflow(page), 0, "320px structured question must not horizontally overflow");
-    const structuredMetrics320 = await singleChoices.evaluateAll((buttons) => buttons.map((button) => ({
-      height: Math.round(button.getBoundingClientRect().height),
-      premiseFont: button.querySelector(".practical-choice-premise")
-        ? Number.parseFloat(getComputedStyle(button.querySelector(".practical-choice-premise")).fontSize)
+    const structuredMetrics320 = await singleChoices.evaluateAll((buttons) => buttons.map((button) => {
+      const option = button.closest(".practical-choice-option");
+      return {
+      height: Math.round(button.getBoundingClientRect().height || 0),
+      premiseFont: option?.querySelector(".practical-choice-premise")
+        ? Number.parseFloat(getComputedStyle(option.querySelector(".practical-choice-premise")).fontSize)
         : null,
       judgmentFont: Number.parseFloat(getComputedStyle(button.querySelector(".practical-choice-judgment")).fontSize)
-    })));
+      };
+    }));
     assert.ok(structuredMetrics320.every((item) => item.height >= 44 && (item.premiseFont === null || item.premiseFont >= 13) && item.judgmentFont >= 15), `320px structured choice metrics too small: ${JSON.stringify(structuredMetrics320)}`);
 
     // Existing non-fullscore questions do not have a display model.  They must

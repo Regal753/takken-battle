@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20260911-archive-v56-08691ba9ae4e";
+  const VERSION = "20260911-choice-premise-v57-e254758aed94";
   const BANNER_ID = "pwaUpdateNotice";
   let reloadRequested = false;
 

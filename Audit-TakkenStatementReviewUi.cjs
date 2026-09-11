@@ -141,7 +141,7 @@ async function readFixture(page, fixture) {
     const duplicatePremiseFields = await page.evaluate((text) => {
       const itemPremises = [...document.querySelectorAll(".practical-prompt-item .practical-prompt-premise li")]
         .map((node) => (node.textContent || "").trim());
-      const choicePremises = [...document.querySelectorAll(".practical-drill-choice .practical-choice-premise > span:last-child")]
+      const choicePremises = [...document.querySelectorAll(".practical-choice-option .practical-choice-premise .practical-choice-premise-text")]
         .flatMap((node) => (node.textContent || "").split("／").map((value) => value.trim()));
       return [...itemPremises, ...choicePremises].filter((value) => value === text).length;
     }, group.text);
