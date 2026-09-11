@@ -67,7 +67,7 @@ async function completeRestrictionGrounding(page) {
 async function waitForApp(page) {
   await page.waitForFunction(() =>
     window.TAKKEN_SUBJECT_SPRINT_BANK?.VERSION === 5 &&
-    window.TAKKEN_SUBJECT_SPRINT_BANK?.COVERAGE?.bySection?.restrictions === 40 &&
+    window.TAKKEN_SUBJECT_SPRINT_BANK?.COVERAGE?.bySection?.restrictions === 112 &&
     document.querySelector('[data-subject-sprint="restrictions"]:not([data-subject-sprint-topic])')
   );
 }
@@ -107,7 +107,7 @@ async function main() {
     await waitForApp(page);
 
     const button = page.locator('[data-subject-sprint="restrictions"]:not([data-subject-sprint-topic])');
-    assert.equal((await button.textContent()).trim(), "法令 20問（全40問）・約27分");
+    assert.equal((await button.textContent()).trim(), "法令 20問（全112問）・約27分");
     assert.equal(await button.getAttribute("data-session-size"), "20");
     // Dispatch the same click event without waiting for the smooth-scroll
     // animation, which is irrelevant to the saved-session contract.
@@ -130,10 +130,10 @@ async function main() {
         queue: ids,
         anchors: ids.map((id) => questions[id].sourceAnchor),
         sourceQuestionIds: ids.map((id) => questions[id].sourceQuestionId),
-        supplementIndex: ids.findIndex((id, index) => id.includes("-rs") && index < ids.length - 1)
+        supplementIndex: ids.findIndex((id, index) => (id.includes("-rs") || id.includes("-rc58-")) && index < ids.length - 1)
       };
     }, key);
-    assert.equal(started.stateSchemaVersion, 15);
+    assert.equal(started.stateSchemaVersion, 16);
     assert.equal(started.bankVersion, 5);
     assert.equal(started.scope, "restrictions");
     assert.equal(started.sessionSize, 20);
@@ -275,7 +275,7 @@ async function main() {
       heights: [...document.querySelectorAll("[data-subject-sprint-topic]")].map((node) => Math.round(node.getBoundingClientRect().height))
     }));
     assert.equal(topicLayout.overflow, 0, "restriction topic launcher must fit 320px");
-    assert.equal(topicLayout.labels.length, 9, "all restriction catch-up launchers, including precision, must be exposed");
+    assert.equal(topicLayout.labels.length, 10, "all restriction catch-up launchers, including authored cases, must be exposed");
     assert.ok(topicLayout.heights.every((height) => height >= 44), `restriction topic target under 44px: ${topicLayout.heights.join(", ")}`);
 
     await topicPage.evaluate(() =>
@@ -294,7 +294,7 @@ async function main() {
         sourceQuestionIds: drill.queue.map((id) => questions[id].sourceQuestionId)
       };
     }, topicKey);
-    const cityPlanningIds = new Set(["l001", "l002", "l003", "l004", "rs001", "rs002", "rs015", "rs016"]);
+    const cityPlanningIds = new Set(["l001", "l002", "l003", "l004", "rs001", "rs002", "rs015", "rs016", ...Array.from({ length: 18 }, (_, index) => `rc58-${String(index + 1).padStart(3, "0")}`)]);
     assert.match(catchup.presentationKey, /:topic-catchup:/, "catch-up identity must survive reload/restart");
     assert.equal(catchup.ids.length, 20);
     assert.equal(new Set(catchup.ids).size, 20);
@@ -307,14 +307,20 @@ async function main() {
       document.querySelector('[data-subject-sprint-topic="building"]')?.click()
     );
     await topicPage.waitForFunction((storageKey) =>
-      JSON.parse(localStorage.getItem(storageKey) || "{}").practicalDrill?.queue?.length === 9,
+      JSON.parse(localStorage.getItem(storageKey) || "{}").practicalDrill?.queue?.length === 20,
     topicKey);
     const buildingSources = await topicPage.evaluate((storageKey) => {
       const drill = JSON.parse(localStorage.getItem(storageKey) || "{}").practicalDrill;
       const questions = window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS_BY_ID;
       return drill.queue.map((id) => questions[id].sourceQuestionId).sort();
     }, topicKey);
-    assert.deepEqual(buildingSources, ["l005", "l006", "l007", "l008", "rs003", "rs004", "rs017", "rs018", "rs019"]);
+    const buildingSourceIds = new Set([
+      "l005", "l006", "l007", "l008", "rs003", "rs004", "rs017", "rs018", "rs019",
+      ...Array.from({ length: 18 }, (_, index) => `rc58-${String(index + 27).padStart(3, "0")}`)
+    ]);
+    assert.equal(buildingSources.length, 20, "expanded building topic keeps the standard 20-question session");
+    assert.equal(new Set(buildingSources).size, 20, "expanded building topic has no duplicate source question");
+    assert.ok(buildingSources.every((id) => buildingSourceIds.has(id)), "building topic must exclude every non-building source");
     await topicPage.evaluate((storageKey) => {
       const saved = JSON.parse(localStorage.getItem(storageKey) || "{}");
       saved.practicalDrill.stage = "complete";
@@ -331,7 +337,7 @@ async function main() {
     await topicPage.locator("#practicalDrillRestartButton").click();
     await topicPage.waitForFunction((storageKey) => {
       const drill = JSON.parse(localStorage.getItem(storageKey) || "{}").practicalDrill;
-      return drill?.stage === "active" && drill?.queue?.length === 9 && /:topic-building:/.test(drill.presentationKey || "");
+      return drill?.stage === "active" && drill?.queue?.length === 20 && /:topic-building:/.test(drill.presentationKey || "");
     }, topicKey);
     await topicContext.close();
 
@@ -411,7 +417,7 @@ async function main() {
     }, defaultKey);
     const defaultRestrictionDrill = (await readSaved(defaultPage, defaultKey)).practicalDrill;
     assert.equal(defaultRestrictionDrill.sessionSize, 20, "official restriction repair must use the 20-question default");
-    assert.equal(defaultRestrictionDrill.queue.length, 20, "official restriction repair must not expand to all 40 questions");
+    assert.equal(defaultRestrictionDrill.queue.length, 20, "official restriction repair must not expand to all 112 questions");
     await defaultContext.close();
 
     const rightsPriorityIds = [
@@ -664,7 +670,7 @@ async function main() {
     }, migrationKey);
     const migrated = await readSaved(migrationPage, migrationKey);
     assert.equal(migrated.practicalDrill.stage, "active");
-    assert.equal(migrated.stateSchemaVersion, 15);
+    assert.equal(migrated.stateSchemaVersion, 16);
     assert.equal(migrated.practicalDrill.bankVersion, 5);
     assert.deepEqual(migrated.practicalDrill.sessionIds, oldIds);
     assert.deepEqual(migrated.practicalDrill.queue, oldIds);
@@ -701,7 +707,7 @@ async function main() {
     });
     await importPage.waitForFunction(() => (document.querySelector("#saveTransferStatus")?.textContent || "").includes("引継ぎ完了"));
     const imported = await readSaved(importPage, importKey);
-    assert.equal(imported.stateSchemaVersion, 15);
+    assert.equal(imported.stateSchemaVersion, 16);
     assert.equal(imported.practicalDrill.bankVersion, 5);
     assert.deepEqual(imported.practicalDrill.queue, oldIds);
     assert.equal(imported.practicalDrill.currentAttempt, null);
@@ -715,7 +721,7 @@ async function main() {
       bankVersion: started.bankVersion,
       restrictionPreAnswerForecast: ["confident", "uncertain", "guess"],
       guessedCorrectQueuedForRetry: true,
-      bankQuestions: 40,
+      bankQuestions: 112,
       sessionQuestions: started.queue.length,
       restrictionDefaultSessionQuestions: defaultRestrictionDrill.queue.length,
       sourceAnchorSeparation: 2,

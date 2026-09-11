@@ -302,7 +302,7 @@ async function runDesktop(browser, baseUrl) {
   assert.equal(await page.locator("#practicalDrillForecast").isHidden(), true, "legacy practical drill must not inherit the guarantee pre-answer forecast");
   assert.equal(await page.locator(".practical-drill-choice:enabled").count(), 4, "legacy practical choices must remain immediately answerable");
   const started = await savedPracticalState(page);
-  assert.equal(started.stateSchemaVersion, 15);
+  assert.equal(started.stateSchemaVersion, 16);
   assert.equal(started.practicalDrill.stage, "active");
   assert.equal(started.practicalDrill.version, 2);
   assert.equal(started.practicalDrill.scope, "business");

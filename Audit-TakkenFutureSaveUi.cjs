@@ -10,12 +10,12 @@ const { execFileSync } = require("node:child_process");
 const chromePath = process.env.TAKKEN_CHROME_PATH || "";
 
 // CI runs without historical git objects. Optional immutable refs prove the
-// guard against the real v53/v54 apps; the fallback tests both schema guards.
-const oldClients = [13, 14].map(schema => {
+// guard against the real v53/v54/v57 apps; the fallback tests schema guards.
+const oldClients = [13, 14, 15].map(schema => {
   const ref = process.env[`TAKKEN_SCHEMA${schema}_APP_REF`] || "";
   const app = ref
     ? execFileSync("git", ["show", `${ref}:app.js`], { cwd: __dirname, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 })
-    : fs.readFileSync(path.join(__dirname, "app.js"), "utf8").replace("const STATE_SCHEMA_VERSION = 15;", `const STATE_SCHEMA_VERSION = ${schema};`);
+    : fs.readFileSync(path.join(__dirname, "app.js"), "utf8").replace("const STATE_SCHEMA_VERSION = 16;", `const STATE_SCHEMA_VERSION = ${schema};`);
   assert.ok(app.includes(`const STATE_SCHEMA_VERSION = ${schema};`), `the old-client proof must run schema${schema}`);
   return { schema, ref, app };
 });
@@ -78,20 +78,36 @@ async function openLegacyDrawer(page) {
       };
       return { raw: JSON.stringify(current), id: question.id };
     });
-    assert.equal(JSON.parse(hard15Fixture.raw).stateSchemaVersion, 15);
+    assert.equal(JSON.parse(hard15Fixture.raw).stateSchemaVersion, 16);
     assert.match(hard15Fixture.id, /^hard55-/);
-    for (const oldClient of oldClients) for (const phase of ["load", "stale-save"]) {
+    const law16Fixture = await page.evaluate(() => {
+      const current = JSON.parse(localStorage.getItem("takken-battle-study-clean-v2-hard-review-future-save-ui"));
+      const bank = window.TAKKEN_SUBJECT_SPRINT_BANK;
+      const question = bank.QUESTIONS.find(q => q.sourceQuestionId === "rc58-001");
+      const presentationKey = "2026-09-12:restrictions:old-client-guard";
+      const shown = bank.presentQuestion(question, presentationKey);
+      current.practicalDrill = {
+        ...current.practicalDrill, bankId: "subject-sprint", bankVersion: 5, planMode: "sprint", stage: "active",
+        scope: "restrictions", sessionSize: 1, sessionIds: [question.id], queue: [question.id], position: 0, presentationKey,
+        currentAttempt: { id: question.id, selected: shown.answer, correct: true, confidence: "confident", masteryRecorded: true, diagnosticRecorded: true },
+        history: { [question.id]: { attempts: 1, correct: 1, wrong: 0, uncertain: 0, lastSelected: shown.answer, lastCorrect: true, lastConfidence: "confident", lastAnsweredAt: "2026-09-12T10:00:00+09:00" } }
+      };
+      return { raw: JSON.stringify(current), id: question.id };
+    });
+    assert.match(law16Fixture.id, /^sprint-law-rc58-/);
+    for (const protectedFixture of [hard15Fixture, law16Fixture]) for (const oldClient of oldClients) for (const phase of ["load", "stale-save"]) {
       const olderContext = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: "Asia/Tokyo" });
       const olderPage = await olderContext.newPage();
       olderPage.on("pageerror", error => errors.push(error.message));
-      const review = `s${oldClient.schema}-v15-${phase}`;
+      const review = `s${oldClient.schema}-v16-${protectedFixture === law16Fixture ? "law" : "hard"}-${phase}`;
+      assert.ok(review.length <= 24, "review namespace must not be truncated by the application");
       const key = `takken-battle-study-clean-v2-hard-review-${review}`;
       await olderPage.route(/\/app\.js(?:\?|$)/, route => route.fulfill({ status: 200, contentType: "text/javascript", body: oldClient.app }));
-      if (phase === "load") await olderPage.addInitScript(({ key, raw }) => localStorage.setItem(key, raw), { key, raw: hard15Fixture.raw });
+      if (phase === "load") await olderPage.addInitScript(({ key, raw }) => localStorage.setItem(key, raw), { key, raw: protectedFixture.raw });
       await olderPage.goto(`${local.baseUrl}?review=${review}`, { waitUntil: "networkidle" });
       if (phase === "stale-save") {
         assert.equal(await olderPage.evaluate(key => JSON.parse(localStorage.getItem(key)).stateSchemaVersion, key), oldClient.schema);
-        await olderPage.evaluate(({ key, raw }) => localStorage.setItem(key, raw), { key, raw: hard15Fixture.raw });
+        await olderPage.evaluate(({ key, raw }) => localStorage.setItem(key, raw), { key, raw: protectedFixture.raw });
         await olderPage.locator("#markButton").click();
       }
       const guarded = await olderPage.evaluate(({ key, raw }) => ({
@@ -99,8 +115,8 @@ async function openLegacyDrawer(page) {
         readOnly: document.body.classList.contains("is-save-read-only"),
         enabled: [...document.querySelectorAll("button, input, select, textarea")]
           .filter(control => !control.closest("#pwaUpdateNotice") && !control.disabled).map(control => control.id)
-      }), { key, raw: hard15Fixture.raw });
-      assert.equal(guarded.unchanged, true, `schema${oldClient.schema} ${phase} must preserve every byte of the schema15 hard55 queue/answer/history`);
+      }), { key, raw: protectedFixture.raw });
+      assert.equal(guarded.unchanged, true, `schema${oldClient.schema} ${phase} must preserve every byte of the schema16 ${protectedFixture.id} queue/answer/history`);
       assert.equal(guarded.readOnly, true, `schema${oldClient.schema} ${phase} must be read-only`);
       assert.deepEqual(guarded.enabled, [], `schema${oldClient.schema} ${phase} must disable all save-mutating controls`);
       await olderContext.close();
@@ -114,7 +130,7 @@ async function openLegacyDrawer(page) {
       const current = JSON.parse(localStorage.getItem(key));
       const future = {
         ...current,
-        stateSchemaVersion: 16,
+        stateSchemaVersion: 17,
         futureSchemaSentinel: { retained: true, bytes: "do-not-downgrade" }
       };
       const raw = JSON.stringify(future);
@@ -141,7 +157,7 @@ async function openLegacyDrawer(page) {
       };
     }, fixture);
     assert.equal(result.rawUnchanged, true);
-    assert.equal(result.storedSchema, 16);
+    assert.equal(result.storedSchema, 17);
     assert.deepEqual(result.sentinel, { retained: true, bytes: "do-not-downgrade" });
     assert.equal(result.bodyReadOnly, true);
     assert.match(`${result.protection} ${result.transfer}`, /新しい保存形式v16|読み取り専用/);
@@ -172,7 +188,7 @@ async function openLegacyDrawer(page) {
       );
       const future = {
         ...JSON.parse(localStorage.getItem(key)),
-        stateSchemaVersion: 16,
+        stateSchemaVersion: 17,
         futureSchemaSentinel: { retained: true, bytes: "stale-open-tab-must-not-downcast" }
       };
       const raw = JSON.stringify(future);
@@ -192,7 +208,7 @@ async function openLegacyDrawer(page) {
         .map((control) => control.id || control.outerHTML.slice(0, 80))
     }), staleFixture);
     assert.equal(stale.rawUnchanged, true, "stale tab must not rewrite the future-schema primary raw");
-    assert.equal(stale.storedSchema, 16);
+    assert.equal(stale.storedSchema, 17);
     assert.deepEqual(stale.sentinel, { retained: true, bytes: "stale-open-tab-must-not-downcast" });
     assert.equal(stale.readOnly, true);
     assert.match(stale.notice, /別タブで新しい保存形式v16|読み取り専用/);
@@ -402,7 +418,7 @@ async function openLegacyDrawer(page) {
         practical: state.practicalDrill
       };
     }, v36DowncastFixture);
-    assert.equal(recoveredFromV36.schema, 15);
+    assert.equal(recoveredFromV36.schema, 16);
     assert.equal(recoveredFromV36.practical.bankId, v36DowncastFixture.session.bankId);
     assert.equal(recoveredFromV36.practical.stage, v36DowncastFixture.session.stage);
     assert.deepEqual(recoveredFromV36.practical.queue, v36DowncastFixture.session.queue);
@@ -476,7 +492,7 @@ async function openLegacyDrawer(page) {
         recovery: state.guaranteeAssociationRecovery
       };
     }, v11Fixture);
-    assert.equal(recoveredFromV11.schema, 15);
+    assert.equal(recoveredFromV11.schema, 16);
     assert.equal(recoveredFromV11.stage, "idle", "v11 must not reopen a stale guarantee recovery session");
     assert.deepEqual(recoveredFromV11.queue, []);
     assert.deepEqual(recoveredFromV11.retryIds, []);
@@ -510,7 +526,7 @@ async function openLegacyDrawer(page) {
       const current = JSON.parse(localStorage.getItem(key));
       const previous = {
         ...current,
-        stateSchemaVersion: 16,
+        stateSchemaVersion: 17,
         futureSchemaSentinel: { retained: true, bytes: "future-previous-must-survive" }
       };
       const previousRaw = JSON.stringify(previous);
@@ -580,7 +596,7 @@ async function openLegacyDrawer(page) {
     await migrationPage.reload({ waitUntil: "networkidle" });
     const migration = await migrationPage.evaluate(({ key, questionId }) => {
       const state = JSON.parse(localStorage.getItem(key));
-      const backup = localStorage.getItem(`${key}-before-upgrade-v10-to-v15`);
+      const backup = localStorage.getItem(`${key}-before-upgrade-v10-to-v16`);
       return {
         schema: state.stateSchemaVersion,
         migratedHistory: state.practicalDrill?.history?.[questionId],
@@ -588,7 +604,7 @@ async function openLegacyDrawer(page) {
         notice: document.querySelector("#saveTransferStatus")?.textContent || ""
       };
     }, migrationFixture);
-    assert.equal(migration.schema, 15);
+    assert.equal(migration.schema, 16);
     assert.deepEqual(migration.migratedHistory && {
       attempts: migration.migratedHistory.attempts,
       correct: migration.migratedHistory.correct,
@@ -612,7 +628,7 @@ async function openLegacyDrawer(page) {
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({
       status: "ok",
-      schema: 15,
+      schema: 16,
       schema13And14Hard15Guard: ["load", "stale-save"],
       olderRuntimes: oldClients.map(({ schema, ref }) => ({ schema, runtime: ref || `schema${schema}-compatibility-harness` })),
       rawUnchanged: true,

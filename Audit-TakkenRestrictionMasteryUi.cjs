@@ -95,7 +95,7 @@ async function main() {
       assert.equal(layout.overflow, 0, `${width}px restriction panel overflow`);
       assert.equal(layout.hidden, false, `${width}px restriction panel must be visible without PASS PLAN`);
       assert.notEqual(layout.display, "none", `${width}px restriction panel display`);
-      assert.equal(layout.heights.length, 4, `${width}px restriction action count`);
+      assert.equal(layout.heights.length, 5, `${width}px restriction action count`);
       assert.ok(layout.heights.every((height) => height >= 44), `${width}px restriction action targets: ${layout.heights.join(",")}`);
     }
 
@@ -277,13 +277,30 @@ async function main() {
       const question = window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS_BY_ID[id];
       return window.TAKKEN_SUBJECT_SPRINT_BANK.presentQuestion(question, drill.presentationKey).answer;
     }, key);
-    const scrollBeforePrecisionAnswer = await page.evaluate(() => window.scrollY);
-    await page.locator(".practical-drill-choice").nth(precisionAnswer).click();
+    const precisionChoice = page.locator(".practical-drill-choice").nth(precisionAnswer);
+    await page.evaluate(() => document.fonts.ready);
+    await precisionChoice.scrollIntoViewIfNeeded();
+    await precisionChoice.click({ trial: true });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const precisionViewportBefore = await page.evaluate((answerIndex) => {
+      const node = document.querySelectorAll(".practical-drill-choice")[answerIndex];
+      const rect = node.getBoundingClientRect();
+      return { scrollY: window.scrollY, top: rect.top, bottom: rect.bottom, absoluteTop: window.scrollY + rect.top, viewport: innerHeight };
+    }, precisionAnswer);
+    const scrollBeforePrecisionAnswer = precisionViewportBefore.scrollY;
+    await precisionChoice.click();
     await page.locator("#practicalDrillFeedback").waitFor({ state: "visible" });
-    const scrollAfterPrecisionAnswer = await page.evaluate(() => window.scrollY);
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const precisionViewportAfter = await page.evaluate((answerIndex) => {
+      const node = document.querySelectorAll(".practical-drill-choice")[answerIndex];
+      const rect = node.getBoundingClientRect();
+      return { scrollY: window.scrollY, top: rect.top, bottom: rect.bottom, absoluteTop: window.scrollY + rect.top, viewport: innerHeight };
+    }, precisionAnswer);
+    const scrollAfterPrecisionAnswer = precisionViewportAfter.scrollY;
     assert.ok(
-      Math.abs(scrollAfterPrecisionAnswer - scrollBeforePrecisionAnswer) <= 160,
-      `precision answer must not jump a material portion of the mobile viewport before the learner chooses Next: ${scrollBeforePrecisionAnswer} -> ${scrollAfterPrecisionAnswer}`
+      Math.abs(precisionViewportAfter.top - precisionViewportBefore.top) <= 2 &&
+        precisionViewportAfter.top >= -1 && precisionViewportAfter.bottom <= precisionViewportAfter.viewport + 1,
+      `precision answer must preserve the selected-choice viewport: ${JSON.stringify({ precisionViewportBefore, precisionViewportAfter })}`
     );
     const fourPointFeedback = (await page.locator("#practicalDrillReasoning").textContent()).trim();
     ["区域・対象", "行為", "主体・手続", "数値・期限"].forEach((label) =>

@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20260911-choice-premise-v57-e254758aed94",
-  "digest": "sha256:e254758aed941c4af908f088ceac1f8e0ea33916f3450290ba8f7f3685b382f7",
-  "assetCount": 60,
+  "version": "20260912-restrictions-v58-c1c17441255c",
+  "digest": "sha256:c1c17441255c635e8afff1d3b9f1d99ce0db3810247b79be8039a3c792e986e5",
+  "assetCount": 64,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "aa35d7b15acde252f31f8ddf7bf26ef92984b028139ec6bc7137cdc77cc815a6"
+      "sha256": "79813be8d0d63864387ae035adcede87aca1a6c8a106a2dd5dbcbdf2eeba56c7"
     },
     {
       "path": "assets/battle/grassland-route.webp",
@@ -102,7 +102,7 @@
     },
     {
       "path": "calculation-drill.js",
-      "sha256": "4ba0154ec7e81f495a1b11073b6ce1b54389b5d21c483dc5e9273f62ef040bb4"
+      "sha256": "93aed56cfd4860bfdd35145b1a8db8cea47adcb9b49afff92d209eeb3db622a1"
     },
     {
       "path": "case-exam-bank.js",
@@ -130,7 +130,7 @@
     },
     {
       "path": "exam-blueprint.js",
-      "sha256": "591d24671a679b1ce6efefe6b80d172f53c89a4da426c3b7d064bc504300f328"
+      "sha256": "5d6abb9555402384186182238c770914a49d576b994ec946d6cb1044fa49d631"
     },
     {
       "path": "exam-current-year-2026.js",
@@ -162,7 +162,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "f804e3d1a6835595ca8ff9463f3cd223fa497c40b12a4ed74ef522576b28fe98"
+      "sha256": "dbe2bd9d0399256f13716156d273cb9c6a3acd34396c8318beb4888197036a3b"
     },
     {
       "path": "manifest.webmanifest",
@@ -213,8 +213,24 @@
       "sha256": "453ef480e0774d91bcd534cd780d374580ad854e55bc1df659eeeb6b77341856"
     },
     {
+      "path": "restrictions-authored-bank.js",
+      "sha256": "e56002f81d527676a0ac58e5b94a66e94b6c8bda3dcecc211191a4e1e67a95e3"
+    },
+    {
+      "path": "restrictions-cases-agriculture-fill.js",
+      "sha256": "e43921497d6ed45889192e48feb8e1e6a2d92cb30965c8fae2b715c67d16126e"
+    },
+    {
+      "path": "restrictions-cases-building-readjustment.js",
+      "sha256": "5b9750d01fbf77cf4e5fee55b3d449189584b65880e311abf55529d3ac0e9cb9"
+    },
+    {
+      "path": "restrictions-cases-city-land.js",
+      "sha256": "88efc170371d704632b042def5cf830d1a5aac85ec040733ffee8fb26921b661"
+    },
+    {
       "path": "restrictions-supplement-bank.js",
-      "sha256": "0b3a0499035ccf9a88769c56d64b9eabc513435d2dbb4609620ce499b60be4ad"
+      "sha256": "94d9919fd02aea57e7e241aaa8dd5eae95b29204f114b769aa2e80cc94d2036a"
     },
     {
       "path": "reward-system.js",
@@ -230,7 +246,7 @@
     },
     {
       "path": "service-worker.js",
-      "sha256": "a55d4b415238fd661c508d41a13904ab94dc7feaf30c7a9c203051add3fc6892"
+      "sha256": "141609ae05c4e4621c4c8c243f21e5f0afeef283acab3ea08807029fd3e12f6a"
     },
     {
       "path": "state-sync.js",
@@ -242,7 +258,7 @@
     },
     {
       "path": "subject-sprint-bank.js",
-      "sha256": "5021001a6fc8466d5cf8653be1c0fb96450c12a23baa4ddb11a102bebf8880db"
+      "sha256": "f1cbf2613ccb2e12d942102c86c5ba8adbfca95cf94f1cd7b373724c16277950"
     }
   ]
 }

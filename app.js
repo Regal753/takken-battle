@@ -30,6 +30,7 @@
   const BUSINESS_HARD_BANK = window.TAKKEN_BUSINESS_HARD_BANK;
   const GUARANTEE_ASSOCIATION_DRILL = window.TAKKEN_GUARANTEE_ASSOCIATION_DRILL;
   const SUBJECT_SPRINT_BANK = window.TAKKEN_SUBJECT_SPRINT_BANK;
+  const RESTRICTIONS_AUTHORED_BANK = window.TAKKEN_RESTRICTIONS_AUTHORED_BANK;
   const PASS_READINESS = window.TAKKEN_PASS_READINESS;
   const EXAM_CURRENT_YEAR = window.TAKKEN_EXAM_CURRENT_YEAR_2026;
   const PRACTICAL_QUESTIONS = PRACTICAL_VARIATIONS?.QUESTIONS || [];
@@ -49,7 +50,7 @@
   ]);
   const isHardBusinessQuestionId = (id) => BUSINESS_HARD_CANONICAL_IDS.includes(id);
   const GUARANTEE_SPECIAL_EXPECTED_QUESTIONS = 33;
-  const SUBJECT_SPRINT_EXPECTED_QUESTIONS = 102;
+  const SUBJECT_SPRINT_EXPECTED_QUESTIONS = 174;
   const SUBJECT_SPRINT_RESTRICTIONS_SESSION_SIZE = 20;
   const RESTRICTION_EXAM_SESSION_SIZE = 8;
   const RESTRICTION_EXAM_TARGET_MINUTES = 12;
@@ -64,6 +65,14 @@
   const RESTRICTION_PRECISION_SOURCE_IDS = Object.freeze([
     "rs015", "rs016", "rs017", "rs018", "rs019", "rs020", "rs021", "rs022"
   ]);
+  const RESTRICTION_AUTHORED_SOURCE_IDS = Object.freeze(
+    Array.isArray(RESTRICTIONS_AUTHORED_BANK?.QUESTION_IDS) ? RESTRICTIONS_AUTHORED_BANK.QUESTION_IDS : []
+  );
+  const authoredRestrictionIds = (topicId) => Object.freeze(
+    Array.isArray(RESTRICTIONS_AUTHORED_BANK?.TOPIC_SOURCE_IDS?.[topicId])
+      ? RESTRICTIONS_AUTHORED_BANK.TOPIC_SOURCE_IDS[topicId]
+      : []
+  );
   const EXAM_PROFILE_GENERAL = "general";
   const EXAM_PROFILE_FIVE_EXEMPT = "fiveExempt";
   const EXAM_PROFILE_IDS = new Set([EXAM_PROFILE_GENERAL, EXAM_PROFILE_FIVE_EXEMPT]);
@@ -249,7 +258,8 @@
         "l009", "l010", "rs005", "rs006", "rs020",
         "l011", "l012", "rs007", "rs008", "rs021",
         "l013", "l014", "rs009", "rs010", "rs022",
-        "l015", "l016", "rs011", "rs012"
+        "l015", "l016", "rs011", "rs012",
+        ...RESTRICTION_AUTHORED_SOURCE_IDS
       ])
     }),
     precision: Object.freeze({
@@ -266,47 +276,54 @@
         "l011", "l012", "rs007", "rs008", "rs021",
         "l013", "l014", "rs009", "rs010", "rs022",
         "l015", "l016", "rs011", "rs012",
-        "l101", "l102", "rs013", "rs014"
+        "l101", "l102", "rs013", "rs014",
+        ...authoredRestrictionIds("building"), ...authoredRestrictionIds("national-land"),
+        ...authoredRestrictionIds("agriculture"), ...authoredRestrictionIds("readjustment"), ...authoredRestrictionIds("embankment")
       ])
     }),
     "city-planning": Object.freeze({
       id: "city-planning",
       label: "都市計画法",
-      sourceQuestionIds: Object.freeze(["l001", "l002", "l003", "l004", "rs001", "rs002", "rs015", "rs016"])
+      sourceQuestionIds: Object.freeze(["l001", "l002", "l003", "l004", "rs001", "rs002", "rs015", "rs016", ...authoredRestrictionIds("city-planning")])
     }),
     building: Object.freeze({
       id: "building",
       label: "建築基準法",
-      sourceQuestionIds: Object.freeze(["l005", "l006", "l007", "l008", "rs003", "rs004", "rs017", "rs018", "rs019"])
+      sourceQuestionIds: Object.freeze(["l005", "l006", "l007", "l008", "rs003", "rs004", "rs017", "rs018", "rs019", ...authoredRestrictionIds("building")])
     }),
     "national-land": Object.freeze({
       id: "national-land",
       label: "国土利用計画法",
-      sourceQuestionIds: Object.freeze(["l009", "l010", "rs005", "rs006", "rs020"])
+      sourceQuestionIds: Object.freeze(["l009", "l010", "rs005", "rs006", "rs020", ...authoredRestrictionIds("national-land")])
     }),
     agriculture: Object.freeze({
       id: "agriculture",
       label: "農地法",
-      sourceQuestionIds: Object.freeze(["l011", "l012", "rs007", "rs008", "rs021"])
+      sourceQuestionIds: Object.freeze(["l011", "l012", "rs007", "rs008", "rs021", ...authoredRestrictionIds("agriculture")])
     }),
     readjustment: Object.freeze({
       id: "readjustment",
       label: "土地区画整理法",
-      sourceQuestionIds: Object.freeze(["l013", "l014", "rs009", "rs010", "rs022"])
+      sourceQuestionIds: Object.freeze(["l013", "l014", "rs009", "rs010", "rs022", ...authoredRestrictionIds("readjustment")])
     }),
     embankment: Object.freeze({
       id: "embankment",
       label: "盛土規制法",
-      sourceQuestionIds: Object.freeze(["l015", "l016", "rs011", "rs012"])
+      sourceQuestionIds: Object.freeze(["l015", "l016", "rs011", "rs012", ...authoredRestrictionIds("embankment")])
     }),
     "other-law": Object.freeze({
       id: "other-law",
       label: "文化財・道路法",
       sourceQuestionIds: Object.freeze(["l101", "l102", "rs013", "rs014"])
+    }),
+    authored: Object.freeze({
+      id: "authored",
+      label: "新作72問",
+      sourceQuestionIds: RESTRICTION_AUTHORED_SOURCE_IDS
     })
   });
   const SUBJECT_SPRINT_CITY_PLANNING_SOURCE_IDS = Object.freeze([
-    "l001", "l002", "l003", "l004", "rs001", "rs002", "rs015", "rs016"
+    "l001", "l002", "l003", "l004", "rs001", "rs002", "rs015", "rs016", ...authoredRestrictionIds("city-planning")
   ]);
   const RESTRICTION_EXAM_TOPIC_PLAN = Object.freeze([
     Object.freeze({ topicId: "city-planning", count: 2 }),
@@ -388,7 +405,9 @@
   // v13 adds pre-answer evidence and explicit guess counters to the legal-
   // restrictions sprint. Older open tabs must not erase that evidence.
   // v15 protects the added hard55 IDs from schema14 clients that only know hard54.
-  const STATE_SCHEMA_VERSION = 15;
+  // v16 protects rc58 authored restriction IDs from an already-open v57 tab.
+  // The sprint presentation version stays 5 so old in-progress answers survive.
+  const STATE_SCHEMA_VERSION = 16;
   // Only runtimes older than v11 could strip ga001..ga020 from practicalDrill.
   // Do not tie this recovery boundary to the current schema: later schema
   // upgrades must keep the live v11+ history authoritative over its snapshot.
@@ -1044,6 +1063,7 @@
     restrictionExamStart: $("#restrictionExamStart"),
     restrictionPrecisionStart: $("#restrictionPrecisionStart"),
     restrictionMasteryTwenty: $("#restrictionMasteryTwenty"),
+    restrictionAuthoredTwenty: $("#restrictionAuthoredTwenty"),
     restrictionTopicOpen: $("#restrictionTopicOpen"),
     passPlanPanel: $("#passPlanPanel"),
     passPhaseTitle: $("#passPhaseTitle"),
@@ -8235,6 +8255,9 @@
     const drill = state.calculationDrill;
     const item = currentCalculationQuestion();
     if (!item || drill.currentAttempt || !Number.isInteger(selected) || selected < 0 || selected > 3) return;
+    const selectedChoiceTop = elements.calculationDrillChoices
+      ?.querySelectorAll(".calculation-drill-choice")[selected]
+      ?.getBoundingClientRect().top;
     const correct = selected === item.answer;
     const answeredAt = new Date().toISOString();
     const previous = drill.history[item.id] || {
@@ -8267,8 +8290,18 @@
     }
     saveState();
     renderCalculationDrill();
+    const keepSelectedChoiceInPlace = () => {
+      if (state.calculationDrill?.currentAttempt?.id !== item.id || !Number.isFinite(selectedChoiceTop)) return;
+      const renderedChoice = elements.calculationDrillChoices
+        ?.querySelectorAll(".calculation-drill-choice")[selected];
+      const delta = renderedChoice?.getBoundingClientRect().top - selectedChoiceTop;
+      if (Number.isFinite(delta) && Math.abs(delta) > 1) window.scrollBy(0, delta);
+    };
     window.requestAnimationFrame(() => {
       elements.calculationDrillFeedback?.focus({ preventScroll: true });
+      keepSelectedChoiceInPlace();
+      // Chromium can settle native focus/anchor scrolling after the first frame.
+      window.requestAnimationFrame(keepSelectedChoiceInPlace);
     });
   }
 
@@ -8772,6 +8805,27 @@
       units,
       { ...state.practicalDrill, bankId: SUBJECT_SPRINT_BANK_ID }
     );
+    if (scope === "restrictions" && topic?.id === "authored") {
+      // Every fresh daily set spans the six laws. Keep the existing unseen /
+      // retry ranking within each law, without letting larger packs crowd out
+      // agriculture, embankments, readjustment or land-transaction notices.
+      const pools = new Map();
+      for (const id of rankedIds) {
+        const anchor = SUBJECT_SPRINT_QUESTION_BY_ID[id].sourceAnchor;
+        if (!pools.has(anchor)) pools.set(anchor, []);
+        pools.get(anchor).push(id);
+      }
+      const allocations = [...pools].map(([anchor, ids], order) => {
+        const share = target * ids.length / eligible.length;
+        return { anchor, ids, order, take: Math.floor(share), remainder: share % 1 };
+      });
+      let extra = target - allocations.reduce((sum, item) => sum + item.take, 0);
+      for (const item of [...allocations].sort((a, b) => b.remainder - a.remainder || a.order - b.order)) {
+        if (extra-- > 0) item.take += 1;
+      }
+      const selected = new Set(allocations.flatMap(item => item.ids.slice(0, item.take)));
+      return SUBJECT_SPRINT_BANK.diversify(rankedIds.filter(id => selected.has(id)));
+    }
     return scope === "restrictions"
       ? SUBJECT_SPRINT_BANK.diversify(rankedIds).slice(0, target)
       : rankedIds.slice(0, target);
@@ -8847,6 +8901,7 @@
     elements.restrictionExamStart.disabled = controlsDisabled;
     elements.restrictionPrecisionStart.disabled = controlsDisabled || legalSessionActive;
     elements.restrictionMasteryTwenty.disabled = controlsDisabled || legalSessionActive;
+    elements.restrictionAuthoredTwenty.disabled = controlsDisabled || legalSessionActive;
     elements.restrictionTopicOpen.disabled = controlsDisabled || legalSessionActive;
     elements.restrictionExamStart.textContent = legalSessionActive
       ? "進行中の法令セットを再開"
@@ -8857,6 +8912,9 @@
     elements.restrictionPrecisionStart.textContent = legalSessionActive
       ? "境界8問はセット完了後"
       : "境界・主体8問を特訓";
+    elements.restrictionAuthoredTwenty.textContent = legalSessionActive
+      ? "新作20問はセット完了後"
+      : "新作72問から20問";
 
     elements.restrictionMasteryTopics.replaceChildren(...RESTRICTION_MASTERY_TOPIC_IDS.map((topicId) => {
       const topic = subjectSprintTopicDefinition("restrictions", topicId);
@@ -8942,7 +9000,7 @@
         : question.format === "個数問題" ? "count" : "");
     const labels = formatKey === "single"
       ? ["1", "2", "3", "4"]
-      : formatKey === "combination" && sourceFacts.length === 4 && !BUSINESS_HARD_QUESTION_BY_ID[question.id]
+      : formatKey === "combination" && sourceFacts.length === 4 && !BUSINESS_HARD_QUESTION_BY_ID[question.id] && !question.authoredCase
         ? ["ア-1", "ア-2", "イ-1", "イ-2"]
         : ["ア", "イ", "ウ", "エ"];
     if (sourceFacts.length) {
@@ -8951,7 +9009,7 @@
         verdict: fact.truth ? "○" : "×",
         premise: String(fact.presentedContext || fact.context || ""),
         statement: String(fact.presentedStatement || fact.statement || ""),
-        reason: String(fact.reason || "")
+        reason: String(fact.reason || "") + (question.authoredCase && fact.sourceLocator ? `（${fact.sourceLocator}）` : "")
       }));
     }
 
@@ -9161,7 +9219,7 @@
     const model = question?.displayModel;
     const items = Array.isArray(model?.items) ? model.items : [];
     const hasItems = items.length && items.every((block) =>
-      validPracticalDisplayBlock(block, Boolean(BUSINESS_HARD_QUESTION_BY_ID[question.id])));
+      validPracticalDisplayBlock(block, Boolean(BUSINESS_HARD_QUESTION_BY_ID[question.id]) || Boolean(question.authoredCase)));
     const structured = typeof model?.intro === "string" && model.intro.trim() &&
       (hasItems || sharedPremiseGroups.length);
     if (!structured) {
@@ -9236,7 +9294,7 @@
 
   function practicalChoiceAnswerText(question, index) {
     const block = question.displayModel?.choiceBlocks?.[index];
-    return validPracticalDisplayBlock(block, Boolean(BUSINESS_HARD_QUESTION_BY_ID[question.id]))
+    return validPracticalDisplayBlock(block, Boolean(BUSINESS_HARD_QUESTION_BY_ID[question.id]) || Boolean(question.authoredCase))
       ? block.judgment : question.choices[index];
   }
 
@@ -9534,7 +9592,7 @@
         index,
         choiceBlocks[index],
         choiceBlocks.length ? sharedPremiseGroups : [],
-        Boolean(BUSINESS_HARD_QUESTION_BY_ID[question.id])
+        Boolean(BUSINESS_HARD_QUESTION_BY_ID[question.id]) || Boolean(question.authoredCase)
       );
       button.disabled = Boolean(attempt) ||
         (forecastRequired && !drill.preAnswerConfidence) ||
@@ -9618,7 +9676,9 @@
 
   function currentPracticalInputTarget(drill = state.practicalDrill) {
     if (!drill || !["active", "retry"].includes(drill.stage)) return null;
-    if (!drill.currentAttempt && isHardBusinessQuestionId(drill.queue[drill.position])) {
+    const currentId = drill.queue[drill.position];
+    const unreadAuthoredRestriction = SUBJECT_SPRINT_QUESTION_BY_ID[currentId]?.authoredCase && !drill.preAnswerConfidence;
+    if (!drill.currentAttempt && (isHardBusinessQuestionId(currentId) || unreadAuthoredRestriction)) {
       return elements.practicalDrillPrompt;
     }
     if (practicalForecastRequired(drill) && !drill.preAnswerConfidence) {
@@ -14591,6 +14651,9 @@
     );
     elements.restrictionMasteryTwenty?.addEventListener("click", () =>
       startSubjectSprint("restrictions", SUBJECT_SPRINT_RESTRICTIONS_SESSION_SIZE)
+    );
+    elements.restrictionAuthoredTwenty?.addEventListener("click", () =>
+      startSubjectSprint("restrictions", SUBJECT_SPRINT_RESTRICTIONS_SESSION_SIZE, "authored")
     );
     elements.restrictionTopicOpen?.addEventListener("click", openRestrictionTopicPicker);
     document.querySelectorAll("[data-subject-sprint]").forEach((button) => {

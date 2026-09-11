@@ -168,7 +168,7 @@ async function main() {
     const review = `passreadiness${Date.now().toString(36)}`;
     const url = new URL(server.baseUrl); url.searchParams.set("review", review); url.searchParams.set("today", "1");
     await page.goto(url.toString(), { waitUntil: "networkidle", timeout: 20000 });
-    await page.waitForFunction(() => document.querySelector("#passReadinessTitle")?.textContent?.includes("50問") && window.TAKKEN_SUBJECT_SPRINT_BANK?.QUESTIONS?.length === 102);
+    await page.waitForFunction(() => document.querySelector("#passReadinessTitle")?.textContent?.includes("50問") && window.TAKKEN_SUBJECT_SPRINT_BANK?.QUESTIONS?.length === 174);
 
     const initial = await page.evaluate(() => ({
       targets: [...document.querySelectorAll("#passSubjectGrid strong")].map((node) => node.textContent.trim()),
@@ -368,7 +368,7 @@ async function main() {
     retentionPage.on("pageerror", (error) => errors.push(String(error)));
     retentionPage.on("console", (message) => { if (message.type() === "error") errors.push(message.text()); });
     await retentionPage.goto(retentionUrl.toString(), { waitUntil: "networkidle", timeout: 20000 });
-    await retentionPage.waitForFunction(() => window.TAKKEN_SUBJECT_SPRINT_BANK?.QUESTIONS?.length === 102);
+    await retentionPage.waitForFunction(() => window.TAKKEN_SUBJECT_SPRINT_BANK?.QUESTIONS?.length === 174);
     const retentionFixture = await retentionPage.evaluate(() => {
       const review = new URL(location.href).searchParams.get("review") || "";
       const key = `takken-battle-study-clean-v2-hard-review-${review}`;
@@ -600,7 +600,7 @@ async function main() {
     const migratedOnLoad = await legacyPage.evaluate((key) =>
       JSON.parse(localStorage.getItem(key) || "{}").stateSchemaVersion, legacyKey
     );
-    assert.equal(migratedOnLoad, 15, "schema migration must persist during initial load");
+    assert.equal(migratedOnLoad, 16, "schema migration must persist during initial load");
     // Normalization is persisted on the first ordinary state-changing action.
     await openPassPanel(legacyPage);
     // The recommended action changes to official measurement in September.
@@ -614,7 +614,7 @@ async function main() {
       key,
       state: JSON.parse(localStorage.getItem(key) || "{}")
     }), legacyKey);
-    assert.equal(legacy.state.stateSchemaVersion, 15);
+    assert.equal(legacy.state.stateSchemaVersion, 16);
     // Schema-8 records predate the sprint presentation key; normalization must
     // fail closed to an idle launch state instead of reviving a corrupt session.
     assert.equal(legacy.state.practicalDrill.stage, "idle");

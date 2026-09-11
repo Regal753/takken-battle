@@ -216,7 +216,7 @@ async function answerCurrentCorrectly(page) {
         attempts: saved.calculationDrill?.attempts
       };
     }, storageIdFor("calc-desktop"));
-    assert.equal(persistedBeforeReload.schema, 15);
+    assert.equal(persistedBeforeReload.schema, 16);
     assert.equal(persistedBeforeReload.currentAttempt?.confidence, "uncertain");
     assert.deepEqual(persistedBeforeReload.retryIds, ["calc-sale-200", "calc-sale-300"]);
     assert.equal(persistedBeforeReload.attempts, 2);
@@ -323,7 +323,7 @@ async function answerCurrentCorrectly(page) {
       };
     }, storageIdFor("calc-legacy"));
     assert.deepEqual(migrated, {
-      schema: 15,
+      schema: 16,
       attempts: 37,
       correct: 25,
       q1Correct: 2,
@@ -367,8 +367,19 @@ async function answerCurrentCorrectly(page) {
       return window.TAKKEN_CALCULATION_DRILL.QUESTIONS.find((item) => item.id === id).answer;
     }, storageIdFor("calc-mobile"));
     const mobileChoice = mobile.locator("#calculationDrillChoices .calculation-drill-choice").nth(mobileAnswer);
+    await mobile.evaluate(() => document.fonts.ready);
     await mobileChoice.scrollIntoViewIfNeeded();
-    const calculationAnswerBefore = await mobile.evaluate(() => {
+    // Establish the same click-actionability viewport before measuring the
+    // answer handler; screenshot restoration/native scrolling is not an answer.
+    await mobileChoice.click({ trial: true });
+    await mobile.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const calculationAnswerBefore = await mobile.evaluate((answerIndex) => {
+      window.__takkenOriginalCalculationScrollBy = window.scrollBy;
+      window.__takkenCalculationAnswerCorrectionCalls = [];
+      window.scrollBy = function (...args) {
+        window.__takkenCalculationAnswerCorrectionCalls.push(args);
+        return window.__takkenOriginalCalculationScrollBy.apply(this, args);
+      };
       window.__takkenOriginalCalculationScrollTo = window.scrollTo;
       window.__takkenCalculationAnswerScrollCalls = [];
       window.scrollTo = function (...args) {
@@ -381,31 +392,53 @@ async function answerCurrentCorrectly(page) {
         window.__takkenCalculationAnswerRevealCalls.push({ id: this.id || "", args });
         return window.__takkenOriginalCalculationReveal.apply(this, args);
       };
-      return window.scrollY;
-    });
-    await mobileChoice.click();
+      const node = document.querySelectorAll("#calculationDrillChoices .calculation-drill-choice")[answerIndex];
+      const rect = node.getBoundingClientRect();
+      return { scrollY: window.scrollY, top: rect.top, bottom: rect.bottom, absoluteTop: window.scrollY + rect.top, viewport: innerHeight };
+    }, mobileAnswer);
+    const calculationChoiceBox = await mobileChoice.boundingBox();
+    assert.ok(calculationChoiceBox, "calculation answer must have a visible click box");
+    await mobile.mouse.click(
+      calculationChoiceBox.x + calculationChoiceBox.width / 2,
+      calculationChoiceBox.y + calculationChoiceBox.height / 2,
+    );
     await mobile.locator("#calculationDrillFeedback").waitFor({ state: "visible" });
     await mobile.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    const calculationAnswerAfter = await mobile.evaluate(() => {
+    const calculationAnswerAfter = await mobile.evaluate((answerIndex) => {
+      const node = document.querySelectorAll("#calculationDrillChoices .calculation-drill-choice")[answerIndex];
+      const rect = node.getBoundingClientRect();
       const result = {
         scrollY: window.scrollY,
+        top: rect.top,
+        bottom: rect.bottom,
+        absoluteTop: window.scrollY + rect.top,
+        viewport: innerHeight,
+        correctionCalls: [...(window.__takkenCalculationAnswerCorrectionCalls || [])],
         scrollCalls: [...(window.__takkenCalculationAnswerScrollCalls || [])],
         revealCalls: [...(window.__takkenCalculationAnswerRevealCalls || [])],
         activeId: document.activeElement?.id || ""
       };
       window.scrollTo = window.__takkenOriginalCalculationScrollTo;
+      window.scrollBy = window.__takkenOriginalCalculationScrollBy;
+      delete window.__takkenOriginalCalculationScrollBy;
+      delete window.__takkenCalculationAnswerCorrectionCalls;
       Element.prototype.scrollIntoView = window.__takkenOriginalCalculationReveal;
       delete window.__takkenOriginalCalculationScrollTo;
       delete window.__takkenCalculationAnswerScrollCalls;
       delete window.__takkenOriginalCalculationReveal;
       delete window.__takkenCalculationAnswerRevealCalls;
       return result;
-    });
+    }, mobileAnswer);
     assert.equal(calculationAnswerAfter.activeId, "calculationDrillFeedback", "calculation feedback must still receive accessible focus");
+    assert.ok(calculationAnswerAfter.correctionCalls.length <= 2, "calculation viewport correction must be bounded to two frames");
+    assert.ok(calculationAnswerAfter.correctionCalls.every(([x, y]) => x === 0 && Number.isFinite(y)), "calculation viewport correction must remain vertical and finite");
+    assert.equal(await mobile.locator("#calculationDrillVerdict").getAttribute("role"), "status", "calculation verdict must remain an announced status");
+    assert.equal(await mobile.locator("#calculationDrillVerdict").getAttribute("aria-live"), "polite", "calculation verdict must remain politely announced");
     assert.deepEqual(calculationAnswerAfter.scrollCalls, [], `calculation answer must not call window.scrollTo: ${JSON.stringify(calculationAnswerAfter)}`);
     assert.deepEqual(calculationAnswerAfter.revealCalls, [], `calculation answer must not move the viewport to feedback: ${JSON.stringify(calculationAnswerAfter)}`);
     assert.ok(
-      Math.abs(calculationAnswerAfter.scrollY - calculationAnswerBefore) <= 1,
+      Math.abs(calculationAnswerAfter.top - calculationAnswerBefore.top) <= 2 &&
+        calculationAnswerAfter.top >= -1 && calculationAnswerAfter.bottom <= calculationAnswerAfter.viewport + 1,
       `calculation answer must preserve the selected-choice viewport: ${JSON.stringify({ calculationAnswerBefore, calculationAnswerAfter })}`
     );
     await mobileContext.close();

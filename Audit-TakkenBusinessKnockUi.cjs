@@ -649,7 +649,7 @@ async function presentedFixture(page) {
     await page.reload({ waitUntil: "networkidle" });
     await waitForApp(page);
     const migratedOld = await readSavedState(page);
-    assert.equal(migratedOld.stateSchemaVersion, 15, "the answered v53 session must migrate to schema15");
+    assert.equal(migratedOld.stateSchemaVersion, 16, "the answered v53 session must migrate to schema16");
     assert.deepEqual(migratedOld.practicalDrill.queue, oldSaved.practicalDrill.queue);
     assert.deepEqual(migratedOld.practicalDrill.currentAttempt, oldSaved.practicalDrill.currentAttempt);
     assert.deepEqual(migratedOld.practicalDrill.history, oldSaved.practicalDrill.history);
@@ -658,7 +658,7 @@ async function presentedFixture(page) {
     await cancelKnock(page);
 
     // A v54/schema14 hard54 set keeps its nonzero position, rotated choices,
-    // answered state, history, and exact pre-upgrade backup in schema15.
+    // answered state, history, and exact pre-upgrade backup in schema16.
     await forcePracticalQuestion(page, { bankId: "business-fullscore", id: "hard54-001", presentationKey: "v54-saved-hard54-order" });
     await page.evaluate(() => {
       const key = Object.keys(localStorage).find(key => /^takken-battle-study-clean-v2-hard-review-/.test(key) && !/backup|-before-|previous|corrupt|event-outbox/.test(key));
@@ -685,11 +685,11 @@ async function presentedFixture(page) {
     });
     await page.reload({ waitUntil: "networkidle" });
     const migratedV54 = await readSavedState(page);
-    assert.equal(migratedV54.stateSchemaVersion, 15);
+    assert.equal(migratedV54.stateSchemaVersion, 16);
     assert.deepEqual(migratedV54.practicalDrill, v54Saved.practicalDrill, "schema14 hard54 progress must survive without queue, answer, rotation, or history changes");
     assert.deepEqual(await currentPresented(page), v54Question);
     assert.equal(await page.locator("#practicalDrillFeedback").isVisible(), true);
-    assert.equal(await page.evaluate(({ key }) => localStorage.getItem(`${key}-before-upgrade-v14-to-v15`), v54Raw), v54Raw.raw);
+    assert.equal(await page.evaluate(({ key }) => localStorage.getItem(`${key}-before-upgrade-v14-to-v16`), v54Raw), v54Raw.raw);
     await cancelKnock(page);
 
     // The direct fresh CTA ignores a basic/weak preset and completed daily20:

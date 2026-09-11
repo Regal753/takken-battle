@@ -96,7 +96,7 @@
   const floorAreaRatioUrl = "https://www.mlit.go.jp/common/001205298.pdf";
   const northSlantUrl = "https://www.mlit.go.jp/jutakukentiku/house/content/001854167.pdf";
   const developmentPermitUrl = "https://www.mlit.go.jp/toshi/city_plan/toshi_city_plan_fr_000046.html";
-  const nationalLandUrl = "https://laws.e-gov.go.jp/law/349AC0000000092?occasion_date=20260401";
+  const nationalLandUrl = "https://laws.e-gov.go.jp/law/349AC1000000092?occasion_date=20260401";
   const nationalLandOperationalUrl = "https://www.mlit.go.jp/common/001199260.pdf";
   const nationalLandRevisionUrl = "https://www.mlit.go.jp/report/press/tochi_fudousan_kensetsugyo02_hh_000001_00106.html";
   const agriculturalUrl = "https://laws.e-gov.go.jp/law/327AC0000000229?occasion_date=20260401";

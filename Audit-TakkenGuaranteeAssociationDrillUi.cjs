@@ -529,7 +529,7 @@ async function assertFocusedInViewport(page, expectedSelector) {
         const saved = JSON.parse(localStorage.getItem(key));
         const answeredAt = new Date().toISOString();
         Object.values(window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS_BY_ID)
-          .filter((question) => cityPlanningIds.includes(question.sourceQuestionId))
+          .filter((question) => cityPlanningIds.includes(question.sourceQuestionId) || question.sourceAnchor === "都市計画法")
           .forEach((question) => {
             saved.practicalDrill.history[question.id] = {
               attempts: 1,
@@ -553,7 +553,7 @@ async function assertFocusedInViewport(page, expectedSelector) {
       lawSources = await routePage.evaluate((queue) => queue.map((id) =>
         window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS_BY_ID[id].sourceQuestionId
       ), routed.state.practicalDrill.queue);
-      assert.ok(lawSources.every((id) => !["l001", "l002", "l003", "l004", "rs001", "rs002", "rs015", "rs016"].includes(id)), "post-training law route may skip city planning only after all eight sources are in saved history");
+      assert.ok(await routePage.evaluate(ids => ids.every(id => window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS_BY_ID[`sprint-law-${id}`].sourceAnchor !== "都市計画法"), lawSources), "post-training catchup excludes city planning only after all 26 city-planning sources are in saved history");
 
       routePage.once("dialog", (dialog) => dialog.accept());
       await routePage.locator("#practicalDrillDiscardButton").click();

@@ -10,11 +10,11 @@ const releaseIntegrity = require("./release-integrity.json");
 const ROOT = __dirname;
 const EXPECTED_CACHE_VERSION = releaseIntegrity.version;
 releaseIntegrityTools.assertVersionMatchesDigest(releaseIntegrity.version, releaseIntegrity.digest);
-// v55 adds 120 separately authored cases (~319 KB raw / 84 KB gzip), retaining
-// the previous sixty cases, legacy 134-question bank and saved-answer contracts. Keep the
-// budget scoped to this explicit question-bank expansion, not feature growth.
-const MAX_PUBLIC_JS_BYTES = 2_230_000;
-const MAX_PUBLIC_JS_GZIP_BYTES = 570_000;
+// v58 adds 72 authored restrictions and their builder (~214 KB raw / 57.5 KB
+// gzip). Retain all prior banks and saved-answer contracts; the extra allowance
+// is scoped to this measured content expansion, not general feature growth.
+const MAX_PUBLIC_JS_BYTES = 2_480_000;
+const MAX_PUBLIC_JS_GZIP_BYTES = 635_000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
   "pwa-runtime.js",

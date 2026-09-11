@@ -44,6 +44,7 @@ jobs:
       - run: node Audit-TakkenOfficialLawBaseline.js
       - run: node Audit-TakkenStateSync.js
       - run: node Audit-TakkenRestrictionsSupplement.js
+      - run: node Audit-TakkenRestrictionsAuthored.js
       - run: node Audit-TakkenSubjectSprintBank.js
       - run: node Audit-TakkenPassReadiness.js
       - run: node Audit-TakkenExamCurrentYear2026.js
@@ -97,6 +98,7 @@ jobs:
           node Audit-TakkenPassReadinessUi.cjs
           node Audit-TakkenFinalStretchUi.cjs
           node Audit-TakkenSubjectSprintUi.cjs
+          node Audit-TakkenRestrictionsAuthoredUi.cjs
           node Audit-TakkenRestrictionMasteryUi.cjs
           node Audit-TakkenCalculationDrillUi.cjs
           node Audit-TakkenPassPlanUi.cjs

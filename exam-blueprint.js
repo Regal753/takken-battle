@@ -302,7 +302,7 @@
     },
     landUse: {
       label: "国土利用計画法",
-      url: "https://laws.e-gov.go.jp/law/349AC0000000092?occasion_date=20260401"
+      url: "https://laws.e-gov.go.jp/law/349AC1000000092?occasion_date=20260401"
     },
     agricultural: {
       label: "農地法",
