@@ -90,6 +90,7 @@ jobs:
           node Audit-TakkenStatementReviewUi.cjs
           node Audit-TakkenBalancedExplanationUi.cjs
           node Audit-TakkenBusinessKnockUi.cjs
+          node Audit-TakkenChoicePremiseUi.cjs
           node Audit-TakkenBusinessArchiveUi.cjs
           node Audit-TakkenGuaranteeAssociationDrillUi.cjs
           node Audit-TakkenFullExamUi.cjs

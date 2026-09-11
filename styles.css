@@ -7849,6 +7849,18 @@ button.mission-step:disabled {
   padding: 11px;
 }
 
+.practical-choice-option {
+  display: grid;
+  grid-column: 1 / -1;
+  min-width: 0;
+  gap: 6px;
+  margin-bottom: 5px;
+}
+
+.practical-choice-option > .practical-drill-choice {
+  width: 100%;
+}
+
 .practical-choice-marker {
   display: grid;
   place-items: center;
@@ -7873,8 +7885,7 @@ button.mission-step:disabled {
   gap: 8px;
 }
 
-.practical-choice-premise,
-.practical-choice-judgment {
+.practical-choice-premise {
   gap: 4px;
   padding: 8px 9px;
   border-left: 3px solid;
@@ -7886,16 +7897,15 @@ button.mission-step:disabled {
   border-color: #65b09b;
   color: #d9eee8;
   background: rgba(101, 176, 155, 0.1);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 650;
 }
 
 .practical-choice-judgment {
-  border-color: #d5a23a;
-  color: #fff5d7;
-  background: rgba(213, 162, 58, 0.11);
+  color: inherit;
   font-size: 15px;
   font-weight: 820;
+  line-height: 1.65;
 }
 
 .practical-drill-choice:hover,

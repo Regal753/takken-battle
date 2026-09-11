@@ -9190,13 +9190,16 @@
       button.removeAttribute("data-structured");
       button.removeAttribute("aria-describedby");
       button.textContent = `${index + 1}. ${choice}`;
-      return;
+      return button;
     }
     const relevantGroups = sharedPremiseGroups.filter((group) => group.blockIndexes.includes(index));
     const sharedTexts = new Set(relevantGroups.map((group) => group.text));
     const ownPremises = block.premises.filter((text) => !sharedTexts.has(text));
-    if (relevantGroups.length) {
-      button.setAttribute("aria-describedby", relevantGroups.map((group) => group.id).join(" "));
+    const premiseId = `practicalChoicePremise${index + 1}`;
+    const descriptions = relevantGroups.map((group) => group.id);
+    if (ownPremises.length) descriptions.push(premiseId);
+    if (descriptions.length) {
+      button.setAttribute("aria-describedby", descriptions.join(" "));
     } else {
       button.removeAttribute("aria-describedby");
     }
@@ -9207,26 +9210,34 @@
     copy.className = "practical-choice-copy";
     const judgment = document.createElement("span");
     judgment.className = "practical-choice-judgment";
-    const judgmentLabel = document.createElement("span");
-    judgmentLabel.className = "practical-choice-label";
-    judgmentLabel.textContent = "判断";
-    const judgmentText = document.createElement("span");
-    judgmentText.textContent = block.judgment;
-    judgment.append(judgmentLabel, judgmentText);
-    if (ownPremises.length) {
-      const premise = document.createElement("span");
-      premise.className = "practical-choice-premise";
-      const premiseLabel = document.createElement("span");
-      premiseLabel.className = "practical-choice-label";
-      premiseLabel.textContent = "前提";
-      const premiseText = document.createElement("span");
-      premiseText.textContent = ownPremises.join("／");
-      premise.append(premiseLabel, premiseText);
-      copy.append(premise);
-    }
+    judgment.textContent = block.judgment;
     copy.append(judgment);
     button.dataset.structured = "true";
     button.replaceChildren(marker, copy);
+    if (!ownPremises.length) return button;
+
+    // Reading a choice-specific condition must not itself submit an answer.
+    // Keep it next to its judgment and explicitly associate it for screen readers.
+    const option = document.createElement("div");
+    option.className = "practical-choice-option";
+    const premise = document.createElement("div");
+    premise.id = premiseId;
+    premise.className = "practical-choice-premise";
+    const premiseLabel = document.createElement("span");
+    premiseLabel.className = "practical-choice-label";
+    premiseLabel.textContent = `選択肢 ${index + 1} の前提`;
+    const premiseText = document.createElement("span");
+    premiseText.className = "practical-choice-premise-text";
+    premiseText.textContent = ownPremises.join("／");
+    premise.append(premiseLabel, premiseText);
+    option.append(premise, button);
+    return option;
+  }
+
+  function practicalChoiceAnswerText(question, index) {
+    const block = question.displayModel?.choiceBlocks?.[index];
+    return validPracticalDisplayBlock(block, Boolean(BUSINESS_HARD_QUESTION_BY_ID[question.id]))
+      ? block.judgment : question.choices[index];
   }
 
   function practicalForecastValues(drill = state.practicalDrill) {
@@ -9312,25 +9323,26 @@
   }
 
   function practicalForecastVerdict(question, attempt, guaranteeSpecialSession) {
+    const answerText = practicalChoiceAnswerText(question, question.answer);
     const retryTiming = guaranteeSpecialSession
       ? "3問以上空けるか翌日以降に再テストする。"
       : "正解でも同じセットの再出題へ戻す。";
     if (attempt.correct && attempt.predictedConfidence === "confident") {
-      return `根拠あり予想で正解。「${question.choices[question.answer]}」を各肢の理由まで固定する。`;
+      return `根拠あり予想で正解。「${answerText}」を各肢の理由まで固定する。`;
     }
     if (attempt.correct && attempt.predictedConfidence === "guess") {
-      return `ヤマ勘で正解。「${question.choices[question.answer]}」だったが未定着。${retryTiming}`;
+      return `ヤマ勘で正解。「${answerText}」だったが未定着。${retryTiming}`;
     }
     if (attempt.correct) {
-      return `迷いながら正解。「${question.choices[question.answer]}」を復習対象に残した。${retryTiming}`;
+      return `迷いながら正解。「${answerText}」を復習対象に残した。${retryTiming}`;
     }
     if (attempt.predictedConfidence === "confident") {
-      return `過信ミス。正解は「${question.choices[question.answer]}」。判断軸を修正して再出題する。`;
+      return `過信ミス。正解は「${answerText}」。判断軸を修正して再出題する。`;
     }
     if (attempt.predictedConfidence === "guess") {
-      return `ヤマ勘からの誤答。正解は「${question.choices[question.answer]}」。区域・行為・主体・数値を切り分けて再出題する。`;
+      return `ヤマ勘からの誤答。正解は「${answerText}」。区域・行為・主体・数値を切り分けて再出題する。`;
     }
-    return `迷いからの誤答。正解は「${question.choices[question.answer]}」。判断軸を確認して再出題する。`;
+    return `迷いからの誤答。正解は「${answerText}」。判断軸を確認して再出題する。`;
   }
 
   function renderPracticalDrill() {
@@ -9516,7 +9528,7 @@
       button.type = "button";
       button.className = "practical-drill-choice";
       button.setAttribute("aria-pressed", String(Boolean(attempt && attempt.selected === index)));
-      renderPracticalChoice(
+      const choiceElement = renderPracticalChoice(
         button,
         choice,
         index,
@@ -9533,7 +9545,7 @@
         button.classList.toggle("is-wrong", attempt.selected === index && !attempt.correct);
       }
       button.addEventListener("click", () => answerPracticalDrill(index));
-      elements.practicalDrillChoices.append(button);
+      elements.practicalDrillChoices.append(choiceElement);
     });
 
     elements.practicalDrillFeedback.hidden = !attempt;
@@ -9541,8 +9553,8 @@
     elements.practicalDrillVerdict.textContent = attempt.predictedConfidence
       ? practicalForecastVerdict(question, attempt, guaranteeSpecialSession)
       : attempt.correct
-        ? `正解。「${question.choices[question.answer]}」を根拠から再現する。`
-        : `誤答。正解は「${question.choices[question.answer]}」。今回の再出題へ追加した。`;
+        ? `正解。「${practicalChoiceAnswerText(question, question.answer)}」を根拠から再現する。`
+        : `誤答。正解は「${practicalChoiceAnswerText(question, question.answer)}」。今回の再出題へ追加した。`;
     const groundingFrameStep = restrictionSprintSession
       ? practicalGroundingFrameStep(question)
       : null;
