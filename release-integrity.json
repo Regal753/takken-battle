@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "20260912-restrictions-v58-2941b71f7fc3",
-  "digest": "sha256:2941b71f7fc3a1092414a7e414a9843ed450012249953dd034f52504ea7d02f3",
+  "version": "20260912-restrictions-v58-ed9239dd80bc",
+  "digest": "sha256:ed9239dd80bcca9dca8d1d7665cbcd5da85b07735b11957677d7505feb2b258b",
   "assetCount": 64,
   "assets": [
     {
@@ -162,7 +162,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "dbe2bd9d0399256f13716156d273cb9c6a3acd34396c8318beb4888197036a3b"
+      "sha256": "cd4a3ac56cfe2cc37aaa7b3237f0a32202d9613b42b5c9020dcee6291de4431a"
     },
     {
       "path": "manifest.webmanifest",
