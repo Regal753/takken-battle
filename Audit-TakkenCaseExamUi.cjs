@@ -5,7 +5,105 @@ const path = require("node:path");
 const { chromium } = require("playwright");
 const baseUrl = process.env.TAKKEN_BASE_URL || "http://127.0.0.1:8784/";
 const storageId = "takken-battle-study-clean-v2-hard-review-case-ui";
-const waitId = (page, id) => page.waitForFunction(value => document.querySelector("#quizCard")?.dataset.questionId === value, id);
+const settleFrames = page => page.evaluate(() => new Promise(resolve => {
+  requestAnimationFrame(() => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+}));
+async function waitId(page, id) {
+  await page.waitForFunction(value => document.querySelector("#quizCard")?.dataset.questionId === value, id);
+  // Starting/advancing schedules its own reveal; do not include that movement in an answer measurement.
+  await settleFrames(page);
+}
+async function clickChoiceWithGeometry(page, index, width, injectLayoutShift = false) {
+  const choice = page.locator("#choices button").nth(index);
+  await choice.scrollIntoViewIfNeeded();
+  await settleFrames(page);
+  const point = await choice.evaluate(button => {
+    const rect = button.getBoundingClientRect();
+    const x = rect.left + rect.width / 2;
+    const y = (Math.max(0, rect.top) + Math.min(innerHeight, rect.bottom)) / 2;
+    return { x, y, hitIndex: document.elementFromPoint(x, y)?.closest("#choices button")?.dataset.index };
+  });
+  assert.equal(point.hitIndex, String(index), `${width}: the physical click must reach the intended choice`);
+  await page.evaluate(({ index, injectLayoutShift }) => {
+    const read = () => {
+      const button = document.querySelectorAll("#choices button")[index];
+      const top = button.getBoundingClientRect().top;
+      return { scrollY, top, pageY: top + scrollY, questionId: document.querySelector("#quizCard").dataset.questionId,
+        selected: button.getAttribute("aria-pressed") === "true" };
+    };
+    const probe = window.__caseAnswerProbe = { before: null, calls: [], read, stable: 0, last: null, injectedHeight: 0 };
+    let layoutObserver, spacer, anchorStyle;
+    if (injectLayoutShift) {
+      // Synthetic DOM only: force a document-space shift after answer render, before its anchor RAF.
+      // Disable native anchoring so this scenario must exercise the app's correction.
+      anchorStyle = document.createElement("style");
+      anchorStyle.textContent = "* { overflow-anchor: none !important; }";
+      document.head.append(anchorStyle);
+      spacer = document.createElement("div");
+      spacer.style.cssText = "height:0;flex-shrink:0;";
+      document.querySelector("#quizCard").before(spacer);
+      layoutObserver = new MutationObserver(() => {
+        spacer.style.height = "80px";
+        probe.injectedHeight = spacer.getBoundingClientRect().height;
+        layoutObserver.disconnect();
+      });
+      layoutObserver.observe(document.querySelector("#choices"), { childList: true });
+    }
+    const scrollToOriginal = window.scrollTo, scrollByOriginal = window.scrollBy;
+    window.scrollTo = function(...args) { probe.calls.push({ method: "scrollTo", args }); return scrollToOriginal.apply(this, args); };
+    window.scrollBy = function(...args) { probe.calls.push({ method: "scrollBy", args }); return scrollByOriginal.apply(this, args); };
+    const down = event => {
+      const button = event.target.closest("#choices button");
+      if (button?.dataset.index !== String(index)) return;
+      probe.before = { ...read(), trusted: event.isTrusted, pointerType: event.pointerType, pointerPageY: event.pageY };
+    };
+    document.addEventListener("pointerdown", down, { capture: true, once: true });
+    probe.restore = () => {
+      window.scrollTo = scrollToOriginal; window.scrollBy = scrollByOriginal;
+      document.removeEventListener("pointerdown", down, true);
+      layoutObserver?.disconnect(); spacer?.remove(); anchorStyle?.remove();
+    };
+  }, { index, injectLayoutShift });
+  // A locator click may perform its own scrolling after the baseline. Use the actual mouse and pointerdown instead.
+  await page.mouse.click(point.x, point.y);
+  await assertConcealed(page);
+  await settleFrames(page);
+  await page.waitForFunction(() => {
+    const probe = window.__caseAnswerProbe, current = probe.read();
+    probe.stable = probe.last && Math.abs(current.top - probe.last.top) <= 0.1 &&
+      Math.abs(current.scrollY - probe.last.scrollY) <= 0.1 ? probe.stable + 1 : 0;
+    probe.last = current;
+    return probe.stable >= 3;
+  }, null, { polling: "raf", timeout: 3000 });
+  const measured = await page.evaluate(() => {
+    const probe = window.__caseAnswerProbe;
+    const result = { before: probe.before, after: probe.read(), calls: probe.calls, injectedHeight: probe.injectedHeight };
+    probe.restore(); delete window.__caseAnswerProbe;
+    return result;
+  });
+  // Keep coordinates and API calls in CI logs even when a following assertion fails.
+  console.log(JSON.stringify({ caseAnswerGeometry: width, scenario: injectLayoutShift ? "injected-layout-80px" : "normal", ...measured }));
+  assert.ok(measured.before?.trusted, `${width}: baseline must come from a trusted pointerdown`);
+  assert.equal(measured.before.pointerType, "mouse");
+  assert.equal(measured.after.questionId, measured.before.questionId, `${width}: the same question must remain visible`);
+  assert.equal(measured.after.selected, true, `${width}: the physically clicked choice must be recorded`);
+  const scrollDelta = measured.after.scrollY - measured.before.scrollY;
+  const pageYDelta = measured.after.pageY - measured.before.pageY;
+  const topDelta = measured.after.top - measured.before.top;
+  assert.ok(Math.abs(topDelta) <= 2, `${width}: selected choice must stay in place (${measured.before.top} -> ${measured.after.top})`);
+  assert.ok(Math.abs(scrollDelta - pageYDelta) <= 2,
+    `${width}: scrolling must only track document layout movement (scroll ${scrollDelta}, pageY ${pageYDelta})`);
+  assert.equal(measured.calls.filter(call => call.method === "scrollTo").length, 0, `${width}: answering must not call scrollTo`);
+  assert.ok(measured.calls.filter(call => call.method === "scrollBy").length <= 2, `${width}: at most two minimal anchor corrections`);
+  if (injectLayoutShift) {
+    assert.equal(measured.injectedHeight, 80, "the synthetic answer-render layout shift must actually occur");
+    assert.ok(Math.abs(pageYDelta - 80) <= 2, `synthetic choice document position must move 80px, got ${pageYDelta}`);
+    assert.ok(measured.calls.some(call => call.method === "scrollBy"), "native anchoring is disabled: the app must correct this shift");
+  }
+  return { beforeAnswer: measured.before.scrollY, afterAnswer: measured.after.scrollY,
+    beforeTop: measured.before.top, afterTop: measured.after.top, scrollDelta, pageYDelta, topDelta,
+    scrollCalls: measured.calls, injectedHeight: measured.injectedHeight };
+}
 async function assertSourceConcealed(page) {
   assert.match(await page.locator("#sourceLabel").textContent(), /時間演習中・根拠条文と解説は終了後に表示/,
     "source articles and case-law summaries must not hint at answers during an attempt");
@@ -109,13 +207,8 @@ async function main() {
     const geometry = [];
     for (const width of [320, 390, 480, 1440]) {
       await page.setViewportSize({ width, height: 900 });
-      const choice = page.locator("#choices button").nth(questions[0].answer);
-      await choice.scrollIntoViewIfNeeded();
-      const beforeAnswer = await page.evaluate(() => scrollY);
-      await choice.click();
-      await assertConcealed(page);
-      const afterAnswer = await page.evaluate(() => scrollY);
-      assert.ok(Math.abs(afterAnswer - beforeAnswer) <= 3, `${width}: answering must not force a page jump (${beforeAnswer} -> ${afterAnswer})`);
+      await settleFrames(page);
+      const answerGeometry = await clickChoiceWithGeometry(page, questions[0].answer, width);
       await page.locator("#dockNextButton").click(); await waitId(page, questions[1].id);
       await assertSourceConcealed(page);
       await page.waitForTimeout(350);
@@ -126,14 +219,17 @@ async function main() {
       }));
       assert.ok(bounds.overflow <= 1, `${width}: horizontal overflow`);
       assert.ok(bounds.header >= 0 && bounds.header < 450, `${width}: next question header visible`);
-      geometry.push({ width, beforeAnswer, afterAnswer, ...bounds });
+      geometry.push({ width, ...answerGeometry, ...bounds });
       await page.screenshot({ path: path.join(output, `next-${width}.png`), fullPage: false });
       page.once("dialog", dialog => dialog.accept());
       await page.locator("#mockCaseButton").evaluate(button => button.click()); await waitId(page, questions[0].id);
     }
+    await page.setViewportSize({ width: 320, height: 900 });
+    await settleFrames(page);
+    const syntheticLayout = await clickChoiceWithGeometry(page, questions[0].answer, 320, true);
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({ status: "ok", score: 49, legacyScore: 46, resume: true, sourceReview: true,
-      sourceHintsConcealed: true, officialNavigationOnly: true, geometry, screenshots: output }));
+      sourceHintsConcealed: true, officialNavigationOnly: true, geometry, syntheticLayout, screenshots: output }));
     await context.close();
   } finally { await browser.close(); }
 }

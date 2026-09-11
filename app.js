@@ -13198,6 +13198,8 @@
     const question = currentQuestion();
     const ids = mockQuestionIds();
     if (!ids.length || question.id !== ids[state.mock.position]) return;
+    const selectedChoiceTop = elements.choices
+      ?.querySelectorAll(".choice-button")[index]?.getBoundingClientRect().top;
     const previousState = cloneStateForSync(state);
     const result = {
       id: question.id,
@@ -13222,7 +13224,23 @@
       rollbackFailedAnswer(previousState);
       return;
     }
+    // Saving may normalize state. Keep the clicked choice at the same viewport
+    // position while feedback, the fixed answer dock and native anchoring settle.
+    const answeredMock = state.mock;
+    const answeredAttempt = state.answered;
     render();
+    const keepMockChoiceInPlace = () => {
+      if (state.mock !== answeredMock || state.answered !== answeredAttempt ||
+          answeredMock.finalized || answeredAttempt?.id !== question.id ||
+          answeredAttempt?.selected !== index || !Number.isFinite(selectedChoiceTop)) return;
+      const delta = elements.choices?.querySelectorAll(".choice-button")[index]
+        ?.getBoundingClientRect().top - selectedChoiceTop;
+      if (Number.isFinite(delta) && Math.abs(delta) > 1) window.scrollBy(0, delta);
+    };
+    window.requestAnimationFrame(() => {
+      keepMockChoiceInPlace();
+      window.requestAnimationFrame(keepMockChoiceInPlace);
+    });
   }
 
   function answer(index) {

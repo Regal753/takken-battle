@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20260912-tax-polish-v59-2512ef2bbe6e",
-  "digest": "sha256:2512ef2bbe6ee8b612ddde921824c610f2d366514d0983bca79a12f56342634b",
+  "version": "20260912-tax-polish-v59-fe2a755fbec9",
+  "digest": "sha256:fe2a755fbec9d63fc6045dd29a8e3bb44a6f668efab89fcae25a8d0a690bb4d2",
   "assetCount": 66,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "7f46bd8e062ee50b0956bc0a97da7566ee9dd00f095aad02c0ad6c3147912b4f"
+      "sha256": "ce1abb1457e7f9d0c96079730a7072c8fb1968b0f6329c50ffdf156e7823dada"
     },
     {
       "path": "assets/battle/grassland-route.webp",
