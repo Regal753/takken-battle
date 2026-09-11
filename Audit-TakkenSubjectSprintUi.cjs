@@ -339,6 +339,53 @@ async function main() {
       const drill = JSON.parse(localStorage.getItem(storageKey) || "{}").practicalDrill;
       return drill?.stage === "active" && drill?.queue?.length === 20 && /:topic-building:/.test(drill.presentationKey || "");
     }, topicKey);
+    const topicLaunchContracts = [
+      { topic: "city-planning", label: "都市計画法", size: 20, pool: 26, legacy: ["l001", "l002", "l003", "l004", "rs001", "rs002", "rs015", "rs016"] },
+      { topic: "building", label: "建築基準法", size: 20, pool: 27, legacy: ["l005", "l006", "l007", "l008", "rs003", "rs004", "rs017", "rs018", "rs019"] },
+      { topic: "national-land", label: "国土利用計画法", size: 13, pool: 13, legacy: ["l009", "l010", "rs005", "rs006", "rs020"] },
+      { topic: "agriculture", label: "農地法", size: 15, pool: 15, legacy: ["l011", "l012", "rs007", "rs008", "rs021"] },
+      { topic: "readjustment", label: "土地区画整理法", size: 13, pool: 13, legacy: ["l013", "l014", "rs009", "rs010", "rs022"] },
+      { topic: "embankment", label: "盛土規制法", size: 14, pool: 14, legacy: ["l015", "l016", "rs011", "rs012"] },
+      { topic: "precision", label: "境界・主体", size: 8 },
+      { topic: "other-law", label: "文化財・道路法", size: 4, pool: 4, legacy: ["l101", "l102", "rs013", "rs014"] }
+    ];
+    for (const contract of topicLaunchContracts) {
+      topicPage.once("dialog", dialog => dialog.accept());
+      await topicPage.locator("#practicalDrillDiscardButton").click();
+      await topicPage.locator("#practicalDrillSession").waitFor({ state: "hidden" });
+      const launcher = topicPage.locator(`[data-subject-sprint-topic="${contract.topic}"]`);
+      const poolSuffix = contract.pool > contract.size ? `（全${contract.pool}問）` : "";
+      assert.equal((await launcher.textContent()).trim(), `${contract.label} ${contract.size}問${poolSuffix}`, `${contract.topic}: label must state the actual launch size`);
+      assert.equal(await launcher.getAttribute("data-session-size"), String(contract.size), `${contract.topic}: size must be explicit`);
+      const passPlanPanel = topicPage.locator("#passPlanPanel");
+      if (!(await passPlanPanel.evaluate(node => node.open))) {
+        await passPlanPanel.locator("summary").first().click();
+      }
+      assert.equal(await passPlanPanel.evaluate(node => node.open), true, "law launchers must be exposed by opening PASS PLAN");
+      assert.equal(await launcher.isVisible(), true, `${contract.topic}: actual launcher must be visible`);
+      await launcher.click();
+      await topicPage.waitForFunction(({ storageKey, topic, size }) => {
+        const drill = JSON.parse(localStorage.getItem(storageKey) || "{}").practicalDrill;
+        return drill?.stage === "active" && drill?.queue?.length === size && drill?.presentationKey?.includes(`:topic-${topic}:`);
+      }, { storageKey: topicKey, topic: contract.topic, size: contract.size });
+      const launched = await topicPage.evaluate(({ storageKey, topic, legacy }) => {
+        const drill = JSON.parse(localStorage.getItem(storageKey) || "{}").practicalDrill;
+        const bank = window.TAKKEN_SUBJECT_SPRINT_BANK;
+        const expectedSources = new Set([...(legacy || []), ...(window.TAKKEN_RESTRICTIONS_AUTHORED_BANK.TOPIC_SOURCE_IDS[topic] || [])]);
+        return {
+          size: drill.sessionSize, ids: drill.sessionIds, queue: drill.queue,
+          allowedCount: bank.QUESTIONS.filter(question => expectedSources.has(question.sourceQuestionId)).length,
+          correctSources: drill.queue.every(id => expectedSources.has(bank.QUESTIONS_BY_ID[id]?.sourceQuestionId))
+        };
+      }, { storageKey: topicKey, topic: contract.topic, legacy: contract.legacy });
+      assert.equal(launched.size, contract.size, `${contract.topic}: saved session size must match label`);
+      assert.equal(new Set(launched.ids).size, contract.size, `${contract.topic}: launch must contain unique questions`);
+      assert.deepEqual(launched.queue, launched.ids);
+      if (contract.legacy) {
+        assert.equal(launched.allowedCount, contract.pool, `${contract.topic}: displayed pool must match actual bank`);
+        assert.equal(launched.correctSources, true, `${contract.topic}: launch must exclude other legal topics`);
+      }
+    }
     await topicContext.close();
 
     const defaultReview = `lawdefault${Date.now().toString(36)}`;
@@ -724,6 +771,7 @@ async function main() {
       bankQuestions: 112,
       sessionQuestions: started.queue.length,
       restrictionDefaultSessionQuestions: defaultRestrictionDrill.queue.length,
+      topicLauncherSizes: topicLaunchContracts.map(({ topic, size, pool }) => ({ topic, size, pool })),
       sourceAnchorSeparation: 2,
       nonRestrictionPriorityPreserved: true,
       retryQueueDiversified: true,
