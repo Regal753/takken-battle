@@ -102,7 +102,7 @@ requireText(css, ".quest-card { order: 6; }", "question workspace order is missi
 
 const report = {
   status: issues.length ? "error" : "ok",
-  stateSchema: 15,
+  stateSchema: 16,
   textbookUnits: textbookUnits.length,
   textbookQuestions: textbookIds.length,
   practicalQuestions: practical.QUESTIONS.length,
