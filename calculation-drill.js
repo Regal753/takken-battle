@@ -36,7 +36,7 @@
     }),
     nationalLand: Object.freeze({
       label: "e-Gov・国土利用計画法23条・施行令15条（届出対象面積）",
-      url: "https://laws.e-gov.go.jp/law/349AC0000000092?occasion_date=20260401"
+      url: "https://laws.e-gov.go.jp/law/349AC1000000092?occasion_date=20260401"
     }),
     display: Object.freeze({
       label: "不動産公正取引協議会連合会・不動産の表示に関する公正競争規約施行規則（徒歩80m=1分）",

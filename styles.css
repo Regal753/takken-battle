@@ -7133,6 +7133,20 @@ button.mission-step:disabled {
   overflow: hidden;
 }
 
+#taxRevisionGuide > p {
+  margin: 8px 11px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+#taxRevisionGuide > .official-source-link {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  margin: 0 11px 6px;
+  padding: 6px;
+}
+
 .current-year-checks > summary {
   display: flex;
   align-items: center;

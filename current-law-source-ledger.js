@@ -65,7 +65,7 @@
       reviewBy: "2026-10-18",
       status: "current",
       coveragePolicy: "ledger-only-exam-operation",
-      currentNote: "宅建業従事者が登録講習修了試験に合格し、合格後3年以内の試験へ申込みした場合に5問免除。令和8年度は45問で扱う。",
+      currentNote: "宅建業従事者が登録講習修了試験に合格し、合格後3年以内に行われる試験が5問免除の対象。受験申込み時までの修了が必要。令和8年度は45問で扱う。",
       historicalNote: "修了試験合格前の受講中、一般受験者、又は期限外を45問扱いにしない。年度案内の申込条件を優先する。",
       reiwaSourceLabels: []
     },
@@ -82,7 +82,7 @@
       status: "current",
       coveragePolicy: "reference-when-matching-atom",
       currentNote: "土地売買の所有権移転登記は、令和11年3月31日まで税率1,000分の15。課税標準・住宅用家屋特例とは別に判定する。",
-      historicalNote: "NTA No.7191の令和7年4月1日現在版は令和8年3月31日までと表示する旧期限であり、令和8年度の単独根拠に使用禁止。",
+      historicalNote: "NTA No.7191の旧・令和7年4月1日版は令和8年3月31日までだった。現在の令和8年4月1日版は令和11年3月31日までへ更新済み。保存した旧版の期限を混ぜない。",
       reiwaSourceLabels: ["登録免許税法"]
     },
     {
@@ -106,14 +106,14 @@
       topic: "令和8年地価公示",
       sourceRef: "国土交通省 令和8年地価公示 全国の地価動向",
       sourceUrl: "https://www.mlit.go.jp/totikensangyo/content/001985434.pdf",
-      sourceLocator: "1頁『全国平均』、全用途平均・住宅地・商業地がいずれも5年連続上昇。標準地26,000地点。",
+      sourceLocator: "1頁『全国平均』及び標準地数注記。標準地総数26,000地点、調査実施25,565地点（435地点休止）。",
       verifiedAt: "2026-09-10",
       effectiveFrom: "2026-03-17",
       effectiveTo: "2027-03-16",
       reviewBy: "2026-10-18",
       status: "current",
       coveragePolicy: "reference-when-matching-atom",
-      currentNote: "令和8年地価公示は26,000標準地。全国平均で全用途平均・住宅地・商業地はいずれも5年連続上昇。",
+      currentNote: "令和8年地価公示は標準地総数26,000地点、うち調査実施25,565地点（435地点休止）。全国平均で全用途平均・住宅地・商業地はいずれも5年連続上昇。",
       historicalNote: "数値統計は法令基準日と別管理し、令和9年地価公示の公表後は更新前の現行統計として出題しない。",
       reiwaSourceLabels: ["国土交通省 土地・不動産統計", "地価公示法・不動産鑑定評価基準"]
     },

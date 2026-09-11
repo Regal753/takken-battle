@@ -1304,7 +1304,7 @@ async function main() {
     if (
       !/^takken-battle-save-\d{8}\.json$/.test(sharedFile.name) ||
       sharedFile.type !== "application/json" ||
-      sharedFilePackage.state.stateSchemaVersion !== 15 ||
+      sharedFilePackage.state.stateSchemaVersion !== 17 ||
       sharedFilePackage.state.attempts !== 117 ||
       sharedFilePackage.state.correct !== 99 ||
       sharedFilePackage.state.practicalDrill?.bankId !== "business-fullscore" ||
@@ -1521,7 +1521,7 @@ async function main() {
       handoff.hash ||
       handoff.attempts !== 117 ||
       handoff.correct !== 99 ||
-      handoff.schema !== 15 ||
+      handoff.schema !== 17 ||
       handoff.totalXp !== 4631 ||
       handoff.crystals !== 1160 ||
       handoff.centralAnswers !== 162 ||

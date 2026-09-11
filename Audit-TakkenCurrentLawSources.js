@@ -46,7 +46,8 @@ assert.deepEqual([...topics].sort(), [...requiredTopics].sort(), "required topic
 const registrationTax = ledgerApi.ledger.find((item) => item.id === "registration-tax-land-sale-extension");
 assert.equal(registrationTax.effectiveTo, "2029-03-31", "must reflect latest land-sale extension through R11.3.31");
 assert.match(registrationTax.currentNote, /1,000分の15/, "registration tax rate missing");
-assert.match(registrationTax.historicalNote, /No\.7191.*単独根拠に使用禁止/, "old NTA 7191 fail-closed guard missing");
+assert.match(registrationTax.historicalNote, /No\.7191.*旧・令和7年4月1日版.*令和8年3月31日/, "NTA 7191 historical version and its old expiry must remain explicit");
+assert.match(registrationTax.historicalNote, /現在の令和8年4月1日版.*令和11年3月31日.*保存した旧版の期限を混ぜない/, "updated NTA 7191 must not inherit the old version's expiry");
 
 // Coverage policy: only a dated legal/statistical atom actually selected for a
 // generated question must carry its ledger ID and exact primary URL. A ledger

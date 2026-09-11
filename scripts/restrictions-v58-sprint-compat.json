@@ -1,0 +1,826 @@
+{
+  "version": 5,
+  "keys": [
+    "2026-09-11",
+    "2026-09-12",
+    "legacy-attempt-seed"
+  ],
+  "questions": {
+    "sprint-tax-t001": {
+      "canonical": "bb902cc6ec0857458b388aff243b8165225f5561e25022ccee27f7159c0ab118",
+      "presented": [
+        "ac776b57ac2b406a84920655b1d403509562fb76c398830af58d8d3b9d4a2bb6",
+        "1779b0459b60587715c36c9ed4d82c44e3d4f48af0f50a9f5c874bccce1631ad",
+        "bb902cc6ec0857458b388aff243b8165225f5561e25022ccee27f7159c0ab118"
+      ]
+    },
+    "sprint-tax-t002": {
+      "canonical": "1deb8387c0ecf84c1b57bf057d0db36fcc3e4bce2fada20c50fcf9291f8009b0",
+      "presented": [
+        "aab8d185dece3fd43cb4988046b1c7deb834574323cc9bf0d75379c09e4d6cac",
+        "1deb8387c0ecf84c1b57bf057d0db36fcc3e4bce2fada20c50fcf9291f8009b0",
+        "01cbcbab81869106137c84eb0df88aab6382efe70e5dee0979689bcec6d3704e"
+      ]
+    },
+    "sprint-tax-t003": {
+      "canonical": "9c5fb1fa7fe47c8805ea210ead1e1a3dc1b567c24905ebbf1b905d8dfbd94c56",
+      "presented": [
+        "9c5fb1fa7fe47c8805ea210ead1e1a3dc1b567c24905ebbf1b905d8dfbd94c56",
+        "c7c37f912fd30134e9249dc3bdb09b67a72b7cd718c3c3ee976d59e0ff912498",
+        "797a1c02495e1d612354e2ab0e8f77a49ee372f530a47b8d4dd367f73eb9cf3f"
+      ]
+    },
+    "sprint-tax-t004": {
+      "canonical": "600cfc72a0e06d806f8dd3a255661ddff10b511f906d4763ef7968d27ce91239",
+      "presented": [
+        "9dd8d552ab972e12b793033e18368aae7fbae0d69c2e0063db6141eb5d94b72a",
+        "12e9dfc6b1600d73f73d58b2e5808678ef1b1c9d023f684f6b3dcef1194ae27d",
+        "5dbed63a483674099cb21658ea9b11dc25fd3e60817aa4b41ed7a02aa5ab9823"
+      ]
+    },
+    "sprint-tax-t005": {
+      "canonical": "248f51553e42230dedf919b230b36950457e9073c45ae8be40b9fbd58f18e43d",
+      "presented": [
+        "a20f03514bc1c6a43359eb028a6e8e9958cca2cd1c7aa785bcd62053d411fc4d",
+        "2edb7bf10607c12344974465acf69afdf5d8eed730f30882f048136d5df01765",
+        "248f51553e42230dedf919b230b36950457e9073c45ae8be40b9fbd58f18e43d"
+      ]
+    },
+    "sprint-tax-t006": {
+      "canonical": "9ecbc3ce79bd431fbe00063667c4459e897406c59899a20e73c80d8e164f9306",
+      "presented": [
+        "79e723b32098c43ead06a2ba32af7accb643b5ab877c1bdbee9955c94b0cfe81",
+        "9ecbc3ce79bd431fbe00063667c4459e897406c59899a20e73c80d8e164f9306",
+        "6cd0cde03e78ab13fec1e4f566f289d07c36a45e33027d6c1d5db00e0e5c042d"
+      ]
+    },
+    "sprint-law-l001": {
+      "canonical": "98fed5b914ba379a46233b16ef75c94b620efbedc2a07ab7d394e65e2f9c37e8",
+      "presented": [
+        "375b1d027c3364f79d445dea433d6a99a4dec313b763abc9353bac211a102068",
+        "3b68ebee94da9d1e0e41af67c2e7843f766c797f1863f8b9cb0c12e3da9df983",
+        "98fed5b914ba379a46233b16ef75c94b620efbedc2a07ab7d394e65e2f9c37e8"
+      ]
+    },
+    "sprint-law-l002": {
+      "canonical": "785b56cffc93423304ef7d5a2da7dfa6ca3932c39c6d2158949c843a319ba3b5",
+      "presented": [
+        "2359f562d4a4bacac8ef66d88507b5379e508c548237d93833795e9ec614bb67",
+        "785b56cffc93423304ef7d5a2da7dfa6ca3932c39c6d2158949c843a319ba3b5",
+        "72f33aff06c148bc1ee1e6ca662917bed35917f680d4ca379cfa6f9a149c9828"
+      ]
+    },
+    "sprint-law-l003": {
+      "canonical": "fdf1975170fd1145990b2c6259f96aa22babede6afa40b8ed27444d897e092ef",
+      "presented": [
+        "fdf1975170fd1145990b2c6259f96aa22babede6afa40b8ed27444d897e092ef",
+        "220b91eaa636d620935b24a185a466bd95fee2838b58147d56ff5bb702dc92ca",
+        "ffac40db5343d4cd3e884f63c9d41a2035c2c585a142f52cdbe0482b1333c51b"
+      ]
+    },
+    "sprint-law-l004": {
+      "canonical": "d128a665945e6038d056ba8688ba610ecf638545f4b3ccdb3c3fe511cc4067b4",
+      "presented": [
+        "35563d22009f0424ea14ab58e7544c132a688b73dbbf4cfde75731fc1b2bf937",
+        "3a5a28e72e4a88fb7a3e564548381a09ba0422c4a32f0fa6a96066c36e8f43f9",
+        "bb8863bc100bb9cecd465f976ca232be3dea896e01df62a204f815da74faf2e9"
+      ]
+    },
+    "sprint-law-l005": {
+      "canonical": "974f6d9bd57bce23c079c0d6b59af47c698550c07ff787d3aadd03cb216c2217",
+      "presented": [
+        "81c60e8623a7cb828c0154382e9b49444ee1fcdb89d8a09703e3d3a79b7f05b7",
+        "e401185d40d400f6747b6e982d9c9d07d0a87ae3ef5442c33526f79bc814dee1",
+        "974f6d9bd57bce23c079c0d6b59af47c698550c07ff787d3aadd03cb216c2217"
+      ]
+    },
+    "sprint-law-l006": {
+      "canonical": "10f3be074d06a80f9004ddec842f1df513b5824e03aac2a8fd9704482f59d09a",
+      "presented": [
+        "7a5062f9ab32de8ad6f92f723f8a0b7dec59fc4db019074d804791a2eff5300c",
+        "10f3be074d06a80f9004ddec842f1df513b5824e03aac2a8fd9704482f59d09a",
+        "0098979d5892f102838b57f1339935d6d183592128db144c94839754b1e49d5a"
+      ]
+    },
+    "sprint-law-l007": {
+      "canonical": "07654309dfe6d7fec68f30531e63e82018ddf6e5a0b82abe874c4b20320cfbbb",
+      "presented": [
+        "07654309dfe6d7fec68f30531e63e82018ddf6e5a0b82abe874c4b20320cfbbb",
+        "fd6d237e87e912d1645041cb3685428166481775965319f214f15c0f86b91fea",
+        "3241d089ffdc273ee1723f0222628e561412e705fe6cde5e426ea6c67e25f457"
+      ]
+    },
+    "sprint-law-l008": {
+      "canonical": "ea842bd3c4e7b9d2e474a6289afbfbff5056002ea7ad578bbafcad9763367ec7",
+      "presented": [
+        "6da18173f9840cf988134cacfc56b4f32e363092cbab1c3e72ca241303d3414f",
+        "ee312ba1913985bcf227920d503523628757ec035dfc57200818bd09fec4fba9",
+        "64223b0f28c78e308fa68e764ff8f1c3aef1a16e7a405846a12be8ed11e0639d"
+      ]
+    },
+    "sprint-law-l009": {
+      "canonical": "b75008a7e35dfb407ce22a1ed73505917116b34d81e293df0f593a5bf326fa34",
+      "presented": [
+        "39bf227b17c2e5888f35cd7e4ce5ecc647737a53d28becdc5f5f663e9e50af3f",
+        "51b8c7151583350f5a66023fd867f749ba30d4d64b7398e3931b50fc1de4e16d",
+        "b75008a7e35dfb407ce22a1ed73505917116b34d81e293df0f593a5bf326fa34"
+      ]
+    },
+    "sprint-law-l010": {
+      "canonical": "da94373288e110a8ea8a3c3dcfe937ae96350fe280d4811158cd2a68142d57e3",
+      "presented": [
+        "1a33a5e72f620e8fdc6e6a28a55e41a8c14b8c77e61b2f9f6b4bb274270282f1",
+        "da94373288e110a8ea8a3c3dcfe937ae96350fe280d4811158cd2a68142d57e3",
+        "c0ba2636ce5a3c1d43bce1b8694680ba6a3640ec3bb4193a70c399dcff3cdd7f"
+      ]
+    },
+    "sprint-law-l011": {
+      "canonical": "2ad47aa6ee8de1dc2a0e4bb26ace14b9206f9db831a8e46f1de9c99be23594c5",
+      "presented": [
+        "2ad47aa6ee8de1dc2a0e4bb26ace14b9206f9db831a8e46f1de9c99be23594c5",
+        "324a0e04057590de07417915feb9d39152f14ad04c36422a0b45d170d92cc64a",
+        "f756b9a7f27c938b0e9b2209ef5300b4108bf47760891c1ea66d7cc8760843c0"
+      ]
+    },
+    "sprint-law-l012": {
+      "canonical": "e15cb1c8e8881eb5ad955edc9c0a796b9931519b6a4bf339b5f596d37d4e95a1",
+      "presented": [
+        "cd41e8b98969e0e99023b9231edbc3c583a65f93e799a50de5cb6f36a4d81c50",
+        "ce335d8951a7688507c43a7ed2e822ada01a8a8921937e42868e0b081df4732f",
+        "b67aa8bd7d75d716c0b761fe05698e3937ccb6f801ff4130be5d7afac6afa146"
+      ]
+    },
+    "sprint-law-l013": {
+      "canonical": "90ae116fa19f9f50c341f09d8332de3accb725170f96a182e302bb1454047896",
+      "presented": [
+        "6e7a92a3667e0cf783db9c8c1a3f0918744f77c20edce7a2f99ca9040546ad04",
+        "45ed3d36b3757f29b2a3a773b255875ea7c8a2a803b4486a66f92f6a11b6474e",
+        "90ae116fa19f9f50c341f09d8332de3accb725170f96a182e302bb1454047896"
+      ]
+    },
+    "sprint-law-l014": {
+      "canonical": "e4465b06be65e1c24240272ede41df70da9a93780887940112b893273266852d",
+      "presented": [
+        "9bd56fe74015cc2eb5129a1d9daf87616574041c9586bd23dec03e967b55f9a5",
+        "e4465b06be65e1c24240272ede41df70da9a93780887940112b893273266852d",
+        "de8ca7400d2c9d2b089d920dc7ef8baa54efb19cf64284e9012d4efa301ce0fd"
+      ]
+    },
+    "sprint-law-l015": {
+      "canonical": "2e7925b65f84b6bd2bf74f53130c4069d4dbfb20a7017e5eeacb1bbfcc4a62e8",
+      "presented": [
+        "2e7925b65f84b6bd2bf74f53130c4069d4dbfb20a7017e5eeacb1bbfcc4a62e8",
+        "1e5494228c1fa9097298d62662b7e168522d2c144b504f79fa8e976c18964229",
+        "e1b18dd8083566152c83e0ea82b33e05eaa51e224aba930417f08d64332829ae"
+      ]
+    },
+    "sprint-law-l016": {
+      "canonical": "b61daec57bc84d730b58407451caf7ef250cd9e7c0ef8dd9d6be3b11a82438a7",
+      "presented": [
+        "7659eb6513529301f65c61cf2305b058c913f11441fc1c17bf9cd76f27ddc114",
+        "95b80d6cefc0acbb132447510799f0bec6cd88d2a4c912725ad7f705776a1387",
+        "5d4a3ec76236138c17203585d910d6556687a5d44507d1caa1f7ebac2d380eb4"
+      ]
+    },
+    "sprint-law-l101": {
+      "canonical": "e40f7110e9ec0eef364456a040433c16b55f2d2dd298cdcd7f25c11be4c1b99f",
+      "presented": [
+        "ce754505db6ca46311d9d70b0daa705abd6475bdacd1955ab4c4eb9e26345bba",
+        "b206fc7de9f750aa4bb4c63510228c7a0842d7765fecacbebf52611f66d3be6c",
+        "e40f7110e9ec0eef364456a040433c16b55f2d2dd298cdcd7f25c11be4c1b99f"
+      ]
+    },
+    "sprint-law-l102": {
+      "canonical": "5774a25b330aa8a065c05978dff43d3ace66b4da3144dc7ef28b4b9c1df790ec",
+      "presented": [
+        "f4834ff9357097d2c5e6306edd60b4fb2b5254b5969d069a051fc1793b97c3e3",
+        "5774a25b330aa8a065c05978dff43d3ace66b4da3144dc7ef28b4b9c1df790ec",
+        "d4c56eb4d1dae2914002e7c7a6ea92a3adbf1b676e1ce89a0b373fd607069d7c"
+      ]
+    },
+    "sprint-law-rs001": {
+      "canonical": "b55848bd466a896538c102819e72f524accbd0e4841962929b54aa1ba759b0e7",
+      "presented": [
+        "b55848bd466a896538c102819e72f524accbd0e4841962929b54aa1ba759b0e7",
+        "e9c9058cd7f30e326d02fce955092646e0835626f723ab74985e19d4cba6d119",
+        "21dedfe1e1eeb8b915a4e2c9f2c922eec0b95d1c029872c8d3ff71bfb1a8195d"
+      ]
+    },
+    "sprint-law-rs002": {
+      "canonical": "c694b9ea401e426a0462d3a97e8d0d81003f9ed0a0cac657c16259995a4526bd",
+      "presented": [
+        "a010d86ec736ca959e0fb748668505c756e2b2eb41bfac7340f3c9ca56d4fb51",
+        "435914f720c1036f1abdd1d9b572222f3d6b628d296d217408d5c64792d007f1",
+        "323a64c52ca3d8462df2190e4536d7e6d5a2a7051ce631cde7e33d8d645713a8"
+      ]
+    },
+    "sprint-law-rs003": {
+      "canonical": "2c057c23fb988e2e3bb10d6fe5775f6fe55f79fdadd931c0a889bfc6891513b3",
+      "presented": [
+        "ae639157c64d2c38d16d0c6e0e413b26e345858b1bb6831414d50b487c5c0a47",
+        "32a30b28a3cb966bc970672bc92ca4fec92015346b515bc5f0876abc7119f6e2",
+        "2c057c23fb988e2e3bb10d6fe5775f6fe55f79fdadd931c0a889bfc6891513b3"
+      ]
+    },
+    "sprint-law-rs004": {
+      "canonical": "44b959b96e1629cd1cbe49184c778385f95910b622ca80530233549b059dfd18",
+      "presented": [
+        "b9079d9dc2a2034d57b9cbc564fde51272a5dfa49bcbe2ad228b824414b0bdd2",
+        "44b959b96e1629cd1cbe49184c778385f95910b622ca80530233549b059dfd18",
+        "7a22a999d39d4818db72a26a5f25fd6a55baaad8d925c1976a57045818c7cf44"
+      ]
+    },
+    "sprint-law-rs005": {
+      "canonical": "378eced01f3f5d0ae5c4a120ae46abd8d72d308da261d92d8e71640192777eaa",
+      "presented": [
+        "378eced01f3f5d0ae5c4a120ae46abd8d72d308da261d92d8e71640192777eaa",
+        "c68a83cc9be81d3454b9241b4c88e7effd9de2e6a3d1d99e74dc8aafc90d5df7",
+        "6717390a3047c442e07c972409c9b663237f0d19a9cd2cdf14bd846935532d12"
+      ]
+    },
+    "sprint-law-rs006": {
+      "canonical": "244c1119ebdc2e365df629383abd81bfedcf8e9792aad98e1e8f7ad67ecbd38b",
+      "presented": [
+        "b4183b18e6c9c0d3a0da091d50ede6517ac00e2b78205cd07ed379f4977e22b6",
+        "571ed0518ae9302db55536d57a7f5334d785f52605ebb7ed19857dd348deb251",
+        "14b7c498d8899947a067d5f5d6ddaa220514d44530acc6c81437be68c86da76d"
+      ]
+    },
+    "sprint-law-rs007": {
+      "canonical": "2218b9b3d83e02354d427572ca7eef9d7a10620617fc8ded5680ef79b3b4484a",
+      "presented": [
+        "f3f5c18c667d67accfb24ee6af7b2174adde9b2d87f1873184624bfb841f6edb",
+        "81fd99001608dc419d7c673df00f5c134af7dd7828680b85bc50b6dc28013219",
+        "2218b9b3d83e02354d427572ca7eef9d7a10620617fc8ded5680ef79b3b4484a"
+      ]
+    },
+    "sprint-law-rs008": {
+      "canonical": "ef6bcc60e3a20e42a6de8147b73061b9356a6456d4a11baee554c6d6a5935269",
+      "presented": [
+        "5c407102ea129e63ccccedbbf9577ffe78c7d409289491599a2a19cf3bc83a5d",
+        "ef6bcc60e3a20e42a6de8147b73061b9356a6456d4a11baee554c6d6a5935269",
+        "6592b5b7a0444da4047e6f5f389228748d9733f70e746857353255efc604ede4"
+      ]
+    },
+    "sprint-law-rs009": {
+      "canonical": "fa30b94f8c3f9a2bb54fe6648ac793c916b253940cc88f0c1f90325024906461",
+      "presented": [
+        "fa30b94f8c3f9a2bb54fe6648ac793c916b253940cc88f0c1f90325024906461",
+        "81c11b04f8e450b32409038f12610a3307af95738463aa2ec5c2e33e14c47b29",
+        "7d6882c2c037fe07577c624f179cc17e36b159e28b6c17970c4b2c23de34781e"
+      ]
+    },
+    "sprint-law-rs010": {
+      "canonical": "9b055ff3b20a5babe5c7c4bea5ee96af0dae0ea664b8700820da399786b4c0b8",
+      "presented": [
+        "15ac65e39c3d85e29db5cd1ae38900d0723e311931793b7ed63d9212a12d9283",
+        "35c2b1ad9a32182e98740729aa471b409db754b08cfc262644bab6f6126ce9fa",
+        "eb9ba90edccd6cc6f2a85f6f2e07aa7c62b6e7abba7dbeb9897e039f9b432fab"
+      ]
+    },
+    "sprint-law-rs011": {
+      "canonical": "47bbbb82371240529ee67d7f393c906811c3075954af7c52ab96780d473c9221",
+      "presented": [
+        "e15e376705566875086c892cc2b1a247e76c56d1dd1e4861f87b442f176045aa",
+        "5e581e2ac6b546ca27cb7b5822dc72ab8814c8f09e96256a38e00fa22eeef845",
+        "47bbbb82371240529ee67d7f393c906811c3075954af7c52ab96780d473c9221"
+      ]
+    },
+    "sprint-law-rs012": {
+      "canonical": "fd3e2d61dfcf13b1aa5ae58e3219082b9c1189661b8ff4f2c756c3131b2d5b35",
+      "presented": [
+        "c6c1438f1cf4e7381dcd65e198c1fcb757283bed02dc1896ee1223fc778e639c",
+        "fd3e2d61dfcf13b1aa5ae58e3219082b9c1189661b8ff4f2c756c3131b2d5b35",
+        "38bd62535b733331cb49c5393e56599c43066d348c5b7720892fb957c3543e6b"
+      ]
+    },
+    "sprint-law-rs013": {
+      "canonical": "a7f44413dc29a2859ee352cac884eb930f21dca035fe1ee986d655a68b080472",
+      "presented": [
+        "a7f44413dc29a2859ee352cac884eb930f21dca035fe1ee986d655a68b080472",
+        "696fefd48e3816f0e331124e74b65024e93550389e65d9709b68a518eb2b4280",
+        "617d96883345f462634fbe0a4725a3843afdeeb1b34210b0505a94c6989161e9"
+      ]
+    },
+    "sprint-law-rs014": {
+      "canonical": "f9ba2cc90e8254d93ef3dbde988fd47dced1c4de3634cc564af0b8484c992b83",
+      "presented": [
+        "2bfb996bc045587803b17d0c5794021041cefc0492698119f812f1f0da082eb2",
+        "a7a8eac279b48540bc67008c784cd8ff32de98874106d874adf046dacbc2fe32",
+        "bbf978982307ba5f20333fab73c39c3318820f25a074a3cebea5ff47259b7d88"
+      ]
+    },
+    "sprint-law-rs015": {
+      "canonical": "42a2a88162e1610d2f6b798349831aa1c10edb3873359ee3ccfa19d78d3f3c4c",
+      "presented": [
+        "c2e79e6a2449a7860259d462a6b8e0b39bca3cbbe2a6bd8ab71533c739d1ec8c",
+        "a96e66098f79364a07eaa557d6482cc9095f34247fa8e1b17971ca4d94a353a1",
+        "42a2a88162e1610d2f6b798349831aa1c10edb3873359ee3ccfa19d78d3f3c4c"
+      ]
+    },
+    "sprint-law-rs016": {
+      "canonical": "3e570a5704f2549b395359a8f286792967eab2d9f1d49af454bc9fe5215c7202",
+      "presented": [
+        "33827fa9caa1b5ea151b675eaf4ff80ee283c2028064c7a8e47c4579d169400f",
+        "3e570a5704f2549b395359a8f286792967eab2d9f1d49af454bc9fe5215c7202",
+        "98c6524372420065465d5b8d1133c9a0f775d5842ac28379c2d9ef3c26a0dff6"
+      ]
+    },
+    "sprint-law-rs017": {
+      "canonical": "10075caaba782039324c30c419107df6c1980cd7ec069b277fff6c550e8489e4",
+      "presented": [
+        "10075caaba782039324c30c419107df6c1980cd7ec069b277fff6c550e8489e4",
+        "0113e8b11a0b9a534712b7d564d6259937f6d283b9fb627511d2ed5d16b3bbe5",
+        "7b56e994984d275e81c46140a356f167364811dcc945c422b49694fbf9174c0c"
+      ]
+    },
+    "sprint-law-rs018": {
+      "canonical": "3cc3d7aeedd46eec3935e37269979075db5ba4c0b4625035c98cd9d1e9322e41",
+      "presented": [
+        "731bfb8738ab3d2cee7497eea95d6c5ff94c682567c3fd7da05d374de4cdd496",
+        "dcb2bf67a4221b85fa4f8de53e537ea879d148f2196943ca4f2897a15f6fcd4c",
+        "a7d82c877c49ada7d6032039f14fd678d7d2ef44dc8c8a4951ffe616f93864b9"
+      ]
+    },
+    "sprint-law-rs019": {
+      "canonical": "4ff6dea65909c42e877febf1bd5c5a49621e367ccfc246d23c765e5cb2a5b19a",
+      "presented": [
+        "63d6804933843e685fb23b43c0cf1fd34359fc7724a1feca8a20f6609ae2bcad",
+        "8a47445782dbc067c5ff499a74f948827c6862d4ee0ef26127bd03cd3c5d6fc0",
+        "4ff6dea65909c42e877febf1bd5c5a49621e367ccfc246d23c765e5cb2a5b19a"
+      ]
+    },
+    "sprint-law-rs020": {
+      "canonical": "f1c1f19ef63454d41156b03cf99950ed1b510c046d7231b2dd074d7515ac3f9f",
+      "presented": [
+        "ac6a5c5e12a4f6ae537fae0bad43333ee93147167fabc1104c7d7935a2973a2e",
+        "f1c1f19ef63454d41156b03cf99950ed1b510c046d7231b2dd074d7515ac3f9f",
+        "ab1f4c6eb4ac20665b1fd3b42730fde143e8a101c04ca4e6ac98832f476cf415"
+      ]
+    },
+    "sprint-law-rs021": {
+      "canonical": "ae54debe59d7b0f060119cd278dfaaa0f92f5a2812921643fb5776ae60553639",
+      "presented": [
+        "ae54debe59d7b0f060119cd278dfaaa0f92f5a2812921643fb5776ae60553639",
+        "fe4148bbfcbf3a4a56bc4e28380875bc05cdcb49fb2b7bee0d4f99d5addde611",
+        "de28d8cdcf2cbfcbbdef8d07d51c8a6791c89e8ac10ea95f17d5f0a2488c512f"
+      ]
+    },
+    "sprint-law-rs022": {
+      "canonical": "d3f37e7026131c32986f5ca2f7ecd2f39f409aa40328e3ee63d759e8eced6716",
+      "presented": [
+        "bde9b06e0afdd69c492365ea3500437647c1557aa3c8ef4d2ef5c73df50a061c",
+        "a6b1193e8cd9ffc82886d7a1fdd70395d0db6990e2d5b8cf5bcf075a5eae3bc6",
+        "dc342befc6ac1ca83b831e05b56d2f2b70dcaef8824169942c62e82aff75f6e1"
+      ]
+    },
+    "sprint-rights-r001": {
+      "canonical": "a40770651c3043df3fcd6f822ebd8cf00c15297590e2f361564e79dbcfa81fdd",
+      "presented": [
+        "739d51478baaa78ba4d4dda6f19029975cc8b754f2acce68e4aaccc1af46eb74",
+        "bf0da3a71744dfc88c6e01e29ad145436b403a29f89c9215ae363c694a788c61",
+        "a40770651c3043df3fcd6f822ebd8cf00c15297590e2f361564e79dbcfa81fdd"
+      ]
+    },
+    "sprint-rights-r002": {
+      "canonical": "827faebe7acf5e1f8b2fdcb4d1baadb0a27b33664b14dc64cf3ed923408b9bae",
+      "presented": [
+        "cc69dbc8549cec54919b84d24bf0f8ce3f39c1c941038847dc0e37b554169003",
+        "827faebe7acf5e1f8b2fdcb4d1baadb0a27b33664b14dc64cf3ed923408b9bae",
+        "535f54f41b198a8f69eea7052f5341a81f3a4940c03dc088e87ff9e60023c8c8"
+      ]
+    },
+    "sprint-rights-r003": {
+      "canonical": "c4ed373e40fbf4fa11ebbfd0e3c9820ec11dcbdbe95a82f1805cf56764e5c31c",
+      "presented": [
+        "c4ed373e40fbf4fa11ebbfd0e3c9820ec11dcbdbe95a82f1805cf56764e5c31c",
+        "9f218c02916b4425709ec8c69f6951cec01bb60aefb9ac0e0cabb54d99580634",
+        "90ce6715ad48a7930236344d63de5d24a820e0d5b8d207a8473a98bfa03332fd"
+      ]
+    },
+    "sprint-rights-r004": {
+      "canonical": "ce6e6bcb0a19ddd8937e6b98e81648785c09af841afe301d73e3c9107c7bdacf",
+      "presented": [
+        "560211086f4e9757a7da17c3c13e8c61c80f67c4dcc6b7ea09c70c14115d2135",
+        "843c4d499b18a7e295aa8134df808e9b8f79bcfaf92226c68ac1c4d00f5e596b",
+        "47b3a83a0ada3c600d7f728fbd195e1e79d8a2e5537cd1e1c2148626105627b9"
+      ]
+    },
+    "sprint-rights-r005": {
+      "canonical": "cb0603ff7fd837fdc3b394ddc2cb0b0119d442c9c5860e814f44d9c97f7adb4b",
+      "presented": [
+        "d77911aa7a2b6fd4d32f247f8ef515a68a0e389ea61cfcd6c42e36e717603514",
+        "f4d5b47389314e72a5ad78aa0aa0fb6dcaa2cd48d118ced7c1fe23f6d0b15cb0",
+        "cb0603ff7fd837fdc3b394ddc2cb0b0119d442c9c5860e814f44d9c97f7adb4b"
+      ]
+    },
+    "sprint-rights-r006": {
+      "canonical": "87c6f261e60abb4573549103e16987e80ace20650493349775b07694cb7c3afa",
+      "presented": [
+        "b8150f983757cc0d05afbc02a291d996c2a6f14032faaa2422830915f0216ede",
+        "87c6f261e60abb4573549103e16987e80ace20650493349775b07694cb7c3afa",
+        "171083e93f2bd6d8b6aab11c50d88885fe6da51f7c46d61118f66ad3677a5651"
+      ]
+    },
+    "sprint-rights-r007": {
+      "canonical": "4ff8e883d368ad5d524b7656fc97f09596bf5bf68347c9e9d8b8180ae97ee0c6",
+      "presented": [
+        "4ff8e883d368ad5d524b7656fc97f09596bf5bf68347c9e9d8b8180ae97ee0c6",
+        "727c90d07df520120884bb61cf27bbba88a41b6a32442c762de3f983cb5a2453",
+        "7f04e2f3bc88a5a1319c707741d41d65186e7699e64db42c57a71710026ab3ad"
+      ]
+    },
+    "sprint-rights-r008": {
+      "canonical": "431716fec375db9e492beefd12804fada2304e2e82cd57b572d6c97202af85a7",
+      "presented": [
+        "e5407d30c07303fae5dc8cbb7a7d49554e3eeb04902e436771854ee053057a69",
+        "2144e8e448e8b05101923bc89311161f1a00965c14d6ce5ecf0f8b5649eabc9e",
+        "28bcad558746dc4301b68543b33caf496d18a25da5dd0fae92cb7eea30b3ac1d"
+      ]
+    },
+    "sprint-rights-r009": {
+      "canonical": "c6047cb4382f22806d5663169f9d1ca1b8487d6b16e90057182bbb573de7211d",
+      "presented": [
+        "bc706be427c22b962472ebe20bbbfb9153883e803b5146990c2505ba3f871f4a",
+        "a187ff8a41ad854ea428a79fd2f728e664fc91589ae36bba82571493dd5ebbe9",
+        "c6047cb4382f22806d5663169f9d1ca1b8487d6b16e90057182bbb573de7211d"
+      ]
+    },
+    "sprint-rights-r010": {
+      "canonical": "6515c817991efde9d3c0fa398a5ea6c83796ab4c08d12cb35afd2078a9392c8c",
+      "presented": [
+        "040ec8d1e69a05eee43d853337bb87a08caa2e9d243912bedfe3a45e6bd3e7b3",
+        "6515c817991efde9d3c0fa398a5ea6c83796ab4c08d12cb35afd2078a9392c8c",
+        "2596e723309613ee0e291b5b0cd864c5a2819960db180badec13ce018912dcaa"
+      ]
+    },
+    "sprint-rights-r011": {
+      "canonical": "fe29d6d7e293870c5a490aea7e38812041c4fec888fb2808bc462123d5f33276",
+      "presented": [
+        "fe29d6d7e293870c5a490aea7e38812041c4fec888fb2808bc462123d5f33276",
+        "2fbffcb57492f1243af54d086d7442868057dcde918caea35a3c6d061de467bd",
+        "70262b4c977b6511c74d4c98e875b377bf71c1ca25d2bd4fec2780d04ef967d9"
+      ]
+    },
+    "sprint-rights-r012": {
+      "canonical": "e254920b49da75693845b6c9e2dd1f55c06f8a121ea3e2f203f52804b36619b1",
+      "presented": [
+        "a5e77ea9eac37add0ed6a211c88f9c8d6f13819695c10e068d0485fd0afa7fbe",
+        "e29d1b5c2e4ce9240784c24a45e90a6a5059979fe0647d1c052655c2d20f9400",
+        "3cc9193bf20eda40faefacc9ef387b200c949b959a5942530abda8989379df94"
+      ]
+    },
+    "sprint-rights-r013": {
+      "canonical": "b99eea846f8e2084d598d575b523dc621dcc3b6da094e694f1f8c8598be2bf84",
+      "presented": [
+        "8cbefff1402daaeac5a84eb949bcb3b198e3770166fd94b816745ce01e1e6c10",
+        "711764dbc5669493c76d8474fbdb606a2efa9535f657a92f14c9ac85156d919d",
+        "b99eea846f8e2084d598d575b523dc621dcc3b6da094e694f1f8c8598be2bf84"
+      ]
+    },
+    "sprint-rights-r014": {
+      "canonical": "82a838f650dbb9b8ebfcbf0a860bf84878d52faa5c2e2d5ae560aa45ea7d5747",
+      "presented": [
+        "ff583d5b5e7c886eabb9e356c286fc0e0cdae56bfed71350095d5f9309c88f3f",
+        "82a838f650dbb9b8ebfcbf0a860bf84878d52faa5c2e2d5ae560aa45ea7d5747",
+        "ad7a1735ba09f4f7400efa6b65d1bcdbc9ab18d78de53040bad50ba6bd78135a"
+      ]
+    },
+    "sprint-rights-r015": {
+      "canonical": "91f6fff8db98c9b6c10129dc61abfd83e17992b4841b9f49721de3f5c94aa2ec",
+      "presented": [
+        "91f6fff8db98c9b6c10129dc61abfd83e17992b4841b9f49721de3f5c94aa2ec",
+        "83af38587d67e76e0a8300621f4e87ef2a537d3db3a6ef43355463cc575200fe",
+        "bdda44b163108fc914397938af7a264f94ca6882ea1db9f06889b789bfb6c9e7"
+      ]
+    },
+    "sprint-rights-r016": {
+      "canonical": "615df1688a1bff39bfc968bf2499aa57521fea81ddcb2664dbeee894391741a6",
+      "presented": [
+        "f989aface28a30666b9e9266413ea622b02e931e21aa6d9dd089dd49ce86193e",
+        "cb5024923203ceaf3df03590cb2953769aa225881cf79637a6e116b3ec6a73f2",
+        "fba211f3247abc3228a251d3d9ba552c149e5578142e7bf5f67fc359c84821ac"
+      ]
+    },
+    "sprint-rights-r017": {
+      "canonical": "f1a99bf0585517230214966d87c6ee1fa6c10eb2ff7f2cfab9312a6264c7d4cb",
+      "presented": [
+        "fb6f6d8276b69ad533f42f36a6537876329c2dfd6ec65b5db097c896f629356d",
+        "16127087033c0d2391964fe066906a590b8141829e863c593bae0406b0ec9f2e",
+        "f1a99bf0585517230214966d87c6ee1fa6c10eb2ff7f2cfab9312a6264c7d4cb"
+      ]
+    },
+    "sprint-rights-r018": {
+      "canonical": "c4160848e27c84a20b73a58a078d43084d8997ba9fdc0a6b8398002bc4ab9c96",
+      "presented": [
+        "2586270066cb5adb799e0404dce0c7e916404473d141434b2fa74d05f4a56216",
+        "c4160848e27c84a20b73a58a078d43084d8997ba9fdc0a6b8398002bc4ab9c96",
+        "eb0b2ecb64130c1500fb6ce3b9a022b30933297e9f002fb6da58158d2ce701b9"
+      ]
+    },
+    "sprint-rights-r019": {
+      "canonical": "bf1f8a8d49a9fe704c4d2d0040cf33020678ed7f8200865cdfe0a9b1857e09d9",
+      "presented": [
+        "bf1f8a8d49a9fe704c4d2d0040cf33020678ed7f8200865cdfe0a9b1857e09d9",
+        "601e55b229e5051fba7d5aca1b02fb9189f34ecf8734293aebf626c89d4f3978",
+        "9ced93a90103f7d7b62d413540dff256facc40cc07b35c04ff556ea8cf0068a6"
+      ]
+    },
+    "sprint-rights-r020": {
+      "canonical": "37c2055c9801b3b15cb9fe51ed4170d4624c5ad0f0668edbf7820458d424c234",
+      "presented": [
+        "a404e4cff7465cb241313f880c372dd65487785dbf0525f79773cc9bc1309d2b",
+        "4f3c87758f51f03d613ad3ceaeedc6ae91b46d0374083fcc0c28dcfead4f5e56",
+        "dc1a4854e2ceb48ccc397d338761d0e30cfbdbe7eb4c0dc376f39644b090ef55"
+      ]
+    },
+    "sprint-rights-r021": {
+      "canonical": "6b3ac446ac975c1d625c7b8c1ca76d6b6717ad4f28696c35a48052a771860cae",
+      "presented": [
+        "7a5335ad7d7328d78fe1cbdb6a4629733e7424b409131e66345d6a6b19a99260",
+        "5b324e0699f0b135cd367ca0aaf1a2f8d9f8045e8e58c0459a29c6c8f903779e",
+        "6b3ac446ac975c1d625c7b8c1ca76d6b6717ad4f28696c35a48052a771860cae"
+      ]
+    },
+    "sprint-rights-r022": {
+      "canonical": "0459006763e1e6203c54a6724f45037dd959a8be3dc641fb25bf93b8c5f9c8d9",
+      "presented": [
+        "f29a63c58996afd0f0da35a8fde55007a73799e3e05fa195be3d0a6c7daf6d58",
+        "0459006763e1e6203c54a6724f45037dd959a8be3dc641fb25bf93b8c5f9c8d9",
+        "88f03f06449df41e7d7d56326d92ed2d1f8217924542d0ed9e4f03dc9b50b420"
+      ]
+    },
+    "sprint-rights-r023": {
+      "canonical": "a5c837e2c433380bf5e6e041a96a9e36801ff7ef2103a94c328210846c73310a",
+      "presented": [
+        "a5c837e2c433380bf5e6e041a96a9e36801ff7ef2103a94c328210846c73310a",
+        "ad9eebb8566307421460e7dbf46efc3f468c5e8fe9c4b1575f852f44642a7a75",
+        "a0a1235a6e99af64f7fa0f527bd3dbcb74910a8355122033ff59a23c2074dbc8"
+      ]
+    },
+    "sprint-rights-r024": {
+      "canonical": "b02fc01ca4ff52da54bf0b963afe977ec08b18140ee31c270f2e41261c211418",
+      "presented": [
+        "b3e27e905e3ba3b5eada85805bf4f19bee6e6187aaed6ac3a6e7138235e22fb3",
+        "c24a6c71535c29fd4e59a09f0a24d64f58aaa0799ac18a1451399184b43c31c6",
+        "10b108d4edc3c5112d4f78f0b283d5e542c233222e7cb2ba4a2c8a5ec6d44bfa"
+      ]
+    },
+    "sprint-rights-r025": {
+      "canonical": "870b732722893b94a4c1a3f7fe9a1f272ec05d3ff2aefaba191189560f90cdec",
+      "presented": [
+        "76dbf61683039a3227eaa4b0abc5ac97297c7d4e8a093629c0b49d62fbc981f7",
+        "b9da8c570a2286904c841d58ff99945252ee62f70d9e6119145e1ab40cd05826",
+        "870b732722893b94a4c1a3f7fe9a1f272ec05d3ff2aefaba191189560f90cdec"
+      ]
+    },
+    "sprint-rights-r026": {
+      "canonical": "d5b5dabb3dd68b6393988e95cd11796823977e49d7135fd601a8df3f9465b792",
+      "presented": [
+        "6ea27a088d715c2894462f65ffbc015252d39de390f5f3324c808f1aaa30c153",
+        "d5b5dabb3dd68b6393988e95cd11796823977e49d7135fd601a8df3f9465b792",
+        "a31477aa48a2c113f68b960ab76d23d758a69c12b97775e67bbf7f28651c1df0"
+      ]
+    },
+    "sprint-rights-r027": {
+      "canonical": "1cb4c566c3a943dac9ee7ffdfc498e242b3dc16394d5ff3258f4fc8a468d028a",
+      "presented": [
+        "1cb4c566c3a943dac9ee7ffdfc498e242b3dc16394d5ff3258f4fc8a468d028a",
+        "8a050a6a38806339be149092ed2964dab78a8fe9dece70fb97d6e09095c2976b",
+        "8d77cd57aa63439a13e9f6c7ecda633c191239515c8fe8dcf1727eabf7716988"
+      ]
+    },
+    "sprint-rights-r028": {
+      "canonical": "74f1898c5aa30f1f5b55e5c8fc8b099bf155c0dc59fb10dbc3805fa94606cea6",
+      "presented": [
+        "7acccdf80e42e9e5250647f4d4d3c88be6cecb0c6fefe94f90bde0eb1483c58a",
+        "ef9a75d7779aff7fbb93d8925bb48c0235e6f384ac88788a26f2cdad5a7bb7aa",
+        "007729864ea63d7ca9540ce904f600aa4e36997e9de9faffa21aa2a47d0e3278"
+      ]
+    },
+    "sprint-rights-r101": {
+      "canonical": "b8c0fb736a328ff886882065b2c288038f5e41baba667e34729ccefc1ac54f8b",
+      "presented": [
+        "90a4df21cb18240d1703679088b893f3537407b2800e8f38c7298953d73cff1f",
+        "77ad37c0b5996b77fc785fdf8493f0a843ec0f1a48fa58a47b9dcf3dc73ff32c",
+        "b8c0fb736a328ff886882065b2c288038f5e41baba667e34729ccefc1ac54f8b"
+      ]
+    },
+    "sprint-rights-r102": {
+      "canonical": "375cc54cb425dbcab8569c651294da7b03f6e870ca39483451abef0eb8987ccc",
+      "presented": [
+        "055ffacce71e52dd56b0937c9f46fbe888fa4bb8011a9254dd845eeacb56654d",
+        "375cc54cb425dbcab8569c651294da7b03f6e870ca39483451abef0eb8987ccc",
+        "90b68b88f2b3400020e6fa21d51aa9093b400ccc28711b803d6f8de94c48d099"
+      ]
+    },
+    "sprint-rights-r103": {
+      "canonical": "cadd0a7ece5e71d3ab819019671b5b1ed056b28e5ae4e7c52031c3833a344438",
+      "presented": [
+        "cadd0a7ece5e71d3ab819019671b5b1ed056b28e5ae4e7c52031c3833a344438",
+        "6e3f35c27ffce313f564c56ec0255dca070267565e9016e28a78950189549610",
+        "3e63f69f8a42241f65a4b551247b5d24c6d91a9e4dbd5d994558b0059e616c7c"
+      ]
+    },
+    "sprint-rights-r104": {
+      "canonical": "296af912b53247cfb7b3fcb1740ed78fceb0952425d79ff84551284a736e1737",
+      "presented": [
+        "59b710756b95fc97a556964fbce6c4bd7a8f537ab7069520e97edbc8a3261c8c",
+        "92d52c8d69fbeab59acf23e64fb73db35d9b80bfa1d0fc8a37a0e7d9a361dfbd",
+        "4897835760535fe4dbc66e3b70e2bc16a988e2f1878a8885eb4975ffee7162c4"
+      ]
+    },
+    "sprint-rights-r105": {
+      "canonical": "10b4c4c38d11d342a69e910f7990fa9f94b79b8ab8c80a79d976ce2c7eebf443",
+      "presented": [
+        "a72166e68940257f6b5f45a79d310b2639436592fed91bf58826121b34261077",
+        "6933b830343505caae949f6ee400104c610f41696be4d5da32f6996cbd4629ed",
+        "10b4c4c38d11d342a69e910f7990fa9f94b79b8ab8c80a79d976ce2c7eebf443"
+      ]
+    },
+    "sprint-rights-r106": {
+      "canonical": "b4ba6831273ee5a3d6779060fae66ee23d6a41692cb2f409e99ab0fb1ba754b1",
+      "presented": [
+        "ecbea9c3f6159bd3cf1d738200d6952a4df337d015660f94d80d4180f184f191",
+        "b4ba6831273ee5a3d6779060fae66ee23d6a41692cb2f409e99ab0fb1ba754b1",
+        "c6cc1e9fb393b9f6d9ca3dad00cd9fdb9c050c298ba07ed71e56e4040e8d5894"
+      ]
+    },
+    "sprint-rights-r107": {
+      "canonical": "c8d2f38a316592eb3070de110dc99aa20b10ce5df3a7edeb12f0cc36009ec730",
+      "presented": [
+        "c8d2f38a316592eb3070de110dc99aa20b10ce5df3a7edeb12f0cc36009ec730",
+        "d4c1b3fa26d24d37760f945fe1f273a54403cff4374c337fde61caa900c48b37",
+        "7f0c660962bf574a48146ab9fa8e9e2649df34823a2fbf2df27bd520bb561c9b"
+      ]
+    },
+    "sprint-rights-r108": {
+      "canonical": "dc83d8b95825eb615e6c9d616b552182243e8d5da48153256144a6ed3f29ce1e",
+      "presented": [
+        "d90e33109ebf5e6b181e58f47520c2b4bd4849242ad7baad92f241c2770dcf83",
+        "3e830c847f736504a30edb446f670e95907d932ee50d6e163aad5ad370dbcb8f",
+        "3065fb837f683ece961a9b2083eaad051b1cf49b1849ee6b061c0806f2138929"
+      ]
+    },
+    "sprint-rights-r109": {
+      "canonical": "1aebc85b3aecad1fdc418dd2a7d7c9a00d89070bb8c3006a2dac6e5ac9afa2c1",
+      "presented": [
+        "03f864765050f1080bee0a76d96e871e421a9df56c809d5c3441468e528098f2",
+        "ef1a736de8601076ba3c65d1bc58f3b18fe09a8eaa6dac147849f9d0a9fef584",
+        "1aebc85b3aecad1fdc418dd2a7d7c9a00d89070bb8c3006a2dac6e5ac9afa2c1"
+      ]
+    },
+    "sprint-rights-r110": {
+      "canonical": "06e2959401cfc8c597e12087ffb655ceff7b00f8810c5c328f8dbcf6db4cfead",
+      "presented": [
+        "4a67382a172166e0ab09b95c3cb47ac19b176bee02a2a9c2471c3bf4e048a08f",
+        "06e2959401cfc8c597e12087ffb655ceff7b00f8810c5c328f8dbcf6db4cfead",
+        "d8700ae63b6405d457999b5814d55d11bf15f1f07a9f85d3a088f94f0cbd763a"
+      ]
+    },
+    "sprint-rights-r111": {
+      "canonical": "4bce3ffa454dc977e6e36910b5b393654ecf9e9879406db5985a42ace9accb71",
+      "presented": [
+        "4bce3ffa454dc977e6e36910b5b393654ecf9e9879406db5985a42ace9accb71",
+        "bd9dbb218ad89b8d14f0a409c0f94c854ab5341935d15bf59565c578c6a0a159",
+        "52d3e34ff95838c35c5664e3ecf43da1b37fe44b81f974502cfab89c71e000ea"
+      ]
+    },
+    "sprint-rights-r112": {
+      "canonical": "50cc1712363018f3215d51ccece3541779deb3da4ee0add4ae1b03816eae1175",
+      "presented": [
+        "7945755ecd4b46e8a5ef039da5890ba19a633f73650f132f287a957e2d1b7a8a",
+        "a0645a8332f9694a4769f2e65e877aebb858af4948c41cb12e3549860de5b1ea",
+        "0182ad22f6b76ff8243990c67359652605f17ffc4850a287703d972776b7f8ff"
+      ]
+    },
+    "sprint-rights-r113": {
+      "canonical": "013d0d950c33d4bbd11324767a3103d3174b2d58f32920235ce4568212022c2b",
+      "presented": [
+        "accdc4730c7fb2cbc2ae7d9ae4602da33710347d54eb1fe2e70b143eab3542f7",
+        "67f6ccc836aa12bd62cdb08e74b91435c454507d6bf3456532ff45ba6e8c4bb4",
+        "013d0d950c33d4bbd11324767a3103d3174b2d58f32920235ce4568212022c2b"
+      ]
+    },
+    "sprint-rights-r114": {
+      "canonical": "b21e52284a51fcad168b80874443304d243fa8ae959285da3d69894c51765325",
+      "presented": [
+        "0eb53452a92d631e25d61dbdadd45b916283a6b03e20f78ae04fc9e29f50261f",
+        "b21e52284a51fcad168b80874443304d243fa8ae959285da3d69894c51765325",
+        "04afb20969f158d0017881e99c3f77e567233568a9ae6eb56370856ba9a7042e"
+      ]
+    },
+    "sprint-rights-r115": {
+      "canonical": "134913d3026cc988f2a7a2e502ea93c24d5ac059e479c3e59246c57e5ef0f6e4",
+      "presented": [
+        "134913d3026cc988f2a7a2e502ea93c24d5ac059e479c3e59246c57e5ef0f6e4",
+        "f82d0b6189b4a6a2aa34dd31d3dff4c62de0ef03ab701abb43f561a00163be30",
+        "17b030612955e383210f3344828f05000d759f2d5b879f6e51fb68f29358aab0"
+      ]
+    },
+    "sprint-rights-r116": {
+      "canonical": "359bcf849878944cecc76b0d010a93364ccd49ad0d1b008b1fbf14e9921b90e1",
+      "presented": [
+        "fdc216a7a4e9db37b7d94b699aec746ad74462a15d9ee5f03624a3b28cff1d2e",
+        "7fdd430e40a6dd41444ee64c935b55e670029ad866ff39eaee164873d4acc556",
+        "b50cacd83d74bf1547b520563b2ce1febabce72bc0a31a6a45c51d6b28b346e0"
+      ]
+    },
+    "sprint-other-o001": {
+      "canonical": "075462261df6e14a794a3b506bdf393368fc3b1f6d49c321490f152f469676a7",
+      "presented": [
+        "eb0f3a20c5aa18839f7f3fd92900bee7fbf9b511a2f9ca52b382ff30aa43d8e2",
+        "b6c903ce78d9bfa11707ae4067472165e8ba6b86af9f968bfd03df354c15e146",
+        "075462261df6e14a794a3b506bdf393368fc3b1f6d49c321490f152f469676a7"
+      ]
+    },
+    "sprint-other-o002": {
+      "canonical": "826e960f9381154f31642cbbd47d4f33476b180b9068566139c4cf31149ad61b",
+      "presented": [
+        "c4e97b2799fc258b3408c5054b956af7f5aa2bb9403bface834619218cb916eb",
+        "826e960f9381154f31642cbbd47d4f33476b180b9068566139c4cf31149ad61b",
+        "8cfd8fc0b0a13189a3136c7b1ed7dcc3f8f52a32f5c89f32170e0bb943b4f8d6"
+      ]
+    },
+    "sprint-other-o003": {
+      "canonical": "6fcafbc020fa19ed87873272248ac489ccc8a4ac3e494406eda38df694c8ea2f",
+      "presented": [
+        "6fcafbc020fa19ed87873272248ac489ccc8a4ac3e494406eda38df694c8ea2f",
+        "6bdc1b8a22f18d622c724acfe9a1b44ac53a5a54db35a1c557be369ead7ac4c3",
+        "4d8eea2890185a338cbffb0be274c55ad452f0c5a24bc6726ec1073ba982b20a"
+      ]
+    },
+    "sprint-other-o004": {
+      "canonical": "47aae2917597ad5d4a21742f5c35fec8254862a7f8de69e5be5859c1c528d436",
+      "presented": [
+        "0b9de9cbcdd7345cc24f786b55b668a808c8923909eeb395329e5ae980734b82",
+        "5fb487337949a7e7cf9b1c7b7846889e769852a8282bf66c5c1ab6257933988c",
+        "ad0f3b4ecf9053c13469fceddaf59981ac283f3b991f011eb741c621c8c42ff6"
+      ]
+    },
+    "sprint-other-o005": {
+      "canonical": "a43d2751ba2f7cd278bb1ff79e2957923ffda5c4748d7095b40f6ac60aaf7137",
+      "presented": [
+        "f96bd16f37070f1a1ad0b4f5d8936cee0bbdd74340aff1c311adcf49a48834d9",
+        "85373f56de04f6f3b3dc04bd83594aa94777b398a8b76a0c40f8772488d3d812",
+        "a43d2751ba2f7cd278bb1ff79e2957923ffda5c4748d7095b40f6ac60aaf7137"
+      ]
+    },
+    "sprint-other-o006": {
+      "canonical": "8db9f720c136c73946b788b2e0ea33ede81f268e48beb68032a947851d942676",
+      "presented": [
+        "594a55c945d56e25fdc2b8b2b0a3daeb4659e2aa14f90be230f867aa9c20b1a1",
+        "8db9f720c136c73946b788b2e0ea33ede81f268e48beb68032a947851d942676",
+        "71939d062e66ae09011e872fc676f243da8f921644fbd61d37fce0f72a947062"
+      ]
+    },
+    "sprint-other-o007": {
+      "canonical": "c2a02b488a3fc726ae96b972d4499f439e5a6f2cab880fc9ecfa0c3170c455d0",
+      "presented": [
+        "c2a02b488a3fc726ae96b972d4499f439e5a6f2cab880fc9ecfa0c3170c455d0",
+        "8e689633eb5f57ebd37f1fd9393324bf06fbdd8cd08f229aa5e9301961f6f4bf",
+        "5ae2d948fa1b2ef552fb322186a1ee4918501dff465d17c10c297157f0d3b6fb"
+      ]
+    },
+    "sprint-other-o008": {
+      "canonical": "717a368527a2767f20dd7cd8f27d86f0064816df2e02094ea5bbbde45e8aae0b",
+      "presented": [
+        "abdf52e9cea11715373c2700044f0f7ae0a13ad782a38c6dff8fbec2d9f660cd",
+        "9f127b3bdb06197fec179328b806e2c17e7fe4c3d7d523b05d8bad05c1411c85",
+        "49f6ff9ee676e06742b2efe6e793e51624dc628afd95a7b1e594988f60a1d117"
+      ]
+    },
+    "sprint-other-o009": {
+      "canonical": "688939304bccbbc8cd753de225bc70c9a798d20b8e937ed0093587fdff226528",
+      "presented": [
+        "539df7a163a78cc189345e97ca00d76d5e20400164690422273c68ee54b21998",
+        "d4cd4a7008d25098ce64345561cdc3cbbc00aa8039027e8d87206a6fe7ac204f",
+        "688939304bccbbc8cd753de225bc70c9a798d20b8e937ed0093587fdff226528"
+      ]
+    },
+    "sprint-other-o010": {
+      "canonical": "8c68327a51ec5e7e24e3bbea42c23a470a110d5553775c476e52e18ad5014f2e",
+      "presented": [
+        "964bdd50e46940dd17794ccd6ec6980ab6852f33ad8287c138e33e425a1a6cc3",
+        "8c68327a51ec5e7e24e3bbea42c23a470a110d5553775c476e52e18ad5014f2e",
+        "68facf2ba2a48fad8bfe91a699dd89cc289dec35dc9ebe52d3c00c21ce6018a1"
+      ]
+    },
+    "sprint-other-o101": {
+      "canonical": "268c152c8848544e62be8de47572ca6bcbcf62f1983993250982f61cbdebb54a",
+      "presented": [
+        "268c152c8848544e62be8de47572ca6bcbcf62f1983993250982f61cbdebb54a",
+        "d8757cac4adfa8c430d18db13117d4135ac3c95d24e5863c6dcf685d3b77fcb3",
+        "3056f424fb5bf6974db0517c2332937e1a14f0e454462320f527f8377c9179ae"
+      ]
+    },
+    "sprint-other-o102": {
+      "canonical": "21880fbc50d896cf6a5df53b27b181c020bfb903de4ff83d71ba1e01fe73e2d9",
+      "presented": [
+        "87aff9648360ef88ae93dab093ddca82eea74a2b099524a27b3650ddd0550229",
+        "203e3b0196f89a43cdf2a8bcc3843ad0491824724a327c5c0d628367b5da212a",
+        "59a12e73306e29c27b3e43ec9961c8029c8cd5e72e1702243fe53a1a0ca59322"
+      ]
+    }
+  }
+}

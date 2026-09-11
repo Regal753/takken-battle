@@ -6,7 +6,7 @@ const path = require("node:path");
 const { chromium } = require("playwright");
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20260911-choice-premise-v57-e254758aed94";
+const expectedVersion = process.argv[3] || "20260912-tax-polish-v59-fe2a755fbec9";
 const chromePath = process.env.TAKKEN_CHROME_PATH || undefined;
 const canonicalIndex = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
 const expectedScriptCount = [...canonicalIndex.matchAll(/<script\b[^>]*\bsrc=/gi)].length;
@@ -39,6 +39,9 @@ assert.ok(expectedScriptCount > 0, "canonical index has no runtime scripts");
       window.TAKKEN_PASS_READINESS?.calculatePassReadiness &&
       window.TAKKEN_BUSINESS_FULLSCORE_BANK?.QUESTIONS?.length === 134 &&
       window.TAKKEN_BUSINESS_HARD_BANK?.QUESTIONS?.length === 180 &&
+      window.TAKKEN_RESTRICTIONS_AUTHORED_BANK?.QUESTIONS?.length === 72 &&
+      window.TAKKEN_TAX_AUTHORED_BANK?.QUESTIONS?.length === 24 &&
+      window.TAKKEN_SUBJECT_SPRINT_BANK?.QUESTIONS?.length === 198 &&
       document.querySelector("#passReadinessCard")
     ));
     await page.waitForFunction(() => navigator.serviceWorker?.ready, null, { timeout: 30000 });
@@ -61,7 +64,7 @@ assert.ok(expectedScriptCount > 0, "canonical index has no runtime scripts");
     const mobile320 = await inspect();
     for (const result of [mobile390, mobile320]) {
       assert.equal(result.overflow, 0, "deployed page has horizontal overflow");
-      assert.equal(result.schema, 15, "deployed page did not initialize save schema v15");
+      assert.equal(result.schema, 17, "deployed page did not initialize save schema v17");
       assert.equal(result.manifestVersion, expectedVersion, "deployed manifest version mismatch");
       assert.equal(result.scriptVersions.length, expectedScriptCount, "deployed runtime script count mismatch");
       assert.ok(result.scriptVersions.every((version) => version === expectedVersion), "deployed runtime versions are mixed");
@@ -88,9 +91,28 @@ assert.ok(expectedScriptCount > 0, "canonical index has no runtime scripts");
     assert.ok(old.sessionIds.every((id) => /^bf-business-/.test(id)), "explicit archive must retrieve old questions");
     await page.reload({ waitUntil: "networkidle" });
     assert.deepEqual((await readDrill()).sessionIds, old.sessionIds, "published archive session must survive reload");
+    page.once("dialog", (dialog) => dialog.accept());
+    await page.locator("#practicalDrillDiscardButton").click();
+    await page.locator("#restrictionAuthoredTwenty").click();
+    await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
+    const restrictions = await readDrill();
+    assert.equal(restrictions.sessionIds.length, 20);
+    assert.ok(restrictions.sessionIds.every(id => /^sprint-law-rc58-/.test(id)), "new restriction entry must exclude legacy questions");
+    await page.reload({ waitUntil: "networkidle" });
+    assert.deepEqual((await readDrill()).sessionIds, restrictions.sessionIds, "new restriction session must survive reload");
+    page.once("dialog", dialog => dialog.accept());
+    await page.locator("#practicalDrillDiscardButton").click();
+    await page.locator("#passPlanPanel").evaluate(node => node.open = true);
+    await page.locator("#taxAuthoredTen").click();
+    await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
+    const tax = await readDrill();
+    assert.equal(tax.sessionIds.length, 10);
+    assert.ok(tax.sessionIds.every(id => /^sprint-tax-tc59-/.test(id)), "new tax entry must exclude legacy questions");
+    await page.reload({ waitUntil: "networkidle" });
+    assert.deepEqual((await readDrill()).sessionIds, tax.sessionIds, "new tax session must survive reload");
     assert.deepEqual(consoleErrors, [], "deployed page emitted console errors");
     assert.deepEqual(pageErrors, [], "deployed page emitted page errors");
-    console.log(JSON.stringify({ status: "ok", expectedVersion, scripts: mobile320.scriptVersions.length, overflow390: mobile390.overflow, overflow320: mobile320.overflow, archiveClosed: true, newAndLegacyReload: true, syntheticContextOnly: true, errors: 0 }));
+    console.log(JSON.stringify({ status: "ok", expectedVersion, scripts: mobile320.scriptVersions.length, overflow390: mobile390.overflow, overflow320: mobile320.overflow, archiveClosed: true, newAndLegacyReload: true, newRestrictionReload: true, newTaxReload: true, authoredRestrictions: 72, authoredTax: 24, syntheticContextOnly: true, errors: 0 }));
   } finally {
     await browser.close();
   }

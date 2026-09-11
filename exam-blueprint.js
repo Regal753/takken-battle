@@ -302,7 +302,7 @@
     },
     landUse: {
       label: "国土利用計画法",
-      url: "https://laws.e-gov.go.jp/law/349AC0000000092?occasion_date=20260401"
+      url: "https://laws.e-gov.go.jp/law/349AC1000000092?occasion_date=20260401"
     },
     agricultural: {
       label: "農地法",
@@ -353,8 +353,8 @@
       url: "https://www.retio.or.jp/exam/exam_detail/"
     },
     appraisal: {
-      label: "地価公示法・不動産鑑定評価基準",
-      url: "https://www.mlit.go.jp/totikensangyo/totikensangyo_fr4_000161.html"
+      label: "国土交通省 不動産鑑定評価基準",
+      url: "https://www.mlit.go.jp/common/001204083.pdf"
     },
     landPricePublic: {
       label: "国土交通省 地価公示制度の概要",

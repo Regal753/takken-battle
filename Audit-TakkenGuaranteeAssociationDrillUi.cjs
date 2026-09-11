@@ -293,34 +293,68 @@ async function assertFocusedInViewport(page, expectedSelector) {
     await page.locator('[data-practical-forecast="confident"]').click();
     assert.equal(await page.locator(".practical-drill-choice:enabled").count(), 4, "forecast selection must unlock all choices");
     const wrongChoice = page.locator(".practical-drill-choice").nth((wrong.answer + 1) % 4);
+    await page.evaluate(() => document.fonts.ready);
     await wrongChoice.scrollIntoViewIfNeeded();
-    const answerScrollBefore = await page.evaluate(() => {
+    await wrongChoice.click({ trial: true });
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const answerScrollBefore = await page.evaluate((answerIndex) => {
       window.__takkenOriginalGuaranteeScrollTo = window.scrollTo;
+      window.__takkenOriginalGuaranteeScrollBy = window.scrollBy;
+      window.__takkenOriginalGuaranteeReveal = Element.prototype.scrollIntoView;
       window.__takkenGuaranteeAnswerScrollCalls = [];
+      window.__takkenGuaranteeAnswerCorrections = [];
+      window.__takkenGuaranteeAnswerReveals = [];
       window.scrollTo = function (...args) {
         window.__takkenGuaranteeAnswerScrollCalls.push(args);
         return window.__takkenOriginalGuaranteeScrollTo.apply(window, args);
       };
-      return window.scrollY;
-    });
-    await wrongChoice.click();
+      window.scrollBy = function (...args) {
+        window.__takkenGuaranteeAnswerCorrections.push(args);
+        return window.__takkenOriginalGuaranteeScrollBy.apply(this, args);
+      };
+      Element.prototype.scrollIntoView = function (...args) {
+        window.__takkenGuaranteeAnswerReveals.push(args);
+        return window.__takkenOriginalGuaranteeReveal.apply(this, args);
+      };
+      const rect = document.querySelectorAll(".practical-drill-choice")[answerIndex].getBoundingClientRect();
+      return { scrollY: window.scrollY, top: rect.top, bottom: rect.bottom, viewport: innerHeight };
+    }, (wrong.answer + 1) % 4);
+    const wrongChoiceBox = await wrongChoice.boundingBox();
+    assert.ok(wrongChoiceBox, "guarantee answer must have a visible click box");
+    await page.mouse.click(wrongChoiceBox.x + wrongChoiceBox.width / 2, wrongChoiceBox.y + wrongChoiceBox.height / 2);
     await page.locator("#practicalDrillFeedback").waitFor({ state: "visible" });
     await page.evaluate(() => new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-    const answerScrollAfter = await page.evaluate(() => {
+    const answerScrollAfter = await page.evaluate((answerIndex) => {
+      const rect = document.querySelectorAll(".practical-drill-choice")[answerIndex].getBoundingClientRect();
       const result = {
         scrollY: window.scrollY,
+        top: rect.top, bottom: rect.bottom, viewport: innerHeight,
         calls: [...(window.__takkenGuaranteeAnswerScrollCalls || [])],
+        corrections: [...window.__takkenGuaranteeAnswerCorrections],
+        reveals: [...window.__takkenGuaranteeAnswerReveals],
         activeId: document.activeElement?.id || ""
       };
       window.scrollTo = window.__takkenOriginalGuaranteeScrollTo;
+      window.scrollBy = window.__takkenOriginalGuaranteeScrollBy;
+      Element.prototype.scrollIntoView = window.__takkenOriginalGuaranteeReveal;
       delete window.__takkenOriginalGuaranteeScrollTo;
       delete window.__takkenGuaranteeAnswerScrollCalls;
+      delete window.__takkenOriginalGuaranteeScrollBy;
+      delete window.__takkenOriginalGuaranteeReveal;
+      delete window.__takkenGuaranteeAnswerCorrections;
+      delete window.__takkenGuaranteeAnswerReveals;
       return result;
-    });
+    }, (wrong.answer + 1) % 4);
     assert.equal(answerScrollAfter.activeId, "practicalDrillFeedback", "feedback must still receive accessible focus");
     assert.deepEqual(answerScrollAfter.calls, [], `guarantee answer must not force window.scrollTo: ${JSON.stringify(answerScrollAfter)}`);
+    assert.deepEqual(answerScrollAfter.reveals, [], "guarantee answer must not reveal feedback by scrolling");
+    assert.ok(answerScrollAfter.corrections.length <= 2, "guarantee viewport correction must be bounded to two frames");
+    assert.ok(answerScrollAfter.corrections.every(([x, y]) => x === 0 && Number.isFinite(y)), "guarantee correction must remain vertical and finite");
+    assert.equal(await page.locator("#practicalDrillVerdict").getAttribute("role"), "status");
+    assert.equal(await page.locator("#practicalDrillVerdict").getAttribute("aria-live"), "polite");
     assert.ok(
-      Math.abs(answerScrollAfter.scrollY - answerScrollBefore) <= 1,
+      Math.abs(answerScrollAfter.top - answerScrollBefore.top) <= 2 &&
+        answerScrollAfter.top >= -1 && answerScrollAfter.bottom <= answerScrollAfter.viewport + 1,
       `guarantee answer must preserve the selected-choice viewport: ${JSON.stringify({ answerScrollBefore, answerScrollAfter })}`
     );
     const feedback = await page.locator("#practicalDrillFeedback").textContent();
@@ -529,7 +563,7 @@ async function assertFocusedInViewport(page, expectedSelector) {
         const saved = JSON.parse(localStorage.getItem(key));
         const answeredAt = new Date().toISOString();
         Object.values(window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS_BY_ID)
-          .filter((question) => cityPlanningIds.includes(question.sourceQuestionId))
+          .filter((question) => cityPlanningIds.includes(question.sourceQuestionId) || question.sourceAnchor === "都市計画法")
           .forEach((question) => {
             saved.practicalDrill.history[question.id] = {
               attempts: 1,
@@ -553,7 +587,7 @@ async function assertFocusedInViewport(page, expectedSelector) {
       lawSources = await routePage.evaluate((queue) => queue.map((id) =>
         window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS_BY_ID[id].sourceQuestionId
       ), routed.state.practicalDrill.queue);
-      assert.ok(lawSources.every((id) => !["l001", "l002", "l003", "l004", "rs001", "rs002", "rs015", "rs016"].includes(id)), "post-training law route may skip city planning only after all eight sources are in saved history");
+      assert.ok(await routePage.evaluate(ids => ids.every(id => window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS_BY_ID[`sprint-law-${id}`].sourceAnchor !== "都市計画法"), lawSources), "post-training catchup excludes city planning only after all 26 city-planning sources are in saved history");
 
       routePage.once("dialog", (dialog) => dialog.accept());
       await routePage.locator("#practicalDrillDiscardButton").click();

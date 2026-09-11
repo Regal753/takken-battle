@@ -124,7 +124,7 @@ async function installFixture(page, descriptor) {
         truth: fact.truth,
         premise: fact.presentedContext || fact.context || "",
         statement: fact.presentedStatement || fact.statement || "",
-        reason: fact.reason || ""
+        reason: String(fact.reason || "") + (presented.authoredCase && fact.sourceLocator ? `（${fact.sourceLocator}）` : "")
       }))
     };
   }, descriptor);

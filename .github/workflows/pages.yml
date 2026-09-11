@@ -50,6 +50,9 @@ jobs:
       - run: node Audit-TakkenOfficialLawBaseline.js
       - run: node Audit-TakkenStateSync.js
       - run: node Audit-TakkenRestrictionsSupplement.js
+      - run: node Audit-TakkenRestrictionsAuthored.js
+      - run: node Audit-TakkenTaxAuthored.js
+      - run: node Audit-TakkenBusinessPolish.js
       - run: node Audit-TakkenSubjectSprintBank.js
       - run: node Audit-TakkenPassReadiness.js
       - run: node Audit-TakkenExamCurrentYear2026.js
@@ -91,10 +94,10 @@ jobs:
         id: deployment
         uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
       - name: Verify deployed page
-        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260911-choice-premise-v57-e254758aed94"
+        run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20260912-tax-polish-v59-fe2a755fbec9"
       - name: Verify deployed browser boot
         env:
           TAKKEN_CHROME_PATH: /usr/bin/google-chrome
         run: |
           google-chrome --version
-          node scripts/verify-deployed-browser.cjs "${{ steps.deployment.outputs.page_url }}" "20260911-choice-premise-v57-e254758aed94"
+          node scripts/verify-deployed-browser.cjs "${{ steps.deployment.outputs.page_url }}" "20260912-tax-polish-v59-fe2a755fbec9"

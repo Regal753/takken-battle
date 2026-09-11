@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20260911-choice-premise-v57-e254758aed94",
-  "digest": "sha256:e254758aed941c4af908f088ceac1f8e0ea33916f3450290ba8f7f3685b382f7",
-  "assetCount": 60,
+  "version": "20260912-tax-polish-v59-fe2a755fbec9",
+  "digest": "sha256:fe2a755fbec9d63fc6045dd29a8e3bb44a6f668efab89fcae25a8d0a690bb4d2",
+  "assetCount": 66,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "aa35d7b15acde252f31f8ddf7bf26ef92984b028139ec6bc7137cdc77cc815a6"
+      "sha256": "ce1abb1457e7f9d0c96079730a7072c8fb1968b0f6329c50ffdf156e7823dada"
     },
     {
       "path": "assets/battle/grassland-route.webp",
@@ -54,15 +54,15 @@
     },
     {
       "path": "business-fresh-contracts.js",
-      "sha256": "4e0e57e92964560946925091b11eb62cf39b5261aede6bdebfa5e4b10e9d9580"
+      "sha256": "d7905b304823e359c5991840e349df7dfb10e197703cdfe9189befe8704bc953"
     },
     {
       "path": "business-fresh-front.js",
-      "sha256": "be1d8f2b4378367263380f82fd6751a3b7c20ed32a68a2b02d86b1f5e94fa77f"
+      "sha256": "fc899c9759fc9b79b5ea4f3495db91798c601cf45b4157018328ac9c2ffbc728"
     },
     {
       "path": "business-fresh-practice.js",
-      "sha256": "56eb7ad37132aa7da27b93610eba23a3d264308606a4f7bf4599fff19f7639df"
+      "sha256": "9b5129f97569d2017b58960cb280bf0ec98ed3c0b135b0e995db8050eb8e8663"
     },
     {
       "path": "business-fullscore-bank.js",
@@ -102,7 +102,7 @@
     },
     {
       "path": "calculation-drill.js",
-      "sha256": "4ba0154ec7e81f495a1b11073b6ce1b54389b5d21c483dc5e9273f62ef040bb4"
+      "sha256": "93aed56cfd4860bfdd35145b1a8db8cea47adcb9b49afff92d209eeb3db622a1"
     },
     {
       "path": "case-exam-bank.js",
@@ -122,15 +122,15 @@
     },
     {
       "path": "case-exam-tax-other.js",
-      "sha256": "3e166593d0186fc8c4517f2ba008da57e02fa530fb6b6c86bf7a44cbbc723660"
+      "sha256": "c3e8b627d2839cd444d543001e40df25b641a435882ec8c4525560554aec9f1d"
     },
     {
       "path": "current-law-source-ledger.js",
-      "sha256": "c8b4cc5204c24904cfe141569b14a441f0fb5e9d7084c5f6ac8a78376e6360e6"
+      "sha256": "faae60de864e2c6be9c52addb4ee17dbd991786ded01aeebdef105d94711db03"
     },
     {
       "path": "exam-blueprint.js",
-      "sha256": "591d24671a679b1ce6efefe6b80d172f53c89a4da426c3b7d064bc504300f328"
+      "sha256": "6c64438cd9ce224bdb5b8ce2ce2956ab770be3fcf0809bae76011085240398fa"
     },
     {
       "path": "exam-current-year-2026.js",
@@ -154,7 +154,7 @@
     },
     {
       "path": "exam-questions-tax-other.js",
-      "sha256": "2ceb7f6622ef1080630677b369a0164ce07d9fda7aef678dac1d168666dbc021"
+      "sha256": "4457bebfafa743073c22c5f2002a369bf04a40ff708772f78033729f4718760b"
     },
     {
       "path": "guarantee-association-drill.js",
@@ -162,7 +162,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "f804e3d1a6835595ca8ff9463f3cd223fa497c40b12a4ed74ef522576b28fe98"
+      "sha256": "deede9ea90016d7f5dd7b97464e30d82bd3f642eacefd2ac336dc60021779a8d"
     },
     {
       "path": "manifest.webmanifest",
@@ -213,8 +213,24 @@
       "sha256": "453ef480e0774d91bcd534cd780d374580ad854e55bc1df659eeeb6b77341856"
     },
     {
+      "path": "restrictions-authored-bank.js",
+      "sha256": "e56002f81d527676a0ac58e5b94a66e94b6c8bda3dcecc211191a4e1e67a95e3"
+    },
+    {
+      "path": "restrictions-cases-agriculture-fill.js",
+      "sha256": "e43921497d6ed45889192e48feb8e1e6a2d92cb30965c8fae2b715c67d16126e"
+    },
+    {
+      "path": "restrictions-cases-building-readjustment.js",
+      "sha256": "5b9750d01fbf77cf4e5fee55b3d449189584b65880e311abf55529d3ac0e9cb9"
+    },
+    {
+      "path": "restrictions-cases-city-land.js",
+      "sha256": "88efc170371d704632b042def5cf830d1a5aac85ec040733ffee8fb26921b661"
+    },
+    {
       "path": "restrictions-supplement-bank.js",
-      "sha256": "0b3a0499035ccf9a88769c56d64b9eabc513435d2dbb4609620ce499b60be4ad"
+      "sha256": "94d9919fd02aea57e7e241aaa8dd5eae95b29204f114b769aa2e80cc94d2036a"
     },
     {
       "path": "reward-system.js",
@@ -230,7 +246,7 @@
     },
     {
       "path": "service-worker.js",
-      "sha256": "a55d4b415238fd661c508d41a13904ab94dc7feaf30c7a9c203051add3fc6892"
+      "sha256": "c204ef77aa9c41165b221808bfdcd18588bf57d1588ca99bcd252bdd18350346"
     },
     {
       "path": "state-sync.js",
@@ -238,11 +254,19 @@
     },
     {
       "path": "styles.css",
-      "sha256": "260ea26fe1314a042b064e26ec1f73ea06d861d10ce0f79e22b77c55247482d2"
+      "sha256": "fc0c53e660dbc9640023296a27db6dff57e7a3d2b355b93662c3dd48223450d8"
     },
     {
       "path": "subject-sprint-bank.js",
-      "sha256": "5021001a6fc8466d5cf8653be1c0fb96450c12a23baa4ddb11a102bebf8880db"
+      "sha256": "99df6cb88b97e85be5f2a7d324403bc1efe0c9ac0531b6cc685eefbf987c6403"
+    },
+    {
+      "path": "tax-authored-bank.js",
+      "sha256": "733ac92ef4193107c0a3c1a8f5c9e6fa727ccdc3676a2151c2adccb1a13ca946"
+    },
+    {
+      "path": "tax-cases-v59.js",
+      "sha256": "33b37830c97717aee15dbd535f31702afd32ea4e3c4f4da7fca010e6fa2f4c62"
     }
   ]
 }
