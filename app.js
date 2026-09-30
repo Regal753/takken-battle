@@ -8163,6 +8163,7 @@
 
   function renderCalculationDrill() {
     if (!elements.calculationDrillPanel || !CALCULATION_QUESTION_IDS.length) return;
+    elements.calculationDrillFeedback.querySelector(".chatgpt-help")?.remove();
     const drill = state.calculationDrill;
     renderAnswerDock(currentQuestion());
     const contacted = CALCULATION_QUESTION_IDS.filter((id) => (drill.history[id]?.attempts || 0) > 0).length;
@@ -8231,6 +8232,13 @@
       })
     );
     elements.calculationDrillTrap.textContent = `ひっかけ: ${item.trap}`;
+    renderChatgptHelp(elements.calculationDrillFeedback, item, attempt, {
+      anchor: elements.calculationDrillVerdict,
+      choices: item.choices.map((value) => formatCalculationValue(value, item.unit)),
+      explain: item.formula.join("\n"),
+      legalBaseline: CALCULATION_DRILL.LEGAL_BASELINE,
+      sourceUrls: item.sources.map((key) => CALCULATION_DRILL.SOURCES[key].url)
+    });
     elements.calculationDrillSource.replaceChildren(
       ...item.sources.map((sourceKey) => {
         const source = CALCULATION_DRILL.SOURCES[sourceKey];
@@ -9411,6 +9419,7 @@
   }
 
   function renderPracticalDrill() {
+    elements.practicalDrillFeedback?.querySelector(".chatgpt-help")?.remove();
     if (!elements.practicalDrillPanel || !PRACTICAL_QUESTION_IDS.length) return;
     const drill = state.practicalDrill;
     renderAnswerDock(currentQuestion());
@@ -9630,6 +9639,11 @@
       practicalReasoningStep(groundingFrameStep ? 4 : 3, "間違いやすい境界", question.trap),
       practicalReasoningStep(groundingFrameStep ? 5 : 4, "次に再現する一文", question.memoryRule)
     );
+    renderChatgptHelp(elements.practicalDrillFeedback, question, attempt, {
+      anchor: elements.practicalDrillVerdict,
+      text: elements.practicalDrillPrompt.innerText,
+      explain: elements.practicalDrillReasoning.innerText
+    });
     const sourceLabels = String(question.sourceRef || "").split("／").filter(Boolean);
     elements.practicalDrillSources.replaceChildren(
       ...(question.sourceUrls || []).map((url, index) => {
@@ -11832,8 +11846,101 @@
       TOPIC_REFS[question.tag] || `旧・第1分冊 宅建業法 / ${question.tag}`;
   }
 
+  function renderChatgptHelp(host, question, attempt, options = {}) {
+    if (!host || !question || !attempt) return;
+    const choices = options.choices || question.choices || [];
+    const selected = attempt.selected;
+    const answer = question.answer;
+    if (!Number.isInteger(selected) || !Number.isInteger(answer) ||
+        !choices[selected] || !choices[answer]) return;
+    const explanations = question.statementExplanations || question.choiceExplanations || [];
+    const legalBaseline = options.legalBaseline || question.legalBaseline || "2026-04-01";
+    const sourceUrls = (options.sourceUrls || question.sourceUrls || (question.sourceUrl ? [question.sourceUrl] : []))
+      .filter((url) => /^https?:\/\//i.test(String(url)));
+    // Only this displayed question and attempt; no private notes or save data.
+    const prompt = [
+      "宅建試験の復習を手伝ってください。以下の問題で、選んだ答えと正解の違いを理解したいです。",
+      "1. どこで判断が分かれるかを先に説明してください。",
+      "2. 選んだ肢の誤り（正解していたら迷いやすい点）と正解の根拠を、具体例で説明してください。",
+      "3. 覚えるルールを一文にし、条件を変えた確認問題を1問出してください。確認問題の答えは私が回答するまで伏せてください。",
+      "アプリの解説にも誤りがあり得ます。法令は下の基準日に合わせ、矛盾や改正があれば公式根拠を確認して指摘してください。",
+      "",
+      `【問題】${question.id || ""} ${question.unitLabel || question.category || question.tag || ""}`,
+      options.text || question.text || question.prompt || "",
+      "",
+      "【選択肢（画面の順番）】",
+      ...choices.map((choice, index) => `${index + 1}. ${choice}`),
+      "",
+      `【私が選んだ答え】${selected + 1}. ${choices[selected]}`,
+      `【アプリの正解】${answer + 1}. ${choices[answer]}`,
+      "【アプリの解説】",
+      options.explain || [question.explain, ...explanations].filter(Boolean).join("\n"),
+      ...(question.trap ? [`間違いやすい点: ${question.trap}`] : []),
+      `法令基準日: ${legalBaseline}`,
+      ...sourceUrls.map((url) => `公式根拠: ${url}`)
+    ].join("\n");
+    const href = `https://chatgpt.com/?q=${encodeURIComponent(prompt)}`;
+    const direct = href.length <= 24000;
+    const panel = document.createElement("section");
+    panel.className = "chatgpt-help";
+    panel.dataset.questionId = String(question.id || "");
+    panel.setAttribute("aria-label", "ChatGPTに問題を相談");
+    const title = document.createElement("strong");
+    title.textContent = attempt.correct ? "理解をもう一段深める" : "この間違いを、ここで解消する";
+    const hint = document.createElement("p");
+    hint.textContent = direct
+      ? "問題・選んだ答え・正解・解説を渡して、別タブで相談できます。戻って同じ問題から続けられます。"
+      : "長い問題は相談文をコピーして渡します。開いたChatGPTへ貼り付けてください。";
+    const actions = document.createElement("div");
+    actions.className = "chatgpt-help-actions";
+    const link = document.createElement("a");
+    link.className = "chatgpt-help-link";
+    link.textContent = "ChatGPTに聞く ↗";
+    link.href = direct ? href : "https://chatgpt.com/";
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.setAttribute("aria-label", "ChatGPTに聞く（別タブで開く）");
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.className = "chatgpt-help-copy";
+    copy.textContent = "相談文をコピー";
+    const status = document.createElement("p");
+    status.className = "chatgpt-help-status";
+    status.setAttribute("role", "status");
+    const manual = document.createElement("textarea");
+    manual.className = "chatgpt-help-manual";
+    manual.value = prompt;
+    manual.readOnly = true;
+    manual.hidden = true;
+    manual.rows = 6;
+    manual.setAttribute("aria-label", "手動コピー用の相談文");
+    const copyPrompt = async () => {
+      copy.disabled = true;
+      try {
+        await copyTransferUrl(prompt);
+        status.textContent = "相談文をコピーしました。ChatGPTへ貼り付けて相談できます。";
+      } catch {
+        status.textContent = "相談文を表示しました。選択してコピーし、ChatGPTへ貼り付けてください。";
+        manual.hidden = false;
+        manual.focus({ preventScroll: true });
+        manual.select();
+      } finally {
+        copy.disabled = false;
+      }
+    };
+    copy.addEventListener("click", copyPrompt);
+    if (!direct) link.addEventListener("click", copyPrompt);
+    actions.append(link, copy);
+    const fallback = document.createElement("small");
+    fallback.textContent = "問題が渡らない場合は「相談文をコピー」を使ってください。";
+    panel.append(title, hint, actions, fallback, status, manual);
+    if (options.anchor) options.anchor.insertAdjacentElement("afterend", panel);
+    else host.append(panel);
+  }
+
   function renderFeedback(question) {
     const answered = state.answered;
+    elements.feedbackBox.querySelector(".chatgpt-help")?.remove();
     removeAdaptiveFeedback();
     removeConfidenceCheck();
     removeReasoningPath();
@@ -11877,6 +11984,7 @@
     renderMistakeCapture(question);
     renderMemoryRule(question);
     renderAdaptiveFeedback(question);
+    renderChatgptHelp(elements.feedbackBox, question, answered, { anchor: elements.feedbackTitle });
     elements.nextButton.textContent = nextActionLabel();
   }
 
@@ -14178,6 +14286,7 @@
             choiceReasons
           );
           answers.append(resultDefinition("あなたの解答", `${result.selected + 1}. ${question.choices[result.selected]}`), resultDefinition("正解", `${question.answer + 1}. ${question.choices[question.answer]}`));
+          renderChatgptHelp(details, question, result, { anchor: answers });
           appendSafeSourceLink(details, question);
           wrongReview.append(details);
         });
