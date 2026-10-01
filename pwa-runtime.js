@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20260912-tax-polish-v59-fe2a755fbec9";
+  const VERSION = "20261001-rights-knock-9ce0c2b43fde";
   const BANNER_ID = "pwaUpdateNotice";
   let reloadRequested = false;
 

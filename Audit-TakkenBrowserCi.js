@@ -21,17 +21,18 @@ const required = [
   "Audit-TakkenPwaUpgrade.cjs", "Audit-TakkenFutureSaveUi.cjs",
   "Audit-TakkenSaveLeaseRaceUi.cjs", "Audit-TakkenAccessibilityUi.cjs",
   "Audit-TakkenQuestCoreUi.cjs", "Audit-TakkenReiwaExamUi.cjs",
-  "Audit-TakkenCaseExamUi.cjs"
+  "Audit-TakkenCaseExamUi.cjs",
+  "Audit-TakkenRightsKnockUi.cjs"
 ];
 
 (async () => {
-  assert.equal(runner.EXPECTED_AUDIT_COUNT, 26);
+  assert.equal(runner.EXPECTED_AUDIT_COUNT, 27);
   assert.deepEqual([...runner.AUDITS].sort(), [...required].sort(), "the complete prior browser suite must be retained");
   runner.validateRegistry();
   const shards = runner.SHARDS.map(shard => runner.selectShard(shard));
-  assert.deepEqual(shards.map(shard => shard.length), [13, 13]);
+  assert.deepEqual(shards.map(shard => shard.length), [14, 13]);
   assert.deepEqual(shards.flat().sort(), [...required].sort(), "matrix shards must have no missing or duplicated audits");
-  assert.equal(new Set(shards.flat()).size, 26);
+  assert.equal(new Set(shards.flat()).size, 27);
   assert.throws(() => runner.selectShard("unknown"), /unknown/);
   assert.throws(() => runner.selectShard("a", []), /empty/);
   assert.throws(() => runner.validateRegistry(required.slice(1)), /count/);
@@ -76,5 +77,5 @@ const required = [
   assert.ok(validate.includes("${{ needs.browser.result }}"));
   assert.ok(validate.includes('test "$BROWSER_RESULT" = "success"'));
   assert.ok(validate.includes('test "$STATIC_RESULT" = "success"'));
-  console.log(JSON.stringify({ status: "ok", audits: 26, shards: shards.map(shard => shard.length), missing: 0, duplicates: 0, invalidShardRejected: true, emptyRejected: true, failureExitPreserved: true, matrixFailFast: false, timeoutMinutes: 15 }));
+  console.log(JSON.stringify({ status: "ok", audits: required.length, shards: shards.map(shard => shard.length), missing: 0, duplicates: 0, invalidShardRejected: true, emptyRejected: true, failureExitPreserved: true, matrixFailFast: false, timeoutMinutes: 15 }));
 })().catch(error => { console.error(error.stack || String(error)); process.exitCode = 1; });
