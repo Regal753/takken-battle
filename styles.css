@@ -78,6 +78,7 @@
 .public-mode-note { order: 1; }
 #todayCommandPanel { order: 2; }
 #restrictionMasteryPanel { order: 3; }
+#rightsMasteryPanel { order: 3; }
 #passPlanPanel { order: 3; }
 #businessMasteryPanel { order: 4; }
 #themeDrawer { order: 5; }
@@ -5438,6 +5439,60 @@ body.is-save-read-only .save-protection-status {
   .mock-section-grid,
   .mock-history-grid,
   .mock-finish-actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.rights-mastery-topic-picker {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.rights-mastery-topic-picker label {
+  grid-column: 1 / -1;
+  font-weight: 700;
+}
+
+.rights-mastery-topic-picker select,
+.rights-mastery-topic-picker button {
+  min-width: 0;
+  min-height: 44px;
+  max-width: 100%;
+  border: 1px solid #bac9d6;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font: inherit;
+  background: #fff;
+  color: #24384b;
+}
+
+.rights-mastery-topic-picker button {
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rights-mastery-topic-picker button:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+}
+
+.rights-mastery-topic-progress summary {
+  min-height: 44px;
+  padding: 12px 0;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.rights-mastery-topic-picker :focus-visible,
+.rights-mastery-topic-progress summary:focus-visible {
+  outline: 3px solid #3978a4;
+  outline-offset: 3px;
+}
+
+@media (max-width: 600px) {
+  .rights-mastery-topic-picker {
     grid-template-columns: minmax(0, 1fr);
   }
 }

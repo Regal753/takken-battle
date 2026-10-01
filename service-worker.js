@@ -1,6 +1,6 @@
 "use strict";
 
-const VERSION = "20261001-chatgpt-help-1-07ceb7df595d";
+const VERSION = "20261002-rights-knock-814ba90a6e7e";
 const CACHE_NAME = `takken-battle-${VERSION}`;
 const IMMUTABLE = [
   "styles.css", "reiwa-exam.css", "exam-blueprint.js", "exam-question-core.js", "exam-questions-rights.js",

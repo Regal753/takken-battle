@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { extname } from "node:path";
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20261001-chatgpt-help-1-07ceb7df595d";
+const expectedVersion = process.argv[3] || "20261002-rights-knock-814ba90a6e7e";
 const attempts = Math.max(1, Number(process.env.TAKKEN_DEPLOY_VERIFY_ATTEMPTS) || 12);
 const intervalMs = Math.max(0, Number(process.env.TAKKEN_DEPLOY_VERIFY_INTERVAL_MS) || 10000);
 assert.ok(pageUrl, "usage: node scripts/verify-deployed-page.mjs <page-url> [expected-version]");

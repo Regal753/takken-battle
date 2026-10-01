@@ -7,7 +7,7 @@ const { spawn } = require("node:child_process");
 const { performance } = require("node:perf_hooks");
 
 const ROOT = path.resolve(__dirname, "..");
-const EXPECTED_AUDIT_COUNT = 27;
+const EXPECTED_AUDIT_COUNT = 28;
 const SHARDS = Object.freeze(["a", "b"]);
 // Preserve the complete former CI command list and the new tax audit. Round-robin assignment spreads
 // expensive interaction and exam/save audits across independent runners.
@@ -38,6 +38,7 @@ const AUDITS = Object.freeze([
   "Audit-TakkenQuestCoreUi.cjs",
   "Audit-TakkenReiwaExamUi.cjs",
   "Audit-TakkenCaseExamUi.cjs",
+  "Audit-TakkenRightsKnockUi.cjs",
   "Audit-TakkenChatgptHelpUi.cjs"
 ]);
 

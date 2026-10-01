@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20261001-chatgpt-help-1-07ceb7df595d";
+  const VERSION = "20261002-rights-knock-814ba90a6e7e";
   const BANNER_ID = "pwaUpdateNotice";
   let reloadRequested = false;
 

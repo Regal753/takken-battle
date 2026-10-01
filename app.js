@@ -253,6 +253,35 @@
     Object.freeze({ id: "subject-sprint-taxOther", scopeId: "taxOther", label: "税の得点源", page: 0, part: 3 }),
     Object.freeze({ id: "subject-sprint-other", scopeId: "other", label: "その他の得点源", page: 0, part: 3 })
   ]);
+  const RIGHTS_KNOCK_SESSION_SIZE = 20;
+  const RIGHTS_KNOCK_SOURCE_IDS = Object.freeze(
+    (Array.isArray(SUBJECT_SPRINT_BANK?.QUESTIONS) ? SUBJECT_SPRINT_BANK.QUESTIONS : [])
+      .filter((question) => question.sectionId === "rights")
+      .map((question) => question.sourceQuestionId)
+  );
+  const RIGHTS_KNOCK_THEMES = Object.freeze([
+    ["capacity-declaration", "制限行為能力・意思表示", ["r001", "r101", "r002", "r102"]],
+    ["agency-condition", "錯誤・代理・条件期限", ["r003", "r004", "r006", "r116"]],
+    ["prescription", "消滅時効・取得時効", ["r005", "r014"]],
+    ["obligations", "連帯・保証・弁済", ["r007", "r108", "r008", "r106"]],
+    ["assignment-setoff", "債権譲渡・相殺", ["r009"]],
+    ["default-risk", "債務不履行・解除・危険負担", ["r010", "r103", "r104", "r105"]],
+    ["sale", "契約不適合責任・手付", ["r011", "r012"]],
+    ["property-sharing", "物権変動・共有", ["r013", "r107", "r015", "r115"]],
+    ["mortgage", "抵当権・法定地上権・物上代位", ["r016", "r017", "r018"]],
+    ["lease", "賃貸借・修繕", ["r019", "r109"]],
+    ["land-lease", "借地権", ["r020", "r110"]],
+    ["building-lease", "借家権・定期建物賃貸借", ["r021", "r022"]],
+    ["inheritance", "相続・遺言・遺留分", ["r023", "r024"]],
+    ["work-tort", "請負・不法行為", ["r111", "r112", "r113", "r114"]],
+    ["condominium", "区分所有法", ["r025", "r026"]],
+    ["registration", "不動産登記・住所等変更登記", ["r027", "r028"]]
+  ].map(([id, label, ids]) => Object.freeze({ id, label, sourceQuestionIds: Object.freeze(ids) })));
+  const SUBJECT_SPRINT_RIGHTS_TOPICS = Object.freeze({
+    knock: Object.freeze({ id: "knock", label: "権利関係 根拠ノック", sourceQuestionIds: RIGHTS_KNOCK_SOURCE_IDS }),
+    untouched: Object.freeze({ id: "untouched", label: "権利関係 未接触ノック", sourceQuestionIds: RIGHTS_KNOCK_SOURCE_IDS }),
+    ...Object.fromEntries(RIGHTS_KNOCK_THEMES.map((topic) => [topic.id, topic]))
+  });
   const SUBJECT_SPRINT_RESTRICTION_TOPICS = Object.freeze({
     exam: Object.freeze({
       id: "exam",
@@ -1069,6 +1098,17 @@
     restrictionExamStart: $("#restrictionExamStart"),
     restrictionPrecisionStart: $("#restrictionPrecisionStart"),
     restrictionMasteryTwenty: $("#restrictionMasteryTwenty"),
+    rightsMasteryContacted: $("#rightsMasteryContacted"),
+    rightsMasteryGrounded: $("#rightsMasteryGrounded"),
+    rightsMasteryRetained: $("#rightsMasteryRetained"),
+    rightsMasteryGuesses: $("#rightsMasteryGuesses"),
+    rightsMasteryTwenty: $("#rightsMasteryTwenty"),
+    rightsMasteryFresh: $("#rightsMasteryFresh"),
+    rightsMasteryAll: $("#rightsMasteryAll"),
+    rightsMasteryTopic: $("#rightsMasteryTopic"),
+    rightsMasteryTopicStart: $("#rightsMasteryTopicStart"),
+    rightsMasteryStatus: $("#rightsMasteryStatus"),
+    rightsMasteryTopics: $("#rightsMasteryTopics"),
     restrictionAuthoredTwenty: $("#restrictionAuthoredTwenty"),
     restrictionTopicOpen: $("#restrictionTopicOpen"),
     passPlanPanel: $("#passPlanPanel"),
@@ -2719,11 +2759,7 @@
           diagnosticRecorded: Boolean(rawAttempt?.diagnosticRecorded)
         }
       : null;
-    const preAnswerConfidenceValues = bankId === GUARANTEE_SPECIAL_BANK_ID
-      ? ["confident", "uncertain"]
-      : bankId === SUBJECT_SPRINT_BANK_ID && scope === "restrictions"
-        ? ["confident", "uncertain", "guess"]
-        : [];
+    const preAnswerConfidenceValues = practicalForecastValues({ bankId, scope, presentationKey });
     const preAnswerConfidence = !bankChanged && !currentAttempt &&
       preAnswerConfidenceValues.includes(input?.preAnswerConfidence)
       ? input.preAnswerConfidence
@@ -7450,6 +7486,7 @@
   }
 
   function renderPassPlan() {
+    renderRightsMastery();
     renderRestrictionMastery();
     if (!elements.passPlanPanel) return;
     const phase = passPhaseFor();
@@ -8705,6 +8742,7 @@
   }
 
   function subjectSprintTopicDefinition(scope, topicId) {
+    if (scope === "rights") return SUBJECT_SPRINT_RIGHTS_TOPICS[String(topicId || "")] || null;
     if (scope === "taxOther") return SUBJECT_SPRINT_TAX_TOPICS[String(topicId || "")] || null;
     if (scope !== "restrictions") return null;
     const topic = SUBJECT_SPRINT_RESTRICTION_TOPICS[String(topicId || "")];
@@ -8717,11 +8755,16 @@
   }
 
   function subjectSprintSessionTopic(drill = state.practicalDrill) {
-    if (drill?.bankId !== SUBJECT_SPRINT_BANK_ID || !["restrictions", "taxOther"].includes(drill?.scope)) return null;
+    if (drill?.bankId !== SUBJECT_SPRINT_BANK_ID || !["rights", "restrictions", "taxOther"].includes(drill?.scope)) return null;
     const token = String(drill.presentationKey || "")
       .split(":")
       .find((part) => part.startsWith("topic-"));
     return subjectSprintTopicDefinition(drill.scope, token?.slice(6));
+  }
+
+  function isRightsKnockSession(drill = state.practicalDrill) {
+    return drill?.bankId === SUBJECT_SPRINT_BANK_ID && drill?.scope === "rights" &&
+      Boolean(subjectSprintSessionTopic(drill));
   }
 
   function isRestrictionExamDrill(drill = state.practicalDrill) {
@@ -8810,7 +8853,8 @@
     }
     const topicSourceIds = topic ? new Set(topic.sourceQuestionIds) : null;
     const eligible = SUBJECT_SPRINT_QUESTIONS.filter((question) =>
-      question.scopeId === scope && (!topicSourceIds || topicSourceIds.has(question.sourceQuestionId))
+      question.scopeId === scope && (!topicSourceIds || topicSourceIds.has(question.sourceQuestionId)) &&
+      !(scope === "rights" && topic?.id === "untouched" && state.practicalDrill.history[question.id]?.attempts > 0)
     );
     const units = SUBJECT_SPRINT_UNIT_DEFINITIONS.filter((unit) => unit.scopeId === scope);
     const target = Math.min(Math.max(1, Number(requestedSize) || eligible.length), eligible.length);
@@ -8868,6 +8912,71 @@
       overconfident: items.reduce((sum, { history }) => sum + (history.overconfidentWrong || 0), 0),
       items
     };
+  }
+
+  function renderRightsMastery() {
+    if (!elements.rightsMasteryTwenty) return;
+    const items = SUBJECT_SPRINT_QUESTIONS.filter((question) => question.scopeId === "rights").map((question) => {
+      const history = state.practicalDrill.history[question.id] || {};
+      return { question, history, masteryState: BUSINESS_MASTERY.stateFor(history, new Date()) };
+    });
+    const total = items.length;
+    const contacted = items.filter(({ history }) => history.attempts > 0).length;
+    const grounded = items.filter(({ history }) => history.lastConfidence === "confident").length;
+    const retained = items.filter(({ masteryState }) => ["retained", "durable"].includes(masteryState)).length;
+    const review = items.filter(({ masteryState }) => ["retry", "due"].includes(masteryState)).length;
+    const guesses = items.reduce((sum, { history }) => sum + (history.guessAnswers || 0), 0);
+    const untouched = total - contacted;
+    elements.rightsMasteryContacted.textContent = `${contacted} / ${total}`;
+    elements.rightsMasteryGrounded.textContent = `${grounded} / ${total}`;
+    elements.rightsMasteryRetained.textContent = `${retained} / ${total}`;
+    elements.rightsMasteryGuesses.textContent = String(guesses);
+
+    const active = Boolean(activeLearningSession());
+    const rightsActive = state.practicalDrill.bankId === SUBJECT_SPRINT_BANK_ID &&
+      state.practicalDrill.scope === "rights" && ["active", "retry"].includes(state.practicalDrill.stage);
+    elements.rightsMasteryTwenty.disabled = !SUBJECT_SPRINT_READY;
+    elements.rightsMasteryTwenty.textContent = rightsActive ? "権利セットの続きから再開"
+      : active ? "進行中のセットを再開" : "弱点・未接触を20問ノック";
+    elements.rightsMasteryFresh.disabled = !SUBJECT_SPRINT_READY || active || untouched === 0;
+    elements.rightsMasteryFresh.textContent = untouched > 0
+      ? `未接触から${Math.min(RIGHTS_KNOCK_SESSION_SIZE, untouched)}問（残り${untouched}問）` : "未接触はありません";
+    elements.rightsMasteryAll.disabled = !SUBJECT_SPRINT_READY || active;
+    elements.rightsMasteryAll.textContent = `全${total}問を総点検`;
+    elements.rightsMasteryTopic.disabled = !SUBJECT_SPRINT_READY || active;
+    if (!elements.rightsMasteryTopic.options.length) {
+      for (const topic of RIGHTS_KNOCK_THEMES) {
+        const option = document.createElement("option");
+        option.value = topic.id;
+        option.textContent = `${topic.label}（${topic.sourceQuestionIds.length}問）`;
+        elements.rightsMasteryTopic.append(option);
+      }
+    }
+    const topic = subjectSprintTopicDefinition("rights", elements.rightsMasteryTopic.value);
+    elements.rightsMasteryTopicStart.disabled = !SUBJECT_SPRINT_READY || active || !topic;
+    elements.rightsMasteryTopicStart.textContent = `このテーマの${topic?.sourceQuestionIds.length || 0}問を始める`;
+    elements.rightsMasteryStatus.textContent = rightsActive
+      ? `権利セットを保存しています。要再戦${review}問。続きから再開できます。`
+      : active ? "進行中の学習を再開します。完了後に権利ノックを選べます。"
+      : review > 0 ? `要再戦${review}問を優先。迷い・ヤマ勘で正解した問題も解き直します。`
+      : untouched > 0 ? `未接触${untouched}問。20問ずつ進めるか、テーマを選んで補修します。`
+      : `${total}問へ接触済み。別日定着${retained}/${total}。復習期限が来た問題を優先します。`;
+    elements.rightsMasteryTopics.replaceChildren(...RIGHTS_KNOCK_THEMES.map((theme) => {
+      const sourceIds = new Set(theme.sourceQuestionIds);
+      const themeItems = items.filter(({ question }) => sourceIds.has(question.sourceQuestionId));
+      const groundedCount = themeItems.filter(({ history }) => history.lastConfidence === "confident").length;
+      const reviewCount = themeItems.filter(({ masteryState }) => ["retry", "due"].includes(masteryState)).length;
+      const article = document.createElement("article");
+      article.dataset.state = reviewCount ? "review" : groundedCount === themeItems.length ? "grounded" : "learning";
+      const label = document.createElement("span");
+      label.textContent = theme.label;
+      const value = document.createElement("strong");
+      value.textContent = `${groundedCount} / ${themeItems.length}`;
+      const note = document.createElement("small");
+      note.textContent = reviewCount ? `要再戦 ${reviewCount}` : "根拠あり正答";
+      article.append(label, value, note);
+      return article;
+    }));
   }
 
   function renderRestrictionMastery() {
@@ -9315,7 +9424,7 @@
 
   function practicalForecastValues(drill = state.practicalDrill) {
     if (drill?.bankId === GUARANTEE_SPECIAL_BANK_ID) return ["confident", "uncertain"];
-    if (drill?.bankId === SUBJECT_SPRINT_BANK_ID && drill?.scope === "restrictions") {
+    if (drill?.bankId === SUBJECT_SPRINT_BANK_ID && (drill?.scope === "restrictions" || isRightsKnockSession(drill))) {
       return ["confident", "uncertain", "guess"];
     }
     return [];
@@ -9563,7 +9672,7 @@
         ? "正誤・解説を見る前に手応えを選びます。根拠あり予想からの誤答は過信ミスとして残します。"
         : restrictionSprintSession && question.groundingFrame
           ? "根拠ありなら、区域→行為→主体→数値・期限を自力で言って4点を押す。2択・ヤマ勘は正解でも再出題します。"
-        : restrictionSprintSession
+        : restrictionSprintSession || isRightsKnockSession(drill)
           ? "解説を見る前に手応えを選びます。2択・ヤマ勘の正解は同じセットで再出題します。"
         : "正解後に「根拠を言えた」か「迷った」かを記録し、迷いは復習へ戻します。";
     }
@@ -9572,7 +9681,7 @@
       elements.practicalDrillForecast
         .querySelectorAll("[data-practical-forecast]")
         .forEach((button) => {
-          button.hidden = button.dataset.practicalForecast === "guess" && !restrictionSprintSession;
+          button.hidden = button.dataset.practicalForecast === "guess" && !practicalForecastValues(drill).includes("guess");
           const selected = button.dataset.practicalForecast === drill.preAnswerConfidence;
           button.setAttribute("aria-pressed", String(selected));
           button.classList.toggle("is-selected", selected);
@@ -14808,6 +14917,13 @@
       startSubjectSprint("restrictions", SUBJECT_SPRINT_RESTRICTIONS_SESSION_SIZE, "authored")
     );
     elements.restrictionTopicOpen?.addEventListener("click", openRestrictionTopicPicker);
+    elements.rightsMasteryTwenty?.addEventListener("click", () => startSubjectSprint("rights", RIGHTS_KNOCK_SESSION_SIZE, "knock"));
+    elements.rightsMasteryFresh?.addEventListener("click", () => startSubjectSprint("rights", RIGHTS_KNOCK_SESSION_SIZE, "untouched"));
+    elements.rightsMasteryAll?.addEventListener("click", () => startSubjectSprint("rights", RIGHTS_KNOCK_SOURCE_IDS.length, "knock"));
+    elements.rightsMasteryTopic?.addEventListener("change", renderRightsMastery);
+    elements.rightsMasteryTopicStart?.addEventListener("click", () =>
+      startSubjectSprint("rights", RIGHTS_KNOCK_SESSION_SIZE, elements.rightsMasteryTopic.value)
+    );
     document.querySelectorAll("[data-subject-sprint]").forEach((button) => {
       button.addEventListener("click", () => startSubjectSprint(
         button.dataset.subjectSprint,
