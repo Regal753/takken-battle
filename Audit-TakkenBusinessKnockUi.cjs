@@ -70,8 +70,24 @@ async function readSavedState(page) {
   });
 }
 
+const resetPages = new WeakSet();
+const RESET_FIXTURE_KEY = "takken-audit-business-knock-reset";
+
 async function resetKnockState(page, history = {}, difficulty = "basic") {
-  await page.evaluate(({ nextHistory, nextDifficulty }) => {
+  // Apply the fixture before the new document loads the app. Writing the
+  // primary save in the outgoing document can race with its pending saves or
+  // cross-tab reconciliation and restore the active set during reload.
+  if (!resetPages.has(page)) {
+    await page.addInitScript((fixtureKey) => {
+      const pending = sessionStorage.getItem(fixtureKey);
+      if (!pending) return;
+      const { key, value } = JSON.parse(pending);
+      localStorage.setItem(key, value);
+      sessionStorage.removeItem(fixtureKey);
+    }, RESET_FIXTURE_KEY);
+    resetPages.add(page);
+  }
+  await page.evaluate(({ nextHistory, nextDifficulty, fixtureKey }) => {
     const key = Object.keys(localStorage).find((candidate) =>
       candidate.startsWith("takken-battle-study-clean-v2-hard-review-") &&
       !candidate.includes("backup") && !candidate.includes("-before-") &&
@@ -101,10 +117,12 @@ async function resetKnockState(page, history = {}, difficulty = "basic") {
       correctAttempts: 0,
       history: nextHistory
     };
-    localStorage.setItem(key, JSON.stringify(saved));
-  }, { nextHistory: history, nextDifficulty: difficulty });
+    sessionStorage.setItem(fixtureKey, JSON.stringify({ key, value: JSON.stringify(saved) }));
+  }, { nextHistory: history, nextDifficulty: difficulty, fixtureKey: RESET_FIXTURE_KEY });
   await page.reload({ waitUntil: "networkidle" });
   await waitForApp(page);
+  assert.equal((await readSavedState(page)).practicalDrill.stage, "idle", "reset fixture must replace the outgoing active set");
+  assert.equal(await page.locator("#businessArchiveSize").isDisabled(), false, "reset launcher must be ready before choosing a new set");
 }
 
 async function setKnockPreset(page, { mode, size, unitId, difficulty = "basic" }) {
