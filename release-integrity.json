@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20261001-rights-knock-9ce0c2b43fde",
-  "digest": "sha256:9ce0c2b43fde01a5b732e93bb2c1dbf9a8ed9ca971f8cc0abaa3f36b1534def0",
+  "version": "20261002-rights-knock-814ba90a6e7e",
+  "digest": "sha256:814ba90a6e7eef1160164d25ba329f26e118b4ba90d2b50b4706e12c6c12747b",
   "assetCount": 66,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "b7b88052d90dfee7a3804d89373140bc02c7e7b33c17b5e6d7359519c9068f41"
+      "sha256": "724f11afc89d18177b124630f0b14df8b2299e0ade443bba9f72a973bb32a282"
     },
     {
       "path": "assets/battle/grassland-route.webp",
@@ -254,7 +254,7 @@
     },
     {
       "path": "styles.css",
-      "sha256": "996b43f46107efb1e62d62f2d33a1938d4ee16652f1386f142185824f8b09b11"
+      "sha256": "589bcb30cf47f0a998c7194db7f4423961eeae224dcb8b4b653c35a890d1c807"
     },
     {
       "path": "subject-sprint-bank.js",

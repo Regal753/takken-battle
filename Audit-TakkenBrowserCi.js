@@ -6,7 +6,7 @@ const path = require("node:path");
 const { spawnSync } = require("node:child_process");
 const runner = require("./scripts/run-browser-audits.cjs");
 
-// Independent snapshot of the prior 25 browser commands plus the new tax audit.
+// Independent coverage contract, including the question-specific ChatGPT handoff.
 const required = [
   "Audit-TakkenBusinessMasteryUi.cjs", "Audit-TakkenStatementReviewUi.cjs",
   "Audit-TakkenBalancedExplanationUi.cjs", "Audit-TakkenBusinessKnockUi.cjs",
@@ -22,17 +22,18 @@ const required = [
   "Audit-TakkenSaveLeaseRaceUi.cjs", "Audit-TakkenAccessibilityUi.cjs",
   "Audit-TakkenQuestCoreUi.cjs", "Audit-TakkenReiwaExamUi.cjs",
   "Audit-TakkenCaseExamUi.cjs",
-  "Audit-TakkenRightsKnockUi.cjs"
+  "Audit-TakkenRightsKnockUi.cjs",
+  "Audit-TakkenChatgptHelpUi.cjs"
 ];
 
 (async () => {
-  assert.equal(runner.EXPECTED_AUDIT_COUNT, 27);
+  assert.equal(runner.EXPECTED_AUDIT_COUNT, 28);
   assert.deepEqual([...runner.AUDITS].sort(), [...required].sort(), "the complete prior browser suite must be retained");
   runner.validateRegistry();
   const shards = runner.SHARDS.map(shard => runner.selectShard(shard));
-  assert.deepEqual(shards.map(shard => shard.length), [14, 13]);
+  assert.deepEqual(shards.map(shard => shard.length), [14, 14]);
   assert.deepEqual(shards.flat().sort(), [...required].sort(), "matrix shards must have no missing or duplicated audits");
-  assert.equal(new Set(shards.flat()).size, 27);
+  assert.equal(new Set(shards.flat()).size, 28);
   assert.throws(() => runner.selectShard("unknown"), /unknown/);
   assert.throws(() => runner.selectShard("a", []), /empty/);
   assert.throws(() => runner.validateRegistry(required.slice(1)), /count/);
