@@ -1,6 +1,43 @@
 "use strict";
 
 (() => {
+  // A partial bank load is not an empty learner session. Stop before loadState()
+  // normalizes unknown IDs and the initial autosave can replace a saved queue.
+  const sprintBankAtBoot = window.TAKKEN_SUBJECT_SPRINT_BANK;
+  const missingQuestionBanks = [
+    ["計算・金額", window.TAKKEN_CALCULATION_DRILL?.QUESTIONS?.length === 35],
+    ["基礎の実践", window.TAKKEN_PRACTICAL_VARIATIONS?.QUESTIONS?.length === 180],
+    ["業法の旧問", window.TAKKEN_BUSINESS_FULLSCORE_BANK?.QUESTIONS?.length === 134],
+    ["業法の高難度", window.TAKKEN_BUSINESS_HARD_BANK?.QUESTIONS?.length === 180],
+    ["保証協会", window.TAKKEN_GUARANTEE_ASSOCIATION_DRILL?.QUESTIONS?.length === 33],
+    ["法令上の制限", window.TAKKEN_RESTRICTIONS_AUTHORED_BANK?.QUESTIONS?.length === 72],
+    ["税", window.TAKKEN_TAX_AUTHORED_BANK?.QUESTIONS?.length === 24],
+    ["科目別ノック", sprintBankAtBoot?.QUESTIONS?.length === 198 &&
+      sprintBankAtBoot?.LEGAL_BASELINE === "2026-04-01" &&
+      typeof sprintBankAtBoot?.presentQuestion === "function" &&
+      typeof sprintBankAtBoot?.diversify === "function"]
+  ].filter(([, ready]) => !ready).map(([label]) => label);
+  function showBankLoadRecovery(missingBanks) {
+    const recovery = document.createElement("section");
+    recovery.id = "bankLoadRecovery";
+    recovery.className = "bank-load-recovery";
+    recovery.setAttribute("role", "alert");
+    recovery.innerHTML = '<h1 tabindex="-1">問題集を読み込めませんでした</h1>' +
+      '<p id="bankLoadDetail"></p>' +
+      '<p>学習画面を停止し、端末のセーブを変更せず保護しています。最初からやり直す必要はありません。</p>' +
+      '<p>通信状態を確認して再読み込みしてください。問題集が戻ると、保存済みの続きから再開できます。</p>' +
+      '<button id="bankLoadRetry" type="button">もう一度読み込む</button>';
+    recovery.querySelector("#bankLoadDetail").textContent =
+      `${missingBanks.join("・")}の読み込みが完了していません。`;
+    document.querySelector(".app-root")?.setAttribute("hidden", "");
+    document.body.prepend(recovery);
+    recovery.querySelector("#bankLoadRetry").addEventListener("click", () => window.location.reload());
+    recovery.querySelector("h1").focus();
+  }
+  if (missingQuestionBanks.length) {
+    showBankLoadRecovery(missingQuestionBanks);
+    return;
+  }
   const URL_PARAMS = new URLSearchParams(window.location.search);
   const PUBLIC_STATIC_MODE =
     document.querySelector('meta[name="takken-runtime"]')?.content === "public-static";
@@ -415,6 +452,19 @@
     typeof SUBJECT_SPRINT_BANK?.presentQuestion === "function" &&
     typeof SUBJECT_SPRINT_BANK?.diversify === "function"
   );
+  // Raw counts can still conceal duplicate IDs or invalid questions. Use the
+  // same normalized readiness contract as the study routes before any save I/O.
+  const invalidNormalizedBanks = [
+    ["科目別ノック", SUBJECT_SPRINT_READY],
+    ["業法の高難度・旧問", BUSINESS_HARD_BANK_READY],
+    ["保証協会", GUARANTEE_SPECIAL_READY],
+    ["基礎の実践", PRACTICAL_QUESTIONS.length === 180 && new Set(PRACTICAL_QUESTION_IDS).size === 180],
+    ["計算・金額", CALCULATION_QUESTIONS.length === 35 && new Set(CALCULATION_QUESTION_IDS).size === 35]
+  ].filter(([, ready]) => !ready).map(([label]) => label);
+  if (invalidNormalizedBanks.length) {
+    showBankLoadRecovery(invalidNormalizedBanks.map(label => `${label}（問題データの整合性）`));
+    return;
+  }
   const ALL_PRACTICAL_QUESTION_BY_ID = Object.freeze({
     ...PRACTICAL_QUESTION_BY_ID,
     ...BUSINESS_FULLSCORE_QUESTION_BY_ID,
@@ -990,6 +1040,10 @@
     explainText: $("#explainText"),
     nextButton: $("#nextButton"),
     resetButton: $("#resetButton"),
+    studyModeNav: $("#studyModeNav"),
+    studyModeNavStatus: $("#studyModeNavStatus"),
+    subjectNavigator: $("#subjectNavigator"),
+    publicModeNote: $(".public-mode-note"),
     attemptLabel: $("#attemptLabel"),
     attemptCount: $("#attemptCount"),
     accuracyLabel: $("#accuracyLabel"),
@@ -998,6 +1052,7 @@
     streakText: $("#streakText"),
     markedLabel: $("#markedLabel"),
     markedText: $("#markedText"),
+    progressDataQualityNotice: $("#progressDataQualityNotice"),
     chapterProgressText: $("#chapterProgressText"),
     studyTitle: $("#studyTitle"),
     todayLabel: $("#todayLabel"),
@@ -1005,6 +1060,7 @@
     progressDrawer: $("#progressDrawer"),
     progressDrawerLink: $("#progressDrawerLink"),
     progressDrawerSummary: $("#progressDrawerSummary"),
+    themeDrawer: $("#themeDrawer"),
     themeDrawerSummary: $("#themeDrawerSummary"),
     themeBar: $("#themeBar"),
     chapterSelect: $("#chapterSelect"),
@@ -1102,6 +1158,7 @@
     rightsMasteryGrounded: $("#rightsMasteryGrounded"),
     rightsMasteryRetained: $("#rightsMasteryRetained"),
     rightsMasteryGuesses: $("#rightsMasteryGuesses"),
+    rightsMasteryPanel: $("#rightsMasteryPanel"),
     rightsMasteryTwenty: $("#rightsMasteryTwenty"),
     rightsMasteryFresh: $("#rightsMasteryFresh"),
     rightsMasteryAll: $("#rightsMasteryAll"),
@@ -4862,6 +4919,82 @@
       focusCurrentPracticalContext({ force: true });
     }
     return true;
+  }
+
+  // The top menu is deliberately a navigator, never a launcher.  Starting,
+  // abandoning, scoring, and resetting remain explicit actions in the target
+  // workspace so an accidental tap cannot change a saved study set.
+  function focusStudyNavigationTarget(target, { focusSelector = "" } = {}) {
+    if (!target) return;
+    // Resolve the actionable destination first.  Several routes land inside
+    // nested details (for example the official ledger); opening only the
+    // outer card leaves that action invisible on screen.
+    const focusTarget = focusSelector
+      ? target.querySelector(focusSelector)
+      : target instanceof HTMLDetailsElement
+        ? target.querySelector(":scope > summary") || target
+        : target;
+    const destination = focusTarget || target;
+    let ancestor = destination;
+    while (ancestor && ancestor !== document.body) {
+      if (ancestor instanceof HTMLDetailsElement) ancestor.open = true;
+      ancestor = ancestor.parentElement;
+    }
+    if (destination) {
+      if (!destination.matches("button, a, input, select, summary, [tabindex]")) {
+        destination.tabIndex = -1;
+      }
+      destination.focus({ preventScroll: true });
+    }
+    window.requestAnimationFrame(() => {
+      destination.scrollIntoView({ block: "center", behavior: "smooth" });
+    });
+  }
+
+  function setStudyNavigationStatus(text) {
+    if (elements.studyModeNavStatus) elements.studyModeNavStatus.textContent = text;
+  }
+
+  function navigateStudyMode(destination) {
+    const active = activeLearningSession();
+    if (destination === "today") {
+      if (active) {
+        resumeActiveLearningSession();
+        setStudyNavigationStatus(`${activeResumeLabel(active)}。問題の位置と解答は変えていません。`);
+        return;
+      }
+      focusStudyNavigationTarget(elements.todayCommandPanel, { focusSelector: "#todayCommandStartButton" });
+      setStudyNavigationStatus("今日の指示を開きました。開始するには、ここで問題へのボタンを押します。");
+      return;
+    }
+    const routes = {
+      subjects: { target: elements.subjectNavigator, label: "科目別メニュー" },
+      business: { target: elements.businessMasteryPanel, focusSelector: "#businessKnockMode", label: "宅建業法の高難度ノック設定" },
+      restrictions: { target: elements.restrictionMasteryPanel, focusSelector: "#restrictionExamStart", label: "法令上の制限の診断とノック" },
+      rights: { target: elements.rightsMasteryPanel, focusSelector: "#rightsMasteryTwenty", label: "権利関係の根拠ノック設定" },
+      tax: { target: elements.passPlanPanel, focusSelector: "#taxAuthoredTen", label: "税の新作10問の開始設定" },
+      other: { target: elements.passPlanPanel, focusSelector: '[data-subject-sprint="other"]', label: "その他12問の開始設定" },
+      all: { target: elements.themeDrawer, focusSelector: "#studyScopeSelect", label: "全科目の日課範囲メニュー" },
+      calculation: { target: elements.calculationDrillPanel, focusSelector: "#calculationDrillResetButton", label: "計算・金額35問の開始設定" },
+      review: { target: elements.questCard, focusSelector: "#weakQuestButton", label: "通常問題の弱点狩り（復習メニュー）" },
+      exam: { target: elements.passPlanPanel, focusSelector: "#officialExamStartButton", label: "本番形式・公式過去問の計測開始設定" },
+      progress: { target: elements.progressDrawer, label: "学習記録" },
+      settings: { target: elements.publicModeNote, label: "保存と設定" }
+    };
+    const route = routes[destination];
+    if (!route?.target) return;
+    focusStudyNavigationTarget(route.target, { focusSelector: route.focusSelector });
+    setStudyNavigationStatus(`${route.label}を開きました。ここではまだ問題を開始していません。`);
+  }
+
+  function renderStudyModeNavigation() {
+    if (!elements.studyModeNav) return;
+    const active = activeLearningSession();
+    const todayButton = elements.studyModeNav.querySelector('[data-study-nav="today"]');
+    if (!todayButton) return;
+    todayButton.textContent = active ? "途中を再開" : "今日の指示";
+    todayButton.setAttribute("aria-label", active ? activeResumeLabel(active) : "今日の指示を開く");
+    todayButton.title = active ? `${active.label}を保存位置から再開` : "今日の指示を開く";
   }
 
   function currentMockForm() {
@@ -9529,6 +9662,7 @@
 
   function renderPracticalDrill() {
     elements.practicalDrillFeedback?.querySelector(".chatgpt-help")?.remove();
+    renderStudyModeNavigation();
     if (!elements.practicalDrillPanel || !PRACTICAL_QUESTION_IDS.length) return;
     const drill = state.practicalDrill;
     renderAnswerDock(currentQuestion());
@@ -10625,6 +10759,7 @@
     const retryIds = BUSINESS_DRILL_QUESTION_IDS.filter((id) =>
       ["wrong", "uncertain"].includes(state.practicalDrill?.history?.[id]?.lastConfidence)
     );
+    const previousState = cloneStateForSync(state);
     state.practicalDrill = {
       ...state.practicalDrill,
       version: PRACTICAL_VARIATIONS?.VERSION || 1,
@@ -10648,8 +10783,13 @@
       sessionStartedAt: new Date().toISOString(),
       completedAt: ""
     };
+    if (!saveState()) {
+      state = previousState;
+      renderCurrentView();
+      setTodayCommandStatus("業法セットの開始状態を保存できませんでした。もう一度試してください。", true);
+      return;
+    }
     if (elements.practicalDrillPanel) elements.practicalDrillPanel.open = true;
-    saveState();
     renderPracticalDrill();
     renderBusinessMastery();
     renderPassPlan();
@@ -11449,6 +11589,7 @@
   }
 
   function render() {
+    renderStudyModeNavigation();
     resetQuizCardView();
     renderCalculationDrill();
     renderPracticalDrill();
@@ -12536,6 +12677,10 @@
 
   function renderStats() {
     if (isMockMode()) {
+      if (elements.progressDataQualityNotice) {
+        elements.progressDataQualityNotice.hidden = true;
+        elements.progressDataQualityNotice.textContent = "";
+      }
       const finalized = Boolean(state.mock.finalized);
       const mockScore = (state.mock.results || []).filter((result) => result.correct).length;
       if (elements.attemptLabel) elements.attemptLabel.textContent = "解答";
@@ -12561,8 +12706,20 @@
     if (elements.markedLabel) elements.markedLabel.textContent = "要復習";
     const attempts = Math.max(state.attempts, Number(state.centralProgress?.answers) || 0);
     const correct = Math.max(state.correct, Number(state.centralProgress?.correct) || 0);
+    const questionTotals = Object.values(state.questionStats || {}).reduce((totals, item) => ({
+      attempts: totals.attempts + (Number(item?.attempts) || 0),
+      correct: totals.correct + (Number(item?.correct) || 0)
+    }), { attempts: 0, correct: 0 });
+    const mixedCumulativeCounts = questionTotals.attempts > 0 &&
+      (questionTotals.attempts !== attempts || questionTotals.correct !== correct);
+    if (elements.progressDataQualityNotice) {
+      elements.progressDataQualityNotice.hidden = !mixedCumulativeCounts;
+      elements.progressDataQualityNotice.textContent = mixedCumulativeCounts
+        ? "注意：累計と問題別記録の解答数・正解数が一致していません。正答率や合格判定には使わず、科目別の誤答・迷いと公式50問の記録を優先してください。"
+        : "";
+    }
     elements.attemptCount.textContent = String(attempts);
-    elements.accuracyText.textContent = attempts ? `${Math.round((correct / attempts) * 100)}%` : "-";
+    elements.accuracyText.textContent = !mixedCumulativeCounts && attempts ? `${Math.round((correct / attempts) * 100)}%` : "-";
     elements.streakText.textContent = state.bestStreak ? `${state.streak}/${state.bestStreak}` : String(state.streak);
     elements.markedText.textContent = String(weakIds().length);
     elements.chapterProgressText.textContent =
@@ -14825,6 +14982,9 @@
       }
     });
     elements.resetButton.addEventListener("click", resetAll);
+    document.querySelectorAll("[data-study-nav]").forEach((button) => {
+      button.addEventListener("click", () => navigateStudyMode(button.dataset.studyNav));
+    });
     elements.markButton.addEventListener("click", toggleMarked);
     elements.dailyQuestButton?.addEventListener("click", leaveMockForDailyQuest);
     elements.todayCommandStartButton?.addEventListener("click", (event) => {

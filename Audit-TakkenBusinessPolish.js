@@ -1,6 +1,6 @@
 "use strict";
 
-// Five wording-only repairs must not rewrite a saved answer or rotate a choice.
+// Wording-only repairs must not rewrite a saved answer or rotate a choice.
 const assert = require("node:assert/strict");
 const crypto = require("node:crypto");
 const fs = require("node:fs");
@@ -10,6 +10,9 @@ const { execFileSync } = require("node:child_process");
 const ROOT = __dirname;
 const FIXTURE = path.join(ROOT, "scripts/business-polish-v58-compat.json");
 const CHANGED = ["hard55-018", "hard55-044", "hard55-087", "hard55-098", "hard55-120"];
+const V60_REPAIR_ID = "hard55-089";
+const V60_PREMISE_BEFORE = "宅建業者Aと非業者Bは喫茶店で住宅売買を契約した。Bは35条・37条書面の電子提供を法定の方法で承諾し、適法に受領している。Aはクーリングオフの告知書も同じPDFとして送ったが、紙では交付していない。11日後、手付だけを支払ったBは、引渡し前に紙の解除書面を郵送した。";
+const V60_PREMISE_AFTER = "非業者Bは、宅建業者Aが売主となる住宅について、購入の申込みと売買契約の締結をいずれも同じ喫茶店で行った。この喫茶店はA又はAから代理・媒介を依頼された宅建業者の営業拠点・分譲案内所・展示会場ではなく、Bの自宅・勤務先でもない。Bは35条・37条書面の電子提供を法定の方法で承諾し、適法に受領している。Aはクーリングオフの告知書も同じPDFとして送ったが、紙では交付していない。11日後、手付だけを支払ったBは、引渡し前に紙の解除書面を郵送した。";
 const FILES = ["exam-blueprint.js", "exam-question-core.js", "exam-questions-rights.js",
   "exam-questions-restrictions.js", "exam-questions-tax-other.js", "exam-questions-business.js",
   "business-fullscore-supplement.js", "business-fullscore-bank.js", "business-hard-front.js",
@@ -38,13 +41,27 @@ function grading(q) {
     choiceBlocks: q.displayModel.choiceBlocks,
     presentationKey: q.presentationKey, presentationOrder: q.presentationOrder };
 }
+function v58FullView(q) {
+  if (q.id !== V60_REPAIR_ID) return q;
+  // Keep the immutable 175-question fixture. Only the named premise fields may differ.
+  assert.ok(q.text.startsWith(`${q.premise}\n\n`));
+  assert.equal(q.displayModel.intro, `${q.premise}\n\n${q.stem}`);
+  for (const fact of q.sourceFacts) {
+    assert.equal(fact.context, q.premise);
+    assert.equal(fact.presentedContext, q.premise);
+  }
+  return { ...q, premise: V60_PREMISE_BEFORE,
+    text: V60_PREMISE_BEFORE + q.text.slice(q.premise.length),
+    displayModel: { ...q.displayModel, intro: `${V60_PREMISE_BEFORE}\n\n${q.stem}` },
+    sourceFacts: q.sourceFacts.map(fact => ({ ...fact, context: V60_PREMISE_BEFORE, presentedContext: V60_PREMISE_BEFORE })) };
+}
 function snapshot(runtime) {
   const bank = runtime.TAKKEN_BUSINESS_HARD_BANK;
   const presentations = bank.QUESTIONS.flatMap(q => Array.from({ length: 32 }, (_, i) =>
     grading(bank.presentQuestion(q.id, `business-polish-v59-${i}`))));
   return { bankVersion: bank.VERSION, fullscoreVersion: runtime.TAKKEN_BUSINESS_FULLSCORE_BANK.VERSION,
     ids: bank.QUESTIONS.map(q => q.id), canonicalGrading: digest(bank.QUESTIONS.map(grading)),
-    presentedGrading: digest(presentations), untouchedFullView: digest(bank.QUESTIONS.filter(q => !CHANGED.includes(q.id))),
+    presentedGrading: digest(presentations), untouchedFullView: digest(bank.QUESTIONS.filter(q => !CHANGED.includes(q.id)).map(v58FullView)),
     changedPremisesBefore: Object.fromEntries(bank.QUESTIONS.filter(q => CHANGED.includes(q.id)).map(q => [q.id, digest(q.premise)])) };
 }
 if (process.argv[2] === "--capture-base") {
@@ -68,6 +85,8 @@ if (process.argv[2] === "--capture-base") {
   assert.doesNotMatch(bank.QUESTIONS_BY_ID["hard55-098"].premise, /第43条|ただし書|事情が認められ/);
   assert.doesNotMatch(bank.QUESTIONS_BY_ID["hard55-120"].premise, /適法な住宅販売|要件を全て満たす/);
   assert.match(bank.QUESTIONS_BY_ID["hard55-120"].premise, /金額以外の/);
-  console.log(JSON.stringify({ status: "PASS", repaired: CHANGED, unchangedFullViews: 175,
+  assert.equal(bank.QUESTIONS_BY_ID[V60_REPAIR_ID].premise, V60_PREMISE_AFTER, "申込み・契約の場所と自ら売主の取引を明示する");
+  console.log(JSON.stringify({ status: "PASS", repaired: [...CHANGED, V60_REPAIR_ID], unchangedFullViews: 174,
+    fixtureMatchedFullViews: 175, premiseOnlyCompatibilityAllowlist: [V60_REPAIR_ID],
     unchangedCanonicalAnswers: 180, unchangedPresentedAnswers: 5760, bankVersion: actual.bankVersion }));
 }

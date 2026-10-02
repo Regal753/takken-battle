@@ -12,6 +12,22 @@ function digest(q){return crypto.createHash("sha256").update(JSON.stringify({
   sourceFacts:q.sourceFacts.map(f=>({key:f.key,statement:f.statement,truth:f.truth,reason:f.reason})),
   displayModel:q.displayModel,explain:q.explain,trap:q.trap
 })).digest("hex");}
+// v60/v61 clarify exactly one old common premise. Keep the immutable v58 grading
+// and saved-shuffle digests; project only the two reviewed text fragments back.
+function legacyPremiseProjection(q){
+  if(q.id!=="sprint-law-rc58-041")return q;
+  const fragments=[
+    ["外壁又はこれに代わる柱の面から、道路との境界を含むすべての敷地境界線までの距離の最小値が1.2m","外壁から隣地境界線までの距離が1.2m"],
+    ["高さ制限・高さ算定・後退距離の例外、特例の認定・許可はない","高さ算定や後退距離の例外、特例許可はない"]
+  ];
+  let text=q.text,intro=q.displayModel.intro;
+  for(const [current,previous] of fragments){
+    assert.equal(text.split(current).length,2,"041: each clarified premise fragment must occur exactly once");
+    assert.equal(intro.split(current).length,2,"041: displayed premise must match each clarification");
+    text=text.replace(current,previous);intro=intro.replace(current,previous);
+  }
+  return {...q,text,displayModel:{...q.displayModel,intro}};
+}
 assert.equal(bank.QUESTIONS.length,24);
 assert.equal(bank.LEGAL_BASELINE,"2026-04-01");
 assert.deepEqual(group(bank.RAW_QUESTIONS,"format"),{single:20,count:4});
@@ -63,8 +79,8 @@ assert.deepEqual(sprint.COVERAGE.bySection,{taxOther:30,restrictions:112,rights:
 assert.equal(Object.keys(fixture.questions).length,174);
 for(const [id,old] of Object.entries(fixture.questions)){
   const q=sprint.QUESTIONS_BY_ID[id];assert.ok(q,`${id}: previous ID retained`);
-  assert.equal(digest(q),old.canonical,`${id}: canonical grading/presentation preserved`);
-  fixture.keys.forEach((key,i)=>assert.equal(digest(sprint.presentQuestion(q,key)),old.presented[i],`${id}: stored presentation preserved`));
+  assert.equal(digest(legacyPremiseProjection(q)),old.canonical,`${id}: canonical grading/presentation preserved apart from the explicit 041 premise clarification`);
+  fixture.keys.forEach((key,i)=>assert.equal(digest(legacyPremiseProjection(sprint.presentQuestion(q,key))),old.presented[i],`${id}: stored presentation preserved`));
 }
 const builder=fs.readFileSync(path.join(__dirname,"tax-authored-bank.js"),"utf8");
 assert.throws(()=>vm.runInNewContext(builder,{}),/requires all 24/);
@@ -84,4 +100,4 @@ const validContext={TAKKEN_TAX_CASES_V59:bank.RAW_QUESTIONS,URL};
 vm.runInNewContext(builder,validContext);assert.equal(validContext.TAKKEN_TAX_AUTHORED_BANK.QUESTIONS.length,24);
 console.log(JSON.stringify({status:"ok",newQuestions:24,judgments:96,formats:group(bank.RAW_QUESTIONS,"format"),
   targets:group(bank.QUESTIONS,"targetLevel"),oldGradingPreserved:174,oldPresentationsPreserved:522,
-  compatibilityExceptions:0,newPresentations:120,totalSprint:198,legalBaseline:bank.LEGAL_BASELINE}));
+  gradingCompatibilityExceptions:0,explicitPremiseClarifications:1,newPresentations:120,totalSprint:198,legalBaseline:bank.LEGAL_BASELINE}));

@@ -23,17 +23,20 @@ const required = [
   "Audit-TakkenQuestCoreUi.cjs", "Audit-TakkenReiwaExamUi.cjs",
   "Audit-TakkenCaseExamUi.cjs",
   "Audit-TakkenRightsKnockUi.cjs",
-  "Audit-TakkenChatgptHelpUi.cjs"
+  "Audit-TakkenChatgptHelpUi.cjs",
+  "Audit-TakkenConcurrentSaveUi.cjs",
+  "Audit-TakkenBankRecoveryUi.cjs",
+  "Audit-TakkenNavigationUi.cjs"
 ];
 
 (async () => {
-  assert.equal(runner.EXPECTED_AUDIT_COUNT, 28);
+  assert.equal(runner.EXPECTED_AUDIT_COUNT, 31);
   assert.deepEqual([...runner.AUDITS].sort(), [...required].sort(), "the complete prior browser suite must be retained");
   runner.validateRegistry();
   const shards = runner.SHARDS.map(shard => runner.selectShard(shard));
-  assert.deepEqual(shards.map(shard => shard.length), [14, 14]);
+  assert.deepEqual(shards.map(shard => shard.length), [16, 15]);
   assert.deepEqual(shards.flat().sort(), [...required].sort(), "matrix shards must have no missing or duplicated audits");
-  assert.equal(new Set(shards.flat()).size, 28);
+  assert.equal(new Set(shards.flat()).size, 31);
   assert.throws(() => runner.selectShard("unknown"), /unknown/);
   assert.throws(() => runner.selectShard("a", []), /empty/);
   assert.throws(() => runner.validateRegistry(required.slice(1)), /count/);
