@@ -226,7 +226,12 @@ async function existingSession(browser, serverUrl, subject) {
           const response = await interception.fetch();
           const body = await response.text();
           injected += 1;
-          await interception.fulfill({ response, body: body + `\n;(() => { const bank = window.TAKKEN_SUBJECT_SPRINT_BANK; window.TAKKEN_SUBJECT_SPRINT_BANK = { ...bank, ${variant.override} }; })();\n` });
+          // Do not reuse this synthetic response after unroute: CI's static server
+          // revalidates Last-Modified, while the local audit host uses no-store.
+          const headers = { ...response.headers(), "cache-control": "no-store" };
+          delete headers.etag;
+          delete headers["last-modified"];
+          await interception.fulfill({ response, headers, body: body + `\n;(() => { const bank = window.TAKKEN_SUBJECT_SPRINT_BANK; window.TAKKEN_SUBJECT_SPRINT_BANK = { ...bank, ${variant.override} }; })();\n` });
         });
         await page.reload({ waitUntil: "networkidle" });
         assert.ok(injected > 0, `${phase}: incomplete-module fixture must run`);
@@ -334,6 +339,7 @@ async function main() {
     fs.writeFileSync(path.join(output, "result.json"), JSON.stringify(result, null, 2) + "\n");
     console.log(JSON.stringify({ status: result.status, coverage: focus, scenarios: result.scenarios.length, dependencyAssets: ASSETS.length,
       layouts: result.layouts.length, syntheticContextOnly: true, serviceWorkers: "block", resultPath: path.join(output, "result.json"),
+      ...(result.failure ? { failure: result.failure } : {}),
       ...(result.storageFailure ? { storageFailure: result.storageFailure } : {}) }));
   }
 }
