@@ -531,6 +531,7 @@ async function presentedFixture(page) {
     await waitForApp(missingHardPage);
     const recoveredHardSaved = await readSavedState(missingHardPage);
     assert.deepEqual(recoveredHardSaved.practicalDrill, commandSaved.practicalDrill, "recovering the hard bank must restore the complete drill, selected answer, history and position");
+    await cancelKnock(missingHardPage);
     const explicitBasicFallback = await startKnock(missingHardPage, { mode: "untouched", size: 10 });
     assert.equal(explicitBasicFallback.practicalDrill.sessionIds.every(id => id.startsWith("bf-business-")), true, "only an explicit basic choice may enter the intact legacy bank");
     await missingHardPage.close();
