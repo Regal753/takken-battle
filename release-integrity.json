@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20261002-whole-review-f02edd9e3025",
-  "digest": "sha256:f02edd9e3025a193e2e7d87bf403843e41d9e9a4c8e16a2b8bb69cc64126c43f",
+  "version": "20261002-layout-review-ee6a007207cb",
+  "digest": "sha256:ee6a007207cb09e11723e7abf4e43395300c0667e692bee3b04fff5bf8bf0410",
   "assetCount": 66,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "ab6928ba9d67e1e347c3542edfec0c0ffd7779f6cea8421d428a84a1656b34d2"
+      "sha256": "fc68682adca17f3a998f460e50569e20fd4ed4ba6470ecb0ddb1b2299e161b4c"
     },
     {
       "path": "assets/battle/grassland-route.webp",
@@ -162,7 +162,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "3120c199210626158cadbf7b3066d7590af41745faa10bcf4ee4146d00de5147"
+      "sha256": "304d101af5f1a33c78c770598a42f552d0cfd8b901f3740f2b645f5587c5540c"
     },
     {
       "path": "manifest.webmanifest",
@@ -254,7 +254,7 @@
     },
     {
       "path": "styles.css",
-      "sha256": "75498e053dcd93547764f6b2c2aee51249ea738305692b3ec920bb22b404ac75"
+      "sha256": "6c9f415aa3b687f47ef42eb63685efa1e69bb42c05fa0b905818ec4c9a1cf69c"
     },
     {
       "path": "subject-sprint-bank.js",

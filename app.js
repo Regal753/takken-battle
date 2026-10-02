@@ -9504,7 +9504,13 @@
     if (!validPracticalDisplayBlock(block, sharedCasePremise)) {
       button.removeAttribute("data-structured");
       button.removeAttribute("aria-describedby");
-      button.textContent = `${index + 1}. ${choice}`;
+      const number = document.createElement("span");
+      number.className = "practical-choice-number";
+      number.textContent = `${index + 1}. `;
+      const copy = document.createElement("span");
+      copy.className = "practical-choice-copy";
+      copy.textContent = choice;
+      button.replaceChildren(number, copy);
       return button;
     }
     const relevantGroups = sharedPremiseGroups.filter((group) => group.blockIndexes.includes(index));
@@ -9815,6 +9821,10 @@
       elements.practicalDrillForecast
         .querySelectorAll("[data-practical-forecast]")
         .forEach((button) => {
+          if (button.dataset.practicalForecast === "confident") {
+            button.textContent = restrictionSprintSession && question.groundingFrame
+              ? "4条件を言えた" : "根拠を言えた";
+          }
           button.hidden = button.dataset.practicalForecast === "guess" && !practicalForecastValues(drill).includes("guess");
           const selected = button.dataset.practicalForecast === drill.preAnswerConfidence;
           button.setAttribute("aria-pressed", String(selected));
