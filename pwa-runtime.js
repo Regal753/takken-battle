@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20261002-rights-knock-814ba90a6e7e";
+  const VERSION = "20261002-whole-review-f02edd9e3025";
   const BANNER_ID = "pwaUpdateNotice";
   let reloadRequested = false;
 

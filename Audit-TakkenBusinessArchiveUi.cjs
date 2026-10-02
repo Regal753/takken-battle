@@ -101,7 +101,18 @@ async function answerCurrent(page, { advance = true } = {}) { const answer = awa
       assert.equal(await overflow(page), 0, `${width}px opened archive must not overflow`);
       await page.screenshot({ path: path.join(shots, `drawer-${width}.png`) });
     }
-    const missing = await browser.newPage({ viewport: { width: 390, height: 844 } }); await missing.route(/business-hard-bank\.js/, route => route.abort()); await missing.goto(url(local.base, "missing-hard"), { waitUntil: "networkidle" }); await app(missing); assert.equal(await missing.locator("#businessKnockStart").isDisabled(), true, "missing hard bank disables normal start"); await open(missing); await archiveStart(missing, "all-random", 10); state = (await saved(missing)).state; assert.equal(state.practicalDrill.sessionIds.every(id => /^bf-business-/.test(id)), true, "archive remains usable when hard asset is missing"); await missing.close();
-    assert.deepEqual(errors, []); console.log(JSON.stringify({ status: "ok", defaultClosed: true, archiveOld134: true, hardPreferenceIsolated: true, oldResumeAndRestart: true, missingHardArchiveWorks: true, widths: [320, 390, 1440], screenshots: shots }));
+    const missing = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    await missing.route(/business-hard-bank\.js/, route => route.abort());
+    await missing.goto(url(local.base, "missing-hard"), { waitUntil: "networkidle" });
+    await missing.locator("#bankLoadRecovery").waitFor({ state: "visible" });
+    assert.equal(await missing.locator(".app-root").isVisible(), false, "a partial bank load must stop normal and archive study before any save write");
+    assert.deepEqual(await missing.evaluate(() => Object.keys(localStorage)), [], "first visit with a missing hard bank must not create an incomplete save");
+    await missing.unroute(/business-hard-bank\.js/);
+    await Promise.all([missing.waitForNavigation({ waitUntil: "networkidle" }), missing.locator("#bankLoadRetry").click()]);
+    await app(missing); await open(missing); await archiveStart(missing, "all-random", 10);
+    state = (await saved(missing)).state;
+    assert.equal(state.practicalDrill.sessionIds.every(id => /^bf-business-/.test(id)), true, "the archive remains available after the required banks recover");
+    await missing.close();
+    assert.deepEqual(errors, []); console.log(JSON.stringify({ status: "ok", defaultClosed: true, archiveOld134: true, hardPreferenceIsolated: true, oldResumeAndRestart: true, missingHardSaveProtected: true, recoveredArchiveWorks: true, widths: [320, 390, 1440], screenshots: shots }));
   } finally { await browser.close(); await local.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -371,7 +371,7 @@ async function presentedFixture(page) {
     assert.match(await page.locator("#missionOfficialStatus").textContent(), /^解答済 0 \/ 12$/, "Monday prioritizes the 12-question tax/other repair block");
     assert.equal(
       await page.locator("#passPlanPanel .pass-plan-summary > div:first-child span").textContent(),
-      "4 合格ロード・2026 PASS PLAN"
+      "本番形式・合格状況"
     );
     assert.equal(await page.locator("#businessKnockPanel").isVisible(), true);
     assert.equal(await page.locator("#businessArchiveMode").inputValue(), "all-random", "legacy drawer starts at its explicit all-random control");
@@ -515,18 +515,23 @@ async function presentedFixture(page) {
     await missingHardPage.addInitScript(({ key, value }) => localStorage.setItem(key, value), hardSavedSnapshot);
     await missingHardPage.route(/business-hard-bank\.js/, (route) => route.abort());
     await missingHardPage.goto(page.url(), { waitUntil: "networkidle" });
-    await waitForApp(missingHardPage);
+    await missingHardPage.locator("#bankLoadRecovery").waitFor({ state: "visible" });
+    assert.equal(await missingHardPage.locator(".app-root").isVisible(), false, "a missing bank must stop the entire uninitialized study UI");
+    assert.equal(await missingHardPage.evaluate(key => localStorage.getItem(key), hardSavedSnapshot.key), hardSavedSnapshot.value, "missing hard bank must preserve the complete raw save, not only the queue");
     const missingHardSaved = await readSavedState(missingHardPage);
     assert.deepEqual(missingHardSaved.practicalDrill.queue, commandSaved.practicalDrill.queue, "missing hard asset must retain the exact saved queue");
     assert.deepEqual(missingHardSaved.practicalDrill.currentAttempt, commandSaved.practicalDrill.currentAttempt, "missing hard asset must preserve the saved selected answer");
     assert.deepEqual(missingHardSaved.practicalDrill.history, commandSaved.practicalDrill.history, "missing hard asset must preserve hard answer history");
-    assert.match(await missingHardPage.locator("#practicalDrillPrompt").textContent(), /問題順・解答は保持/);
+    assert.match(await missingHardPage.locator("#bankLoadDetail").textContent(), /業法の高難度/);
     assert.equal(await missingHardPage.locator(".practical-drill-choice").count(), 0, "missing hard asset must not substitute easy questions");
+    assert.equal(await missingHardPage.locator("#businessKnockStart").isVisible(), false, "a fresh hard start must not be available when its asset is missing");
+    assert.equal(await missingHardPage.locator("#businessKnockFreshStart").isVisible(), false, "direct fresh CTA must also be unavailable when its asset is missing");
+    await missingHardPage.unroute(/business-hard-bank\.js/);
+    await Promise.all([missingHardPage.waitForNavigation({ waitUntil: "networkidle" }), missingHardPage.locator("#bankLoadRetry").click()]);
+    await waitForApp(missingHardPage);
+    const recoveredHardSaved = await readSavedState(missingHardPage);
+    assert.deepEqual(recoveredHardSaved.practicalDrill, commandSaved.practicalDrill, "recovering the hard bank must restore the complete drill, selected answer, history and position");
     await cancelKnock(missingHardPage);
-    assert.equal(await missingHardPage.locator("#businessKnockStart").isDisabled(), true, "a fresh hard start must fail closed when its asset is missing");
-    assert.equal(await missingHardPage.locator("#businessKnockFreshStart").isDisabled(), true, "direct fresh CTA must also fail closed when its asset is missing");
-    assert.match(await missingHardPage.locator("#businessKnockFreshStatus").textContent(), /180問の読込を確認できません/);
-    assert.match(await missingHardPage.locator("#businessKnockStatus").textContent(), /難度を自動で下げず/);
     const explicitBasicFallback = await startKnock(missingHardPage, { mode: "untouched", size: 10 });
     assert.equal(explicitBasicFallback.practicalDrill.sessionIds.every(id => id.startsWith("bf-business-")), true, "only an explicit basic choice may enter the intact legacy bank");
     await missingHardPage.close();

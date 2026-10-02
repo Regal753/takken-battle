@@ -91,6 +91,13 @@ for (const q of bank.QUESTIONS) {
   }
 }
 assert.equal(factKeys.size,288);
+// Article 54 covers every site boundary and substitute columns, not just adjoining lots.
+const setbackCase = bank.QUESTIONS_BY_ID["rc58-041"];
+assert.match(setbackCase.premise, /外壁又はこれに代わる柱の面から、道路との境界を含むすべての敷地境界線までの距離の最小値が1\.2m/);
+// Article 55(2) is recognition-based; excluding special permission alone is insufficient.
+assert.match(setbackCase.premise, /高さ制限・高さ算定・後退距離の例外、特例の認定・許可はない/);
+assert.match(setbackCase.choices[setbackCase.answer], /外壁後退の限度は満たすが、高さの限度は満たさず/);
+assert.equal(setbackCase.sourceFacts[setbackCase.answer].truth, true);
 // Additive content must not reset a v57 in-progress answer or change its presentation.
 assert.equal(sprint.VERSION,legacy.version);
 for (const [id, expected] of Object.entries(legacy.questions)) {

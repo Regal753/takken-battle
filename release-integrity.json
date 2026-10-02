@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20261002-rights-knock-814ba90a6e7e",
-  "digest": "sha256:814ba90a6e7eef1160164d25ba329f26e118b4ba90d2b50b4706e12c6c12747b",
+  "version": "20261002-whole-review-f02edd9e3025",
+  "digest": "sha256:f02edd9e3025a193e2e7d87bf403843e41d9e9a4c8e16a2b8bb69cc64126c43f",
   "assetCount": 66,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "724f11afc89d18177b124630f0b14df8b2299e0ade443bba9f72a973bb32a282"
+      "sha256": "ab6928ba9d67e1e347c3542edfec0c0ffd7779f6cea8421d428a84a1656b34d2"
     },
     {
       "path": "assets/battle/grassland-route.webp",
@@ -62,7 +62,7 @@
     },
     {
       "path": "business-fresh-practice.js",
-      "sha256": "9b5129f97569d2017b58960cb280bf0ec98ed3c0b135b0e995db8050eb8e8663"
+      "sha256": "5c479c6cd882972efb81513d396677d412e34fdd6d364a670c0a4ad3d95eea8f"
     },
     {
       "path": "business-fullscore-bank.js",
@@ -162,7 +162,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "e9c58e5ad2247659b0fd1568cd0272f3f0536eb88bbfae52158a7c4f70e7468d"
+      "sha256": "3120c199210626158cadbf7b3066d7590af41745faa10bcf4ee4146d00de5147"
     },
     {
       "path": "manifest.webmanifest",
@@ -222,7 +222,7 @@
     },
     {
       "path": "restrictions-cases-building-readjustment.js",
-      "sha256": "5b9750d01fbf77cf4e5fee55b3d449189584b65880e311abf55529d3ac0e9cb9"
+      "sha256": "0e79a98d8efafdb729c826edbe32cdb159d4bd07b65de21ffbcbaa160a4d335e"
     },
     {
       "path": "restrictions-cases-city-land.js",
@@ -250,11 +250,11 @@
     },
     {
       "path": "state-sync.js",
-      "sha256": "8e88db71cfea313af3c7223483b8793ac88330846e4d110a35cd1add89ca1f9c"
+      "sha256": "f908a1d757d07aaa1a297e88fdc16a0091c9af6d6ddca24785b5b1b9460f07a3"
     },
     {
       "path": "styles.css",
-      "sha256": "589bcb30cf47f0a998c7194db7f4423961eeae224dcb8b4b653c35a890d1c807"
+      "sha256": "75498e053dcd93547764f6b2c2aee51249ea738305692b3ec920bb22b404ac75"
     },
     {
       "path": "subject-sprint-bank.js",

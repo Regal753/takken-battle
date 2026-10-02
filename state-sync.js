@@ -115,9 +115,11 @@
   }
 
   function mergeMonotonicCounter(base, local, remote, context = {}) {
-    const baseValue = Math.max(0, Number(base) || 0);
-    const localValue = Math.max(0, Number(local) || 0);
-    const remoteValue = Math.max(0, Number(remote) || 0);
+    // A newly added counter has no base value. Never coerce the internal sentinel
+    // (or an answer's boolean `correct`) into a numeric learning counter.
+    const baseValue = isCounterValue(base) ? Math.max(0, Number(base)) : 0;
+    const localValue = isCounterValue(local) ? Math.max(0, Number(local)) : 0;
+    const remoteValue = isCounterValue(remote) ? Math.max(0, Number(remote)) : 0;
     if (localValue === baseValue) return remoteValue;
     if (remoteValue === baseValue) return localValue;
     if (localValue === remoteValue && context.clocksEqual) return localValue;
@@ -126,6 +128,12 @@
     return baseValue +
       Math.max(0, localValue - baseValue) +
       Math.max(0, remoteValue - baseValue);
+  }
+
+  function isCounterValue(value) {
+    return (typeof value === "number" ||
+      (typeof value === "string" && value.trim() !== "")) &&
+      Number.isFinite(Number(value));
   }
 
   function validDayKey(value) {
@@ -227,7 +235,7 @@
     const key = path[path.length - 1] || "";
     if (
       COUNTER_KEYS.has(key) &&
-      [local, remote].every((value) => Number.isFinite(Number(value)))
+      [local, remote].every(isCounterValue)
     ) {
       if (equal(local, remote) && context.clocksEqual) return clone(local);
       const additive = key !== "weakAdded" &&
@@ -557,35 +565,36 @@
     return fallback;
   }
 
-  function activeSessionDescriptor(state) {
+  function activeSessionDescriptors(state) {
+    const sessions = [];
     if (isObject(state?.officialExamSession) && state.officialExamSession.examId) {
-      return {
+      sessions.push({
         kind: "official",
         id: `${state.officialExamSession.examId}:${state.officialExamSession.startedAt || "unknown"}`
-      };
+      });
     }
     const mock = state?.mock;
     if (isObject(mock) && mock.formId && mock.startedAt && !mock.finalized) {
-      return { kind: "mock", id: `${mock.formId}:${mock.startedAt}` };
+      sessions.push({ kind: "mock", id: `${mock.formId}:${mock.startedAt}` });
     }
     const calculation = state?.calculationDrill;
     if (isObject(calculation) && ["active", "first", "retry"].includes(calculation.stage)) {
-      return {
+      sessions.push({
         kind: "calculation",
         id: `${calculation.version || 1}:${(calculation.queue || []).join(",")}`
-      };
+      });
     }
     const practical = state?.practicalDrill;
     if (isObject(practical) && ["active", "retry"].includes(practical.stage)) {
-      return {
+      sessions.push({
         kind: "practical",
         id: `${practical.bankId || "legacy"}:${practical.sessionStartedAt || practical.presentationKey || (practical.sessionIds || []).join(",")}`
-      };
+      });
     }
-    return null;
+    return sessions;
   }
 
-  function activeSessionPayload(state, descriptor = activeSessionDescriptor(state)) {
+  function activeSessionPayload(state, descriptor) {
     if (!descriptor) return null;
     if (descriptor.kind === "official") return state?.officialExamSession || null;
     if (descriptor.kind === "mock") return state?.mock || null;
@@ -595,28 +604,56 @@
   }
 
   function detectActiveSessionConflicts(base = {}, local = {}, remote = {}) {
-    const baseSession = activeSessionDescriptor(base);
-    const localSession = activeSessionDescriptor(local);
-    const remoteSession = activeSessionDescriptor(remote);
+    const baseSessions = activeSessionDescriptors(base);
+    const localSessions = activeSessionDescriptors(local);
+    const remoteSessions = activeSessionDescriptors(remote);
+    const conflicts = [];
+    const appendConflict = (baseSession, localSession, remoteSession) => {
+      const conflict = activeSessionConflict(base, local, remote, baseSession, localSession, remoteSession);
+      if (conflict && !conflicts.some((existing) => equal(existing, conflict))) conflicts.push(conflict);
+    };
+    // Calculation is a parallel helper, so it must not hide a practical session.
+    // Preserve the original cross-kind start/completion conflict contract too.
+    ["official", "mock", "calculation", "practical"].forEach((kind) => {
+      appendConflict(
+        baseSessions.find((session) => session.kind === kind) || null,
+        localSessions.find((session) => session.kind === kind) || null,
+        remoteSessions.find((session) => session.kind === kind) || null
+      );
+    });
+    appendConflict(baseSessions[0] || null, localSessions[0] || null, remoteSessions[0] || null);
+    const newSessions = (sessions, otherSessions) => sessions.filter((session) =>
+      !baseSessions.some((baseSession) => equal(session, baseSession)) &&
+      !otherSessions.some((otherSession) => equal(session, otherSession))
+    );
+    newSessions(localSessions, remoteSessions).forEach((localSession) => {
+      newSessions(remoteSessions, localSessions).forEach((remoteSession) => {
+        if (localSession.kind !== remoteSession.kind) appendConflict(null, localSession, remoteSession);
+      });
+    });
+    return conflicts;
+  }
+
+  function activeSessionConflict(base, local, remote, baseSession, localSession, remoteSession) {
     const basePayload = activeSessionPayload(base, baseSession);
     const localChanged = !equal(localSession, baseSession) ||
       !equal(activeSessionPayload(local, localSession), basePayload);
     const remoteChanged = !equal(remoteSession, baseSession) ||
       !equal(activeSessionPayload(remote, remoteSession), basePayload);
-    if (!localChanged || !remoteChanged) return [];
+    if (!localChanged || !remoteChanged) return null;
     if (equal(localSession, remoteSession)) {
       const samePayload = equal(
         activeSessionPayload(local, localSession),
         activeSessionPayload(remote, remoteSession)
       );
-      if (samePayload || localSession?.kind !== "practical") return [];
+      if (samePayload || localSession?.kind !== "practical") return null;
     }
-    return [{
+    return {
       code: "concurrent-active-session",
       base: clone(baseSession),
       local: clone(localSession),
       remote: clone(remoteSession)
-    }];
+    };
   }
 
   function mergeOfficialSession(base, local, remote, context) {

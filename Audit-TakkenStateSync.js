@@ -393,6 +393,81 @@ assert.equal(independentRepeated.attempts, 12);
 assert.equal(independentRepeated.correct, 10);
 assert.equal(independentRepeated.totalXp, 1220);
 
+// Newly created fields have the internal MISSING base, not a numeric zero yet.
+const addedCounterLocal = sync.clone(base);
+addedCounterLocal.totalXp = 30;
+const addedCounterRemote = sync.clone(base);
+addedCounterRemote.totalXp = 50;
+addedCounterRemote.syncMeta = {
+  ...base.syncMeta, revision: 8, writerId: "added-remote",
+  clock: { base: 7, "added-remote": 8 }
+};
+const addedCounters = sync.reconcileForSave(base, addedCounterLocal, addedCounterRemote, {
+  writerId: "added-local"
+}).state;
+assert.equal(addedCounters.totalXp, 80, "both independent additions of a new counter must survive");
+assert.equal(sync.mergeStates(base, addedCounters, addedCounterRemote).totalXp, 80, "an already included new-counter delta must not be added twice");
+assert.equal(sync.mergeStates(base, addedCounterRemote, addedCounters).totalXp, 80, "causal dominance must also prevent double counting with the merged state on the remote side");
+assert.equal(sync.mergeStates(base, addedCounterRemote, addedCounterRemote).totalXp, 50, "an identical clock is not a second earning event");
+const equalAdditionRemote = sync.clone(addedCounterRemote);
+equalAdditionRemote.totalXp = addedCounterLocal.totalXp;
+assert.equal(sync.reconcileForSave(base, addedCounterLocal, equalAdditionRemote, { writerId: "added-local" }).state.totalXp, 60, "equal amounts from independent clocks are two new earning events");
+
+// Real answer objects use boolean correct; history entries use numeric correct.
+// Cover every outcome pair both before and after the first recorded attempt.
+for (const existingAttempts of [0, 2]) {
+  for (const localCorrect of [false, true]) {
+    for (const remoteCorrect of [false, true]) {
+      const answerBase = sync.clone(guaranteeSessionBase);
+      answerBase.practicalDrill.history = existingAttempts ? {
+        ga001: { attempts: 2, correct: 1, wrong: 1, lastAnsweredAt: timestamp("2026-08-14") }
+      } : {};
+      answerBase.practicalDrill.attempts = existingAttempts;
+      answerBase.practicalDrill.correctAttempts = existingAttempts ? 1 : 0;
+      const answerLocal = sync.clone(answerBase);
+      const answerRemote = sync.clone(answerBase);
+      answerRemote.syncMeta = {
+        ...base.syncMeta, revision: 8, writerId: "answer-remote",
+        clock: { base: 7, "answer-remote": 8 }
+      };
+      for (const [branch, correct, selected, time] of [
+        [answerLocal, localCorrect, 0, "12:01:00"],
+        [answerRemote, remoteCorrect, 1, "12:02:00"]
+      ]) {
+        branch.practicalDrill.currentAttempt = { id: "ga001", selected, correct };
+        branch.practicalDrill.attempts += 1;
+        branch.practicalDrill.correctAttempts += Number(correct);
+        branch.practicalDrill.history.ga001 = {
+          attempts: existingAttempts + 1,
+          correct: (existingAttempts ? 1 : 0) + Number(correct),
+          wrong: (existingAttempts ? 1 : 0) + Number(!correct),
+          lastCorrect: correct,
+          lastAnsweredAt: timestamp("2026-08-15", time)
+        };
+      }
+      const answerMerged = sync.reconcileForSave(answerBase, answerLocal, answerRemote, {
+        writerId: "answer-local"
+      });
+      assert.equal(answerMerged.hasConflict, true, "different answers must reach conflict handling without a Symbol conversion error");
+      assert.equal(answerMerged.state.practicalDrill.currentAttempt.correct, remoteCorrect, "the selected session keeps its boolean answer result");
+      assert.equal(answerMerged.state.practicalDrill.history.ga001.lastCorrect, remoteCorrect);
+      assert.equal(answerMerged.state.practicalDrill.history.ga001.attempts, existingAttempts + 2);
+      assert.equal(answerMerged.state.practicalDrill.history.ga001.correct, (existingAttempts ? 1 : 0) + Number(localCorrect) + Number(remoteCorrect));
+      assert.equal(answerMerged.state.practicalDrill.history.ga001.wrong, (existingAttempts ? 1 : 0) + Number(!localCorrect) + Number(!remoteCorrect));
+      const answerRepeated = sync.mergeStates(answerBase, answerMerged.state, answerRemote);
+      assert.equal(answerRepeated.practicalDrill.history.ga001.attempts, existingAttempts + 2);
+      assert.equal(answerRepeated.practicalDrill.history.ga001.correct, answerMerged.state.practicalDrill.history.ga001.correct);
+      assert.equal(answerRepeated.practicalDrill.history.ga001.wrong, answerMerged.state.practicalDrill.history.ga001.wrong);
+      assert.equal(answerRepeated.practicalDrill.currentAttempt.correct, remoteCorrect);
+
+      const booleanBase = { calculationDrill: { currentAttempt: null } };
+      const booleanLocal = { calculationDrill: { currentAttempt: { selected: 0, correct: localCorrect } } };
+      const booleanRemote = { calculationDrill: { currentAttempt: { selected: 1, correct: remoteCorrect } } };
+      assert.equal(sync.mergeStates(booleanBase, booleanLocal, booleanRemote).calculationDrill.currentAttempt.correct, localCorrect, "generic answer objects must not convert boolean correct into a counter");
+    }
+  }
+}
+
 const manyWriterBase = sync.clone(base);
 manyWriterBase.attempts = 10;
 manyWriterBase.syncMeta.clock = { root: 7 };
@@ -560,6 +635,61 @@ assert.equal(
   "completion racing with progress in the same active exam must be surfaced"
 );
 
+for (const stage of ["active", "first", "retry"]) {
+  const helper = { version: 1, stage, queue: ["calc01", "calc02"], position: 0, currentAttempt: null };
+  const parallelBase = { ...sync.clone(guaranteeSessionBase), calculationDrill: sync.clone(helper) };
+  const parallelLocal = { ...sync.clone(guaranteeRetryBranch), calculationDrill: sync.clone(helper) };
+  const parallelRemote = { ...sync.clone(guaranteeProgressBranch), calculationDrill: sync.clone(helper) };
+  const parallelConflict = sync.reconcileForSave(parallelBase, parallelLocal, parallelRemote);
+  assert.ok(parallelConflict.conflicts.some((item) => item.local?.kind === "practical"), `${stage} calculation must not hide divergent practical progress`);
+  assert.equal(sync.reconcileForSave(parallelBase, parallelLocal, parallelBase).hasConflict, false, "a change made on only one branch remains safe with an active helper");
+  assert.equal(sync.reconcileForSave(parallelBase, parallelLocal, parallelLocal).hasConflict, false, "identical parallel sessions are not a conflict");
+  const calculationOnly = sync.clone(parallelBase);
+  calculationOnly.calculationDrill.position = 1;
+  assert.equal(sync.reconcileForSave(parallelBase, calculationOnly, parallelRemote).hasConflict, false, "independent progress in the helper and practical session may coexist");
+  const historyOnly = sync.clone(parallelBase);
+  historyOnly.practicalDrill.history.q1.attempts += 1;
+  assert.equal(sync.reconcileForSave(parallelBase, historyOnly, parallelRemote).hasConflict, false, "history merges alone must not count as session navigation");
+
+  const hiddenBase = sync.clone(parallelBase);
+  hiddenBase.officialExamSession = sync.clone(conflictLocal.officialExamSession);
+  hiddenBase.mock = { formId: "legacy-mock", startedAt: timestamp("2026-08-15", "08:00:00"), finalized: false, answers: {} };
+  const hiddenLocal = sync.clone(hiddenBase);
+  const hiddenRemote = sync.clone(hiddenBase);
+  hiddenLocal.practicalDrill.position = 1;
+  hiddenRemote.practicalDrill.preAnswerConfidence = "uncertain";
+  assert.ok(sync.reconcileForSave(hiddenBase, hiddenLocal, hiddenRemote).conflicts.some((item) => item.local?.kind === "practical"), "every active session must be inspected even in legacy multi-session saves");
+}
+
+const newPractical = sync.clone(guaranteeSessionBase);
+const newCalculation = sync.clone(base);
+newCalculation.calculationDrill = { version: 1, stage: "active", queue: ["calc01"], position: 0 };
+assert.equal(sync.reconcileForSave(base, newPractical, newCalculation).hasConflict, true, "concurrent different-kind starts keep the original conflict contract");
+const newMock = sync.clone(base);
+newMock.mock = { formId: "legacy-mock", startedAt: timestamp("2026-08-15", "10:00:00"), finalized: false, answers: {} };
+assert.equal(sync.reconcileForSave(base, newMock, conflictLocal).hasConflict, true, "mock versus official starts remain conflicting");
+const sharedHelperBase = sync.clone(newCalculation);
+const startsPractical = { ...sync.clone(sharedHelperBase), practicalDrill: sync.clone(newPractical.practicalDrill) };
+const startsMock = { ...sync.clone(sharedHelperBase), mock: sync.clone(newMock.mock) };
+assert.equal(sync.reconcileForSave(sharedHelperBase, startsPractical, startsMock).hasConflict, true, "a shared helper must not hide different-kind starts");
+assert.equal(sync.reconcileForSave(base, startsPractical, startsPractical).hasConflict, false, "identically started parallel sessions are not a conflict");
+
+const sameExamLocal = sync.clone(activeBase);
+sameExamLocal.officialExamSession.answers = { "1": 2 };
+const sameExamRemote = sync.clone(activeBase);
+sameExamRemote.officialExamSession.answers = { "2": 3 };
+const sameExamMerged = sync.reconcileForSave(activeBase, sameExamLocal, sameExamRemote);
+assert.equal(sameExamMerged.hasConflict, false, "the legacy same-exam answer-union contract remains supported");
+assert.deepEqual(sameExamMerged.state.officialExamSession.answers, { "1": 2, "2": 3 });
+const sameMockLocal = sync.clone(newMock);
+sameMockLocal.mock.answers = { "1": 2 };
+const sameMockRemote = sync.clone(newMock);
+sameMockRemote.mock.answers = { "2": 3 };
+assert.equal(sync.reconcileForSave(newMock, sameMockLocal, sameMockRemote).hasConflict, false, "legacy same-mock progress retains its existing merge contract");
+const completedMock = sync.clone(newMock);
+completedMock.mock.finalized = true;
+assert.equal(sync.reconcileForSave(newMock, completedMock, sameMockRemote).hasConflict, true, "mock completion racing with progress must still surface");
+
 assert.deepEqual(sync.compareSync(
   { syncMeta: { revision: 2, updatedAt: timestamp("2026-08-15", "12:00:00") } },
   { syncMeta: { revision: 3, updatedAt: timestamp("2026-08-15", "11:00:00") } }
@@ -629,6 +759,8 @@ console.log(JSON.stringify({
   officialHistoryUnion: true,
   practicalHistoryLatestWins: true,
   independentCounterDeltasPreserved: true,
+  newlyAddedCounterDeltasPreserved: true,
+  booleanAnswerResultsPreserved: true,
   manyWriterCausalityPreserved: true,
   confidenceClearInvalidation: true,
   mockWrongClearInvalidation: true,
@@ -637,5 +769,7 @@ console.log(JSON.stringify({
   replacementEpochMonotonic: true,
   spendPreserved: true,
   activeSessionConflictDetected: true,
+  parallelHelperConflictsDetected: true,
+  legacySessionConflictContractsPreserved: true,
   appliedRevision: recovered.appliedRevision
 }));
