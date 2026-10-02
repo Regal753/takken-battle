@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20261002-whole-review-f02edd9e3025";
+  const VERSION = "20261003-vocabulary-knock-419d7f95f3fe";
   const BANNER_ID = "pwaUpdateNotice";
   let reloadRequested = false;
 

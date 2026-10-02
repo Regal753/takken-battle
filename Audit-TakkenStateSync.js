@@ -362,6 +362,26 @@ const guaranteeOverrideConflict = sync.reconcileForSave(
 assert.equal(guaranteeOverrideConflict.hasConflict, true, "presentation override divergence alone must stop a same-session save");
 assert.equal(guaranteeOverrideConflict.conflicts[0].local.kind, "practical");
 
+const vocabularySessionBase = sync.clone(guaranteeSessionBase);
+vocabularySessionBase.stateSchemaVersion = 18;
+vocabularySessionBase.practicalDrill.bankId = "vocabulary";
+vocabularySessionBase.practicalDrill.sessionIds = ["vocab-001", "vocab-002"];
+vocabularySessionBase.practicalDrill.queue = ["vocab-001", "vocab-002"];
+vocabularySessionBase.practicalDrill.vocabularyPreset = { mode: "topic", size: "10", topicId: "family" };
+const vocabularyLocal = sync.clone(vocabularySessionBase);
+vocabularyLocal.syncMeta.revision = 8;
+vocabularyLocal.practicalDrill.vocabularyPreset = { mode: "topic", size: "20", topicId: "time" };
+const vocabularyRemote = sync.clone(vocabularySessionBase);
+vocabularyRemote.syncMeta.revision = 9;
+vocabularyRemote.practicalDrill.vocabularyPreset = { mode: "all", size: "all", topicId: "family" };
+const vocabularyConflict = sync.reconcileForSave(vocabularySessionBase, vocabularyLocal, vocabularyRemote,
+  { updatedAt: timestamp("2026-08-15", "12:07:00"), writerId: "vocabulary" });
+assert.equal(vocabularyConflict.hasConflict, true, "vocabulary preferences belong to one coherent active session");
+assert.equal(vocabularyConflict.conflicts[0].code, "concurrent-active-session");
+const vocabularyWinner = sync.mergeStates(vocabularySessionBase, vocabularyLocal, vocabularyRemote);
+assert.deepEqual(vocabularyWinner.practicalDrill.vocabularyPreset, vocabularyRemote.practicalDrill.vocabularyPreset,
+  "the winning session must retain its exact vocabulary topic and size together");
+
 const independentBase = sync.clone(base);
 independentBase.attempts = 10;
 independentBase.correct = 8;

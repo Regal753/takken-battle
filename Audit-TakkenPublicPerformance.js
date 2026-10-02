@@ -10,11 +10,11 @@ const releaseIntegrity = require("./release-integrity.json");
 const ROOT = __dirname;
 const EXPECTED_CACHE_VERSION = releaseIntegrity.version;
 releaseIntegrityTools.assertVersionMatchesDigest(releaseIntegrity.version, releaseIntegrity.digest);
-// v59 adds only 24 authored tax cases and their builder: 81,533 raw / 22,674
-// level-9 gzip bytes. Add that measured content cost (rounded up to 1 KB) to
-// the v58 limits; retain its existing headroom and every old saved-answer bank.
-const MAX_PUBLIC_JS_BYTES = 2_562_000;
-const MAX_PUBLIC_JS_GZIP_BYTES = 658_000;
+// The 64-word vocabulary bank and save-safe study flow add 114,793 raw /
+// 22,591 level-9 gzip bytes over the preceding 50-script release.
+// Add that measured delta rounded up to 1 KB; preserve the prior headroom.
+const MAX_PUBLIC_JS_BYTES = 2_677_000;
+const MAX_PUBLIC_JS_GZIP_BYTES = 681_000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
   "pwa-runtime.js",

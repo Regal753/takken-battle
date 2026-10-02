@@ -13,7 +13,7 @@
   ]);
   const RECORD_ARRAY_KEYS = new Set(["mockHistory", "officialExamHistory"]);
   const PRACTICAL_SESSION_FIELDS = [
-    "version", "bankId", "bankVersion", "presentationKey", "presentationOverrides", "planMode", "knockPreset", "stage", "scope", "unitId",
+    "version", "bankId", "bankVersion", "presentationKey", "presentationOverrides", "planMode", "knockPreset", "vocabularyPreset", "stage", "scope", "unitId",
     "sessionSize", "sessionIds", "queue", "position", "preAnswerConfidence", "currentAttempt", "retryIds",
     "sessionStartedAt", "completedAt"
   ];
