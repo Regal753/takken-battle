@@ -371,7 +371,7 @@ async function presentedFixture(page) {
     assert.match(await page.locator("#missionOfficialStatus").textContent(), /^解答済 0 \/ 12$/, "Monday prioritizes the 12-question tax/other repair block");
     assert.equal(
       await page.locator("#passPlanPanel .pass-plan-summary > div:first-child span").textContent(),
-      "4 合格ロード・2026 PASS PLAN"
+      "本番形式・合格状況"
     );
     assert.equal(await page.locator("#businessKnockPanel").isVisible(), true);
     assert.equal(await page.locator("#businessArchiveMode").inputValue(), "all-random", "legacy drawer starts at its explicit all-random control");
