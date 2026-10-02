@@ -152,6 +152,7 @@
 .app-header { order: 0; }
 .public-mode-note { order: 1; }
 #todayCommandPanel { order: 2; }
+#vocabularyPanel { order: 3; }
 #restrictionMasteryPanel { order: 3; }
 #rightsMasteryPanel { order: 3; }
 #passPlanPanel { order: 3; }

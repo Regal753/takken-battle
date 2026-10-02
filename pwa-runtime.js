@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20261003-vocabulary-knock-419d7f95f3fe";
+  const VERSION = "20261003-vocabulary-knock-065282b28b14";
   const BANNER_ID = "pwaUpdateNotice";
   let reloadRequested = false;
 

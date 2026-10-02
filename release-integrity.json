@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "20261003-vocabulary-knock-419d7f95f3fe",
-  "digest": "sha256:419d7f95f3fe7735fffc0d375d1ff0e8db08c4113cd3ea6b64088232dff37d9b",
+  "version": "20261003-vocabulary-knock-065282b28b14",
+  "digest": "sha256:065282b28b14e37ccc367e7345068238979d9205eaa6ef2853fdce3867e040ff",
   "assetCount": 67,
   "assets": [
     {
@@ -162,7 +162,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "cf8c778831981367e0f9a746c83dbab43c866df16a3090e7937747e521584b74"
+      "sha256": "62555d2c58f10fd21a8b836328637577cf1e9cc631a1de0c75688d9f84332ae3"
     },
     {
       "path": "manifest.webmanifest",
@@ -254,7 +254,7 @@
     },
     {
       "path": "styles.css",
-      "sha256": "0536f290e99d3f8392a52000742d6f7e83c5c5e609c376295f7e411cb2f84fdf"
+      "sha256": "b370e2010fb5027e909be6732536617291890d7a5450fdcc9da5a7aa744ff578"
     },
     {
       "path": "subject-sprint-bank.js",
