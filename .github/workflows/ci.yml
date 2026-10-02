@@ -48,6 +48,7 @@ jobs:
       - run: node Audit-TakkenTaxAuthored.js
       - run: node Audit-TakkenBusinessPolish.js
       - run: node Audit-TakkenSubjectSprintBank.js
+      - run: node Audit-TakkenVocabularyBank.js
       - run: node Audit-TakkenPassReadiness.js
       - run: node Audit-TakkenExamCurrentYear2026.js
       - run: node Audit-TakkenOfficialTopicMap.js

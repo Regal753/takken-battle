@@ -4,6 +4,20 @@ const assert = require("node:assert/strict");
 const transfer = require("./save-transfer.js");
 
 const allowedIds = ["q1", "q2", "q3"];
+const vocabularyState = {
+  stateSchemaVersion: 18,
+  practicalDrill: {
+    bankId: "vocabulary", bankVersion: 1, stage: "retry", scope: "vocabulary",
+    sessionIds: ["vocab-001", "vocab-002"], queue: ["vocab-002"], position: 0,
+    presentationKey: "2026-10-02:vocabulary:roundtrip", presentationOverrides: { "vocab-002": "retry:2" },
+    vocabularyPreset: { mode: "topic", size: "10", topicId: "family" },
+    preAnswerConfidence: "guess", currentAttempt: null, retryIds: ["vocab-002"],
+    history: { "vocab-002": { attempts: 2, correct: 1, wrong: 1, lastConfidence: "uncertain", guessAnswers: 1 } }
+  }
+};
+const vocabularyPackage = transfer.createSavePackage(vocabularyState);
+assert.deepEqual(transfer.validatePackage(transfer.decodePackage(transfer.encodePackage(vocabularyPackage)), allowedIds).state, vocabularyState,
+  "complete vocabulary session, preferences, confidence and history must survive a package roundtrip");
 const progressPackage = {
   format: transfer.PROGRESS_FORMAT,
   version: 1,
