@@ -34,7 +34,7 @@ const required = [
   assert.deepEqual([...runner.AUDITS].sort(), [...required].sort(), "the complete prior browser suite must be retained");
   runner.validateRegistry();
   const shards = runner.SHARDS.map(shard => runner.selectShard(shard));
-  assert.deepEqual(shards.map(shard => shard.length), [16, 15]);
+  assert.deepEqual(shards.map(shard => shard.length), [11, 10, 10]);
   assert.deepEqual(shards.flat().sort(), [...required].sort(), "matrix shards must have no missing or duplicated audits");
   assert.equal(new Set(shards.flat()).size, 31);
   assert.throws(() => runner.selectShard("unknown"), /unknown/);
@@ -74,7 +74,7 @@ const required = [
   const validate = workflow.split("  validate:\n")[1];
   assert.match(browser, /timeout-minutes: 15\n/, "keep the original per-job deadline");
   assert.match(browser, /fail-fast: false\n/, "one failed shard must not cancel the other evidence stream");
-  assert.match(browser, /shard: \[a, b\]/);
+  assert.match(browser, /shard: \[a, b, c\]/);
   assert.match(browser, /node scripts\/run-browser-audits\.cjs --shard/);
   assert.match(browser, /TAKKEN_AUDIT_SHARD: \$\{\{ matrix\.shard \}\}/);
   assert.match(validate, /needs:\n\s+- static\n\s+- browser\n/);

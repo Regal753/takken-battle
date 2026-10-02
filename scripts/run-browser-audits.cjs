@@ -8,7 +8,7 @@ const { performance } = require("node:perf_hooks");
 
 const ROOT = path.resolve(__dirname, "..");
 const EXPECTED_AUDIT_COUNT = 31;
-const SHARDS = Object.freeze(["a", "b"]);
+const SHARDS = Object.freeze(["a", "b", "c"]);
 // Preserve the complete former CI command list and the new tax audit. Round-robin assignment spreads
 // expensive interaction and exam/save audits across independent runners.
 const AUDITS = Object.freeze([
@@ -66,7 +66,7 @@ function selectShard(shard, audits = AUDITS) {
 
 function parseArgs(args) {
   assert.ok(args.length === 2 && args[0] === "--shard" && SHARDS.includes(args[1]),
-    "usage: node scripts/run-browser-audits.cjs --shard <a|b>");
+    "usage: node scripts/run-browser-audits.cjs --shard <a|b|c>");
   return args[1];
 }
 
