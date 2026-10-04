@@ -73,9 +73,6 @@ jobs:
         shard: [a, b, c]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
-        with:
-          # Save-compatibility audits execute immutable earlier app revisions.
-          fetch-depth: 0
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "22"
@@ -83,6 +80,16 @@ jobs:
         env:
           PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: "1"
         run: npm install --no-save --no-package-lock playwright@1.62.1
+      - name: Fetch immutable save compatibility baselines
+        if: matrix.shard == 'b'
+        shell: bash
+        run: |
+          # Squash merges delete the PR branch; these fixed runtimes must also
+          # be available in the shallow main checkout after publication.
+          for revision in a65ed1a0da87d1fb27b497e5f0b060bc4243a5e5 1b552fe1366bd43fc106bd16ba663853b03cd9e5; do
+            git fetch --no-tags --depth=1 origin "$revision"
+            git cat-file -e "$revision:app.js"
+          done
       - name: Run critical browser audits
         shell: bash
         env:
