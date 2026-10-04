@@ -11,6 +11,10 @@ const path = require("node:path");
 const { chromium } = require("playwright");
 
 function startStaticServer(root) {
+  let releaseWorker;
+  let workerRequested;
+  const workerGate = new Promise(resolve => { releaseWorker = resolve; });
+  const workerRequest = new Promise(resolve => { workerRequested = resolve; });
   const types = { ".css": "text/css; charset=utf-8", ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".svg": "image/svg+xml", ".webp": "image/webp" };
   const safeRoot = path.resolve(root);
   const server = http.createServer((request, response) => {
@@ -20,16 +24,22 @@ function startStaticServer(root) {
     if (!target.startsWith(`${safeRoot}${path.sep}`) && target !== path.join(safeRoot, "index.html")) {
       response.writeHead(403); response.end("forbidden"); return;
     }
-    fs.readFile(target, (error, body) => {
+    const read = () => fs.readFile(target, (error, body) => {
       if (error) { response.writeHead(404); response.end("not found"); return; }
       response.writeHead(200, { "content-type": types[path.extname(target)] || "application/octet-stream", "cache-control": "no-store" });
       response.end(body);
     });
+    if (pathname === "/service-worker.js") {
+      workerRequested();
+      void workerGate.then(read);
+    } else read();
   });
   return new Promise((resolve, reject) => {
     server.once("error", reject);
     server.listen(0, "127.0.0.1", () => resolve({
       baseUrl: `http://127.0.0.1:${server.address().port}/`,
+      workerRequest,
+      releaseWorker,
       close: () => new Promise((done) => {
         server.closeAllConnections?.();
         server.close(done);
@@ -45,15 +55,24 @@ function reviewUrl(baseUrl) {
   return url.toString();
 }
 
-async function waitForApp(page) {
-  await page.waitForFunction(() => Boolean(
-    window.TAKKEN_BUSINESS_KNOCK?.plan &&
-    document.querySelector("#businessKnockPanel") &&
-    document.querySelector("#businessKnockStart") &&
-    document.querySelector("#businessKnockUntouched")
-  ));
+async function waitForApp(page, { requirePwa = false } = {}) {
+  // Static HTML and the planner exist before app initialization. Also wait for
+  // the initial PWA precache/controller in the dedicated PWA fixture. The
+  // routed UI fixtures block workers so cache interception cannot race reloads.
+  const handle = await page.waitForFunction(requirePwa => {
+    const recovery = document.querySelector("#bankLoadDetail");
+    if (recovery) return { error: recovery.textContent };
+    const root = document.querySelector(".app-root");
+    return document.readyState === "complete" && root && !root.hidden &&
+      window.TAKKEN_BUSINESS_KNOCK?.plan &&
+      document.querySelectorAll("#businessKnockUnit option").length === 10 &&
+      (!requirePwa || navigator.serviceWorker?.controller) ? { ready: true } : null;
+  }, requirePwa);
+  const status = await handle.jsonValue();
+  await handle.dispose();
+  if (status.error) throw new Error("business knock app initialization failed: " + status.error);
   const drawer = page.locator("#businessLegacyDrawer");
-  await drawer.waitFor({ state: "attached" });
+  await drawer.waitFor({ state: "visible" });
   if (!await drawer.evaluate((node) => node.open)) await drawer.locator("summary").click();
 }
 
@@ -347,7 +366,7 @@ async function presentedFixture(page) {
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   const hardScreenshots = path.join(process.cwd(), "output", "playwright", "business-hard");
   fs.mkdirSync(hardScreenshots, { recursive: true });
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
   await page.addInitScript(() => {
     const NativeDate = Date;
     const fixed = new NativeDate("2026-08-24T10:00:00+09:00").getTime();
@@ -358,10 +377,30 @@ async function presentedFixture(page) {
     window.Date = FixedDate;
   });
   const errors = [];
+  const failedRequests = [];
+  page.on("requestfailed", request => failedRequests.push({ url: request.url(), error: request.failure()?.errorText }));
   page.on("pageerror", (error) => errors.push(`page: ${error.message}`));
   page.on("console", (message) => { if (message.type() === "error") errors.push(`console: ${message.text()}`); });
 
   try {
+    // PWA startup remains covered with workers enabled, independently of the
+    // routed, rapidly reloaded UI fixtures below.
+    const pwaPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    // Reproduce the gap in the old static-DOM readiness predicate without a
+    // timer: keep first registration pending until the server observes it.
+    await pwaPage.goto(reviewUrl(local.baseUrl), { waitUntil: "domcontentloaded", timeout: 20000 });
+    await local.workerRequest;
+    await pwaPage.waitForFunction(() => document.querySelectorAll("#businessKnockUnit option").length === 10);
+    assert.equal(await pwaPage.evaluate(() => Boolean(window.TAKKEN_BUSINESS_KNOCK?.plan && document.querySelector("#businessKnockStart"))), true);
+    assert.equal(await pwaPage.evaluate(() => Boolean(navigator.serviceWorker.controller)), false);
+    let ready = false;
+    const pendingReady = waitForApp(pwaPage, { requirePwa: true }).then(() => { ready = true; });
+    await pwaPage.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.equal(ready, false, "app readiness must not permit reload while initial PWA installation is pending");
+    local.releaseWorker();
+    await pendingReady;
+    assert.equal(await pwaPage.evaluate(() => Boolean(navigator.serviceWorker.controller)), true);
+    await pwaPage.close();
     await page.goto(reviewUrl(local.baseUrl), { waitUntil: "networkidle", timeout: 20000 });
     await waitForApp(page);
     assert.equal(await page.locator("#todayCommandTitle").textContent(), "今日の宅建業法 残り20問");
@@ -511,11 +550,12 @@ async function presentedFixture(page) {
         !candidate.endsWith("event-outbox"));
       return { key, value: localStorage.getItem(key) };
     });
-    const missingHardPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    const missingHardPage = await browser.newPage({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
     await missingHardPage.addInitScript(({ key, value }) => localStorage.setItem(key, value), hardSavedSnapshot);
     await missingHardPage.route(/business-hard-bank\.js/, (route) => route.abort());
     await missingHardPage.goto(page.url(), { waitUntil: "networkidle" });
     await missingHardPage.locator("#bankLoadRecovery").waitFor({ state: "visible" });
+    await assert.rejects(() => waitForApp(missingHardPage), /business knock app initialization failed/, "readiness must report bank recovery instead of timing out on a hidden drawer");
     assert.equal(await missingHardPage.locator(".app-root").isVisible(), false, "a missing bank must stop the entire uninitialized study UI");
     assert.equal(await missingHardPage.evaluate(key => localStorage.getItem(key), hardSavedSnapshot.key), hardSavedSnapshot.value, "missing hard bank must preserve the complete raw save, not only the queue");
     const missingHardSaved = await readSavedState(missingHardPage);
@@ -798,7 +838,7 @@ async function presentedFixture(page) {
       const key = Object.keys(localStorage).find(key => /^takken-battle-study-clean-v2-hard-review-/.test(key) && !/backup|-before-|previous|corrupt|event-outbox/.test(key));
       return { key, value: localStorage.getItem(key) };
     });
-    const missingFreshPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    const missingFreshPage = await browser.newPage({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
     await missingFreshPage.addInitScript(({ key, value }) => localStorage.setItem(key, value), freshSavedSnapshot);
     await missingFreshPage.route(/business-hard-bank\.js/, route => route.abort());
     await missingFreshPage.goto(page.url(), { waitUntil: "networkidle" });
@@ -1152,7 +1192,7 @@ async function presentedFixture(page) {
 
     // The dojo is additive: a missing planner asset must disable only the dojo,
     // while the existing 134-question mastery route remains usable.
-    const fallbackPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    const fallbackPage = await browser.newPage({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
     await fallbackPage.route(/business-knock\.js/, (route) => route.abort());
     await fallbackPage.goto(reviewUrl(local.baseUrl), { waitUntil: "networkidle", timeout: 20000 });
     await fallbackPage.waitForFunction(() => document.querySelectorAll("#businessMasteryGrid article").length === 11);
@@ -1161,8 +1201,27 @@ async function presentedFixture(page) {
     await fallbackPage.close();
 
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: "ok", sequentialTopCommand: true, explicitProgressLabels: true, knockOnlyTransferSummary: true, hardDaily20: true, hardSeparate180Stats: true, freshOnly20: true, freshPartial7: true, freshExhaustionNoFallback: true, freshActiveResumePreserved: true, hard54Schema14Migration: true, hard55AnsweredReload: true, hardMissingAssetSavePreserved: true, hardLegacyAnsweredMigration: true, hardFormats: ["single", "count", "combination"], hardCaseWidths: [320, 390, 1440], hardScreenshots, nextQuestionKeepsViewport: true, plannerSizes: [10, 20, 50, 100], unitFiltered: true, weakDuePrioritized: true, random100Unique: true, randomOrderPreserved: true, reloadPreserved: true, retryLoop: true, retryAnswerPositionsRotated: true, sameDayLevelCapped: true, structuredPromptFormats: ["combination", "count", "case"], singleChoiceBlocks: 4, legacyRawFallback: true, coreFallbackWithoutKnock: true, overflow390: 0, overflow320: 0, errors: 0 }));
+    console.log(JSON.stringify({ status: "ok", initialPwaReadyBeforeReload: true, workerEnabledStartupCovered: true, routedUiWorkersBlocked: true, bankRecoveryReported: true, sequentialTopCommand: true, explicitProgressLabels: true, knockOnlyTransferSummary: true, hardDaily20: true, hardSeparate180Stats: true, freshOnly20: true, freshPartial7: true, freshExhaustionNoFallback: true, freshActiveResumePreserved: true, hard54Schema14Migration: true, hard55AnsweredReload: true, hardMissingAssetSavePreserved: true, hardLegacyAnsweredMigration: true, hardFormats: ["single", "count", "combination"], hardCaseWidths: [320, 390, 1440], hardScreenshots, nextQuestionKeepsViewport: true, plannerSizes: [10, 20, 50, 100], unitFiltered: true, weakDuePrioritized: true, random100Unique: true, randomOrderPreserved: true, reloadPreserved: true, retryLoop: true, retryAnswerPositionsRotated: true, sameDayLevelCapped: true, structuredPromptFormats: ["combination", "count", "case"], singleChoiceBlocks: 4, legacyRawFallback: true, coreFallbackWithoutKnock: true, overflow390: 0, overflow320: 0, errors: 0 }));
+  } catch (error) {
+    const diagnostic = await page.evaluate(() => ({
+      url: location.href, readyState: document.readyState,
+      rootHidden: document.querySelector('.app-root')?.hidden, controlled: Boolean(navigator.serviceWorker?.controller),
+      recovery: document.querySelector('#bankLoadDetail')?.textContent || null,
+      drawer: document.querySelector('#businessLegacyDrawer')?.outerHTML.slice(0, 500),
+      units: document.querySelectorAll('#businessKnockUnit option').length,
+      banks: Object.fromEntries(Object.entries(window).filter(([key]) => key.startsWith('TAKKEN_')).map(([key, value]) => [key, {
+        questions: value?.QUESTIONS?.length, items: Array.isArray(value) ? value.length : undefined,
+        version: value?.VERSION
+      }]))
+    })).catch(cause => ({ captureError: String(cause) }));
+    diagnostic.errors = errors;
+    diagnostic.failedRequests = failedRequests;
+    console.error('BUSINESS_KNOCK_FAILURE_DIAGNOSTIC ' + JSON.stringify(diagnostic));
+    fs.writeFileSync(path.join(hardScreenshots, 'failure.json'), JSON.stringify(diagnostic, null, 2));
+    await page.screenshot({ path: path.join(hardScreenshots, 'failure.png'), fullPage: true }).catch(() => {});
+    throw error;
   } finally {
+    local.releaseWorker();
     await browser.close();
     await local.close();
   }

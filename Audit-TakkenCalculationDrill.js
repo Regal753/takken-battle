@@ -162,7 +162,7 @@ if (!app.includes("function exitCalculationDrill()")) issues.push("Calculation c
 if (!html.includes("id=\"calculationDrillPanel\"")) issues.push("Calculation drill panel is missing.");
 if (!html.includes("id=\"todayCommandCalculationButton\"")) issues.push("Calculation drill quick entry is missing.");
 if (!html.includes("id=\"calculationDrillExitButton\"")) issues.push("Calculation drill completion exit button is missing.");
-if (!html.includes("calculation-drill.js?v=20261004-vocabulary-cards-7456ead81208")) issues.push("Calculation data script is not loaded.");
+if (!html.includes("calculation-drill.js?v=20261004-vocabulary-meanings-e92ed9f33d7d")) issues.push("Calculation data script is not loaded.");
 
 const report = {
   status: issues.length ? "error" : "ok",

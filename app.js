@@ -18,6 +18,7 @@
     ["税", window.TAKKEN_TAX_AUTHORED_BANK?.QUESTIONS?.length === 24],
     ["用語の意味", Array.isArray(window.TAKKEN_VOCABULARY_BANK?.QUESTIONS) &&
       window.TAKKEN_VOCABULARY_BANK.QUESTIONS.length === VOCABULARY_EXPECTED_QUESTIONS &&
+      window.TAKKEN_VOCABULARY_BANK.MEANING_QUESTIONS?.length === VOCABULARY_EXPECTED_QUESTIONS &&
       Array.isArray(window.TAKKEN_VOCABULARY_BANK.TOPICS) &&
       window.TAKKEN_VOCABULARY_BANK.TOPICS.length === VOCABULARY_EXPECTED_TOPICS &&
       window.TAKKEN_VOCABULARY_BANK.LEGAL_BASELINE === "2026-04-01"],
@@ -486,9 +487,17 @@
       unitLabel: VOCABULARY_TOPICS.find((topic) => topic.id === item.unitId)?.label || item.unitId,
       sourceUrls: [...new Set([item.sourceUrl, ...(item.sourceFacts || []).map((fact) => fact.sourceUrl)].filter(Boolean))]
     })).filter(Boolean));
+  const VOCABULARY_MEANING_QUESTION_BY_ID = Object.freeze(Object.fromEntries(
+    (VOCABULARY_BANK.MEANING_QUESTIONS || []).map(item => normalizeFullScoreQuestion({
+      ...item, unitLabel: VOCABULARY_TOPICS.find(topic => topic.id === item.unitId)?.label || item.unitId,
+      sourceUrls: [...new Set(item.sourceFacts.map(fact => fact.sourceUrl))]
+    })).filter(Boolean).map(item => [item.id, item])
+  ));
   const VOCABULARY_QUESTION_BY_ID = Object.freeze(Object.fromEntries(VOCABULARY_QUESTIONS.map((item) => [item.id, item])));
   const VOCABULARY_QUESTION_IDS = Object.freeze(VOCABULARY_QUESTIONS.map((item) => item.id));
-  const VOCABULARY_READY = VOCABULARY_QUESTIONS.length === VOCABULARY_EXPECTED_QUESTIONS &&
+  const VOCABULARY_READY = Object.keys(VOCABULARY_MEANING_QUESTION_BY_ID).length === VOCABULARY_EXPECTED_QUESTIONS &&
+    VOCABULARY_QUESTIONS.every(item => VOCABULARY_MEANING_QUESTION_BY_ID[item.id]?.answer === item.answer) &&
+    VOCABULARY_QUESTIONS.length === VOCABULARY_EXPECTED_QUESTIONS &&
     VOCABULARY_QUESTIONS.length === VOCABULARY_BANK.QUESTIONS.length &&
     new Set(VOCABULARY_QUESTION_IDS).size === VOCABULARY_QUESTIONS.length &&
     VOCABULARY_TOPICS.length === VOCABULARY_EXPECTED_TOPICS &&
@@ -1316,13 +1325,6 @@
     vocabularyRetained: $("#vocabularyRetained"),
     vocabularyReview: $("#vocabularyReview"),
     vocabularyStatus: $("#vocabularyStatus"),
-    vocabularyCard: $("#vocabularyCard"),
-    vocabularyReveal: $("#vocabularyReveal"),
-    vocabularyAnswer: $("#vocabularyAnswer"),
-    vocabularyMeaning: $("#vocabularyMeaning"),
-    vocabularyGrade: $("#vocabularyGrade"),
-    vocabularyKnown: $("#vocabularyKnown"),
-    vocabularyAgain: $("#vocabularyAgain"),
     practicalDrillSummary: $("#practicalDrillSummary"),
     practicalDrillOverview: $("#practicalDrillOverview"),
     practicalDrillScope: $("#practicalDrillScope"),
@@ -1552,7 +1554,6 @@
   let isAdvancing = false;
   let isFlushingEvents = false;
   let practicalGroundingDraft = { questionId: "", axes: new Set() };
-  let vocabularyRevealedKey = "";
   let activeDayKey = todayKey();
   const logConnection = {
     checked: false,
@@ -2489,7 +2490,7 @@
           selected,
           correct: selected === currentQuestion.answer,
           confidence: selected === currentQuestion.answer
-            ? (["confident", "uncertain"].includes(rawAttempt?.confidence) ? rawAttempt.confidence : "")
+            ? (["confident", "uncertain"].includes(rawAttempt?.confidence) ? rawAttempt.confidence : bankId === VOCABULARY_BANK_ID ? "confident" : "")
             : "wrong"
         }
       : null;
@@ -2842,7 +2843,7 @@
     const rawAttempt = input?.currentAttempt;
     const selected = Number(rawAttempt?.selected);
     const currentQuestion = practicalQuestionFor(currentId, bankId);
-    const presentationKey = [BUSINESS_FULLSCORE_BANK_ID, GUARANTEE_SPECIAL_BANK_ID, SUBJECT_SPRINT_BANK_ID, VOCABULARY_BANK_ID].includes(bankId)
+    let presentationKey = [BUSINESS_FULLSCORE_BANK_ID, GUARANTEE_SPECIAL_BANK_ID, SUBJECT_SPRINT_BANK_ID, VOCABULARY_BANK_ID].includes(bankId)
       ? String(input?.presentationKey || "").replace(/[^0-9a-z:_-]/gi, "").slice(0, 80)
       : "";
     const presentationOverrides = {};
@@ -2854,6 +2855,11 @@
         const normalizedKey = String(key || "").replace(/[^0-9a-z:_-]/gi, "").slice(0, 80);
         if (normalizedKey) presentationOverrides[id] = normalizedKey;
       });
+    }
+    const savedVocabularyAnswer = bankId === VOCABULARY_BANK_ID && rawAttempt?.id === currentId && Number.isInteger(selected) && selected >= 0 && selected < 4;
+    if (bankId === VOCABULARY_BANK_ID && queue.length && !savedVocabularyAnswer) {
+      presentationKey = vocabularyMeaningKey(presentationKey);
+      Object.keys(presentationOverrides).forEach(id => { presentationOverrides[id] = vocabularyMeaningKey(presentationOverrides[id]); });
     }
     const presentedQuestion = presentPracticalQuestion(
       currentQuestion,
@@ -4958,7 +4964,7 @@
           : state.practicalDrill.bankId === SUBJECT_SPRINT_BANK_ID
             ? "進行中の科目補強セット"
           : state.practicalDrill.bankId === VOCABULARY_BANK_ID
-            ? "進行中の用語カード"
+            ? "進行中の語彙4択"
           : "進行中の実践セット"
       };
     }
@@ -5052,7 +5058,7 @@
       business: { target: elements.businessMasteryPanel, focusSelector: "#businessKnockMode", label: "宅建業法の高難度ノック設定" },
       restrictions: { target: elements.restrictionMasteryPanel, focusSelector: "#restrictionExamStart", label: "法令上の制限の診断とノック" },
       rights: { target: elements.rightsMasteryPanel, focusSelector: "#rightsMasteryTwenty", label: "権利関係の根拠ノック設定" },
-      vocabulary: { target: elements.vocabularyPanel, focusSelector: "#vocabularyStart", label: "用語カード設定" },
+      vocabulary: { target: elements.vocabularyPanel, focusSelector: "#vocabularyStart", label: "語彙4択設定" },
       tax: { target: elements.passPlanPanel, focusSelector: "#taxAuthoredTen", label: "税の新作10問の開始設定" },
       other: { target: elements.passPlanPanel, focusSelector: '[data-subject-sprint="other"]', label: "その他12問の開始設定" },
       all: { target: elements.themeDrawer, focusSelector: "#studyScopeSelect", label: "全科目の日課範囲メニュー" },
@@ -8790,6 +8796,7 @@
   function presentPracticalQuestion(question, bankId, presentationKey) {
     if (!question) return null;
     if (bankId === VOCABULARY_BANK_ID) {
+      if (String(presentationKey).startsWith("meaning2:")) question = VOCABULARY_MEANING_QUESTION_BY_ID[question.id];
       const order = BUSINESS_MASTERY.choiceOrder(question.id, presentationKey, 4);
       return {
         ...question,
@@ -9735,7 +9742,7 @@
   }
 
   function practicalForecastValues(drill = state.practicalDrill) {
-    if (drill?.bankId === VOCABULARY_BANK_ID) return ["confident", "uncertain", "guess"];
+    if (drill?.bankId === VOCABULARY_BANK_ID) return [];
     if (drill?.bankId === GUARANTEE_SPECIAL_BANK_ID) return ["confident", "uncertain"];
     if (drill?.bankId === SUBJECT_SPRINT_BANK_ID && (drill?.scope === "restrictions" || isRightsKnockSession(drill))) {
       return ["confident", "uncertain", "guess"];
@@ -9854,11 +9861,10 @@
     const guaranteeSpecialSession = drill.bankId === GUARANTEE_SPECIAL_BANK_ID;
     const subjectSprintSession = drill.bankId === SUBJECT_SPRINT_BANK_ID;
     const vocabularySession = drill.bankId === VOCABULARY_BANK_ID;
-    elements.vocabularyCard.hidden = !vocabularySession;
     elements.practicalDrillPrompt.classList.toggle("vocabulary-term", vocabularySession);
     elements.practicalDrillPrompt.setAttribute("aria-label", vocabularySession ? "用語" : "問題文");
     elements.practicalConfidenceHint.hidden = vocabularySession;
-    elements.practicalDrillChoices.hidden = vocabularySession;
+    elements.practicalDrillChoices.hidden = false;
     const bankAttempts = activeIds.reduce((sum, id) => sum + (drill.history[id]?.attempts || 0), 0);
     const restrictionSprintSession = subjectSprintSession && drill.scope === "restrictions";
     const guaranteeSummary = guaranteeSpecialSession ? guaranteeSpecialSummary() : null;
@@ -9875,11 +9881,11 @@
     const bankLabel = knockSession ? hardKnockSession ? "高難度・事例ノック" : "基礎変形ノック"
       : drill.bankId === BUSINESS_FULLSCORE_BANK_ID ? "満点変形"
       : guaranteeSpecialSession ? "保証協会特訓"
-        : vocabularySession ? "用語カード" : subjectSprintSession ? "科目補強" : "実践";
+        : vocabularySession ? "語彙4択" : subjectSprintSession ? "科目補強" : "実践";
     elements.practicalDrillPanel.querySelector("summary strong").textContent = vocabularySession
-      ? "用語カード" : "分野別の振り返り";
+      ? "語彙4択" : "分野別の振り返り";
     elements.practicalDrillComplete.querySelector(":scope > strong").textContent = vocabularySession
-      ? "用語カードを完了" : "実践セットを完了";
+      ? "語彙4択を完了" : "実践セットを完了";
     const summaryPrefix = drill.bankId === LEGACY_PRACTICAL_BANK_ID ? "" : `${bankLabel}累計 `;
     elements.practicalDrillSummary.textContent = vocabularySession
       ? `用語${activeIds.length}語・もう一度 ${drill.retryIds.filter((id) => activeIds.includes(id)).length}語`
@@ -9912,7 +9918,7 @@
         : guaranteeSpecialSession ? "保証協会・営業保証金"
           : restrictionExamSession
             ? `法令${RESTRICTION_EXAM_SESSION_SIZE}問・${RESTRICTION_EXAM_TARGET_MINUTES}分 根拠診断`
-          : vocabularySession ? "用語カード" : subjectSprintSession ? `${subjectSprintTopic?.label || practicalScopeLabel(drill.scope)}・高速補強`
+          : vocabularySession ? "語彙4択" : subjectSprintSession ? `${subjectSprintTopic?.label || practicalScopeLabel(drill.scope)}・高速補強`
         : unitSession ? unitSession.label : scopeLabel;
       const restrictionExamResult = restrictionExamSession ? currentRestrictionExamResult(drill) : null;
       const restrictionExamVerdict = restrictionExamResult?.passed ? "合格圏目安" : "要再診断";
@@ -9937,7 +9943,7 @@
           ? "宅建業法ノックへ戻る"
         : restrictionExamSession
           ? `法令${RESTRICTION_EXAM_SESSION_SIZE}問・${RESTRICTION_EXAM_TARGET_MINUTES}分をもう一周`
-        : vocabularySession ? "同じ条件で用語カードを続ける"
+        : vocabularySession ? "同じ条件で語彙4択を続ける"
         : subjectSprintSession
           ? `${subjectSprintTopic?.label || practicalScopeLabel(drill.scope)}をもう一周`
         : unitSession
@@ -10154,8 +10160,7 @@
       return elements.practicalDrillPrompt;
     }
     if (drill.bankId === VOCABULARY_BANK_ID) {
-      return drill.currentAttempt ? elements.practicalDrillNextButton
-        : elements.vocabularyReveal.hidden ? elements.vocabularyKnown : elements.vocabularyReveal;
+      return drill.currentAttempt ? elements.practicalDrillNextButton : elements.practicalDrillChoices?.querySelector("button:not(:disabled)");
     }
     if (practicalForecastRequired(drill) && !drill.preAnswerConfidence) {
       return elements.practicalDrillForecast?.querySelector("button");
@@ -11161,56 +11166,58 @@
     }
   }
 
-  function vocabularyCardKey(drill = state.practicalDrill) {
-    return [drill.presentationKey, drill.sessionStartedAt, drill.stage, drill.position, drill.queue[drill.position]].join("|");
+  function vocabularyMeaningKey(key) {
+    return String(key).startsWith("meaning2:") ? String(key) : ("meaning2:" + (key || "legacy")).slice(0, 80);
   }
 
   function renderVocabularyCard(question, attempt) {
     const drill = state.practicalDrill;
-    const card = VOCABULARY_BANK.CARDS_BY_ID[question.id];
-    const revealed = Boolean(attempt) || vocabularyRevealedKey === vocabularyCardKey(drill);
-    elements.practicalDrillStage.textContent = drill.stage === "retry" ? "もう一度" : "用語カード";
-    elements.practicalDrillProgress.textContent = `${drill.position + 1} / ${drill.queue.length}語`;
-    elements.practicalDrillUnit.textContent = "意味を思い出す";
-    elements.practicalDrillRetryStatus.textContent = `もう一度 ${drill.retryIds.filter(id => drill.sessionIds.includes(id)).length}語`;
+    elements.practicalDrillStage.textContent = drill.stage === "retry" ? "意味の取り違えを復習" : "語彙4択";
+    elements.practicalDrillProgress.textContent = (drill.position + 1) + " / " + drill.queue.length + "問";
+    elements.practicalDrillUnit.textContent = "意味を一つ選ぶ";
+    elements.practicalDrillRetryStatus.textContent = "再出題 " + drill.retryIds.filter(id => drill.sessionIds.includes(id)).length + "問";
     elements.practicalDrillPrompt.removeAttribute("data-structured");
-    elements.practicalDrillPrompt.textContent = card.term;
-    elements.practicalDrillChoices.replaceChildren();
+    elements.practicalDrillPrompt.textContent = "「" + question.term + "」の意味は？";
     elements.practicalDrillForecast.hidden = true;
     elements.practicalGroundingChecklist.hidden = true;
-    elements.vocabularyReveal.hidden = revealed;
-    elements.vocabularyAnswer.hidden = !revealed;
-    // Do not leave the answer in the unrevealed DOM or count a reveal as mastery.
-    elements.vocabularyMeaning.textContent = revealed ? card.meaning : "";
-    elements.vocabularyGrade.hidden = Boolean(attempt);
-    // Saved legacy answers and a failed next-position save advance without
-    // grading again. Their original confidence and history remain intact.
+    elements.practicalDrillConfidence.hidden = true;
+    elements.practicalDrillChoices.replaceChildren();
+    question.choices.forEach((choice, index) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "practical-drill-choice";
+      button.textContent = (index + 1) + ". " + choice;
+      button.disabled = Boolean(attempt);
+      button.setAttribute("aria-pressed", String(Boolean(attempt && attempt.selected === index)));
+      if (attempt) {
+        button.classList.toggle("is-selected", attempt.selected === index);
+        button.classList.toggle("is-correct", question.answer === index);
+        button.classList.toggle("is-wrong", !attempt.correct && attempt.selected === index);
+      }
+      button.addEventListener("click", () => answerPracticalDrill(index));
+      elements.practicalDrillChoices.append(button);
+    });
     elements.practicalDrillFeedback.hidden = !attempt;
-    elements.practicalDrillVerdict.textContent = "";
     elements.practicalDrillReasoning.replaceChildren();
     elements.practicalDrillSources.replaceChildren();
-    elements.practicalDrillConfidence.hidden = true;
-    elements.practicalDrillNextButton.disabled = false;
-    elements.practicalDrillNextButton.textContent = "次の用語へ";
-  }
-
-  function revealVocabularyCard() {
-    if (state.practicalDrill.bankId !== VOCABULARY_BANK_ID || state.practicalDrill.currentAttempt || !currentPracticalQuestion()) return;
-    vocabularyRevealedKey = vocabularyCardKey();
-    renderPracticalDrill();
-    elements.vocabularyKnown.focus({ preventScroll: true });
-  }
-
-  function gradeVocabularyCard(confidence) {
-    const drill = state.practicalDrill;
-    const question = currentPresentedPracticalQuestion();
-    if (drill.bankId !== VOCABULARY_BANK_ID || drill.currentAttempt || !question ||
-        vocabularyRevealedKey !== vocabularyCardKey(drill) || !["confident", "uncertain"].includes(confidence)) return;
-    const attempts = drill.attempts;
-    answerPracticalDrill(question.answer, { vocabularyConfidence: confidence });
-    if (state.practicalDrill.attempts === attempts + 1 && state.practicalDrill.currentAttempt?.id === question.id) {
-      advancePracticalDrill();
+    if (attempt) {
+      elements.practicalDrillVerdict.textContent = attempt.correct ? "正解。" : "意味の取り違え。復習に戻します。";
+      const meaning = document.createElement("p");
+      meaning.className = "vocabulary-meaning";
+      meaning.textContent = question.term + "：" + (question.meaning || VOCABULARY_BANK.CARDS_BY_ID[question.id].meaning);
+      const contrast = document.createElement("p");
+      contrast.textContent = attempt.correct && question.meaning
+        ? "見分ける用語：" + [...new Set(question.sourceFacts.filter(fact => !fact.truth).map(fact => fact.diagnosticTags.at(-1)))].join("・")
+        : question.sourceFacts[attempt.selected].reason;
+      if (!question.meaning) contrast.textContent = "保存済みの旧形式の回答：" + question.choices[attempt.selected] + "。" + contrast.textContent;
+      elements.practicalDrillReasoning.append(meaning, contrast);
+      const source = document.createElement("a");
+      source.className = "official-source-link"; source.href = question.sourceUrl;
+      source.target = "_blank"; source.rel = "noopener noreferrer"; source.textContent = "公式根拠：" + question.sourceRef;
+      elements.practicalDrillSources.append(source);
     }
+    elements.practicalDrillNextButton.disabled = !attempt;
+    elements.practicalDrillNextButton.textContent = "次の用語へ";
   }
 
   function normalizeVocabularyPreset(input) {
@@ -11267,11 +11274,11 @@
     elements.vocabularyTopicField.hidden = elements.vocabularyMode.value !== "topic";
     [elements.vocabularyMode, elements.vocabularyTopic, elements.vocabularySize, elements.vocabularyCustomStart]
       .forEach((control) => { control.disabled = Boolean(active); });
-    elements.vocabularyStart.textContent = vocabularyActive ? "用語カードの続きから再開"
-      : active ? "進行中のセットを再開" : "用語10語を始める";
+    elements.vocabularyStart.textContent = vocabularyActive ? "語彙4択の続きから再開"
+      : active ? "進行中のセットを再開" : "用語10問を始める";
     elements.vocabularyStatus.textContent = vocabularyActive
       ? `第${state.practicalDrill.position + 1}問から再開できます。解答・再出題も保存済みです。`
-      : active ? `${active.label}を先に再開します。終わった後に用語カードを選べます。`
+      : active ? `${active.label}を先に再開します。終わった後に語彙4択を選べます。`
       : `全${total}問。未接触${total - summary.contacted}問、要復習${summary.review}問。用語だけの記録です。`;
   }
 
@@ -11279,7 +11286,7 @@
     if (vocabularyBlockingSession()?.kind === "calculation") {
       renderCalculationDrill();
       focusStudyNavigationTarget(elements.calculationDrillPanel, { focusSelector: "#calculationDrillPrompt" });
-      setTodayCommandStatus("進行中の計算・金額特訓を保存位置から再開します。完了後に用語カードを選べます。");
+      setTodayCommandStatus("進行中の計算・金額特訓を保存位置から再開します。完了後に語彙4択を選べます。");
       return;
     }
     if (resumeActiveLearningSession()) return;
@@ -11290,7 +11297,7 @@
     });
     const previousState = cloneStateForSync(state);
     const eligible = VOCABULARY_QUESTIONS.filter((question) => preset.mode !== "topic" || question.unitId === preset.topicId);
-    const sessionKey = `${todayKey()}:vocabulary:${createOpaqueId("cycle")}`.replace(/[^0-9a-z:_-]/gi, "").slice(0, 80);
+    const sessionKey = `meaning2:${todayKey()}:vocabulary:${createOpaqueId("cycle")}`.replace(/[^0-9a-z:_-]/gi, "").slice(0, 80);
     const hash = (value) => [...value].reduce((sum, char) => (Math.imul(sum, 31) + char.codePointAt(0)) >>> 0, 2166136261);
     const priority = (question) => {
       const history = state.practicalDrill.history[question.id] || {};
@@ -11314,7 +11321,7 @@
       restrictionExamSession: null, sessionStartedAt: new Date().toISOString(), completedAt: ""
     };
     if (!saveState()) {
-      rollbackFailedPracticalDrillMutation(previousState, "用語カードを開始できませんでした。保存管理を確認して再試行してください。");
+      rollbackFailedPracticalDrillMutation(previousState, "語彙4択を開始できませんでした。保存管理を確認して再試行してください。");
       return;
     }
     renderPracticalDrill();
@@ -11592,16 +11599,15 @@
     window.requestAnimationFrame(() => currentPracticalInputTarget(drill)?.focus({ preventScroll: true }));
   }
 
-  function answerPracticalDrill(selected, { vocabularyConfidence = "" } = {}) {
+  function answerPracticalDrill(selected) {
     const drill = state.practicalDrill;
     const question = currentPresentedPracticalQuestion();
     if (!question || drill.currentAttempt || !Number.isInteger(selected) || selected < 0 || selected > 3) return;
     const guaranteeSpecial = drill.bankId === GUARANTEE_SPECIAL_BANK_ID;
+    const vocabularyObjective = drill.bankId === VOCABULARY_BANK_ID;
     const forecastValues = practicalForecastValues(drill);
     const forecastSession = forecastValues.length > 0;
-    const predictedConfidence = drill.bankId === VOCABULARY_BANK_ID && ["confident", "uncertain"].includes(vocabularyConfidence)
-      ? vocabularyConfidence
-      : forecastSession && forecastValues.includes(drill.preAnswerConfidence) ? drill.preAnswerConfidence : "";
+    const predictedConfidence = forecastSession && forecastValues.includes(drill.preAnswerConfidence) ? drill.preAnswerConfidence : "";
     if (forecastSession && !predictedConfidence) return;
     if (restrictionGroundingRequired(drill) && !restrictionGroundingComplete(question)) return;
     const selectedChoiceTop = elements.practicalDrillChoices
@@ -11626,8 +11632,8 @@
       uncertain: (previous.uncertain || 0) + (correct && predictedWithoutGrounding ? 1 : 0),
       lastSelected: selected,
       lastCorrect: correct,
-      lastConfidence: correct ? (forecastSession ? recordedConfidence : "") : "wrong",
-      lastConfidenceAt: forecastSession ? answeredAt : (previous.lastConfidenceAt || ""),
+      lastConfidence: correct ? (vocabularyObjective ? "confident" : forecastSession ? recordedConfidence : "") : "wrong",
+      lastConfidenceAt: forecastSession || vocabularyObjective ? answeredAt : (previous.lastConfidenceAt || ""),
       lastPredictedConfidence: forecastSession ? predictedConfidence : (previous.lastPredictedConfidence || ""),
       overconfidentWrong: (previous.overconfidentWrong || 0) +
         (forecastSession && !correct && predictedConfidence === "confident" ? 1 : 0),
@@ -11650,7 +11656,7 @@
       id: question.id,
       selected,
       correct,
-      confidence: correct ? (forecastSession ? recordedConfidence : "") : "wrong",
+      confidence: correct ? (vocabularyObjective ? "confident" : forecastSession ? recordedConfidence : "") : "wrong",
       predictedConfidence,
       diagnosticRecorded: (!correct || predictedWithoutGrounding) &&
         recordPracticalDiagnostic(
@@ -11663,7 +11669,7 @@
     practicalGroundingDraft = { questionId: "", axes: new Set() };
     if (!correct || predictedWithoutGrounding) {
       drill.retryIds = addPracticalId(drill.retryIds, question.id);
-    } else if (forecastSession) {
+    } else if (forecastSession || vocabularyObjective) {
       drill.retryIds = removePracticalId(drill.retryIds, question.id);
     }
     if (!saveState()) {
@@ -11740,6 +11746,10 @@
     const drill = state.practicalDrill;
     if (!drill.currentAttempt || (drill.currentAttempt.correct && !drill.currentAttempt.confidence)) return;
     const previousState = cloneStateForSync(state);
+    if (drill.bankId === VOCABULARY_BANK_ID && !drill.presentationKey.startsWith("meaning2:")) {
+      drill.presentationKey = vocabularyMeaningKey(drill.presentationKey);
+      Object.keys(drill.presentationOverrides || {}).forEach(id => { drill.presentationOverrides[id] = vocabularyMeaningKey(drill.presentationOverrides[id]); });
+    }
     const answeredQuestion = currentPracticalQuestion();
     const history = answeredQuestion && drill.history[answeredQuestion.id];
     if (answeredQuestion && history && !drill.currentAttempt.masteryRecorded) {
@@ -15499,9 +15509,6 @@
     );
     elements.restrictionTopicOpen?.addEventListener("click", openRestrictionTopicPicker);
     elements.rightsMasteryTwenty?.addEventListener("click", () => startSubjectSprint("rights", RIGHTS_KNOCK_SESSION_SIZE, "knock"));
-    elements.vocabularyReveal?.addEventListener("click", revealVocabularyCard);
-    elements.vocabularyKnown?.addEventListener("click", () => gradeVocabularyCard("confident"));
-    elements.vocabularyAgain?.addEventListener("click", () => gradeVocabularyCard("uncertain"));
     elements.vocabularyStart?.addEventListener("click", () => startVocabularySession({ mode: "weak", size: "10" }));
     elements.vocabularyCustomStart?.addEventListener("click", () => startVocabularySession());
     elements.vocabularyMode?.addEventListener("change", renderVocabulary);

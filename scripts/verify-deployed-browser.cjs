@@ -6,7 +6,7 @@ const path = require("node:path");
 const { chromium } = require("playwright");
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20261004-vocabulary-cards-7456ead81208";
+const expectedVersion = process.argv[3] || "20261004-vocabulary-meanings-e92ed9f33d7d";
 const chromePath = process.env.TAKKEN_CHROME_PATH || undefined;
 const canonicalIndex = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
 const expectedScriptCount = [...canonicalIndex.matchAll(/<script\b[^>]*\bsrc=/gi)].length;
