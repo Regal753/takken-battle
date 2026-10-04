@@ -26,6 +26,19 @@ assert.deepEqual(Object.keys(bank.QUESTIONS_BY_ID), bank.QUESTION_IDS);
 assert.equal(new Set(bank.QUESTIONS.map(q => q.text)).size, 64, "each question needs a distinct prompt");
 assert.equal(new Set(bank.QUESTIONS.map(q => q.term)).size, 64);
 assert.ok(Object.isFrozen(bank) && Object.isFrozen(bank.QUESTIONS));
+assert.deepEqual(Object.keys(bank.CARDS_BY_ID), bank.QUESTION_IDS);
+for (const q of bank.QUESTIONS) {
+  const card = bank.CARDS_BY_ID[q.id];
+  assert.ok(Object.isFrozen(card));
+  assert.equal(card.id, q.id);
+  assert.equal(card.term, q.term);
+  assert.equal(card.sourceUrl, q.sourceUrl);
+  assert.equal(card.legalBaseline, q.legalBaseline);
+  assert.ok(nonblank(card.meaning) && card.meaning.length <= 100, q.id + ': concise meaning');
+}
+assert.match(bank.CARDS_BY_ID['vocab-031'].meaning, /子・孫.*下の世代/);
+assert.match(bank.CARDS_BY_ID['vocab-029'].meaning, /宅建業者を除く/);
+assert.match(bank.CARDS_BY_ID['vocab-054'].meaning, /解約手付.*履行着手前/);
 const topicIds = new Set(bank.TOPICS.map(topic => topic.id));
 const slots = [0, 0, 0, 0];
 const topicCounts = Object.fromEntries(bank.TOPICS.map(topic => [topic.label, 0]));

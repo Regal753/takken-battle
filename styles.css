@@ -9448,3 +9448,12 @@ body.has-answer-dock .pwa-update-notice { bottom: calc(158px + env(safe-area-ins
 .rights-transfer-dialog .transfer-choices button:focus-visible, .rights-transfer-dialog summary:focus-visible { outline: 3px solid #83ddff; outline-offset: 3px; }
 .rights-transfer-dialog summary { min-height: 44px; cursor: pointer; }
 .rights-transfer-dialog article { padding-block: 16px; border-top: 1px solid #547080; }
+
+.vocabulary-term { font-size: clamp(1.8rem, 7vw, 2.7rem); text-align: center; padding: 1.5rem .5rem; font-weight: 800; overflow-wrap: anywhere; }
+.vocabulary-card { text-align: center; }
+.vocabulary-card > button { min-height: 48px; width: 100%; }
+.vocabulary-meaning { font-size: 1.15rem; line-height: 1.8; text-align: left; overflow-wrap: anywhere; }
+.vocabulary-grade:not([hidden]) { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem; }
+.vocabulary-grade button { min-height: 48px; min-width: 0; }
+
+.vocabulary-card [hidden] { display: none; }

@@ -34,14 +34,12 @@ async function shown(page, key) {
     return { id, answer: order.indexOf(question.answer), choices: order.map(index => question.choices[index]), topicId: question.unitId };
   }, key);
 }
-async function answer(page, key, confidence = "confident", wrong = false) {
+async function answer(page, key, confidence = "confident") {
   const question = await shown(page, key);
-  await page.locator(`[data-practical-forecast="${confidence}"]`).click();
-  await page.locator(".practical-drill-choice").nth(wrong ? (question.answer + 1) % 4 : question.answer).click();
-  await page.locator("#practicalDrillFeedback").waitFor({ state: "visible" });
+  await page.locator("#vocabularyReveal").click();
+  await page.locator(confidence === "confident" ? "#vocabularyKnown" : "#vocabularyAgain").click();
   return question;
 }
-const next = page => page.locator("#practicalDrillNextButton").click();
 function mainEvidence(state) {
   return {
     attempts: state.attempts, correct: state.correct, index: state.index, questionStats: state.questionStats,
@@ -106,45 +104,55 @@ async function main() {
     assert.equal(drill.queue.length, 10);
     assert.equal(new Set(drill.queue).size, 10);
     assert.deepEqual(drill.queue.slice(0, 2), [priorityIds.wrong, priorityIds.due], "unresolved misconception precedes a due item and untouched meanings");
-    assert.equal(await page.locator(".practical-drill-choice:disabled").count(), 4);
-    assert.equal(await page.locator('[data-practical-forecast="confident"]').textContent(), "意味を言える");
-    assert.equal(await page.locator('[data-practical-forecast="uncertain"]').textContent(), "迷い");
-    assert.equal(await page.locator('[data-practical-forecast="guess"]').textContent(), "勘");
-    await page.setViewportSize({ width: 390, height: 844 });
-    await page.locator("#practicalDrillSession").screenshot({ path: path.join(output, "question-before-answer-390.png") });
-    await page.setViewportSize({ width: 320, height: 900 });
-    const wrong = await answer(page, key, "confident", true);
-    assert.equal(await page.locator(".practical-statement-review-card").count(), 4, "all four meanings need reasons");
-    assert.ok(await page.locator("#practicalDrillSources a").count() > 0);
-    await page.locator("#practicalDrillSession").screenshot({ path: path.join(output, "answer-320.png") });
-    await next(page);
+    assert.equal(await page.locator(".practical-drill-choice").count(), 0);
+    assert.equal(await page.locator("#practicalDrillForecast").isVisible(), false);
+    assert.equal(await page.locator("#practicalConfidenceHint").isVisible(), false);
+    const first = await shown(page, key);
+    const expected = await page.evaluate(id => window.TAKKEN_VOCABULARY_BANK.CARDS_BY_ID[id], first.id);
+    assert.equal(await page.locator("#practicalDrillPrompt").textContent(), expected.term, "front contains only the term");
+    assert.equal(await page.locator("#vocabularyMeaning").textContent(), "", "answer absent before reveal");
+    const beforeReveal = (await saved(page, key)).practicalDrill;
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), 0);
+      await page.locator("#practicalDrillSession").screenshot({ path: path.join(output, 'question-before-answer-' + width + '.png') });
+    }
+    await page.locator("#vocabularyReveal").click();
+    assert.equal(await page.locator("#vocabularyMeaning").textContent(), expected.meaning);
+    assert.equal(await page.locator("#vocabularyReveal").isVisible(), false, "hide reveal button after opening the meaning");
+    assert.deepEqual((await saved(page, key)).practicalDrill, beforeReveal, "revealing a meaning records no success");
+    for (const width of [390, 320]) {
+      await page.setViewportSize({ width, height: 844 });
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), 0);
+      assert.ok(await page.locator("#vocabularyKnown").evaluate(el => el.getBoundingClientRect().height >= 44));
+      assert.ok(await page.locator("#vocabularyAgain").evaluate(el => el.getBoundingClientRect().height >= 44));
+      await page.locator("#practicalDrillSession").screenshot({ path: path.join(output, 'answer-' + width + '.png') });
+    }
+    await page.reload({ waitUntil: "networkidle" });
+    assert.deepEqual((await saved(page, key)).practicalDrill, beforeReveal);
+    assert.equal(await page.locator("#vocabularyMeaning").textContent(), "", "reload starts from recall without grading twice");
+    const again = await answer(page, key, "uncertain");
+    assert.equal((await saved(page, key)).practicalDrill.position, 1, "self-grade advances immediately");
     const unsure = await answer(page, key, "uncertain");
-    await next(page);
-    const guess = await answer(page, key, "guess");
     const beforeReload = (await saved(page, key)).practicalDrill;
     await page.reload({ waitUntil: "networkidle" });
-    assert.deepEqual((await saved(page, key)).practicalDrill, beforeReload, "answer, confidence, queue and retry survive reload");
+    assert.deepEqual((await saved(page, key)).practicalDrill, beforeReload, "history, queue and retries survive reload");
     await page.locator("#practicalDrillCancelButton").click();
     await page.locator("#vocabularyStart").click();
-    assert.deepEqual((await saved(page, key)).practicalDrill, beforeReload, "pause/resume must not restart");
-    await next(page);
-    while ((await saved(page, key)).practicalDrill.stage === "active") { await answer(page, key); await next(page); }
+    assert.deepEqual((await saved(page, key)).practicalDrill, beforeReload, "pause/resume keeps the current term");
+    while ((await saved(page, key)).practicalDrill.stage === "active") await answer(page, key);
     drill = (await saved(page, key)).practicalDrill;
     assert.equal(drill.stage, "retry");
-    assert.deepEqual([...drill.queue].sort(), [wrong.id, unsure.id, guess.id].sort());
-    const originals = { [wrong.id]: wrong, [unsure.id]: unsure, [guess.id]: guess };
-    while ((await saved(page, key)).practicalDrill.stage === "retry") {
-      const retry = await shown(page, key);
-      assert.notEqual(retry.answer, originals[retry.id].answer, "retry must move the correct choice");
-      await answer(page, key); await next(page);
-    }
+    assert.deepEqual([...drill.queue].sort(), [again.id, unsure.id].sort());
+    await answer(page, key, "uncertain");
+    while ((await saved(page, key)).practicalDrill.stage === "retry") await answer(page, key);
     const completed = await saved(page, key);
     assert.equal(completed.stateSchemaVersion, 18);
-    assert.equal(completed.practicalDrill.history[wrong.id].overconfidentWrong, 1);
-    assert.equal(completed.practicalDrill.history[guess.id].guessAnswers, 1);
+    assert.equal(completed.practicalDrill.history[again.id].overconfidentWrong || 0, 0, "self-review is not an overconfidence error");
+    assert.equal(completed.practicalDrill.history[again.id].wrong, 2, "original wrong count is preserved");
     assert.match(await page.locator("#practicalDrillCompleteText").textContent(), /通常問題や模試の得点には算入しません/);
-    assert.equal(await page.locator("#vocabularyRetained").textContent(), `0 / ${total}`);
-    assert.deepEqual(mainEvidence(completed), baseline, "vocabulary must not advance daily/subject/official/mock evidence");
+    assert.equal(await page.locator("#vocabularyRetained").textContent(), '0 / ' + total);
+    assert.deepEqual(mainEvidence(completed), baseline, "cards cannot advance daily/official/mock evidence");
     assert.equal(completed.practicalDrill.attempts, Object.values(completed.practicalDrill.history).reduce((sum, item) => sum + item.attempts, 0));
     await page.locator("#practicalDrillComplete").screenshot({ path: path.join(output, "completion-320.png") });
     checks++;
@@ -158,7 +166,7 @@ async function main() {
     assert.equal(drill.vocabularyPreset.mode, "topic");
     assert.equal(drill.unitId, topicId);
     assert.ok(await page.evaluate(({ key, topicId }) => JSON.parse(localStorage.getItem(key)).practicalDrill.queue.every(id => window.TAKKEN_VOCABULARY_BANK.QUESTIONS_BY_ID[id].unitId === topicId), { key, topicId }));
-    while (["active", "retry"].includes((await saved(page, key)).practicalDrill.stage)) { await answer(page, key); await next(page); }
+    while (["active", "retry"].includes((await saved(page, key)).practicalDrill.stage)) { await answer(page, key); }
     await page.locator("#practicalDrillRestartButton").click();
     assert.equal((await saved(page, key)).practicalDrill.unitId, topicId, "restart keeps its topic");
     page.once("dialog", dialog => dialog.dismiss());
@@ -178,7 +186,8 @@ async function main() {
     const partialBank = await page.evaluate(() => `window.TAKKEN_VOCABULARY_BANK=${JSON.stringify({
       ...window.TAKKEN_VOCABULARY_BANK, QUESTIONS: window.TAKKEN_VOCABULARY_BANK.QUESTIONS.slice(0, -1)
     })};`);
-    for (const body of ["", 'window.TAKKEN_VOCABULARY_BANK={VERSION:1,LEGAL_BASELINE:"2026-04-01",QUESTIONS:[{id:"vocab-001"}],TOPICS:[{id:"bad",label:"bad"}]};', partialBank]) {
+    const oldBank = await page.evaluate(() => { const { CARDS_BY_ID, ...legacy } = window.TAKKEN_VOCABULARY_BANK; return `window.TAKKEN_VOCABULARY_BANK=${JSON.stringify(legacy)};`; });
+    for (const body of [oldBank, "", 'window.TAKKEN_VOCABULARY_BANK={VERSION:1,LEGAL_BASELINE:"2026-04-01",QUESTIONS:[{id:"vocab-001"}],TOPICS:[{id:"bad",label:"bad"}]};', partialBank]) {
       await page.route("**/vocabulary-bank.js*", route => route.fulfill({ status: 200, contentType: "text/javascript", body }));
       await page.reload({ waitUntil: "networkidle" });
       await page.locator("#bankLoadRecovery").waitFor({ state: "visible" });
@@ -188,6 +197,69 @@ async function main() {
     }
     await context.close();
 
+    // Published schema18 four-choice saves resume as cards without changing
+    // their old answer/confidence counts or charging another attempt.
+    for (const confidence of ["confident", "uncertain", "wrong"]) {
+      const old = await fixture();
+      await old.page.locator("#vocabularyStart").click();
+      await old.page.evaluate(({ key, confidence }) => {
+        const state = JSON.parse(localStorage.getItem(key));
+        const d = state.practicalDrill;
+        const id = d.queue[0];
+        const q = window.TAKKEN_VOCABULARY_BANK.QUESTIONS_BY_ID[id];
+        const order = window.TAKKEN_BUSINESS_MASTERY.choiceOrder(id, d.presentationKey, 4);
+        const correct = confidence !== "wrong";
+        const selected = correct ? order.indexOf(q.answer) : (order.indexOf(q.answer) + 1) % 4;
+        d.currentAttempt = { id, selected, correct, confidence, predictedConfidence: "confident", diagnosticRecorded: false, masteryRecorded: false };
+        d.history[id] = { attempts: 4, correct: correct ? 4 : 3, wrong: correct ? 0 : 1, uncertain: confidence === "uncertain" ? 1 : 0,
+          lastSelected: selected, lastCorrect: correct, lastConfidence: confidence, lastPredictedConfidence: "confident", lastAnsweredAt: new Date().toISOString() };
+        d.attempts = 4; d.correctAttempts = correct ? 4 : 3;
+        if (confidence !== "confident") d.retryIds.push(id);
+        localStorage.setItem(key, JSON.stringify(state));
+      }, { key: old.key, confidence });
+      await old.page.reload({ waitUntil: "networkidle" });
+      const prior = (await saved(old.page, old.key)).practicalDrill;
+      assert.equal(await old.page.locator("#vocabularyMeaning").isVisible(), true);
+      assert.equal(await old.page.locator("#vocabularyGrade").isVisible(), false);
+      assert.equal(await old.page.locator(".practical-drill-choice").count(), 0);
+      await old.page.locator("#practicalDrillNextButton").click();
+      const after = (await saved(old.page, old.key)).practicalDrill;
+      assert.equal(after.position, 1);
+      assert.equal(after.attempts, prior.attempts);
+      assert.equal(after.history[prior.queue[0]].attempts, 4);
+      assert.equal(after.history[prior.queue[0]].lastConfidence, confidence);
+      await old.context.close(); checks++;
+    }
+    for (const failAt of [1, 2]) {
+      const broken = await fixture();
+      await broken.page.locator("#vocabularyStart").click();
+      await broken.page.locator("#vocabularyReveal").click();
+      const prior = (await saved(broken.page, broken.key)).practicalDrill;
+      await broken.page.evaluate(({ key, failAt }) => {
+        const original = Storage.prototype.setItem;
+        let writes = 0;
+        window.restoreVocabularyWrites = () => { Storage.prototype.setItem = original; };
+        Storage.prototype.setItem = function(name, value) {
+          if (name === key && ++writes === failAt) throw new DOMException("synthetic quota failure", "QuotaExceededError");
+          return original.call(this, name, value);
+        };
+      }, { key: broken.key, failAt });
+      await broken.page.locator("#vocabularyKnown").click();
+      await broken.page.locator("#practicalDrillSaveError").waitFor({ state: "visible" });
+      const failed = (await saved(broken.page, broken.key)).practicalDrill;
+      assert.equal(failed.position, prior.position, "failed position write must retain the current card");
+      assert.equal(failed.attempts, prior.attempts + (failAt === 2 ? 1 : 0));
+      await broken.page.evaluate(() => window.restoreVocabularyWrites());
+      if (failAt === 1) await broken.page.locator("#vocabularyKnown").click();
+      else {
+        await broken.page.reload({ waitUntil: "networkidle" });
+        await broken.page.locator("#practicalDrillNextButton").click();
+      }
+      const recovered = (await saved(broken.page, broken.key)).practicalDrill;
+      assert.equal(recovered.position, 1);
+      assert.equal(recovered.history[prior.queue[0]].attempts, 1, "recovery must not double-count the self-grade");
+      await broken.context.close(); checks++;
+    }
     const legacy = await fixture();
     await legacy.page.evaluate(storageKey => {
       const state = JSON.parse(localStorage.getItem(storageKey));
@@ -218,7 +290,7 @@ async function main() {
     await calculation.context.close();
     checks++;
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: "ok", checks, questions: total, schema: 18, viewports: [1280, 390, 320], retryShuffled: true, reload: true, topicRestart: true, otherSessionPreserved: true, missingBankProtected: true, examEvidenceUnchanged: true }));
+    console.log(JSON.stringify({ status: "ok", checks, questions: total, schema: 18, viewports: [1280, 390, 320], termOnly: true, revealUngraded: true, binarySelfAssessment: true, reload: true, topicRestart: true, legacyFourChoiceCompatible: true, failedGradeAndAdvanceProtected: true, otherSessionPreserved: true, missingBankProtected: true, examEvidenceUnchanged: true }));
   } finally { await browser.close(); await server.close(); }
 }
 main().catch(error => { console.error(error.stack || String(error)); process.exitCode = 1; });
