@@ -55,19 +55,19 @@ function reviewUrl(baseUrl) {
   return url.toString();
 }
 
-async function waitForApp(page) {
+async function waitForApp(page, { requirePwa = false } = {}) {
   // Static HTML and the planner exist before app initialization. Also wait for
-  // the initial PWA precache/controller: networkidle alone does not describe
-  // the service worker's background requests, which must settle before reloads.
-  const handle = await page.waitForFunction(() => {
+  // the initial PWA precache/controller in the dedicated PWA fixture. The
+  // routed UI fixtures block workers so cache interception cannot race reloads.
+  const handle = await page.waitForFunction(requirePwa => {
     const recovery = document.querySelector("#bankLoadDetail");
     if (recovery) return { error: recovery.textContent };
     const root = document.querySelector(".app-root");
     return document.readyState === "complete" && root && !root.hidden &&
       window.TAKKEN_BUSINESS_KNOCK?.plan &&
       document.querySelectorAll("#businessKnockUnit option").length === 10 &&
-      navigator.serviceWorker?.controller ? { ready: true } : null;
-  });
+      (!requirePwa || navigator.serviceWorker?.controller) ? { ready: true } : null;
+  }, requirePwa);
   const status = await handle.jsonValue();
   await handle.dispose();
   if (status.error) throw new Error("business knock app initialization failed: " + status.error);
@@ -366,7 +366,7 @@ async function presentedFixture(page) {
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   const hardScreenshots = path.join(process.cwd(), "output", "playwright", "business-hard");
   fs.mkdirSync(hardScreenshots, { recursive: true });
-  const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
+  const page = await browser.newPage({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
   await page.addInitScript(() => {
     const NativeDate = Date;
     const fixed = new NativeDate("2026-08-24T10:00:00+09:00").getTime();
@@ -383,20 +383,26 @@ async function presentedFixture(page) {
   page.on("console", (message) => { if (message.type() === "error") errors.push(`console: ${message.text()}`); });
 
   try {
+    // PWA startup remains covered with workers enabled, independently of the
+    // routed, rapidly reloaded UI fixtures below.
+    const pwaPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
     // Reproduce the gap in the old static-DOM readiness predicate without a
     // timer: keep first registration pending until the server observes it.
-    await page.goto(reviewUrl(local.baseUrl), { waitUntil: "domcontentloaded", timeout: 20000 });
+    await pwaPage.goto(reviewUrl(local.baseUrl), { waitUntil: "domcontentloaded", timeout: 20000 });
     await local.workerRequest;
-    await page.waitForFunction(() => document.querySelectorAll("#businessKnockUnit option").length === 10);
-    assert.equal(await page.evaluate(() => Boolean(window.TAKKEN_BUSINESS_KNOCK?.plan && document.querySelector("#businessKnockStart"))), true);
-    assert.equal(await page.evaluate(() => Boolean(navigator.serviceWorker.controller)), false);
+    await pwaPage.waitForFunction(() => document.querySelectorAll("#businessKnockUnit option").length === 10);
+    assert.equal(await pwaPage.evaluate(() => Boolean(window.TAKKEN_BUSINESS_KNOCK?.plan && document.querySelector("#businessKnockStart"))), true);
+    assert.equal(await pwaPage.evaluate(() => Boolean(navigator.serviceWorker.controller)), false);
     let ready = false;
-    const pendingReady = waitForApp(page).then(() => { ready = true; });
-    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    const pendingReady = waitForApp(pwaPage, { requirePwa: true }).then(() => { ready = true; });
+    await pwaPage.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     assert.equal(ready, false, "app readiness must not permit reload while initial PWA installation is pending");
     local.releaseWorker();
     await pendingReady;
-    assert.equal(await page.evaluate(() => Boolean(navigator.serviceWorker.controller)), true);
+    assert.equal(await pwaPage.evaluate(() => Boolean(navigator.serviceWorker.controller)), true);
+    await pwaPage.close();
+    await page.goto(reviewUrl(local.baseUrl), { waitUntil: "networkidle", timeout: 20000 });
+    await waitForApp(page);
     assert.equal(await page.locator("#todayCommandTitle").textContent(), "今日の宅建業法 残り20問");
     assert.equal(await page.locator("#todayCommandStartButton").textContent(), "残り20問をノック開始");
     assert.equal(await page.locator("#todayCommandPracticalButton").isHidden(), true, "the next subject must stay hidden until the fixed business knock is done");
@@ -544,7 +550,7 @@ async function presentedFixture(page) {
         !candidate.endsWith("event-outbox"));
       return { key, value: localStorage.getItem(key) };
     });
-    const missingHardPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    const missingHardPage = await browser.newPage({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
     await missingHardPage.addInitScript(({ key, value }) => localStorage.setItem(key, value), hardSavedSnapshot);
     await missingHardPage.route(/business-hard-bank\.js/, (route) => route.abort());
     await missingHardPage.goto(page.url(), { waitUntil: "networkidle" });
@@ -832,7 +838,7 @@ async function presentedFixture(page) {
       const key = Object.keys(localStorage).find(key => /^takken-battle-study-clean-v2-hard-review-/.test(key) && !/backup|-before-|previous|corrupt|event-outbox/.test(key));
       return { key, value: localStorage.getItem(key) };
     });
-    const missingFreshPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    const missingFreshPage = await browser.newPage({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
     await missingFreshPage.addInitScript(({ key, value }) => localStorage.setItem(key, value), freshSavedSnapshot);
     await missingFreshPage.route(/business-hard-bank\.js/, route => route.abort());
     await missingFreshPage.goto(page.url(), { waitUntil: "networkidle" });
@@ -1186,7 +1192,7 @@ async function presentedFixture(page) {
 
     // The dojo is additive: a missing planner asset must disable only the dojo,
     // while the existing 134-question mastery route remains usable.
-    const fallbackPage = await browser.newPage({ viewport: { width: 390, height: 844 } });
+    const fallbackPage = await browser.newPage({ viewport: { width: 390, height: 844 }, serviceWorkers: "block" });
     await fallbackPage.route(/business-knock\.js/, (route) => route.abort());
     await fallbackPage.goto(reviewUrl(local.baseUrl), { waitUntil: "networkidle", timeout: 20000 });
     await fallbackPage.waitForFunction(() => document.querySelectorAll("#businessMasteryGrid article").length === 11);
@@ -1195,11 +1201,11 @@ async function presentedFixture(page) {
     await fallbackPage.close();
 
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: "ok", initialPwaReadyBeforeReload: true, bankRecoveryReported: true, sequentialTopCommand: true, explicitProgressLabels: true, knockOnlyTransferSummary: true, hardDaily20: true, hardSeparate180Stats: true, freshOnly20: true, freshPartial7: true, freshExhaustionNoFallback: true, freshActiveResumePreserved: true, hard54Schema14Migration: true, hard55AnsweredReload: true, hardMissingAssetSavePreserved: true, hardLegacyAnsweredMigration: true, hardFormats: ["single", "count", "combination"], hardCaseWidths: [320, 390, 1440], hardScreenshots, nextQuestionKeepsViewport: true, plannerSizes: [10, 20, 50, 100], unitFiltered: true, weakDuePrioritized: true, random100Unique: true, randomOrderPreserved: true, reloadPreserved: true, retryLoop: true, retryAnswerPositionsRotated: true, sameDayLevelCapped: true, structuredPromptFormats: ["combination", "count", "case"], singleChoiceBlocks: 4, legacyRawFallback: true, coreFallbackWithoutKnock: true, overflow390: 0, overflow320: 0, errors: 0 }));
+    console.log(JSON.stringify({ status: "ok", initialPwaReadyBeforeReload: true, workerEnabledStartupCovered: true, routedUiWorkersBlocked: true, bankRecoveryReported: true, sequentialTopCommand: true, explicitProgressLabels: true, knockOnlyTransferSummary: true, hardDaily20: true, hardSeparate180Stats: true, freshOnly20: true, freshPartial7: true, freshExhaustionNoFallback: true, freshActiveResumePreserved: true, hard54Schema14Migration: true, hard55AnsweredReload: true, hardMissingAssetSavePreserved: true, hardLegacyAnsweredMigration: true, hardFormats: ["single", "count", "combination"], hardCaseWidths: [320, 390, 1440], hardScreenshots, nextQuestionKeepsViewport: true, plannerSizes: [10, 20, 50, 100], unitFiltered: true, weakDuePrioritized: true, random100Unique: true, randomOrderPreserved: true, reloadPreserved: true, retryLoop: true, retryAnswerPositionsRotated: true, sameDayLevelCapped: true, structuredPromptFormats: ["combination", "count", "case"], singleChoiceBlocks: 4, legacyRawFallback: true, coreFallbackWithoutKnock: true, overflow390: 0, overflow320: 0, errors: 0 }));
   } catch (error) {
     const diagnostic = await page.evaluate(() => ({
       url: location.href, readyState: document.readyState,
-      rootHidden: document.querySelector('.app-root')?.hidden,
+      rootHidden: document.querySelector('.app-root')?.hidden, controlled: Boolean(navigator.serviceWorker?.controller),
       recovery: document.querySelector('#bankLoadDetail')?.textContent || null,
       drawer: document.querySelector('#businessLegacyDrawer')?.outerHTML.slice(0, 500),
       units: document.querySelectorAll('#businessKnockUnit option').length,

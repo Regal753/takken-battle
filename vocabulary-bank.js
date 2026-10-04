@@ -487,7 +487,7 @@
     "vocab-030": "父母・祖父母など、自分に直接つながる上の世代の血族。",
     "vocab-031": "子・孫など、自分に直接つながる下の世代の血族。",
     "vocab-032": "兄弟姉妹・叔父叔母など、共通の祖先を介して別の枝につながる血族。",
-    "vocab-033": "配偶者の血族や血族の配偶者など、婚姻を介してつながる親族。配偶者自身とは区別する。",
+    "vocab-033": "配偶者の血族や血族の配偶者など、婚姻を介する親族。配偶者自身は除く。配偶者自身とは区別する。",
     "vocab-036": "法律上の要件を満たす場合に、その物に関する債権の弁済まで物を留め置ける権利。",
     "vocab-039": "原則、建物の外壁や柱の中心線で囲む部分を水平に投影した面積。",
     "vocab-040": "各階などの壁や柱の中心線で囲む部分を水平に投影した面積。",
@@ -502,7 +502,98 @@
     id: q.id, term: q.term, meaning: cardMeanings[q.id] || q.memoryRule,
     sourceUrl: q.sourceUrl, sourceLocator: q.sourceLocator, legalBaseline: q.legalBaseline
   }]));
-  return freeze({ VERSION, LEGAL_BASELINE, SOURCES, TOPICS, UNITS: TOPICS, QUESTIONS, CARDS_BY_ID,
+  // Pure term-to-meaning questions. Legacy QUESTIONS stay immutable so saved
+  // selections keep their original meaning until the learner advances.
+  const MEANING_DEFINITIONS = [
+  "問われている事情を知らないこと。",
+  "問われている事情を知っていること。",
+  "必要な注意を欠いた落ち度があること。",
+  "相手に権利や法律上の効果を主張すること。",
+  "その法律関係の当事者以外の者。範囲は条文ごとに異なる。",
+  "行為に本来予定された法律上の効力が生じないこと。",
+  "取消権を行使して、行為を初めから無効とみなすこと。",
+  "解除権の行使などによって契約関係を解消すること。",
+  "行為を後から認めること。取消し得る行為では取消権を失う。",
+  "法律上の効果を過去の時点にさかのぼらせること。",
+  "特定の相手に一定の給付を求める権利。",
+  "特定の相手に一定の給付をする義務。",
+  "義務の内容に従って実行すること。",
+  "義務の内容に従った履行がされないこと。",
+  "債務の内容を実現して、その債務を消滅させること。",
+  "互いの債務を対当額で消滅させること。",
+  "自ら負担した分について、本来負担すべき人に返還を求めること。",
+  "弁済した者が、求償できる範囲で元の債権や担保を行使できる仕組み。",
+  "複数の債務者が、それぞれ債務の全部の履行を求められ得る関係。",
+  "主債務者が履行しないときに履行する責任を負う者。",
+  "賃料を払って物を使用・収益し、契約終了時に返す契約。",
+  "無償で物を使用・収益し、契約終了時に返す契約。",
+  "相手に義務の履行などを求めること。",
+  "時効の利益を受ける意思を示して主張すること。",
+  "法律で定めた期間、時効が完成しないこと。",
+  "それまでの経過期間を引き継がず、新たに時効が進行すること。",
+  "金銭等を供託所に預け、法律上の目的を達成する制度。",
+  "法律上の要件を満たす供託によって、債務を消滅させる制度。",
+  "宅建業者以外の取引相手の一定の債権を担保するために供託すること。",
+  "父母・祖父母など、自分に直接つながる上の世代の血族。",
+  "子・孫など、自分に直接つながる下の世代の血族。",
+  "兄弟姉妹・叔父叔母など、共通の祖先から別の枝につながる血族。",
+  "配偶者の血族や血族の配偶者など、婚姻を介する親族。配偶者自身は除く。",
+  "一定の相続人に保障された、遺産の価額の割合。",
+  "占有を移さず不動産等を担保にし、優先弁済を受ける権利。",
+  "要件を満たす場合、その物に関する債権の弁済まで物を留め置く権利。",
+  "法律が特定の債権に認める、他の債権者より優先して弁済を受ける権利。",
+  "一つの建築物などのための、一団の土地。",
+  "原則、建物の外壁や柱の中心線で囲む部分の水平投影面積。",
+  "各階などの壁や柱の中心線で囲む部分の水平投影面積。",
+  "建物の各階の床面積を合計した面積。",
+  "建築面積を敷地面積で割った割合。",
+  "算定対象の延べ面積を敷地面積で割った割合。",
+  "一体の都市として整備・開発・保全するために指定される区域。",
+  "既成市街地と、おおむね10年以内に計画的に市街化する区域。",
+  "市街化を抑制すべき区域。",
+  "住居・商業・工業などの土地利用に応じた地域の区分。",
+  "主に建築物等のために行う、土地の区画形質の変更。",
+  "農地を農地以外の用途に使うこと。",
+  "工作物・施設等を道路に継続して設けて道路を使うこと。",
+  "工事等による道路の特別な使用行為について、警察署長がする許可。",
+  "当事者同士の契約が成立するよう、間を取り持つこと。",
+  "代理人がした法律行為の効果を、本人に直接帰属させる制度。",
+  "契約締結の際などに交付する金銭等。証約・解約・違約などの性質がある。",
+  "契約違反の場合に支払うと約束した金銭。損害賠償額の予定と推定される。",
+  "契約判断に必要な法定事項を、原則として契約成立前に宅建士が説明すること。",
+  "一定の土地取引で、契約締結後2週間以内に権利取得者が届け出る制度。",
+  "対象となる土地売買等の契約に、締結前の許可を必要とする指定区域。",
+  "換地計画の関係事項を権利者に通知し、土地の権利関係を定める処分。",
+  "換地処分前に指定される、仮の使用・収益先となる土地。",
+  "その事業を実施する主体。",
+  "法令に従って、事項を公に知らせること。",
+  "その行為を許可する法令上の権限を持つ主体。",
+  "法定は法令の定め、約定は当事者の合意による定め。"
+];
+  const MEANING_DISTRACTORS = [[2,3,9],[1,3,4],[1,2,14],[53,52,23],[20,61,63],[7,8,9],[6,8,9],[7,9,16],[7,8,10],[25,26,24],[12,35,23],[11,20,17],[14,23,16],[13,16,15],[16,17,18],[15,17,18],[18,16,15],[17,35,36],[20,17,18],[19,17,53],[22,52,15],[21,52,13],[24,62,4],[25,26,23],[26,24,10],[25,24,10],[15,16,23],[29,16,17],[28,20,35],[31,32,33],[30,32,33],[30,31,33],[30,31,32],[37,17,35],[36,37,34],[35,37,17],[35,36,34],[39,40,41],[40,41,38],[39,41,38],[39,40,43],[43,39,41],[42,40,41],[45,46,47],[46,44,47],[45,44,47],[44,45,46],[49,50,59],[48,47,21],[51,48,49],[50,63,62],[53,21,23],[52,20,4],[55,21,29],[54,17,16],[52,57,62],[58,56,62],[57,44,46],[60,48,62],[59,38,44],[63,52,5],[23,56,57],[61,5,53],[]];
+  const MEANING_QUESTIONS = QUESTIONS.map((legacy, index) => {
+    const own = { text: MEANING_DEFINITIONS[index], term: legacy.term, source: legacy, correct: true };
+    const options = index === 63 ? [
+      { text: "法定は当事者の合意、約定は法令による定め。", term: "法定と約定の逆転", source: legacy, correct: false },
+      { text: "法定も約定も、当事者の合意だけによる定め。", term: "法定と約定の混同", source: legacy, correct: false },
+      { text: "法定も約定も、法令だけによる定め。", term: "法定と約定の混同", source: legacy, correct: false }
+    ] : MEANING_DISTRACTORS[index].map(number => ({
+      text: MEANING_DEFINITIONS[number - 1], term: QUESTIONS[number - 1].term, source: QUESTIONS[number - 1], correct: false
+    }));
+    options.splice(legacy.answer, 0, own);
+    const facts = options.map((option, choiceIndex) => ({
+      key: legacy.id + ":meaning:" + choiceIndex, statement: option.text, presentedStatement: option.text, truth: option.correct,
+      reason: option.correct ? legacy.term + "：" + own.text : index === 63 ? "法定は法令、約定は合意。二つの定めの出どころを区別します。" : "これは「" + option.term + "」の意味。「" + legacy.term + "」とは区別します。",
+      sourceLocator: option.source.sourceLocator, sourceUrl: option.source.sourceUrl,
+      diagnosticTags: ["vocabulary", legacy.term, option.term], legalBaseline: LEGAL_BASELINE
+    }));
+    return freeze({ ...legacy, text: "「" + legacy.term + "」の意味は？", meaning: own.text,
+      choices: options.map(option => option.text), answer: legacy.answer, choiceTerms: options.map(option => option.term),
+      sourceFacts: facts, choiceExplanations: facts.map(fact => ({ judgment: fact.statement, correct: fact.truth, reason: fact.reason, sourceLocator: fact.sourceLocator, sourceUrl: fact.sourceUrl })),
+      explain: own.text, memoryRule: own.text, trap: "近い用語の意味と区別する。" });
+  });
+  const MEANING_QUESTIONS_BY_ID = Object.fromEntries(MEANING_QUESTIONS.map(question => [question.id, question]));
+  return freeze({ VERSION, LEGAL_BASELINE, SOURCES, TOPICS, UNITS: TOPICS, QUESTIONS, CARDS_BY_ID, MEANING_QUESTIONS, MEANING_QUESTIONS_BY_ID,
     QUESTIONS_BY_ID: Object.fromEntries(QUESTIONS.map(question => [question.id, question])),
     QUESTION_IDS: QUESTIONS.map(question => question.id) });
 });

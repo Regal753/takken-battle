@@ -147,3 +147,37 @@ assert.deepEqual(JSON.parse(JSON.stringify(sandbox.window.TAKKEN_VOCABULARY_BANK
 console.log(JSON.stringify({ status: "ok", questions: bank.QUESTIONS.length, topics: topicCounts,
   legalBaseline: bank.LEGAL_BASELINE, correctSlots: slots, correctIsLongest,
   officialSourceHosts: [...officialHosts], semanticSpotChecks: 28, legalReview: review.counts }, null, 2));
+
+// Independent delivery contract for the pure term-to-meaning edition.
+const meaningReview = require("./vocabulary-meaning-review-20261004.json");
+assert.equal(bank.MEANING_QUESTIONS.length, 64);
+assert.equal(new Set(bank.MEANING_QUESTIONS.map(q => q.id)).size, 64);
+assert.deepEqual(meaningReview.counts, { terms: 64, choices: 256, singleCorrect: 64 });
+for (const q of bank.MEANING_QUESTIONS) {
+  assert.equal(q.text, "「" + q.term + "」の意味は？");
+  assert.ok(q.text.length <= 24, q.id + ": term only, no case scenario");
+  assert.equal(q.choices.length, 4);
+  assert.equal(new Set(q.choices).size, 4);
+  assert.ok(q.choices.every(text => text.length <= 64));
+  assert.equal(q.choices[q.answer], q.meaning);
+  assert.equal(q.answer, bank.QUESTIONS_BY_ID[q.id].answer, "legacy score/index compatibility");
+  assert.equal(q.sourceFacts.filter(fact => fact.truth).length, 1);
+  assert.equal(q.choiceTerms[q.answer], q.term);
+  for (let i = 0; i < 4; i++) {
+    assert.equal(q.sourceFacts[i].statement, q.choices[i]);
+    assert.equal(q.sourceFacts[i].truth, i === q.answer);
+    assert.ok(q.sourceFacts[i].reason.trim());
+    validateUrl(q.sourceFacts[i].sourceUrl);
+    if (i !== q.answer) assert.notEqual(q.choiceTerms[i], q.term);
+  }
+  const reviewed = meaningReview.questions.find(item => item.id === q.id);
+  assert.equal(reviewed.sha256, crypto.createHash("sha256").update(JSON.stringify(q)).digest("hex"), q.id + ": reviewed final content");
+}
+assert.ok(!bank.MEANING_QUESTIONS_BY_ID["vocab-013"].choiceTerms.includes("弁済"), "do not offer a narrower correct definition of fulfillment as a distractor");
+assert.ok(!bank.MEANING_QUESTIONS_BY_ID["vocab-027"].choiceTerms.some(term => ["弁済供託", "営業保証金の供託"].includes(term)), "do not offer a kind of deposit as an alternative definition of deposit");
+assert.match(bank.MEANING_QUESTIONS_BY_ID["vocab-031"].meaning, /子・孫.*下の世代/);
+assert.ok(!bank.MEANING_QUESTIONS_BY_ID["vocab-031"].choices.includes("直系卑属"), "ask meanings rather than repeat the term among choices");
+assert.match(bank.MEANING_QUESTIONS_BY_ID["vocab-017"].meaning, /本来負担すべき人.*返還/);
+assert.match(bank.MEANING_QUESTIONS_BY_ID["vocab-018"].meaning, /求償できる範囲.*元の債権や担保/);
+assert.match(bank.MEANING_QUESTIONS_BY_ID["vocab-033"].meaning, /配偶者自身は除く/);
+console.log(JSON.stringify({ meaningQuestions: 64, reviewedChoices: 256, termOnlyPrompts: true, objectiveSingleCorrect: true, legacyObjectsPreserved: true }));
