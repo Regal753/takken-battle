@@ -8,23 +8,24 @@ const crypto = require("node:crypto");
 const bank = require("./vocabulary-bank.js");
 const source = fs.readFileSync(path.join(__dirname, "vocabulary-bank.js"), "utf8");
 const nonblank = value => typeof value === "string" && value.trim().length > 0;
-const officialHosts = new Set(["laws.e-gov.go.jp", "www.moj.go.jp", "www.mlit.go.jp", "www.maff.go.jp"]);
+const officialHosts = new Set(["laws.e-gov.go.jp", "www.moj.go.jp", "www.mlit.go.jp", "www.maff.go.jp",
+  "www.nta.go.jp", "www.gsi.go.jp", "www.retio.or.jp", "www.courts.go.jp", "www.kansai-airports.co.jp"]);
 const validateUrl = value => {
   const url = new URL(value);
   assert.equal(url.protocol, "https:");
   assert.ok(officialHosts.has(url.hostname), `unapproved source: ${value}`);
 };
 
-assert.equal(bank.VERSION, 1);
+assert.equal(bank.VERSION, 2);
 assert.equal(bank.LEGAL_BASELINE, "2026-04-01");
-assert.equal(bank.QUESTIONS.length, 64, "retain all 64 original vocabulary questions");
-assert.equal(bank.TOPICS.length, 6);
+assert.equal(bank.QUESTIONS.length, 158, "64 preserved questions plus 94 sourced additions");
+assert.equal(bank.TOPICS.length, 10);
 assert.equal(bank.UNITS, bank.TOPICS);
-assert.equal(new Set(bank.QUESTION_IDS).size, 64);
+assert.equal(new Set(bank.QUESTION_IDS).size, 158);
 assert.deepEqual(bank.QUESTION_IDS, bank.QUESTIONS.map(q => q.id));
 assert.deepEqual(Object.keys(bank.QUESTIONS_BY_ID), bank.QUESTION_IDS);
-assert.equal(new Set(bank.QUESTIONS.map(q => q.text)).size, 64, "each question needs a distinct prompt");
-assert.equal(new Set(bank.QUESTIONS.map(q => q.term)).size, 64);
+assert.equal(new Set(bank.QUESTIONS.map(q => q.text)).size, 158, "each question needs a distinct prompt");
+assert.equal(new Set(bank.QUESTIONS.map(q => q.term)).size, 158);
 assert.ok(Object.isFrozen(bank) && Object.isFrozen(bank.QUESTIONS));
 assert.deepEqual(Object.keys(bank.CARDS_BY_ID), bank.QUESTION_IDS);
 for (const q of bank.QUESTIONS) {
@@ -84,8 +85,10 @@ for (const [index, q] of bank.QUESTIONS.entries()) {
   slots[q.answer]++;
   topicCounts[bank.TOPICS.find(topic => topic.id === q.unitId).label]++;
 }
-assert.deepEqual(slots, [16, 16, 16, 16], "do not favor a fixed correct position");
-assert.ok(correctIsLongest <= 24, "correct choice must not routinely give itself away by length");
+assert.deepEqual(slots, [40, 40, 39, 39], "do not favor a fixed correct position");
+const longestCount = questions => questions.filter(q => q.choices[q.answer].length > Math.max(...q.choices.filter((_, i) => i !== q.answer).map(text => text.length))).length;
+assert.ok(longestCount(bank.QUESTIONS.slice(0, 64)) <= 24, "keep the original length-balance check");
+assert.ok(longestCount(bank.QUESTIONS.slice(64)) <= 37, "new correct choices must not routinely reveal themselves by length");
 const byTerm = term => {
   const question = bank.QUESTIONS.find(q => q.term === term);
   assert.ok(question, `missing priority term: ${term}`);
@@ -139,9 +142,10 @@ assert.doesNotMatch(source, /chatgpt\.com\/c\/|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{
 
 const sandbox = { window: {} };
 vm.createContext(sandbox);
+vm.runInContext(fs.readFileSync(path.join(__dirname, "vocabulary-expansion-data.js"), "utf8"), sandbox, { filename: "vocabulary-expansion-data.js" });
 vm.runInContext(source, sandbox, { filename: "vocabulary-bank.js" });
 assert.ok(sandbox.window.TAKKEN_VOCABULARY_BANK, "browser global must be available without require");
-assert.equal(sandbox.window.TAKKEN_VOCABULARY_BANK.QUESTIONS.length, 64);
+assert.equal(sandbox.window.TAKKEN_VOCABULARY_BANK.QUESTIONS.length, 158);
 assert.deepEqual(JSON.parse(JSON.stringify(sandbox.window.TAKKEN_VOCABULARY_BANK.QUESTION_IDS)), bank.QUESTION_IDS);
 
 console.log(JSON.stringify({ status: "ok", questions: bank.QUESTIONS.length, topics: topicCounts,
@@ -150,12 +154,12 @@ console.log(JSON.stringify({ status: "ok", questions: bank.QUESTIONS.length, top
 
 // Independent delivery contract for the pure term-to-meaning edition.
 const meaningReview = require("./vocabulary-meaning-review-20261004.json");
-assert.equal(bank.MEANING_QUESTIONS.length, 64);
-assert.equal(new Set(bank.MEANING_QUESTIONS.map(q => q.id)).size, 64);
+assert.equal(bank.MEANING_QUESTIONS.length, 158);
+assert.equal(new Set(bank.MEANING_QUESTIONS.map(q => q.id)).size, 158);
 assert.deepEqual(meaningReview.counts, { terms: 64, choices: 256, singleCorrect: 64 });
 for (const q of bank.MEANING_QUESTIONS) {
-  assert.equal(q.text, "「" + q.term + "」の意味は？");
-  assert.ok(q.text.length <= 24, q.id + ": term only, no case scenario");
+  assert.equal(q.text, "「" + q.term + (q.context ? "（" + q.context + "）" : "") + "」の意味は？");
+  assert.ok(q.text.length <= 28, q.id + ": term only, no case scenario");
   assert.equal(q.choices.length, 4);
   assert.equal(new Set(q.choices).size, 4);
   assert.ok(q.choices.every(text => text.length <= 64));
@@ -171,7 +175,7 @@ for (const q of bank.MEANING_QUESTIONS) {
     if (i !== q.answer) assert.notEqual(q.choiceTerms[i], q.term);
   }
   const reviewed = meaningReview.questions.find(item => item.id === q.id);
-  assert.equal(reviewed.sha256, crypto.createHash("sha256").update(JSON.stringify(q)).digest("hex"), q.id + ": reviewed final content");
+  if (reviewed) assert.equal(reviewed.sha256, crypto.createHash("sha256").update(JSON.stringify(q)).digest("hex"), q.id + ": reviewed original content");
 }
 assert.ok(!bank.MEANING_QUESTIONS_BY_ID["vocab-013"].choiceTerms.includes("弁済"), "do not offer a narrower correct definition of fulfillment as a distractor");
 assert.ok(!bank.MEANING_QUESTIONS_BY_ID["vocab-027"].choiceTerms.some(term => ["弁済供託", "営業保証金の供託"].includes(term)), "do not offer a kind of deposit as an alternative definition of deposit");
@@ -180,4 +184,40 @@ assert.ok(!bank.MEANING_QUESTIONS_BY_ID["vocab-031"].choices.includes("直系卑
 assert.match(bank.MEANING_QUESTIONS_BY_ID["vocab-017"].meaning, /本来負担すべき人.*返還/);
 assert.match(bank.MEANING_QUESTIONS_BY_ID["vocab-018"].meaning, /求償できる範囲.*元の債権や担保/);
 assert.match(bank.MEANING_QUESTIONS_BY_ID["vocab-033"].meaning, /配偶者自身は除く/);
-console.log(JSON.stringify({ meaningQuestions: 64, reviewedChoices: 256, termOnlyPrompts: true, objectiveSingleCorrect: true, legacyObjectsPreserved: true }));
+const compat = require("./scripts/vocabulary-v1-compat.json");
+const sha = value => crypto.createHash("sha256").update(JSON.stringify(value)).digest("hex");
+assert.equal(compat.questions.length, 64);
+assert.deepEqual(bank.TOPICS.slice(0, 6), compat.topics);
+for (const row of compat.questions) {
+  assert.equal(sha(bank.QUESTIONS_BY_ID[row.id]), row.legacySha256, row.id + ": legacy question unchanged");
+  assert.equal(sha(bank.MEANING_QUESTIONS_BY_ID[row.id]), row.meaningSha256, row.id + ": old meaning choices unchanged");
+  assert.equal(sha(bank.CARDS_BY_ID[row.id]), row.cardSha256, row.id + ": old card unchanged");
+}
+const expansionReview = require("./vocabulary-expansion-review-20261004.json");
+assert.equal(expansionReview.legalBaseline, bank.LEGAL_BASELINE);
+assert.equal(expansionReview.questions.length, 94);
+assert.deepEqual(expansionReview.counts, { added: 94, total: 158, choicesReviewed: 376, rights: 31, business: 16, restrictions: 21, taxOther: 26 });
+for (const row of expansionReview.questions) {
+  const q = bank.MEANING_QUESTIONS_BY_ID[row.id];
+  assert.equal(sha(q), row.sha256, q.id + ": additions require renewed source/choice review after edits");
+  assert.match(q.reading, /^[ぁ-ゖー・]+$/);
+  assert.equal(row.choices.length, 4);
+  row.choices.forEach((choice, i) => {
+    assert.equal(choice.term, q.choiceTerms[i]);
+    assert.equal(choice.correct, i === q.answer);
+    assert.equal(choice.sourceUrl, q.sourceFacts[i].sourceUrl);
+    assert.ok(choice.sourceLocator && choice.definitionSha256 === sha(q.choices[i]));
+  });
+}
+const meaningByTerm = term => bank.MEANING_QUESTIONS.find(q => q.term === term);
+for (const [term, excluded] of [["表見代理", "無権代理"], ["無権代理", "表見代理"], ["根抵当権", "抵当権"], ["不同沈下", "不等沈下"], ["液状化", "噴砂"], ["防火地域", "準防火地域"], ["準防火地域", "防火地域"]]) {
+  assert.ok(!meaningByTerm(term).choiceTerms.includes(excluded), term + ": avoid overlapping or synonymous alternatives");
+}
+assert.match(meaningByTerm("土石の堆積").meaning, /一定期間後.*除却/);
+assert.match(meaningByTerm("特定盛土等").meaning, /隣接・近接.*宅地.*政令/);
+assert.match(meaningByTerm("専任媒介契約").meaning, /直接取引は認める/);
+assert.match(meaningByTerm("専属専任媒介契約").meaning, /直接取引も禁止/);
+assert.match(meaningByTerm("代襲相続").trap, /放棄.*原因にならない/);
+assert.match(meaningByTerm("規約共用部分").trap, /第三者.*登記/);
+assert.throws(() => vm.runInNewContext(source, { window: {} }), /missing or incomplete/);
+console.log(JSON.stringify({ meaningQuestions: 158, reviewedChoices: 632, added: 94, termOnlyPrompts: true, objectiveSingleCorrect: true, legacyObjectsPreserved: true }));

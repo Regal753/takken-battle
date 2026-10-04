@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20261004-vocabulary-meanings-e92ed9f33d7d",
-  "digest": "sha256:e92ed9f33d7dafa7878e3fdef3d94c3c61e588816602f8c7e5849d59d28b07b6",
-  "assetCount": 69,
+  "version": "20261004-vocabulary-expanded-31de6d5303ce",
+  "digest": "sha256:31de6d5303ceeab5f6d6dc1597ecdafc16c4cc468ed78c877c355217db9798d5",
+  "assetCount": 70,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "ff41c70d894de697c17275c56bf2339346c458d9cbb19bdc1d520ec74f5b07cb"
+      "sha256": "39f11377e957dc7d820fc2216f2a82bb291d4a67f187d0dd6143648cd2ee88a0"
     },
     {
       "path": "assets/battle/grassland-route.webp",
@@ -166,7 +166,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "d33e467f7788b9f1d7a77173ad9354b65a028a99156f2952ae6530a450de911b"
+      "sha256": "b73b53e8c3808fb982d18241da3831898594f61155f7e0348942ab9dfafb2440"
     },
     {
       "path": "manifest.webmanifest",
@@ -254,7 +254,7 @@
     },
     {
       "path": "service-worker.js",
-      "sha256": "1a3cfc8da3aa18d0df6c0dd74b7b6c9f0e9d7b6d3cdbbaadc627bee59685f8d9"
+      "sha256": "53d126d9b2b0528f5027313c1d39702351347a111d815c0eb1f23e5794e08c74"
     },
     {
       "path": "state-sync.js",
@@ -278,7 +278,11 @@
     },
     {
       "path": "vocabulary-bank.js",
-      "sha256": "8667b25204a7b9e77f2f7d86a1f036b7a8fdb7865bf065d14eaf60ed70b17319"
+      "sha256": "4a326f170f09b98c8ac46ca996b6c9401529314cca16be589486c0f58157f3a8"
+    },
+    {
+      "path": "vocabulary-expansion-data.js",
+      "sha256": "4956318fafa3c033feb7a27eb1b036accd0008217458ee58e751dcc446421403"
     }
   ]
 }

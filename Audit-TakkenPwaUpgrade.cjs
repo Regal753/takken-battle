@@ -11,7 +11,7 @@ const { chromium } = require("playwright");
 const { execFileSync } = require("node:child_process");
 
 const ROOT = process.cwd();
-const CURRENT_VERSION = "20261004-vocabulary-meanings-e92ed9f33d7d";
+const CURRENT_VERSION = "20261004-vocabulary-expanded-31de6d5303ce";
 const OLD_VERSION = "20260822-controlled-old-runtime";
 const SAVE_KEY = "takken-battle-study-clean-v2-hard";
 const SENTINEL_KEY = "takken-pwa-upgrade-sentinel";
@@ -21,10 +21,9 @@ const multiTab = process.argv.includes("--multi-tab");
 const saveFailure = process.argv.includes("--save-failure");
 const legacyRef = process.env.TAKKEN_PWA_LEGACY_REF || "";
 if (legacyRef) assert.match(legacyRef, /^[0-9a-f]{7,40}$/);
-const legacyRuntime = legacyRef
-  ? execFileSync("git", ["show", `${legacyRef}:pwa-runtime.js`], { encoding: "utf8" })
-      .replace(/const VERSION = "[^"]+";/, `const VERSION = "${OLD_VERSION}";`)
-  : null;
+const legacyVersion = legacyRef
+  ? execFileSync("git", ["show", `${legacyRef}:service-worker.js`], { encoding: "utf8" }).match(/const VERSION = "([^"]+)";/)[1] : "";
+const legacyBodies = new Map();
 
 function startVersionedServer(root) {
   let release = "old";
@@ -47,8 +46,15 @@ function startVersionedServer(root) {
     }
     fs.readFile(target, (error, body) => {
       if (error) { response.writeHead(404); response.end("not found"); return; }
-      if (release === "old" && relative === "pwa-runtime.js" && legacyRuntime) {
-        body = Buffer.from(legacyRuntime, "utf8");
+      if (release === "old" && legacyRef) {
+        if (!legacyBodies.has(relative)) {
+          let historical = execFileSync("git", ["show", `${legacyRef}:${relative}`], { maxBuffer: 8 * 1024 * 1024 });
+          if (/\.(?:js|css|html|json|webmanifest|svg)$/.test(relative)) {
+            historical = Buffer.from(historical.toString("utf8").replaceAll(legacyVersion, OLD_VERSION), "utf8");
+          }
+          legacyBodies.set(relative, historical);
+        }
+        body = legacyBodies.get(relative);
       } else if (release === "old" && (relative === "pwa-runtime.js" || relative === "service-worker.js")) {
         body = Buffer.from(body.toString("utf8").replaceAll(CURRENT_VERSION, OLD_VERSION), "utf8");
       }
@@ -83,6 +89,9 @@ async function cacheNames(page) {
     ? { headless: true, executablePath: chromePath }
     : { headless: true, channel: "chrome" });
   const context = await browser.newContext(autoReconnect || saveFailure ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : {});
+  await context.addInitScript(saveKey => {
+    window.__TAKKEN_PWA_PREBOOT_RAW__ = localStorage.getItem(saveKey);
+  }, SAVE_KEY);
   const page = await context.newPage();
   try {
     if (autoReconnect) await page.clock.install();
@@ -132,6 +141,8 @@ async function cacheNames(page) {
         }
       };
       state.pwaUpgradeSentinel = { text: "更新前の学習記録", nested: [1, { keep: true }] };
+      state.practicalDrill.history["vocab-064"] = { attempts: 2, correct: 1, wrong: 1,
+        lastCorrect: false, lastConfidence: "wrong", lastAnsweredAt: answeredAt };
       const raw = JSON.stringify(state);
       const sentinel = "exact-sentinel: PWA update must not rewrite this value";
       localStorage.setItem(saveKey, raw);
@@ -150,6 +161,8 @@ async function cacheNames(page) {
         sentinel: localStorage.getItem(sentinelKey),
         currentAttempt: state.practicalDrill?.currentAttempt,
         history: state.practicalDrill?.history?.[id],
+        vocabularyHistory: state.practicalDrill?.history?.["vocab-064"],
+        raw, schema: state.stateSchemaVersion,
         stateSentinel: state.pwaUpgradeSentinel
       };
     }, { saveKey: SAVE_KEY, sentinelKey: SENTINEL_KEY });
@@ -232,12 +245,29 @@ async function cacheNames(page) {
         sentinel: localStorage.getItem(sentinelKey),
         currentAttempt: state.practicalDrill?.currentAttempt,
         history: state.practicalDrill?.history?.[id],
+        vocabularyHistory: state.practicalDrill?.history?.["vocab-064"],
+        schema: state.stateSchemaVersion,
+        migrationBackup: localStorage.getItem(saveKey + "-before-upgrade-v18-to-v19"),
+        prebootRaw: window.__TAKKEN_PWA_PREBOOT_RAW__,
         stateSentinel: state.pwaUpgradeSentinel
       };
     }, { saveKey: SAVE_KEY, sentinelKey: SENTINEL_KEY });
     assert.equal(readback.sentinel, fixture.sentinel, "unrelated localStorage sentinel bytes changed during PWA upgrade");
     assert.deepEqual(readback.currentAttempt, beforeUpdate.currentAttempt, "currentAttempt changed during PWA upgrade");
     assert.deepEqual(readback.history, beforeUpdate.history, "answer history changed during PWA upgrade");
+    assert.deepEqual(readback.vocabularyHistory, beforeUpdate.vocabularyHistory, "old vocabulary history changed during PWA upgrade");
+    assert.equal(readback.schema, 19);
+    if (legacyRef && beforeUpdate.schema === 18) {
+      const backup = JSON.parse(readback.migrationBackup);
+      assert.equal(backup.stateSchemaVersion, 18);
+      assert.deepEqual(backup.practicalDrill.currentAttempt, beforeUpdate.currentAttempt);
+      assert.deepEqual(backup.practicalDrill.history["vocab-064"], beforeUpdate.vocabularyHistory);
+      // The old runtime can autosave sync revisions while downloading a worker.
+      // Compare the exact last raw at the new document's migration boundary.
+      if (JSON.parse(readback.prebootRaw).stateSchemaVersion === 18) {
+        assert.equal(readback.migrationBackup === readback.prebootRaw, true, "exact input bytes are backed up at migration");
+      }
+    }
     assert.deepEqual(readback.stateSentinel, beforeUpdate.stateSentinel, "canonical state sentinel changed during PWA upgrade");
 
     const newCaches = await cacheNames(page);

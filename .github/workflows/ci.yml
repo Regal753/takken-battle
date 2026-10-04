@@ -90,12 +90,19 @@ jobs:
             git fetch --no-tags --depth=1 origin "$revision"
             git cat-file -e "$revision:app.js"
           done
+      - name: Fetch published vocabulary schema18 baseline
+        shell: bash
+        run: |
+          git fetch --no-tags --depth=1 origin ebc5a046d0764d90a4bea36303ac87005687b0f5
+          git cat-file -e ebc5a046d0764d90a4bea36303ac87005687b0f5:app.js
+          git cat-file -e ebc5a046d0764d90a4bea36303ac87005687b0f5:vocabulary-bank.js
       - name: Run critical browser audits
         shell: bash
         env:
           TAKKEN_BASE_URL: http://127.0.0.1:8783/
           TAKKEN_CHROME_PATH: /usr/bin/google-chrome
           TAKKEN_AUDIT_SHARD: ${{ matrix.shard }}
+          TAKKEN_SCHEMA18_APP_REF: ebc5a046d0764d90a4bea36303ac87005687b0f5
         run: |
           set -euo pipefail
           google-chrome --version
@@ -115,6 +122,7 @@ jobs:
         if: matrix.shard == 'b'
         env:
           TAKKEN_CHROME_PATH: /usr/bin/google-chrome
+          TAKKEN_PWA_LEGACY_REF: ebc5a046d0764d90a4bea36303ac87005687b0f5
         run: |
           node Audit-TakkenPwaUpgrade.cjs --auto-reconnect
           node Audit-TakkenPwaUpgrade.cjs --multi-tab

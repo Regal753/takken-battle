@@ -1,13 +1,18 @@
 "use strict";
 
 (function attachVocabularyBank(root, factory) {
-  const api = factory();
+  const expansion = typeof module === "object" && module.exports
+    ? require("./vocabulary-expansion-data.js") : root.TAKKEN_VOCABULARY_EXPANSION;
+  const api = factory(expansion);
   if (typeof module === "object" && module.exports) module.exports = api;
   root.TAKKEN_VOCABULARY_BANK = api;
   if (root.window && root.window !== root) root.window.TAKKEN_VOCABULARY_BANK = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function createVocabularyBank() {
-  const VERSION = 1;
+})(typeof globalThis !== "undefined" ? globalThis : this, function createVocabularyBank(expansion) {
+  const VERSION = 2;
   const LEGAL_BASELINE = "2026-04-01";
+  if (expansion?.LEGAL_BASELINE !== LEGAL_BASELINE || expansion?.ROWS?.length !== 94 || expansion?.TOPICS?.length !== 4) {
+    throw new Error("Vocabulary expansion is missing or incomplete");
+  }
   const TOPICS = [
     { id: "vocab-language", label: "法律の言い回し" },
     { id: "vocab-obligations", label: "契約と債務" },
@@ -592,8 +597,51 @@
       sourceFacts: facts, choiceExplanations: facts.map(fact => ({ judgment: fact.statement, correct: fact.truth, reason: fact.reason, sourceLocator: fact.sourceLocator, sourceUrl: fact.sourceUrl })),
       explain: own.text, memoryRule: own.text, trap: "近い用語の意味と区別する。" });
   });
-  const MEANING_QUESTIONS_BY_ID = Object.fromEntries(MEANING_QUESTIONS.map(question => [question.id, question]));
-  return freeze({ VERSION, LEGAL_BASELINE, SOURCES, TOPICS, UNITS: TOPICS, QUESTIONS, CARDS_BY_ID, MEANING_QUESTIONS, MEANING_QUESTIONS_BY_ID,
-    QUESTIONS_BY_ID: Object.fromEntries(QUESTIONS.map(question => [question.id, question])),
-    QUESTION_IDS: QUESTIONS.map(question => question.id) });
+  const definitions = new Map(MEANING_QUESTIONS.map(question => [question.term, {
+    term: question.term, meaning: question.meaning, sourceUrl: question.sourceUrl, sourceLocator: question.sourceLocator
+  }]));
+  for (const entry of [...expansion.ROWS, ...expansion.AUXILIARY_DEFINITIONS]) {
+    if (definitions.has(entry.term)) throw new Error("Duplicate vocabulary definition: " + entry.term);
+    definitions.set(entry.term, entry);
+  }
+  const newQuestions = expansion.ROWS.map((entry, offset) => {
+    const index = QUESTIONS.length + offset;
+    const id = "vocab-" + String(index + 1).padStart(3, "0");
+    const answer = index % 4;
+    const unitId = expansion.TOPICS.find(topic => topic.subject === entry.subject)?.id;
+    const options = entry.distractors.map(term => definitions.get(term));
+    if (!unitId || options.length !== 3 || options.some(option => !option) || new Set(entry.distractors).size !== 3 || entry.distractors.includes(entry.term)) {
+      throw new Error("Invalid vocabulary alternatives: " + entry.term);
+    }
+    options.splice(answer, 0, entry);
+    const facts = options.map((option, choiceIndex) => ({
+      key: id + ":" + choiceIndex, statement: option.meaning, presentedStatement: option.meaning, truth: choiceIndex === answer,
+      reason: choiceIndex === answer ? entry.term + "：" + entry.meaning
+        : "これは「" + option.term + "」の意味。「" + entry.term + "」とは区別します。" + entry.contrast,
+      sourceUrl: option.sourceUrl, sourceLocator: option.sourceLocator,
+      diagnosticTags: ["vocabulary", entry.term, option.term], legalBaseline: LEGAL_BASELINE
+    }));
+    return freeze({
+      id, unitId, format: "単一選択", formatKey: "single", term: entry.term, reading: entry.reading, context: entry.context,
+      text: "「" + entry.term + (entry.context ? "（" + entry.context + "）" : "") + "」の意味は？",
+      meaning: entry.meaning, choices: options.map(option => option.meaning), answer, choiceTerms: options.map(option => option.term),
+      sourceFacts: facts, choiceExplanations: facts.map(fact => ({ judgment: fact.statement, correct: fact.truth, reason: fact.reason,
+        sourceLocator: fact.sourceLocator, sourceUrl: fact.sourceUrl })),
+      explain: entry.meaning, memoryRule: entry.meaning, trap: entry.contrast,
+      sourceUrl: entry.sourceUrl, sourceLocator: entry.sourceLocator, legalBaseline: LEGAL_BASELINE
+    });
+  });
+  const allQuestions = [...QUESTIONS, ...newQuestions];
+  const allMeanings = [...MEANING_QUESTIONS, ...newQuestions];
+  const allTopics = [...TOPICS, ...expansion.TOPICS];
+  for (const question of newQuestions) CARDS_BY_ID[question.id] = {
+    id: question.id, term: question.term, meaning: question.meaning, sourceUrl: question.sourceUrl,
+    sourceLocator: question.sourceLocator, legalBaseline: LEGAL_BASELINE
+  };
+  const MEANING_QUESTIONS_BY_ID = Object.fromEntries(allMeanings.map(question => [question.id, question]));
+  return freeze({ VERSION, APPEND_ONLY_FROM_VERSION: 1, LEGACY_QUESTION_COUNT: 64, LEGAL_BASELINE,
+    SOURCES: { ...SOURCES, ...expansion.SOURCES }, TOPICS: allTopics, UNITS: allTopics, QUESTIONS: allQuestions, CARDS_BY_ID,
+    MEANING_QUESTIONS: allMeanings, MEANING_QUESTIONS_BY_ID,
+    QUESTIONS_BY_ID: Object.fromEntries(allQuestions.map(question => [question.id, question])),
+    QUESTION_IDS: allQuestions.map(question => question.id) });
 });

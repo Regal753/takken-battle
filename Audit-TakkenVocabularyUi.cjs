@@ -31,7 +31,9 @@ async function shown(page, key) {
     const id = drill.queue[drill.position];
     const question = (drill.presentationOverrides?.[id] || drill.presentationKey).startsWith("meaning2:") ? window.TAKKEN_VOCABULARY_BANK.MEANING_QUESTIONS_BY_ID[id] : window.TAKKEN_VOCABULARY_BANK.QUESTIONS_BY_ID[id];
     const order = window.TAKKEN_BUSINESS_MASTERY.choiceOrder(id, drill.presentationOverrides?.[id] || drill.presentationKey, 4);
-    return { id, term: question.term, meaning: question.meaning, answer: order.indexOf(question.answer), choices: order.map(index => question.choices[index]), topicId: question.unitId, reasons: order.map(index => question.sourceFacts[index].reason) };
+    return { id, term: question.term, text: question.text, reading: question.reading || "", meaning: question.meaning,
+      answer: order.indexOf(question.answer), choices: order.map(index => question.choices[index]), topicId: question.unitId,
+      reasons: order.map(index => question.sourceFacts[index].reason) };
   }, key);
 }
 async function answer(page, key, result = "confident") {
@@ -60,13 +62,17 @@ async function main() {
   const server = process.env.TAKKEN_BASE_URL ? { baseUrl: process.env.TAKKEN_BASE_URL, close: async () => {} } : await staticServer(process.cwd());
   const browser = await chromium.launch({ channel: "chrome", headless: true });
   const errors = [];
+  let expectingExpansionFailure = false, expansionFailures = 0;
   const output = path.join(process.cwd(), "output", "playwright", "vocabulary");
   fs.mkdirSync(output, { recursive: true });
   let fixtures = 0, checks = 0;
   async function fixture() {
     const context = await browser.newContext({ viewport: { width: 390, height: 844 }, locale: "ja-JP", timezoneId: "Asia/Tokyo", reducedMotion: "reduce", serviceWorkers: "block" });
     const page = await context.newPage();
-    page.on("pageerror", error => errors.push(String(error)));
+    page.on("pageerror", error => {
+      if (expectingExpansionFailure && error.message === "Vocabulary expansion is missing or incomplete") expansionFailures++;
+      else errors.push(String(error));
+    });
     const review = `vocab${++fixtures}${Date.now().toString(36)}`;
     const key = `takken-battle-study-clean-v2-hard-review-${review}`;
     const url = new URL(server.baseUrl); url.searchParams.set("review", review); url.searchParams.set("today", "1");
@@ -143,7 +149,7 @@ async function main() {
     await answer(page, key, "uncertain");
     while ((await saved(page, key)).practicalDrill.stage === "retry") await answer(page, key);
     const completed = await saved(page, key);
-    assert.equal(completed.stateSchemaVersion, 18);
+    assert.equal(completed.stateSchemaVersion, 19);
     assert.equal(completed.practicalDrill.history[again.id].overconfidentWrong || 0, 0, "objective grading is not a confidence prediction");
     assert.equal(completed.practicalDrill.history[again.id].wrong, 4, "two new objectively wrong selections are added to the preserved two wrong answers");
     assert.match(await page.locator("#practicalDrillCompleteText").textContent(), /通常問題や模試の得点には算入しません/);
@@ -179,7 +185,9 @@ async function main() {
     const reviewed = new Set();
     while (["active", "retry"].includes((await saved(page, key)).practicalDrill.stage)) {
       const item = await shown(page, key);
-      assert.equal(await page.locator("#practicalDrillPrompt").textContent(), "「" + item.term + "」の意味は？");
+      assert.equal(await page.locator("#practicalDrillPrompt").textContent(), item.text);
+      if (item.reading) assert.ok((await page.locator("#practicalDrillUnit").textContent()).includes(item.reading), "difficult readings are visible");
+      assert.equal(await page.locator("#practicalDrillFeedback").isVisible(), false, "no definition or distinction is exposed before an answer");
       assert.deepEqual(await page.locator(".practical-drill-choice").allTextContents(), item.choices.map((text, index) => (index + 1) + ". " + text));
       assert.equal(new Set(item.choices).size, 4);
       await page.locator(".practical-drill-choice").nth(item.answer).click();
@@ -196,10 +204,58 @@ async function main() {
       reviewed.add(item.id);
       await page.locator("#practicalDrillNextButton").click();
     }
-    assert.equal(reviewed.size, 64, "all 64 terms must actually render and score as meaning choices");
+    assert.equal(reviewed.size, 158, "all 158 terms must actually render and score as meaning choices");
     await page.locator("#practicalDrillRestartButton").click();
     checks++;
 
+    // PR78's schema18/bank1 meaning edition must retain both answered and
+    // unanswered sessions byte-for-byte in its pre-upgrade backup.
+    for (const answered of [false, true]) {
+      const old = await fixture();
+      await old.page.locator(".vocabulary-settings").evaluate(node => { node.open = true; });
+      await old.page.locator("#vocabularyMode").selectOption("topic");
+      await old.page.locator("#vocabularyTopic").selectOption("vocab-language");
+      await old.page.locator("#vocabularyCustomStart").click();
+      if (answered) {
+        const question = await shown(old.page, old.key);
+        await old.page.locator(".practical-drill-choice").nth((question.answer + 1) % 4).click();
+      }
+      const prior = await old.page.evaluate(key => {
+        const state = JSON.parse(localStorage.getItem(key));
+        state.stateSchemaVersion = 18; state.practicalDrill.bankVersion = 1;
+        const raw = JSON.stringify(state); localStorage.setItem(key, raw);
+        return { raw, drill: state.practicalDrill };
+      }, old.key);
+      await old.page.reload({ waitUntil: "networkidle" });
+      const migrated = await saved(old.page, old.key);
+      assert.equal(migrated.stateSchemaVersion, 19);
+      assert.equal(migrated.practicalDrill.bankVersion, 2);
+      for (const field of ["queue", "sessionIds", "retryIds", "history", "currentAttempt", "position", "presentationKey", "attempts", "correctAttempts"]) {
+        assert.deepEqual(migrated.practicalDrill[field], prior.drill[field], "additive upgrade preserves " + field);
+      }
+      assert.equal(await old.page.evaluate(key => localStorage.getItem(key + "-before-upgrade-v18-to-v19"), old.key), prior.raw);
+      assert.equal(await old.page.locator("#practicalDrillFeedback").isVisible(), answered);
+      await old.context.close(); checks++;
+    }
+    for (const [topic, count] of [["vocab-rights-hard", 31], ["vocab-business-hard", 16], ["vocab-restrictions-hard", 21], ["vocab-tax-other", 26]]) {
+      const item = await fixture();
+      await item.page.locator(".vocabulary-settings").evaluate(node => { node.open = true; });
+      await item.page.locator("#vocabularyMode").selectOption("topic");
+      await item.page.locator("#vocabularyTopic").selectOption(topic);
+      await item.page.locator("#vocabularySize").selectOption("all");
+      await item.page.locator("#vocabularyCustomStart").click();
+      const session = (await saved(item.page, item.key)).practicalDrill;
+      assert.equal(session.sessionIds.length, count);
+      const question = await shown(item.page, item.key);
+      assert.equal(question.topicId, topic);
+      assert.ok((await item.page.locator("#practicalDrillUnit").textContent()).includes(question.reading));
+      await item.page.locator("#practicalDrillSession").screenshot({ path: path.join(output, topic + "-390.png") });
+      await answer(item.page, item.key, "wrong");
+      assert.ok((await saved(item.page, item.key)).practicalDrill.retryIds.includes(question.id));
+      await item.page.reload({ waitUntil: "networkidle" });
+      assert.ok((await saved(item.page, item.key)).practicalDrill.retryIds.includes(question.id));
+      await item.context.close(); checks++;
+    }
     const raw = await page.evaluate(storageKey => localStorage.getItem(storageKey), key);
     const partialBank = await page.evaluate(() => `window.TAKKEN_VOCABULARY_BANK=${JSON.stringify({
       ...window.TAKKEN_VOCABULARY_BANK, QUESTIONS: window.TAKKEN_VOCABULARY_BANK.QUESTIONS.slice(0, -1)
@@ -213,6 +269,15 @@ async function main() {
       await page.unroute("**/vocabulary-bank.js*");
       checks++;
     }
+    expectingExpansionFailure = true;
+    await page.route("**/vocabulary-expansion-data.js*", route => route.fulfill({ status: 200, contentType: "text/javascript", body: "" }));
+    await page.reload({ waitUntil: "networkidle" });
+    await page.locator("#bankLoadRecovery").waitFor({ state: "visible" });
+    assert.equal(await page.evaluate(storageKey => localStorage.getItem(storageKey), key), raw, "missing expansion never normalizes away saved IDs");
+    assert.equal(expansionFailures, 1, "the expected dependency error is diagnosed explicitly");
+    await page.unroute("**/vocabulary-expansion-data.js*");
+    expectingExpansionFailure = false;
+    checks++;
     await context.close();
 
     // Published schema18 answers retain their old displayed choices without changing
@@ -223,6 +288,10 @@ async function main() {
       await old.page.evaluate(({ key, confidence }) => {
         const state = JSON.parse(localStorage.getItem(key));
         const d = state.practicalDrill;
+        state.stateSchemaVersion = 18;
+        d.bankVersion = 1;
+        d.sessionIds = window.TAKKEN_VOCABULARY_BANK.QUESTION_IDS.slice(0, 10);
+        d.queue = d.sessionIds.slice();
         d.presentationKey = d.presentationKey.replace(/^meaning2:/, "");
         const id = d.queue[0];
         const q = window.TAKKEN_VOCABULARY_BANK.QUESTIONS_BY_ID[id];
@@ -312,7 +381,7 @@ async function main() {
     }, legacy.key);
     await legacy.page.reload({ waitUntil: "networkidle" });
     const migrated = await saved(legacy.page, legacy.key);
-    assert.equal(migrated.stateSchemaVersion, 18);
+    assert.equal(migrated.stateSchemaVersion, 19);
     assert.equal(Object.values(migrated.practicalDrill.history)[0].attempts, 3, "schema17 existing history survives migration");
     await legacy.page.locator("#vocabularyStart").click();
     assert.deepEqual((await saved(legacy.page, legacy.key)).practicalDrill, migrated.practicalDrill, "vocab action resumes another unfinished drill");
@@ -331,7 +400,7 @@ async function main() {
     await calculation.context.close();
     checks++;
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: "ok", checks, questions: total, schema: 18, viewports: [1280, 390, 320], termOnly: true, meaningChoices: 4, objectiveGrading: true, renderedTerms: 64, reload: true, topicRestart: true, legacyFourChoiceCompatible: true, failedGradeAndAdvanceProtected: true, otherSessionPreserved: true, missingBankProtected: true, examEvidenceUnchanged: true }));
+    console.log(JSON.stringify({ status: "ok", checks, questions: total, schema: 19, viewports: [1280, 390, 320], termOnly: true, meaningChoices: 4, objectiveGrading: true, renderedTerms: 158, reload: true, topicRestart: true, legacyFourChoiceCompatible: true, failedGradeAndAdvanceProtected: true, otherSessionPreserved: true, missingBankProtected: true, examEvidenceUnchanged: true }));
   } finally { await browser.close(); await server.close(); }
 }
 main().catch(error => { console.error(error.stack || String(error)); process.exitCode = 1; });

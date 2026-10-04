@@ -747,7 +747,7 @@ async function presentedFixture(page) {
     await page.reload({ waitUntil: "networkidle" });
     await waitForApp(page);
     const migratedOld = await readSavedState(page);
-    assert.equal(migratedOld.stateSchemaVersion, 18, "the answered v53 session must migrate to schema18");
+    assert.equal(migratedOld.stateSchemaVersion, 19, "the answered v53 session must migrate to schema18");
     assert.deepEqual(migratedOld.practicalDrill.queue, oldSaved.practicalDrill.queue);
     assert.deepEqual(migratedOld.practicalDrill.currentAttempt, oldSaved.practicalDrill.currentAttempt);
     assert.deepEqual(migratedOld.practicalDrill.history, oldSaved.practicalDrill.history);
@@ -783,11 +783,11 @@ async function presentedFixture(page) {
     });
     await page.reload({ waitUntil: "networkidle" });
     const migratedV54 = await readSavedState(page);
-    assert.equal(migratedV54.stateSchemaVersion, 18);
+    assert.equal(migratedV54.stateSchemaVersion, 19);
     assert.deepEqual(migratedV54.practicalDrill, v54Saved.practicalDrill, "schema14 hard54 progress must survive without queue, answer, rotation, or history changes");
     assert.deepEqual(await currentPresented(page), v54Question);
     assert.equal(await page.locator("#practicalDrillFeedback").isVisible(), true);
-    assert.equal(await page.evaluate(({ key }) => localStorage.getItem(`${key}-before-upgrade-v14-to-v18`), v54Raw), v54Raw.raw);
+    assert.equal(await page.evaluate(({ key }) => localStorage.getItem(`${key}-before-upgrade-v14-to-v19`), v54Raw), v54Raw.raw);
     await cancelKnock(page);
 
     // The direct fresh CTA ignores a basic/weak preset and completed daily20:
