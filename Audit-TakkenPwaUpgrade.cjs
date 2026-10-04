@@ -10,11 +10,12 @@ const path = require("node:path");
 const { chromium } = require("playwright");
 
 const ROOT = process.cwd();
-const CURRENT_VERSION = "20261002-whole-review-f02edd9e3025";
+const CURRENT_VERSION = "20261004-pwa-reconnect-580af685a0a1";
 const OLD_VERSION = "20260822-controlled-old-runtime";
 const SAVE_KEY = "takken-battle-study-clean-v2-hard";
 const SENTINEL_KEY = "takken-pwa-upgrade-sentinel";
 const chromePath = process.env.TAKKEN_CHROME_PATH || undefined;
+const autoReconnect = process.argv.includes("--auto-reconnect");
 
 function startVersionedServer(root) {
   let release = "old";
@@ -70,9 +71,10 @@ async function cacheNames(page) {
   const browser = await chromium.launch(chromePath
     ? { headless: true, executablePath: chromePath }
     : { headless: true, channel: "chrome" });
-  const context = await browser.newContext();
+  const context = await browser.newContext(autoReconnect ? { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } : {});
   const page = await context.newPage();
   try {
+    if (autoReconnect) await page.clock.install();
     await page.goto(server.baseUrl, { waitUntil: "networkidle", timeout: 20000 });
     await waitForController(page);
     // Reload once so the original runtime is definitely controlled by its old SW.
@@ -145,7 +147,11 @@ async function cacheNames(page) {
     assert.ok(oldCaches.some((name) => name === `takken-battle-${OLD_VERSION}`), "old controlled cache was not installed");
 
     server.release("new");
-    await page.evaluate(async () => {
+    if (autoReconnect) {
+      await page.clock.fastForward(61_000);
+      await context.setOffline(true);
+      await context.setOffline(false);
+    } else await page.evaluate(async () => {
       const registration = await navigator.serviceWorker.getRegistration();
       if (!registration) throw new Error("old runtime registration missing");
       await registration.update();
@@ -153,6 +159,19 @@ async function cacheNames(page) {
     await page.waitForFunction(() => navigator.serviceWorker.getRegistration()
       .then((registration) => Boolean(registration?.waiting)), null, { timeout: 15000 });
     await page.waitForSelector("#pwaUpdateNotice button", { state: "visible", timeout: 15000 });
+    if (autoReconnect) {
+      assert.equal(await page.locator("#pwaUpdateNotice").count(), 1);
+      assert.ok((await cacheNames(page)).includes(`takken-battle-${OLD_VERSION}`), "reconnect must await the learner's explicit update");
+      fs.mkdirSync("output/playwright", { recursive: true });
+      await page.screenshot({ path: "output/playwright/pwa-reconnect-390.png", fullPage: false });
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+      assert.equal(overflow, 0, "mobile update notice must not overflow");
+      await page.setViewportSize({ width: 320, height: 720 });
+      const mobile = await page.locator("#pwaUpdateNotice button").boundingBox();
+      assert.ok(mobile?.width >= 44 && mobile.height >= 44, "320px update action must keep a 44px touch target");
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth - innerWidth), 0, "320px update must not overflow");
+      await page.screenshot({ path: "output/playwright/pwa-reconnect-320.png", fullPage: false });
+    }
 
     await Promise.all([
       page.waitForNavigation({ waitUntil: "domcontentloaded", timeout: 20000 }),
@@ -180,7 +199,7 @@ async function cacheNames(page) {
     const newCaches = await cacheNames(page);
     assert.ok(newCaches.includes(`takken-battle-${CURRENT_VERSION}`), "new controlled cache was not activated");
     assert.ok(!newCaches.includes(`takken-battle-${OLD_VERSION}`), "old cache survived activation cleanup");
-    console.log("Audit-TakkenPwaUpgrade: OK (old runtime update button -> controllerchange -> new cache; sentinel bytes and canonical attempt/history values retained)");
+    console.log(`Audit-TakkenPwaUpgrade: OK (${autoReconnect ? "mobile automatic reconnect discovery; " : ""}old runtime update button -> controllerchange -> new cache; sentinel bytes and canonical attempt/history values retained)`);
   } finally {
     await browser.close();
     await server.close();

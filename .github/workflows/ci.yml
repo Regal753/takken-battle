@@ -57,6 +57,7 @@ jobs:
       - run: node Audit-TakkenReiwaExamBank.js
       - run: node Audit-TakkenReiwaQuestionView.js
       - run: node Audit-TakkenBrowserCi.js
+      - run: node Audit-TakkenPwaLifecycle.js
       - run: node scripts/validate-public.mjs
 
   browser:
@@ -96,6 +97,12 @@ jobs:
           done
           curl --fail --silent --show-error "$TAKKEN_BASE_URL" >/dev/null
           node scripts/run-browser-audits.cjs --shard "$TAKKEN_AUDIT_SHARD"
+
+      - name: Verify mobile PWA reconnect update and save retention
+        if: matrix.shard == 'b'
+        env:
+          TAKKEN_CHROME_PATH: /usr/bin/google-chrome
+        run: node Audit-TakkenPwaUpgrade.cjs --auto-reconnect
 
   validate:
     if: ${{ always() }}

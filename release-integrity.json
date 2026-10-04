@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "20261002-whole-review-f02edd9e3025",
-  "digest": "sha256:f02edd9e3025a193e2e7d87bf403843e41d9e9a4c8e16a2b8bb69cc64126c43f",
+  "version": "20261004-pwa-reconnect-580af685a0a1",
+  "digest": "sha256:580af685a0a129ff11818c7211fe7494f94fbcbc2176d27f7fbd16d49af50082",
   "assetCount": 66,
   "assets": [
     {
@@ -190,7 +190,7 @@
     },
     {
       "path": "pwa-runtime.js",
-      "sha256": "7d73f993122d9229a691500275b2314c4b312960869d347389fe0969d66d3df5"
+      "sha256": "48bd142926497ae93fdea6ecabd7fca49595694c4cd39425ceacacb688dfd397"
     },
     {
       "path": "question-balance.js",

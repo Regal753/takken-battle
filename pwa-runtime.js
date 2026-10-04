@@ -1,9 +1,13 @@
 "use strict";
 
 (() => {
-  const VERSION = "20261002-whole-review-f02edd9e3025";
+  const VERSION = "20261004-pwa-reconnect-580af685a0a1";
   const BANNER_ID = "pwaUpdateNotice";
+  const UPDATE_CHECK_INTERVAL_MS = 60_000;
   let reloadRequested = false;
+  let registration = null;
+  let checkInFlight = null;
+  let lastCheckAt = -Infinity;
 
   const showUpdateNotice = (registration) => {
     if (!registration?.waiting || document.getElementById(BANNER_ID)) return;
@@ -55,22 +59,37 @@
     navigator.serviceWorker.addEventListener("controllerchange", () => {
       if (reloadRequested) window.location.reload();
     });
-    navigator.serviceWorker
-      .register(`./service-worker.js?v=${VERSION}`, { scope: "./", updateViaCache: "none" })
-      .then((registration) => {
-        showUpdateNotice(registration);
-        registration.addEventListener("updatefound", () => {
-          const installing = registration.installing;
-          if (!installing) return;
-          installing.addEventListener("statechange", () => {
-            if (installing.state === "installed" && navigator.serviceWorker.controller) {
-              showUpdateNotice(registration);
-            }
+    const checkForUpdate = () => {
+      if (reloadRequested || navigator.onLine === false || document.visibilityState === "hidden") return;
+      if (checkInFlight || Date.now() - lastCheckAt < UPDATE_CHECK_INTERVAL_MS) return;
+      lastCheckAt = Date.now();
+      checkInFlight = (async () => {
+        if (!registration) {
+          registration = await navigator.serviceWorker.register(`./service-worker.js?v=${VERSION}`, {
+            scope: "./", updateViaCache: "none"
           });
-        });
-      })
-      .catch(() => {
-        // The learning app remains fully usable online when a browser blocks SW.
-      });
+          registration.addEventListener("updatefound", () => {
+            const installing = registration.installing;
+            if (!installing) return;
+            installing.addEventListener("statechange", () => {
+              if (installing.state === "installed" && navigator.serviceWorker.controller) {
+                showUpdateNotice(registration);
+              }
+            });
+          });
+        } else {
+          await registration.update();
+        }
+        showUpdateNotice(registration);
+      })().catch(() => {
+        // Offline/blocked registration must be retryable on the next reconnect.
+        // Checking never activates a worker or reloads an unfinished answer.
+        lastCheckAt = -Infinity;
+      }).finally(() => { checkInFlight = null; });
+    };
+    window.addEventListener("online", checkForUpdate);
+    window.addEventListener("pageshow", checkForUpdate);
+    document.addEventListener("visibilitychange", checkForUpdate);
+    checkForUpdate();
   });
 })();
