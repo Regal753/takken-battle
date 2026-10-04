@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20261002-whole-review-f02edd9e3025",
-  "digest": "sha256:f02edd9e3025a193e2e7d87bf403843e41d9e9a4c8e16a2b8bb69cc64126c43f",
+  "version": "20261004-learning-effectiveness-5ab5a35177cf",
+  "digest": "sha256:5ab5a35177cf06741e975f8590df6eb8124ff9bc7069a8f783c35da7d20441c1",
   "assetCount": 66,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "ab6928ba9d67e1e347c3542edfec0c0ffd7779f6cea8421d428a84a1656b34d2"
+      "sha256": "bc93f10aaac2d1494d6507e984d865e56c2c9101525982fe23ec133bdcbf5d84"
     },
     {
       "path": "assets/battle/grassland-route.webp",
@@ -138,7 +138,7 @@
     },
     {
       "path": "exam-question-core.js",
-      "sha256": "c6ea092f1cbbe556be635e4086b050ce95150c612a36324710a315e78fb4e9f4"
+      "sha256": "da6ae9e73d02995b9058f4b63cefee8407f3ec6765c79ca8b99cb09ad65d05e6"
     },
     {
       "path": "exam-questions-business.js",
@@ -150,7 +150,7 @@
     },
     {
       "path": "exam-questions-rights.js",
-      "sha256": "3c8c8f4c70f7ee632d805e85564e82afaa15cd5ac43a14e892f7d7151e80dca2"
+      "sha256": "2e12525af30761a14e8f987d0597d5c06ba334497bdebe616d4d8242c078d544"
     },
     {
       "path": "exam-questions-tax-other.js",
@@ -162,7 +162,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "3120c199210626158cadbf7b3066d7590af41745faa10bcf4ee4146d00de5147"
+      "sha256": "64d1cf0cab627d86d124879bdcf6bbc69af52421b1f7cd4205523f03c2938fec"
     },
     {
       "path": "manifest.webmanifest",
@@ -182,7 +182,7 @@
     },
     {
       "path": "pass-readiness.js",
-      "sha256": "4dff8695ff1573c00abec15272e927f06943ecdde40bb96bbab87ba145ba2939"
+      "sha256": "a2d1619911a7853bce891f1d75997d43e4285cf5e734e1e13a6bf906100650e1"
     },
     {
       "path": "practical-question-bank.js",
@@ -254,11 +254,11 @@
     },
     {
       "path": "styles.css",
-      "sha256": "75498e053dcd93547764f6b2c2aee51249ea738305692b3ec920bb22b404ac75"
+      "sha256": "d985e654012e6c12c79103b10315c3f687192e9c5bc2019e74bc519ad21ca6b4"
     },
     {
       "path": "subject-sprint-bank.js",
-      "sha256": "99df6cb88b97e85be5f2a7d324403bc1efe0c9ac0531b6cc685eefbf987c6403"
+      "sha256": "2ec13d5cd06a1e8087b58a60ad038a4bc271be783d6153680a65601acca34d54"
     },
     {
       "path": "tax-authored-bank.js",

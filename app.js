@@ -5208,13 +5208,15 @@
     const minimum = equivalentScores.length
       ? Math.min(...equivalentScores)
       : 0;
-    const stability = latestThree.length < 3 || !transferableSet
-      ? "測定中"
-      : mean >= 40 && minimum >= 37
-        ? "安定40"
-        : mean >= 37 && minimum >= 35
-          ? "合格域"
-          : "測定中";
+    const transferAssessment = PASS_READINESS.assessOfficialTransfer({
+      initialCount: initial.length,
+      latestThreeInitial: latestThree.map((item, index) => ({
+        examId: item.examId,
+        dayKey: String(item.startedDayKey || localDateKey(item.completedAt) || ""),
+        score50: equivalentScores[index]
+      }))
+    }, todayKey());
+    const stability = transferAssessment.label;
     return {
       history,
       qualifying,
@@ -9880,7 +9882,8 @@
       practicalStatementReviewStep(question),
       ...(groundingFrameStep ? [groundingFrameStep] : []),
       practicalReasoningStep(groundingFrameStep ? 4 : 3, "間違いやすい境界", question.trap),
-      practicalReasoningStep(groundingFrameStep ? 5 : 4, "次に再現する一文", question.memoryRule)
+      practicalReasoningStep(groundingFrameStep ? 5 : 4, "次に再現する一文", question.memoryRule),
+      ...reasoningTransferElements(question)
     );
     renderChatgptHelp(elements.practicalDrillFeedback, question, attempt, {
       anchor: elements.practicalDrillVerdict,
@@ -12188,7 +12191,44 @@
     else host.append(panel);
   }
 
+  // Oral retrieval before revealing a model explanation. This is deliberately
+  // unscored: opening an explanation is not evidence of independent mastery.
+  function reasoningTransferElements(question) {
+    const checks = question.reasoningChecks || window.TAKKEN_EXAM_QUESTIONS?.[question.sourceQuestionId || question.id]?.reasoningChecks;
+    if (!Array.isArray(checks) || !checks.length) return [];
+    const section = document.createElement("section");
+    section.className = "reasoning-transfer";
+    const heading = document.createElement("h4");
+    heading.textContent = "条件を変えて、理由を説明する";
+    const note = document.createElement("p");
+    note.textContent = "答えを見る前に、誰・条件・結論を声に出して説明。翌日の復習でも確認しよう。この確認は採点・定着数に加えません。";
+    section.append(heading, note);
+    for (const check of checks) {
+      const article = document.createElement("article");
+      const title = document.createElement("strong");
+      title.textContent = check.axis;
+      const prompt = document.createElement("p");
+      prompt.textContent = check.prompt;
+      const details = document.createElement("details");
+      const summary = document.createElement("summary");
+      summary.textContent = "説明の例と根拠を確認";
+      const answer = document.createElement("p");
+      answer.textContent = check.answer;
+      const source = document.createElement("a");
+      source.className = "official-source-link";
+      source.href = check.sourceUrl;
+      source.target = "_blank";
+      source.rel = "noopener noreferrer";
+      source.textContent = check.sourceLocator + "（法令基準日 " + check.legalBaseline + "）";
+      details.append(summary, answer, source);
+      article.append(title, prompt, details);
+      section.append(article);
+    }
+    return [section];
+  }
+
   function renderFeedback(question) {
+    elements.feedbackBox.querySelectorAll(".reasoning-transfer").forEach(node => node.remove());
     const answered = state.answered;
     elements.feedbackBox.querySelector(".chatgpt-help")?.remove();
     removeAdaptiveFeedback();
@@ -12233,6 +12273,7 @@
     renderPriorMistakeRecall(question);
     renderMistakeCapture(question);
     renderMemoryRule(question);
+    elements.explainText.after(...reasoningTransferElements(question));
     renderAdaptiveFeedback(question);
     renderChatgptHelp(elements.feedbackBox, question, answered, { anchor: elements.feedbackTitle });
     elements.nextButton.textContent = nextActionLabel();

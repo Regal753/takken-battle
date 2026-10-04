@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20261002-whole-review-f02edd9e3025";
+  const VERSION = "20261004-learning-effectiveness-5ab5a35177cf";
   const BANNER_ID = "pwaUpdateNotice";
   let reloadRequested = false;
 
