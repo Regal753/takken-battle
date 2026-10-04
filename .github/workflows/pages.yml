@@ -92,7 +92,7 @@ jobs:
         run: npm install --no-save --no-package-lock playwright@1.62.1
       - name: Deploy
         id: deployment
-        uses: actions/deploy-pages@cd2ce8fcbc39b97be8ca5fce6e763baed58fa128 # v5
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5
       - name: Verify deployed page
         run: node scripts/verify-deployed-page.mjs "${{ steps.deployment.outputs.page_url }}" "20261004-vocabulary-expanded-31de6d5303ce"
       - name: Verify deployed browser boot
