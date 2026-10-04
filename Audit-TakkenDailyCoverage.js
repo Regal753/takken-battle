@@ -1,0 +1,63 @@
+"use strict";
+const assert = require("node:assert/strict");
+const coverage = require("./exam-daily-coverage.js");
+const bank = require("./rights-transfer-bank.js");
+const sync = require("./state-sync.js");
+const transfer = require("./save-transfer.js");
+global.window = {};
+for (const file of ["exam-blueprint.js", "exam-question-core.js", "exam-questions-rights.js", "exam-questions-restrictions.js", "exam-questions-tax-other.js", "exam-questions-business.js", "restrictions-supplement-bank.js", "restrictions-cases-city-land.js", "restrictions-cases-building-readjustment.js", "restrictions-cases-agriculture-fill.js", "restrictions-authored-bank.js", "tax-authored-bank.js", "subject-sprint-bank.js"]) require("./" + file);
+const questions = Object.values(window.TAKKEN_EXAM_QUESTIONS);
+assert.equal(questions.length, 124);
+assert.equal(window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS.length, 198);
+const categories = profile => [...new Set(questions.filter(q => coverage.eligible(q, profile)).map(coverage.category))].sort();
+assert.deepEqual(categories("general"), ["business", "exempt", "price", "restrictions", "rights", "tax"]);
+assert.deepEqual(categories("fiveExempt"), ["business", "price", "restrictions", "rights", "tax"]);
+for (const id of coverage.PRICE_IDS) assert.equal(coverage.eligible(window.TAKKEN_EXAM_QUESTIONS[id], "fiveExempt"), true);
+for (const id of coverage.EXEMPT_IDS) assert.equal(coverage.eligible(window.TAKKEN_EXAM_QUESTIONS[id], "fiveExempt"), false);
+assert.equal(coverage.nextLane("fiveExempt", { tax: 30, exempt: 8 }).category, "price", "tax/exempt cannot substitute for price");
+assert.equal(coverage.completedCount("fiveExempt", { tax: 30, exempt: 8 }), 4);
+assert.equal(coverage.completedCount("general", { tax: 30, exempt: 8 }), 10);
+assert.equal(coverage.nextLane("general", { tax: 4, price: 2 }).category, "exempt");
+assert.equal(coverage.nextLane("fiveExempt", { tax: 4, price: 2 }), null);
+assert.equal(bank.QUESTIONS.length, 6);
+for (const q of bank.QUESTIONS) {
+  assert.equal(q.choices.length, 4);
+  assert.equal(new Set(q.choices).size, 4);
+  assert.equal(q.reasons.length, 4);
+  assert.ok(q.premise.length > 70 && q.contrast.length > 20);
+  assert.equal(q.legalBaseline, "2026-04-01");
+  assert.equal(q.verifiedAt, "2026-10-04");
+  assert.match(q.sourceUrl, /laws\.e-gov\.go\.jp\/law\/129AC0000000089\/20260401_/);
+  assert.ok(q.articles.length && q.sourceIds.every(id => ["r008", "r009"].includes(id)));
+}
+// Independently reviewed answers, from Civil Code 446/453/454/465-2/465-4/467/468/469.
+assert.deepEqual(bank.QUESTIONS.map(q => q.answer), [1, 2, 0, 3, 0, 1]);
+const t = "2026-10-04T09:00:00Z", later = "2026-10-05T09:00:00Z";
+let first = bank.start(null, "first", t);
+const initial = JSON.stringify(first);
+first = bank.answer(first, bank.current(first).id, 0, t);
+assert.notEqual(JSON.stringify(first), initial);
+assert.equal(bank.start(first, "retry-premature", later).session.id, "first", "resume instead of resetting first attempt");
+assert.equal(first.firstResult, null);
+assert.throws(() => bank.answer(first, bank.QUESTION_IDS[0], 1, t), /invalid/, "cannot change an already recorded answer");
+assert.throws(() => bank.answer(first, bank.current(first).id, 4, t), /invalid/);
+while (bank.current(first)) { const q = bank.current(first); first = bank.answer(first, q.id, q.answer, t); }
+assert.equal(first.firstResult.score, 5);
+let retry = bank.start(first, "retry", later);
+while (bank.current(retry)) { const q = bank.current(retry); retry = bank.answer(retry, q.id, q.answer, later); }
+assert.equal(retry.firstResult.score, 5);
+assert.equal(retry.lastResult.score, 6);
+const saved = { stateSchemaVersion: 17, questionStats: { r008: { attempts: 2, correct: 1 } }, rightsTransferQuiz: retry };
+assert.deepEqual(transfer.validatePackage(transfer.decodePackage(transfer.encodePackage(transfer.createSavePackage(saved))), questions.map(q => q.id)).state, saved);
+const normalSave = sync.mergeStates(saved, { ...saved, attempts: 5 }, saved);
+assert.deepEqual(normalSave.rightsTransferQuiz, retry);
+const base = { rightsTransferQuiz: bank.start(null, "same", t) };
+const local = { rightsTransferQuiz: bank.answer(base.rightsTransferQuiz, bank.QUESTION_IDS[0], 0, t), syncMeta: { updatedAt: t } };
+const remote = { rightsTransferQuiz: bank.answer(base.rightsTransferQuiz, bank.QUESTION_IDS[0], 1, later), syncMeta: { updatedAt: later } };
+assert.equal(sync.mergeStatesDetailed(base, local, remote).requiresResolution, true, "divergent first answers need the existing save-conflict UI");
+const different = sync.mergeStatesDetailed(saved, { ...saved, rightsTransferQuiz: bank.start(retry, "retry2", later) }, saved).state;
+assert.equal(different.rightsTransferQuiz.session.id, "retry2");
+assert.deepEqual(different.rightsTransferQuiz.firstResult, first.firstResult);
+assert.deepEqual(different.questionStats, normalSave.questionStats);
+assert.deepEqual(bank.normalize({ version: 2, future: true }), { version: 2, future: true });
+console.log(JSON.stringify({ status: "passed", core: 124, sprint: 198, objective: 6, profiles: ["general", "fiveExempt"], firstAttemptImmutable: true, saveRoundTrip: true, concurrentAnswersProtected: true }));

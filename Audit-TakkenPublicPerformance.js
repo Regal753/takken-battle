@@ -13,8 +13,10 @@ releaseIntegrityTools.assertVersionMatchesDigest(releaseIntegrity.version, relea
 // v59 adds only 24 authored tax cases and their builder: 81,533 raw / 22,674
 // level-9 gzip bytes. Add that measured content cost (rounded up to 1 KB) to
 // the v58 limits; retain its existing headroom and every old saved-answer bank.
-const MAX_PUBLIC_JS_BYTES = 2_562_000;
-const MAX_PUBLIC_JS_GZIP_BYTES = 658_000;
+// Coverage checkpoint: +46493 raw / +9280 gzip bytes vs e341fb3.
+// Add only that measured cost, rounded up to 1 KB, retaining prior headroom.
+const MAX_PUBLIC_JS_BYTES = 2609000;
+const MAX_PUBLIC_JS_GZIP_BYTES = 668000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
   "pwa-runtime.js",

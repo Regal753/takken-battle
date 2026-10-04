@@ -1,6 +1,6 @@
 "use strict";
 
-const VERSION = "20261004-learning-effectiveness-5ab5a35177cf";
+const VERSION = "20261004-learning-coverage-d7b94541d082";
 const CACHE_NAME = `takken-battle-${VERSION}`;
 const IMMUTABLE = [
   "styles.css", "reiwa-exam.css", "exam-blueprint.js", "exam-question-core.js", "exam-questions-rights.js",
@@ -13,7 +13,7 @@ const IMMUTABLE = [
   "practical-question-bank.js", "question-bank.js", "question-balance.js", "reward-system.js",
   "official-exam-data.js", "official-law-baseline.js", "official-topic-map.js", "calculation-drill.js",
   "save-store.js", "save-transfer.js", "state-sync.js", "business-mastery.js", "business-knock.js",
-  "business-pace.js", "pass-readiness.js", "exam-current-year-2026.js", "pwa-runtime.js", "app.js",
+  "business-pace.js", "exam-daily-coverage.js", "rights-transfer-bank.js", "pass-readiness.js", "exam-current-year-2026.js", "pwa-runtime.js", "app.js",
   "manifest.webmanifest", "release-integrity.json", "assets/pwa-icon-192.svg", "assets/pwa-icon-512.svg",
   "assets/battle/grassland-route.webp", "assets/characters/contract-mimic.webp",
   "assets/characters/deadline-warden.webp", "assets/characters/law-citadel-boss.webp",

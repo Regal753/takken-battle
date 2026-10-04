@@ -41,18 +41,18 @@ async function main() {
       await page.waitForFunction(() => window.TAKKEN_SUBJECT_SPRINT_BANK && document.querySelector("#todayCommandStartButton")?.dataset.commandAction);
       return { page, context };
     }
-    async function seed(page, { tax = 0, other = 0, minutes = 0 } = {}) {
-      await page.evaluate(({ tax, other, minutes }) => {
+    async function seed(page, { tax = 0, other = 0, price = 0, minutes = 0 } = {}) {
+      await page.evaluate(({ tax, other, price, minutes }) => {
         const review = new URL(location.href).searchParams.get("review");
         const key = `takken-battle-study-clean-v2-hard-review-${review}`;
         const saved = JSON.parse(localStorage.getItem(key));
         const bank = window.TAKKEN_BUSINESS_HARD_BANK.QUESTIONS;
         const sprint = window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS;
-        const questions = [...bank.slice(0, 20), ...sprint.filter(q => q.sectionId === "taxOther").slice(0, tax), ...sprint.filter(q => q.sectionId === "other").slice(0, other)];
+        const questions = [...bank.slice(0, 20), ...sprint.filter(q => q.sectionId === "taxOther").slice(0, tax), ...sprint.filter(q => window.TAKKEN_EXAM_DAILY_COVERAGE.category(q) === "exempt").slice(0, other), ...sprint.filter(q => window.TAKKEN_EXAM_DAILY_COVERAGE.category(q) === "price").slice(0, price)];
         for (const q of questions) saved.practicalDrill.history[q.id] = { attempts: 1, correct: 1, wrong: 0, lastCorrect: true, lastConfidence: "confident", lastAnsweredAt: "2026-09-10T09:00:00+09:00" };
         saved.missionLog["2026-09-10"] = { ...(saved.missionLog["2026-09-10"] || {}), minutes };
         localStorage.setItem(key, JSON.stringify(saved));
-      }, { tax, other, minutes });
+      }, { tax, other, price, minutes });
       await page.reload({ waitUntil: "networkidle" });
     }
     async function stored(page) {
@@ -86,13 +86,13 @@ async function main() {
     const sprint = (await stored(gap.page)).practicalDrill;
     assert.equal(sprint.bankId, "subject-sprint");
     assert.equal(sprint.scope, "taxOther");
-    assert.equal(sprint.sessionSize, 6, "daily catch-up remains six; the separate normal/new tax launchers offer ten");
+    assert.equal(sprint.sessionSize, 4, "daily tax lane is four, independently followed by price two");
     await seed(gap.page, { tax: 6, other: 12, minutes: 75 });
     assert.equal(await gap.page.locator("#todayCommandStartButton").isVisible(), true, "unfinished retry/session must remain resumable even after counts are reached");
     assert.equal(await gap.page.locator("#todayCommandPanel").evaluate(n => n.classList.contains("is-complete")), false);
 
     const time = await open("2026-09-10", "time");
-    await seed(time.page, { tax: 6, other: 6 });
+    await seed(time.page, { tax: 4, other: 6, price: 2 });
     const counted = await time.page.locator("#missionOfficialStatus").textContent();
     assert.match(counted, /12 \/ 12/, `tax + other must count both lanes: ${counted}`);
     assert.match(await time.page.locator("#todayCommandTitle").textContent(), /問題は完了/);

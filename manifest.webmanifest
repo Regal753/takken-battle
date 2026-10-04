@@ -8,7 +8,7 @@
   "background_color": "#0b1020",
   "theme_color": "#0b1020",
   "icons": [
-    { "src": "./assets/pwa-icon-192.svg?v=20261004-learning-effectiveness-5ab5a35177cf", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "./assets/pwa-icon-512.svg?v=20261004-learning-effectiveness-5ab5a35177cf", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any" }
+    { "src": "./assets/pwa-icon-192.svg?v=20261004-learning-coverage-d7b94541d082", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./assets/pwa-icon-512.svg?v=20261004-learning-coverage-d7b94541d082", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any" }
   ]
 }

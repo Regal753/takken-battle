@@ -9404,3 +9404,14 @@ body.has-answer-dock .pwa-update-notice { bottom: calc(158px + env(safe-area-ins
 .reasoning-transfer article + article { margin-top: 1.25rem; }
 .reasoning-transfer summary { min-height: 44px; padding-block: .5rem; cursor: pointer; }
 .reasoning-transfer summary:focus-visible { outline: 3px solid currentColor; outline-offset: 2px; }
+
+.rights-transfer-dialog { width: min(920px, calc(100vw - 24px)); max-height: calc(100dvh - 32px); padding: 20px; color: var(--text, #e8f0f5); background: #091a25; border: 1px solid #719bad; border-radius: 16px; font-size: 16px; line-height: 1.8; overflow-y: auto; overflow-wrap: anywhere; }
+.rights-transfer-dialog::backdrop { background: #000b; }
+.rights-transfer-dialog header { display: flex; gap: 12px; align-items: center; justify-content: space-between; }
+.rights-transfer-dialog h2 { margin: 0; font-size: 20px; }
+.rights-transfer-dialog button { min-height: 44px; white-space: normal; }
+.rights-transfer-dialog .transfer-choices { display: grid; gap: 12px; }
+.rights-transfer-dialog .transfer-choices button { padding: 12px; text-align: left; font-size: 16px; line-height: 1.7; color: #e8f0f5; background: #142f40; border: 1px solid #719bad; border-radius: 8px; }
+.rights-transfer-dialog .transfer-choices button:focus-visible, .rights-transfer-dialog summary:focus-visible { outline: 3px solid #83ddff; outline-offset: 3px; }
+.rights-transfer-dialog summary { min-height: 44px; cursor: pointer; }
+.rights-transfer-dialog article { padding-block: 16px; border-top: 1px solid #547080; }
