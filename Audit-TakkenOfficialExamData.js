@@ -59,8 +59,8 @@ assert.match(app, /const OFFICIAL_RETEST_TARGET = 3/);
 assert.match(app, /const OFFICIAL_RETEST_WAIT_DAYS = 14/);
 assert.match(app, /function officialRetestEligibility/);
 assert.match(app, /function officialReadinessStats/);
-assert.match(app, /mean >= 40 && minimum >= 37/);
-assert.match(app, /mean >= 37 && minimum >= 35/);
+assert.match(app, /PASS_READINESS\?\.assessOfficialTransfer\?\./);
+assert.doesNotMatch(app, /\? "安定40"|\? "合格域"/);
 assert.match(app, /sourceMode !== "timed-answer-sheet"/);
 assert.match(app, /CURRENT_LAW_BASELINE = "2026-04-01"/);
 
