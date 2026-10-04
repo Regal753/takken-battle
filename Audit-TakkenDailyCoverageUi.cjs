@@ -214,7 +214,7 @@ async function main() {
     if (completed.stateSchemaVersion === 17) await page.locator("#todayCommandStartButton").click();
     else assert.match(await page.locator("#saveTransferStatus").textContent(), /新しい保存形式v18/, "old main must protect the newer PR76 schema");
     assert.deepEqual((await saved(page)).rightsTransferQuiz, retry, "main schema17 normal save preserves additive field");
-    if (completed.stateSchemaVersion === 18) {
+    if (completed.stateSchemaVersion === 19) {
       await page.goto(`${base}?review=coverage-objective&today=1&legacy=76`, { waitUntil: "networkidle" });
       await page.locator("#todayCommandStartButton").click();
       assert.deepEqual((await saved(page)).rightsTransferQuiz, retry, "standalone PR76 normal save preserves the added checkpoint");

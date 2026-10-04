@@ -1,0 +1,417 @@
+{
+  "base": "ebc5a046d0764d90a4bea36303ac87005687b0f5",
+  "version": 1,
+  "questionCount": 64,
+  "topics": [
+    {
+      "id": "vocab-language",
+      "label": "法律の言い回し"
+    },
+    {
+      "id": "vocab-obligations",
+      "label": "契約と債務"
+    },
+    {
+      "id": "vocab-time-deposit",
+      "label": "時効と供託"
+    },
+    {
+      "id": "vocab-family-security",
+      "label": "相続と担保"
+    },
+    {
+      "id": "vocab-land-building",
+      "label": "土地・建築・道路"
+    },
+    {
+      "id": "vocab-transaction-admin",
+      "label": "取引と行政手続"
+    }
+  ],
+  "questions": [
+    {
+      "id": "vocab-001",
+      "legacySha256": "5b768b8e02035eca8457cc5ce5f647838ab4c30cab396c1b1c162a234d8fd72a",
+      "meaningSha256": "58d65324c03c19df2b6d4a11d9c90dd69080039f458ecde560208ac6faf95e23",
+      "cardSha256": "78e3a5b99eb161ca8fbb0a3b6f1f5fe6b2e526f2ebe5ee139fa268324ccafbdd"
+    },
+    {
+      "id": "vocab-002",
+      "legacySha256": "bca10f0302954b9400f959bbcb28c9fa43d7af822f959d3fcd006589c48a8da9",
+      "meaningSha256": "c35626fd4d1752a139e5a3833712c261b69346b7189cb6dcd14eb8d94e21f62c",
+      "cardSha256": "9c051247ee86ba5187179ce1696ba1e0e0ba3f80575bc17bcb38b6363e693171"
+    },
+    {
+      "id": "vocab-003",
+      "legacySha256": "22e04029ec068c6f0ebcce858112708707308f16267d425149811b7a9f86f5b0",
+      "meaningSha256": "265854eccd986477c2fd3870e498355dd85e09b73ca9f0ec1c6d8c09dd44fe33",
+      "cardSha256": "20072ececba4047728bf5ba6a03838a60b7ff090c64b31d41171c3d274b77cad"
+    },
+    {
+      "id": "vocab-004",
+      "legacySha256": "c87e2e5289de9eeb8838be3f4ed7b35af2ee0efe920e364639836ea343f8278d",
+      "meaningSha256": "060b00cf3684047a0c15d43c5b026b9ae8af1c19554b6bfd93a96067f0fcea03",
+      "cardSha256": "3b26eae4b5e791284faa4416441f1633b95368a012262a5bf975ed5b63a35b0e"
+    },
+    {
+      "id": "vocab-005",
+      "legacySha256": "7c09963d627761d24c89933b287c88f7f83aed36ff534c220ff6dfeb930eaf20",
+      "meaningSha256": "60d4e7f4837ca25f096b0cfd85eeda29ce459bb1726751b32d7a0cc6856e7eec",
+      "cardSha256": "b14a166f89710369799745356117f1e990bfef7d3bfc869f6a0ce72725b9d874"
+    },
+    {
+      "id": "vocab-006",
+      "legacySha256": "5941f727620c2094ae6d1a0f678f5d48a8bf269f60a9648f73e38616e6a67593",
+      "meaningSha256": "6c9ed4e639bdeb7da162e42e134870c77071b74974645ed2316de8fa888158ad",
+      "cardSha256": "0b3348bfaca792bc0dac1d0d2a7014873a0fc1db2a2f8cc9320e396f3e4d65af"
+    },
+    {
+      "id": "vocab-007",
+      "legacySha256": "cd0fd1ffea37404b9b582ecd15173c6086851ba3d4cf245fa3b4328a35ad3a38",
+      "meaningSha256": "b36fa0c7e9590c6e6436b4d6855614331652350e500732a7ee6a070daf3182ca",
+      "cardSha256": "f7c5b6a14fc250dba7ad4d17183671d2abf7fdcda24e79d23bc6b712c375f3a3"
+    },
+    {
+      "id": "vocab-008",
+      "legacySha256": "f84183705a32db14deb20b4079627857cef17129a08d5f1a4fa14f4792a734ad",
+      "meaningSha256": "fda710d0a3b1a5b3a73dc295efcb98a456b55590ea0fd939a9832037276e788f",
+      "cardSha256": "457f7ce479d08367ce1e9d0a75e8ddd69ca4076f99071949c311be3e08519307"
+    },
+    {
+      "id": "vocab-009",
+      "legacySha256": "34346a075647890ecff6b89160420726870fbba437f86c4c88b1833924f13718",
+      "meaningSha256": "ba3d61cdd044c22cefe1a12ed1c7ed68b4f52475ceaefa7a626a7d830e4853b5",
+      "cardSha256": "6553002bf81352bae9aa853005ca2de1bf3d5552b2393acb590b5ce1168252d3"
+    },
+    {
+      "id": "vocab-010",
+      "legacySha256": "cd96f026c22b702cf0bbc9860f21aee83f96788b3170a6e301b99729dd0a5733",
+      "meaningSha256": "661c517fd163a8f10cd3361b9fa4ad1dfd1c1571b16dc27b527b62a3858938c2",
+      "cardSha256": "fb7de2b8b5702cc08f15f8991febbe2d5c15c36c9eceb98abe49b5d403bc286b"
+    },
+    {
+      "id": "vocab-011",
+      "legacySha256": "ed8a074a3cb32483d93475f7de354abe11046a885581ba96fda93628d59ef908",
+      "meaningSha256": "419dd185b3e5a5b97a7df67154c51ae27fc53554aff3b2e02fa534080df14f20",
+      "cardSha256": "6957eb3c62c5d3ce9b9d34e08e266fbcd8a147750434fd93ce85be4ca5df6a72"
+    },
+    {
+      "id": "vocab-012",
+      "legacySha256": "a54815e011197357f1377f2cccd483b34c29082471892771153d449a52584293",
+      "meaningSha256": "5adb522559434fc3d45ac72029ee6829971330e9ce2438419849188569b16e5a",
+      "cardSha256": "425294d9425d6f387f6a6e37fba1fec8b6de2e79b85137d320b5d2a813b65d52"
+    },
+    {
+      "id": "vocab-013",
+      "legacySha256": "af249e0e67f96d7c66d94b642c8ac19d326ae12c0455ee93db8311fc038025d9",
+      "meaningSha256": "8b7786e4f7e52c6b2c76186fefda224ce539449993eb4ea12c56a95ba9bf7871",
+      "cardSha256": "1ec9e6c8897851b1046f1b9460261acdf42e913fdeab18cd8ae113031727b393"
+    },
+    {
+      "id": "vocab-014",
+      "legacySha256": "62a5d8715ec5099c7fa86823c3fec2a82bdfc90b1a474105bb6d7571fc7a6703",
+      "meaningSha256": "83f8dd8a7e9ff39ca2d748fadb3ee14d4ae315b3e470dd30ef0f2859e5f7a2e4",
+      "cardSha256": "04f9fc44479922667e3f6a157650d3c37aa0f3f1f514e761ad35d373492ebd84"
+    },
+    {
+      "id": "vocab-015",
+      "legacySha256": "fc3b2c56f81b53711cf26deadf50cd6cc6d20cb685a05f65c9591e93be92c538",
+      "meaningSha256": "a2045e1dfb95208b53114ae09e7e94d046ca0e95abf7b85bbb4b72a827af52de",
+      "cardSha256": "cc46e559312a771c488f1511d946ac9dc19e4c5c53f5ec5f4cd05fb8e715b8f9"
+    },
+    {
+      "id": "vocab-016",
+      "legacySha256": "8cae81d15d08df957bff30d31fdbdb5d7c1c9f1d86a58717b2470857fb74c0b7",
+      "meaningSha256": "c0f9628a2799d4c98ca9a04675872b5d94ebdd2f7eda14f94742bf7680495f77",
+      "cardSha256": "49a81164e429f61fda4b84bfb5e09207c9bdcc7b0f2e0acf685d277784684fc5"
+    },
+    {
+      "id": "vocab-017",
+      "legacySha256": "2dd2e13bb3d2a152ee5b672b0da336aa7f1660b23272c8cf4af6c23599d4a832",
+      "meaningSha256": "30a028bca902601532c351bd55018d5b8bdd3f9951f00a510eb6d3c1240c17d3",
+      "cardSha256": "43cb0f2d56899ce2f0524b90d852e4a137933e61b60d9815141dd037b33bddd3"
+    },
+    {
+      "id": "vocab-018",
+      "legacySha256": "cf14c26b89cda9a47ccfa9cea8fcfe1c69cff4631e5b2d27d56eb18285911c87",
+      "meaningSha256": "9f0adc46ff7136898978c06093866508972a7ffaea932a17681cf29baa3620c5",
+      "cardSha256": "19fa8cebf36df8d30a6d90e50fd6d98e7531b24f00559d9ae3fa7a52089f23c9"
+    },
+    {
+      "id": "vocab-019",
+      "legacySha256": "80b259976392480f9f4c07768c48d7e9872afc854c4ddafe1bda04a2efe03735",
+      "meaningSha256": "0409fc9dcb0ae0b9ad01d76dfbe1b9e9e1a1c62a9755820aecbb41c54208731a",
+      "cardSha256": "f3df5e90a9fbff7a5b636d80724c5615d8274103f39d6f6a7981072093b88bad"
+    },
+    {
+      "id": "vocab-020",
+      "legacySha256": "4a1a267a5960039eb2fe60271cb8638b9a2d7054b8790dee1dcb63c39d6c2974",
+      "meaningSha256": "13b04ffdad532a75dfd9ea6c1909ade161f5004a9460d95cd8bc9f709a081bae",
+      "cardSha256": "093d972afbc1b0616f2bf63b4e0c1bc575e18898841c81cf7d30f686088438eb"
+    },
+    {
+      "id": "vocab-021",
+      "legacySha256": "7d6a04355cefa9dc00a046cae45b925d112069617b5040a286fcf8f96cd873f2",
+      "meaningSha256": "656ceb9477fa573ce6d058ba355fbcc00ff8e181061964f6ec85a63903e2113a",
+      "cardSha256": "033b2a36329c69b4e91e9fa3d50115f461accf3ae10e5abff8363b123b7bc541"
+    },
+    {
+      "id": "vocab-022",
+      "legacySha256": "3def98785f6eae7cdf46a7567d22fa62cbbe9fb41d812f73abab7727c559bdfb",
+      "meaningSha256": "d7326db604657eca8231af616840d8a210493322b5ddfd92d83b3cbada7750c1",
+      "cardSha256": "bfd5db4f116a2b588ac59444ed8720716972d59a5e3f0a3bbc86fc72c298468f"
+    },
+    {
+      "id": "vocab-023",
+      "legacySha256": "b5e2a74fff9e258c5d6ae7b5cbe64ae69ae3917be54a5932442a7c3e0cd95beb",
+      "meaningSha256": "7c52e152e212df7fd2153b9db0a2d735a448a5a5f3e630bc36160eab70d73c1b",
+      "cardSha256": "74e6a7693875206be942fcf1acdcb75dc01fa8b959bb9065cdbaa7ca63b55305"
+    },
+    {
+      "id": "vocab-024",
+      "legacySha256": "ae5337e70bcace35183fd702ac23a273466dfc2a326e9fb3c25d126616c3ddd5",
+      "meaningSha256": "68153a695caa51f5d976fe4000b2238df91dfd10546b949757fdf59078cfe7a7",
+      "cardSha256": "3f8dcf833c24f979fd517506b91fc93260d935bf3259092d78260ca0f85acb0f"
+    },
+    {
+      "id": "vocab-025",
+      "legacySha256": "611fe8838554da9813a858390974a6b48539c38e977ae3129d869011e5ff3539",
+      "meaningSha256": "0e14a51046d2aa105603ffbfa24080befa166212005996ba834e74e9cbb0260a",
+      "cardSha256": "3cef71cbe836f0fbe29fe107dcf2368585eaec69692a0485abbfad53cecd314c"
+    },
+    {
+      "id": "vocab-026",
+      "legacySha256": "fb9b287a40aa9cf828c6e3bc2b398cd85110adcc56d757c9afcb6feb46ada20e",
+      "meaningSha256": "255cce25ac9ac6fa5d7c2e3f868800ff7b77d2a42e212b06632fcfb591e585e7",
+      "cardSha256": "43ef1c01b25b70cb5f8c14be729b8a6d87dddc9621d801ce55e50780ba87d29d"
+    },
+    {
+      "id": "vocab-027",
+      "legacySha256": "00a9805f46ebeafc169bb788b6685f12d0ee6cddaa4268a20e2185da92d6d8b2",
+      "meaningSha256": "82ccea61cfb7cb92b03a20fee79d95b098e2847f85fc804ab73f4d843dc6e784",
+      "cardSha256": "98a0f537527b65ca6f8c4913efe09dfd82dfe00764e615244fe5844e3be10459"
+    },
+    {
+      "id": "vocab-028",
+      "legacySha256": "7511ccd64fe72f761e1ac628ce695ab052a18ff0057983210f4adb5e22fbc64a",
+      "meaningSha256": "d2b150976d6d4b470000ea42052d46a7c0c6764d6f575bb49d1981e332d1ad07",
+      "cardSha256": "ee490b4a31d0a59c3987739bc71545063aa34786995dffa98a324a1338479dac"
+    },
+    {
+      "id": "vocab-029",
+      "legacySha256": "ac6b21b87ad3d11f50d840d139d3479687b9c88e6acf8b3f3f566342bdc2ae69",
+      "meaningSha256": "3d4400ca45a9b5628d2c5ee8e5b7a6656bca611a37b384e430423d9efdf8560a",
+      "cardSha256": "44a64c9844807f5ee2acb2873f1b3a1e32bf0a49979f4eac43c4daba97fc2485"
+    },
+    {
+      "id": "vocab-030",
+      "legacySha256": "417beddc3927f32c97fa715db5f7af51f4ca50997e63c0b56516a4065fc836c3",
+      "meaningSha256": "e274cc47f87fde2250acb18d33f22c4acb9f37bd3f3b6079ab507028bd882654",
+      "cardSha256": "194ccd0dcabf5b8451d62c19a76d75728c24c7ccb5767b920a52a418252abdbd"
+    },
+    {
+      "id": "vocab-031",
+      "legacySha256": "e1c144fc8a19500140dcb68e8482cd82366ca98bd3b32cfa1bd8a50bf360f67e",
+      "meaningSha256": "66554457d38c7290ca36c65301baf287a66d7a96883bfe40f39afadd65efb12b",
+      "cardSha256": "eb5a1be0bb62c5512e03e9bf716b789dbbe62b874652be7088ac79c4f3d54629"
+    },
+    {
+      "id": "vocab-032",
+      "legacySha256": "ff9d58db95490eda72e4767f12c083941c86499a5c83cedab529d3adf9eee66d",
+      "meaningSha256": "6d4f13b3a8964d70e8f32057fc7fd2a217137c72cd99e84528b11364fd32475b",
+      "cardSha256": "a43661670c5108a24ab5c4e1441d0e3d51aabce2349f47de398824b61d9eb114"
+    },
+    {
+      "id": "vocab-033",
+      "legacySha256": "c07ee49802729e179f548e5492cc3ac50d54d021cd2d30821037487c0ff11b2d",
+      "meaningSha256": "5541db3acce95073a30064ec034a720339cc0713ef73922349329b564988b102",
+      "cardSha256": "5fd77851baebf10c316df95bc250db3dcc428ebdee23ad4fe206444094998b48"
+    },
+    {
+      "id": "vocab-034",
+      "legacySha256": "e4c7f11787a363462c01e2d25f471d68093a8a535149ad11f6b894b3a767551d",
+      "meaningSha256": "9d6241010e408e85874b0ac4f6f5711302c5b025a9d340318e58ee1a1d57ca4c",
+      "cardSha256": "7a6678dce2952ef00c0bc8fe0d61f77c0511d41101bfd6178d2eeb7dc7e0c005"
+    },
+    {
+      "id": "vocab-035",
+      "legacySha256": "d263985bd41bfb35afd6fa47c236f0050fff3f927f401a53ec5720983aa1bc86",
+      "meaningSha256": "c5929bfa84dea30689d74df540ceafd92ea541cf24d95dc5ef2f0b41325e17be",
+      "cardSha256": "ff8a1011498c02f407456ad5a643223b306e2f87900155a26f9fcb70d3f3ff20"
+    },
+    {
+      "id": "vocab-036",
+      "legacySha256": "4202bcc772b02ab108f56f3bdd66f5b462c6afb4ad2f7130eef755f67bf341f4",
+      "meaningSha256": "e8d76536087a1d2bec1085c4898d1bdb009ea47b7a0f1b77b4248532fcc5b5dd",
+      "cardSha256": "1ff1c87330ab40fff60aa1ae0e7db3fcef9de7cdd823cd68d7b61152bd4484e7"
+    },
+    {
+      "id": "vocab-037",
+      "legacySha256": "3f4dcaa91110081db8c6d41f702b3db9854bb7f2f5a4e2f8bc59765f0e463049",
+      "meaningSha256": "1b5531ea6499d2bc2a1e3b1ce07efed9834cebde746d3da0c88ff4e7f0bc2af7",
+      "cardSha256": "18cfc0d40127a3f4716ee2d2a9132b0346a5a3978f9e635dca76dd411d4b8728"
+    },
+    {
+      "id": "vocab-038",
+      "legacySha256": "25da71b4e007dde0866589cf571a946beb9a2bf11049b4f64b8f82fea4e6e6ff",
+      "meaningSha256": "857bcf4a6d84ccf6a2b4b57b20a9387a370e3fdd6bff80b685c3e0549ff1eb74",
+      "cardSha256": "be677e003ee4f8743b01ae8c1398536b20aa1adfb660abfeab4276e31dcd340e"
+    },
+    {
+      "id": "vocab-039",
+      "legacySha256": "2dc6e5c972db2d42c68f1e4999aada894d4af93f6678a379ba512774958857d9",
+      "meaningSha256": "d159906802a9cae162c72f9376dde1d3b70ef634419df617e004c6400ab297c0",
+      "cardSha256": "25dd3256a96accc4465fa74f608af50d073f848c5b839aa43bfccbce7500febf"
+    },
+    {
+      "id": "vocab-040",
+      "legacySha256": "465a3ec33f255bf6ed25a9bd8955e83874f47652f49b71f33040da2fed7d25ec",
+      "meaningSha256": "fcef20e1ed0e26cd4b61736064b6666d6e7e54775c875683c96f5cbe0781fbf5",
+      "cardSha256": "5d20f9737343cc81f7da13461955de96b1ea1894d2ec60ac90ac4c464ae708a4"
+    },
+    {
+      "id": "vocab-041",
+      "legacySha256": "11b0c5d4c80b5937fb19e55b2db2c6f53c21117d1c2dc52b65c468e6ba827214",
+      "meaningSha256": "4f3213454092ceaf848a267330879ebf42d471200ff34a47be9e7f6544a119ed",
+      "cardSha256": "2424639e55f2856c06250522f162c94a24df5b0b99667297773d6ac38790b9ef"
+    },
+    {
+      "id": "vocab-042",
+      "legacySha256": "564523a075c78fee221059334be89640c30a824dce16f2a25619ee5b530c8abd",
+      "meaningSha256": "71ca02485b0b0f7029db04896292b801041c58d76946fa3743c1a86867f11cbf",
+      "cardSha256": "affaa5567f71e27244520b34853c9beb270a8b90302b5792e8069f7ee5a92d70"
+    },
+    {
+      "id": "vocab-043",
+      "legacySha256": "c9b7f1405e251e8c8c65f6393a50e73f3845525b7410918b3cd98baac9621236",
+      "meaningSha256": "189ebd4781f3eabd3f8cf79eba1cadcc5461349d9e76171f1754b23293d76200",
+      "cardSha256": "3d718409c49b5daa1f5b0b9c3909c6422d1a3bae3be054228042bcd8eb9d274c"
+    },
+    {
+      "id": "vocab-044",
+      "legacySha256": "1136e9ee2e72c9a4f6d84bdbe5906d8765a4cfc0c9897e0f35ef1f87f738ac9a",
+      "meaningSha256": "5e8eed5ccb2ddb5cbdf10c9fab809682ff29bdf5e83845082a01b7276d9c8468",
+      "cardSha256": "88c3e184a0846095bd0a0bb785b02e4ff7a080bb839a8b7de595de60d9dcdb31"
+    },
+    {
+      "id": "vocab-045",
+      "legacySha256": "86a3244aed84517e1809852c7f599275527dcc1b4e52185dda45c65654f489f6",
+      "meaningSha256": "dd5f700dac826bf1cf5849d70eea6b7391458ede86f8e866acd55ff7f6ed2cbc",
+      "cardSha256": "3cb7087679647366d4a24aee5310ed1a5f2e00e4d8f8e37c3cd702b182fc131b"
+    },
+    {
+      "id": "vocab-046",
+      "legacySha256": "db1fe8be3bced1c61a200afe0bc7072712ebced29c599a11f204cba02050a55a",
+      "meaningSha256": "b121e681cc18cdd43a8dadf45131f51b8f0159ff51ebd3f3295a432079c76ce4",
+      "cardSha256": "bbcf93f93d33fcf29dde9b7225913e5a1c8e1b63671a5cc4be538818de0e7cbf"
+    },
+    {
+      "id": "vocab-047",
+      "legacySha256": "9d288f519cac3d2b98f41b02f9b7f6beac38f0a0dc7ccb92824167ca8c0a5858",
+      "meaningSha256": "d114524139192edd14583920f62804c2807193be280bfff1dbcce2abcd259ca3",
+      "cardSha256": "2a18b95aeaf04dd58352b7c41838c8cf05a089ac15f988f78b96135d8397795b"
+    },
+    {
+      "id": "vocab-048",
+      "legacySha256": "54ab69056b7fb33b14cc60aa9c47f0c0b9ddaa6daeb88372638cea00f2f204ef",
+      "meaningSha256": "b440a94f2415b05a688859808a2822ddfd554758522397e886738e73279612c8",
+      "cardSha256": "d7eafb8f99e82adeb922cd037a74b9aea3755e6da4bf3404d2cfaf81f72ce275"
+    },
+    {
+      "id": "vocab-049",
+      "legacySha256": "da55f3f7938c8a28ae3e6304925dbf30c167ffc5ede9b610ba20ca965c28fe61",
+      "meaningSha256": "5fc0c0919df15a87770d913eadbeed587cc16f4025b3a0bbf1167bdb37f6eada",
+      "cardSha256": "b3f433dcf315fbb5bd9f3ae13788cf6cbd95f3c0b235950c64e08847d550c967"
+    },
+    {
+      "id": "vocab-050",
+      "legacySha256": "b7dc3e3ee54566214a3d2562c904ce2bb48d64ba57d84d885ba43e5bff63ec4a",
+      "meaningSha256": "e54b51890cbcdf87377246327f9f7d25a089212f2ff012baaf9966335a3cae4b",
+      "cardSha256": "6381c1b832b08573c0f7696f71ec93ce419d9cc0045837bd29e81bcf3e5bf795"
+    },
+    {
+      "id": "vocab-051",
+      "legacySha256": "a9696c31f3a2a89a0fa83cc6ff872c61badffd84eb18a64ee65ea080046c50f9",
+      "meaningSha256": "6e23ae00313fb6ca3e3224b9db383ef564c6e2be3adf20d1ffc6475fecb84359",
+      "cardSha256": "44d66469c351b087a4bd0c2479d3056940d4f5ad82a9ca402a8c203556a7a566"
+    },
+    {
+      "id": "vocab-052",
+      "legacySha256": "f1e5b1bc5bedd8c491fc4f9d1d63aafae760d316cd72b30609d4008c5bbb7961",
+      "meaningSha256": "54628f59527f501eb77510e4ecb5a60ccb7399bea660dd34f90f48485416e1f9",
+      "cardSha256": "fb719adbf77653ecb9009a28b59be7ed51c184596b8de4f553594d2e7dbcf623"
+    },
+    {
+      "id": "vocab-053",
+      "legacySha256": "049f59726b29763cbf6677b391e252d61496192bd29230886b849d2116ecfd66",
+      "meaningSha256": "bb8237fbbbcda4e6c57439df5f27584b7085298f79fb1c3ff4e1d48dd1ba9c05",
+      "cardSha256": "81944d33047968896eb8d79954d3ac2d00dfe8c67f466f710efba01cc3b5c674"
+    },
+    {
+      "id": "vocab-054",
+      "legacySha256": "9ba4a87ead4284398ed9c9fc2ec5f14f79d32ea96eb1815a9e1872c8e1e3c88d",
+      "meaningSha256": "c1603db53cbbab0006e901df21c700f05d4280082bf78010c2b41830ebef025e",
+      "cardSha256": "bfb5c868c9cf1adf3ba4cc047f7a5a373e5819b1ad3f219c0b519d9c5c090bf5"
+    },
+    {
+      "id": "vocab-055",
+      "legacySha256": "969f1275c4c28e1388b8152b47e3d6283f5746261a4824bf18fa62006c9846d2",
+      "meaningSha256": "22c6547fa66d0eb07a852d1e7198c9e46262d5ce086ffc6d9e94d6f1c1f2e7d7",
+      "cardSha256": "804f0cbd26069c684bf3142d502b00958d169d6c5753d63f94ff89a436c2af86"
+    },
+    {
+      "id": "vocab-056",
+      "legacySha256": "6cf76c2bcc60e99c36a26822228c0923b041adabfd9d7ed1533198b36ba9f38a",
+      "meaningSha256": "34ac20908d90399fa18b422a944428b003d4be4f17a9830074d9cff630ecc549",
+      "cardSha256": "2a4578681f81f3bfa9bdc233e8d1eeb378fa5f1a240e597b315e17f85bf89089"
+    },
+    {
+      "id": "vocab-057",
+      "legacySha256": "3f9969ba101447a695025389b3470bb5580656d31256156284582d14effd1f9b",
+      "meaningSha256": "ab47000b512623b30afd47f04b739e327ab94031434976b711198e84c2a29ad0",
+      "cardSha256": "fc6598b831e6e8a4af5db0c8956d134fa9b412b048140ec772abe4c36e372d60"
+    },
+    {
+      "id": "vocab-058",
+      "legacySha256": "6afe5d12bb2e1a04a420193cd5a3b63449c6555a984986e9ee5bf5d942ab657f",
+      "meaningSha256": "6c4d9203b570c288d11cf7184e311da6965d782ecf3713721212e3c9e01b4eb2",
+      "cardSha256": "2552b38c4fcd91c2d82e2ba872a9e1dab1790687b05773abf92255645c994012"
+    },
+    {
+      "id": "vocab-059",
+      "legacySha256": "f0b23342c0a2449d37edcf08839738adb87ab9377d021aec3858d34ba88728c7",
+      "meaningSha256": "ddf70b1bfafa58e34f40534d3f8259bfb5afa01c69e9c610a2b3d448a0e9b5e5",
+      "cardSha256": "3b2fc48e1bdf282a9c783ded5095d1475f9d09527db7b13d65f5a87113651b12"
+    },
+    {
+      "id": "vocab-060",
+      "legacySha256": "0fbd04f3997337ed4c12b2f375dd7364437f541d9f7b52c00700389d9be0c4f6",
+      "meaningSha256": "105984743397602f4c388d0dcef5cd458bc6de669c42da8e6637f42fbd174b83",
+      "cardSha256": "6ef784f69290b43c334de4bd69aeb16b7d364e0dc4aa712bc71a7324ad8d32e8"
+    },
+    {
+      "id": "vocab-061",
+      "legacySha256": "cb489cc86f3d0184f66047a3281dd0bef8422c8c9e43aaa8f41d1bdb64e30956",
+      "meaningSha256": "65cef9e01dd75a3abe7c23cfceda2b5ad84293b158eeaa53c58046ea8f6be294",
+      "cardSha256": "0b360a5c57ddb626e7d6c117d4990abec25f2331686d996108d9565ec37a3f40"
+    },
+    {
+      "id": "vocab-062",
+      "legacySha256": "46917b60ee6a7b00aa7db05f09626c44f3ed26dbe1da4dc213868dcb41fcbdc4",
+      "meaningSha256": "b8bcd0d1b1fbe25f1f6d6ef476b7500ac3afa8225c504f29c6851655a1a0dc06",
+      "cardSha256": "53d7ad02eb42e84a695d70af08fa1d9290e5fabc48e8dcb2e4fec96bbece6ab8"
+    },
+    {
+      "id": "vocab-063",
+      "legacySha256": "ec84b470874eea2ff422e4894b4e6c70c56452cc7767e168d227eb19ac7f8318",
+      "meaningSha256": "ca68b984767ef6f075e31df199757b34f653919f5908a8a33795773909320546",
+      "cardSha256": "6243be544c80611db2bcc97a46e049123e89c19edb76ae71733fcb34cf886e96"
+    },
+    {
+      "id": "vocab-064",
+      "legacySha256": "67eadd9252d8e0a651f5c65afd9863a45f62418ba2a732cd992b33a2da02d6ba",
+      "meaningSha256": "24b988171b22b5c20c0388f1493f5ab597b09c98ac302948ce57b71a1194a3bc",
+      "cardSha256": "5b333b5d010509dacd7bb77c93daacd4e1649386303ae985b81390854ebef0ac"
+    }
+  ]
+}

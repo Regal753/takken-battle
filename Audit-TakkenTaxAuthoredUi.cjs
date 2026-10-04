@@ -67,7 +67,7 @@ async function main(){
     await guide.locator("summary").click();
     await page.locator("#taxAuthoredTen").click();await page.locator("#practicalDrillSession").waitFor({state:"visible"});
     const start=await saved(page,key),ids=start.practicalDrill.queue;
-    assert.equal(start.stateSchemaVersion,18);assert.equal(ids.length,10);assert.equal(new Set(ids).size,10);
+    assert.equal(start.stateSchemaVersion,19);assert.equal(ids.length,10);assert.equal(new Set(ids).size,10);
     assert.ok(ids.every(id=>/^sprint-tax-tc59-\d{3}$/.test(id)),"new tax route must exclude old or other-subject IDs");
     const anchors=await page.evaluate(ids=>ids.map(id=>window.TAKKEN_SUBJECT_SPRINT_BANK.QUESTIONS_BY_ID[id].sourceAnchor),ids);
     const counts=anchors.reduce((o,a)=>(o[a]=(o[a]||0)+1,o),{});

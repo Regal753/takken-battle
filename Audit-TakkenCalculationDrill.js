@@ -154,7 +154,7 @@ requiredSourceKeys.forEach((key) => {
 
 const app = fs.readFileSync(path.join(root, "app.js"), "utf8");
 const html = fs.readFileSync(path.join(root, "index.html"), "utf8");
-if (!app.includes("const STATE_SCHEMA_VERSION = 18;")) issues.push("State schema version must protect authored tax/restriction IDs and existing study history from older clients.");
+if (!app.includes("const STATE_SCHEMA_VERSION = 19;")) issues.push("State schema version must protect appended vocabulary IDs and existing study history from older clients.");
 if (!app.includes("normalizeCalculationDrillState")) issues.push("Calculation save normalization is missing.");
 if (!app.includes("drill.retryIds = addCalculationId")) issues.push("Wrong/uncertain retry queue is missing.");
 if (!app.includes("function startCalculationDrill()")) issues.push("Calculation session restart must preserve history.");
@@ -162,7 +162,7 @@ if (!app.includes("function exitCalculationDrill()")) issues.push("Calculation c
 if (!html.includes("id=\"calculationDrillPanel\"")) issues.push("Calculation drill panel is missing.");
 if (!html.includes("id=\"todayCommandCalculationButton\"")) issues.push("Calculation drill quick entry is missing.");
 if (!html.includes("id=\"calculationDrillExitButton\"")) issues.push("Calculation drill completion exit button is missing.");
-if (!html.includes("calculation-drill.js?v=20261004-vocabulary-meanings-e92ed9f33d7d")) issues.push("Calculation data script is not loaded.");
+if (!html.includes("calculation-drill.js?v=20261004-vocabulary-expanded-f720848134d0")) issues.push("Calculation data script is not loaded.");
 
 const report = {
   status: issues.length ? "error" : "ok",

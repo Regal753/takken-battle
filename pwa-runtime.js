@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20261004-vocabulary-meanings-e92ed9f33d7d";
+  const VERSION = "20261004-vocabulary-expanded-f720848134d0";
   const BANNER_ID = "pwaUpdateNotice";
   const UPDATE_CHECK_INTERVAL_MS = 60_000;
   let reloadRequested = false;

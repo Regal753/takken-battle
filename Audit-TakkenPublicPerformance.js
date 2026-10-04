@@ -15,7 +15,9 @@ releaseIntegrityTools.assertVersionMatchesDigest(releaseIntegrity.version, relea
 // Add that measured delta rounded up to 1 KB; preserve the prior headroom.
 // Local integration measured +71757 raw / +12513 gzip vs PR76 head.
 const MAX_PUBLIC_JS_BYTES = 2749000;
-const MAX_PUBLIC_JS_GZIP_BYTES = 694000;
+// The 94 source-backed additions add 16,149 gzip bytes over PR78.
+// Keep a 710 KB ceiling for this measured 158-term delivery.
+const MAX_PUBLIC_JS_GZIP_BYTES = 710000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
   "pwa-runtime.js",
