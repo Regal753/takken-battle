@@ -1,8 +1,8 @@
 "use strict";
 
 (() => {
-  const VOCABULARY_EXPECTED_QUESTIONS = 64;
-  const VOCABULARY_EXPECTED_TOPICS = 6;
+  const VOCABULARY_EXPECTED_QUESTIONS = 158;
+  const VOCABULARY_EXPECTED_TOPICS = 10;
   // A partial bank load is not an empty learner session. Stop before loadState()
   // normalizes unknown IDs and the initial autosave can replace a saved queue.
   const sprintBankAtBoot = window.TAKKEN_SUBJECT_SPRINT_BANK;
@@ -539,7 +539,7 @@
   // The sprint presentation version stays 5 so old in-progress answers survive.
   // v17 also protects the tc59 tax cases from clients that only know v58.
   // v18 protects vocabulary IDs, forecasts and preferences from older tabs.
-  const STATE_SCHEMA_VERSION = 18;
+  const STATE_SCHEMA_VERSION = 19;
   // Only runtimes older than v11 could strip ga001..ga020 from practicalDrill.
   // Do not tie this recovery boundary to the current schema: later schema
   // upgrades must keep the live v11+ history authoritative over its snapshot.
@@ -2753,7 +2753,11 @@
           ? Number(SUBJECT_SPRINT_BANK?.VERSION) || Number(input?.bankVersion) || 1
           : bankId === VOCABULARY_BANK_ID ? VOCABULARY_BANK.VERSION : PRACTICAL_VARIATIONS?.VERSION || 1;
     const savedBankVersion = Number(input?.bankVersion || input?.version || 1);
-    const bankChanged = savedBankVersion !== currentBankVersion;
+    // Version 2 only appends vocabulary IDs. Existing questions, answer slots,
+    // presentation keys and attempts remain valid across this one transition.
+    const vocabularyAppendOnly = bankId === VOCABULARY_BANK_ID &&
+      savedBankVersion === VOCABULARY_BANK.APPEND_ONLY_FROM_VERSION && currentBankVersion === 2;
+    const bankChanged = savedBankVersion !== currentBankVersion && !vocabularyAppendOnly;
     const preserveUnknownIds = [
       ...(!BUSINESS_HARD_BANK_READY
         ? Object.keys(input?.history || {}).filter(isHardBusinessQuestionId)
@@ -11184,10 +11188,13 @@
     const drill = state.practicalDrill;
     elements.practicalDrillStage.textContent = drill.stage === "retry" ? "意味の取り違えを復習" : "語彙4択";
     elements.practicalDrillProgress.textContent = (drill.position + 1) + " / " + drill.queue.length + "問";
-    elements.practicalDrillUnit.textContent = "意味を一つ選ぶ";
+    const vocabularySource = VOCABULARY_BANK.MEANING_QUESTIONS_BY_ID[question.id];
+    elements.practicalDrillUnit.textContent = vocabularySource?.reading
+      ? "読み：" + vocabularySource.reading + " · 意味を一つ選ぶ" : "意味を一つ選ぶ";
     elements.practicalDrillRetryStatus.textContent = "再出題 " + drill.retryIds.filter(id => drill.sessionIds.includes(id)).length + "問";
     elements.practicalDrillPrompt.removeAttribute("data-structured");
-    elements.practicalDrillPrompt.textContent = "「" + question.term + "」の意味は？";
+    elements.practicalDrillPrompt.textContent = vocabularySource?.context
+      ? vocabularySource.text : "「" + question.term + "」の意味は？";
     elements.practicalDrillForecast.hidden = true;
     elements.practicalGroundingChecklist.hidden = true;
     elements.practicalDrillConfidence.hidden = true;
@@ -11217,7 +11224,8 @@
       meaning.textContent = question.term + "：" + (question.meaning || VOCABULARY_BANK.CARDS_BY_ID[question.id].meaning);
       const contrast = document.createElement("p");
       contrast.textContent = attempt.correct && question.meaning
-        ? "見分ける用語：" + [...new Set(question.sourceFacts.filter(fact => !fact.truth).map(fact => fact.diagnosticTags.at(-1)))].join("・")
+        ? vocabularySource?.reading ? vocabularySource.trap
+          : "見分ける用語：" + [...new Set(question.sourceFacts.filter(fact => !fact.truth).map(fact => fact.diagnosticTags.at(-1)))].join("・")
         : question.sourceFacts[attempt.selected].reason;
       if (!question.meaning) contrast.textContent = "保存済みの旧形式の回答：" + question.choices[attempt.selected] + "。" + contrast.textContent;
       elements.practicalDrillReasoning.append(meaning, contrast);

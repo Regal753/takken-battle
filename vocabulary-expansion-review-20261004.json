@@ -1,0 +1,4954 @@
+{
+  "legalBaseline": "2026-04-01",
+  "base": "ebc5a046d0764d90a4bea36303ac87005687b0f5",
+  "selection": "RETIO R5-R7 150 official questions, official 2026 exam scope, current question banks; definitions checked against primary sources, not copied from past false choices.",
+  "counts": {
+    "added": 94,
+    "total": 158,
+    "choicesReviewed": 376,
+    "rights": 31,
+    "business": 16,
+    "restrictions": 21,
+    "taxOther": 26
+  },
+  "sources": {
+    "civil": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+    "business": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+    "condominium": "https://laws.e-gov.go.jp/law/337AC0000000069/20260401_507AC0000000047",
+    "building": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+    "buildingOrder": "https://laws.e-gov.go.jp/law/325CO0000000338/20251201_507CO0000000377",
+    "city": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+    "agriculture": "https://laws.e-gov.go.jp/law/327AC0000000229/20250601_504AC0000000068",
+    "fill": "https://laws.e-gov.go.jp/law/336AC0000000191/20250601_504AC0000000068",
+    "readjustment": "https://laws.e-gov.go.jp/law/329AC0000000119/20250601_504AC0000000068",
+    "localTax": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+    "acquisitionCost": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/joto/3252.htm",
+    "disposalCost": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/joto/3255.htm",
+    "registrationTax": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/inshi/7191.htm",
+    "stampTax": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/inshi/7100.htm",
+    "depreciation": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/joto/3261.htm",
+    "valuation": "https://www.mlit.go.jp/common/001043585.pdf",
+    "landform": "https://www.gsi.go.jp/bousaichiri/bousaichiri41051.html",
+    "landslide": "https://laws.e-gov.go.jp/law/333AC0000000030",
+    "ground": "https://www.kansai-airports.co.jp/sustainability/society/tech-jacking-up/",
+    "badFaith": "https://www.retio.or.jp/wp-content/uploads/2024/12/295.pdf",
+    "visibleOwnership": "https://www.courts.go.jp/assets/hanrei/hanrei-pdf-20191.pdf"
+  },
+  "questions": [
+    {
+      "id": "vocab-065",
+      "term": "心裡留保",
+      "subject": "rights",
+      "reading": "しんりりゅうほ",
+      "sha256": "3de37d552ff251dacfbb9743d2a33f1aeb81003b0e7eaf5342e3608e1b9e4f49",
+      "evidence": {
+        "term": "心裡留保",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": []
+      },
+      "contrast": "相手と通じる虚偽表示や、本人が気づかない錯誤とは区別する。",
+      "choices": [
+        {
+          "term": "心裡留保",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法93条",
+          "definitionSha256": "838e03ca6c9025d4df0440dc0afa89e4d9b9c10c531cf0553dea59137803bc7e"
+        },
+        {
+          "term": "通謀虚偽表示",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法94条",
+          "definitionSha256": "80915ebbd2b0d4bee4435f0d6082027241f4123193a3f1a88b3f3c7a30f6160d"
+        },
+        {
+          "term": "錯誤",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法95条",
+          "definitionSha256": "a2af47e660461fbb9b7f0b18eddafdbf2596fbe16195cb967f7b1a56baa284fb"
+        },
+        {
+          "term": "停止条件",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法127条1項",
+          "definitionSha256": "75c34634c50e8ce30c8d9e9402619e86b0d8dfd4ee432f91f113b4dc02e1c3a5"
+        }
+      ]
+    },
+    {
+      "id": "vocab-066",
+      "term": "通謀虚偽表示",
+      "subject": "rights",
+      "reading": "つうぼうきょぎひょうじ",
+      "sha256": "5ba1424f35d6ef37ebcb535fda57c3e5f6bd00fd2f57479122dc9ddce0c7f32d",
+      "evidence": {
+        "term": "通謀虚偽表示",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "exam-questions-rights.js"
+        ]
+      },
+      "contrast": "本人だけが真意でないと知る心裡留保と区別する。",
+      "choices": [
+        {
+          "term": "心裡留保",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法93条",
+          "definitionSha256": "838e03ca6c9025d4df0440dc0afa89e4d9b9c10c531cf0553dea59137803bc7e"
+        },
+        {
+          "term": "通謀虚偽表示",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法94条",
+          "definitionSha256": "80915ebbd2b0d4bee4435f0d6082027241f4123193a3f1a88b3f3c7a30f6160d"
+        },
+        {
+          "term": "錯誤",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法95条",
+          "definitionSha256": "a2af47e660461fbb9b7f0b18eddafdbf2596fbe16195cb967f7b1a56baa284fb"
+        },
+        {
+          "term": "無権代理",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法113条以下",
+          "definitionSha256": "2e33b1c2682bc24e831cb51d19f23b45db1b1747f6d57c75699a8eacb8ca4d54"
+        }
+      ]
+    },
+    {
+      "id": "vocab-067",
+      "term": "錯誤",
+      "subject": "rights",
+      "reading": "さくご",
+      "sha256": "05f6ba021ec2a7ef7354771e501ecb73797ed02368cfd74ec3545c15d2ad4204",
+      "evidence": {
+        "term": "錯誤",
+        "subject": "rights",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 3
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-rights.js"
+        ]
+      },
+      "contrast": "取消しには重要性等が必要。基礎事情の錯誤では、その事情を基礎としたことの表示も要件。",
+      "choices": [
+        {
+          "term": "心裡留保",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法93条",
+          "definitionSha256": "838e03ca6c9025d4df0440dc0afa89e4d9b9c10c531cf0553dea59137803bc7e"
+        },
+        {
+          "term": "通謀虚偽表示",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法94条",
+          "definitionSha256": "80915ebbd2b0d4bee4435f0d6082027241f4123193a3f1a88b3f3c7a30f6160d"
+        },
+        {
+          "term": "錯誤",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法95条",
+          "definitionSha256": "a2af47e660461fbb9b7f0b18eddafdbf2596fbe16195cb967f7b1a56baa284fb"
+        },
+        {
+          "term": "停止条件",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法127条1項",
+          "definitionSha256": "75c34634c50e8ce30c8d9e9402619e86b0d8dfd4ee432f91f113b4dc02e1c3a5"
+        }
+      ]
+    },
+    {
+      "id": "vocab-068",
+      "term": "表見代理",
+      "subject": "rights",
+      "reading": "ひょうけんだいり",
+      "sha256": "0998418753cedeaf1ca09a233fe87fc77cb6d8a064d0f447bafc70c869fe6a9d",
+      "evidence": {
+        "term": "表見代理",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": []
+      },
+      "contrast": "外観を信じただけで成立するとは限らず、条文ごとの要件を確認する。",
+      "choices": [
+        {
+          "term": "追認",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第122条",
+          "definitionSha256": "f3e348e52388f06414d36be9550d8f22196e5ea0e90ed98cd7b7ba055cb4ee31"
+        },
+        {
+          "term": "通謀虚偽表示",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法94条",
+          "definitionSha256": "80915ebbd2b0d4bee4435f0d6082027241f4123193a3f1a88b3f3c7a30f6160d"
+        },
+        {
+          "term": "債権者代位権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法423条以下",
+          "definitionSha256": "b92a5dbab873162393d77630b52ef0b3ee6f0af6f6c5e65c8b5f8dbf32d38ba1"
+        },
+        {
+          "term": "表見代理",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法109・110・112条",
+          "definitionSha256": "949aafc46f2c7882c1e0385c703a102f900fd578fd5db6cc4bd9b4f2cf91f155"
+        }
+      ]
+    },
+    {
+      "id": "vocab-069",
+      "term": "無権代理",
+      "subject": "rights",
+      "reading": "むけんだいり",
+      "sha256": "a941220c4fadc9f6131e169c955a0b12555d79e4a4feebd4cbd022dc406f2b62",
+      "evidence": {
+        "term": "無権代理",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "exam-questions-rights.js"
+        ]
+      },
+      "contrast": "原則として本人の追認がなければ本人に効力を生じない。表見代理等は別に確認。",
+      "choices": [
+        {
+          "term": "無権代理",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法113条以下",
+          "definitionSha256": "2e33b1c2682bc24e831cb51d19f23b45db1b1747f6d57c75699a8eacb8ca4d54"
+        },
+        {
+          "term": "媒介",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅地建物取引業法第2条第2号・第34条の2",
+          "definitionSha256": "6221786038f088668b1cedafed6ff83b345d992cd89c63a27427ee69827637ad"
+        },
+        {
+          "term": "債権者代位権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法423条以下",
+          "definitionSha256": "b92a5dbab873162393d77630b52ef0b3ee6f0af6f6c5e65c8b5f8dbf32d38ba1"
+        },
+        {
+          "term": "通謀虚偽表示",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法94条",
+          "definitionSha256": "80915ebbd2b0d4bee4435f0d6082027241f4123193a3f1a88b3f3c7a30f6160d"
+        }
+      ]
+    },
+    {
+      "id": "vocab-070",
+      "term": "停止条件",
+      "subject": "rights",
+      "reading": "ていしじょうけん",
+      "sha256": "9ba4ddae589e01ee450ed93d17ae3cc5771b32b2e518d2f7b583f89f11de559f",
+      "evidence": {
+        "term": "停止条件",
+        "subject": "rights",
+        "pastQuestions": [
+          {
+            "year": "2024",
+            "question": 21
+          }
+        ],
+        "currentBankFiles": [
+          "business-fresh-contracts.js",
+          "business-fullscore-bank.js",
+          "business-hard-practice.js",
+          "exam-questions-business.js",
+          "exam-questions-rights.js"
+        ]
+      },
+      "contrast": "成就で効力が発生する。解除条件は成就で効力が消滅する。",
+      "choices": [
+        {
+          "term": "解除条件",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法127条2項",
+          "definitionSha256": "18783467c3fa64aabea9ddc433c1fcc6ea8ed02c90289554891ef9698f9971ca"
+        },
+        {
+          "term": "停止条件",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法127条1項",
+          "definitionSha256": "75c34634c50e8ce30c8d9e9402619e86b0d8dfd4ee432f91f113b4dc02e1c3a5"
+        },
+        {
+          "term": "時効の完成猶予",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第147条・第150条",
+          "definitionSha256": "6f7e5d6bb7224aaf70a330dc7c149ba58804ad66e2929f66a8f294121e73be34"
+        },
+        {
+          "term": "催告",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第541条・第150条",
+          "definitionSha256": "7468858f06124de313b2c029c2a6fb2df427ff328431949c1e1805628cb64e33"
+        }
+      ]
+    },
+    {
+      "id": "vocab-071",
+      "term": "解除条件",
+      "subject": "rights",
+      "reading": "かいじょじょうけん",
+      "sha256": "83ca9832efae8c2fc4fc26bf72c382ce7f94b496b4d60189de8906826b578675",
+      "evidence": {
+        "term": "解除条件",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "business-fresh-contracts.js",
+          "exam-questions-rights.js"
+        ]
+      },
+      "contrast": "条件の成就による消滅。解除権の行使とは別。",
+      "choices": [
+        {
+          "term": "停止条件",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法127条1項",
+          "definitionSha256": "75c34634c50e8ce30c8d9e9402619e86b0d8dfd4ee432f91f113b4dc02e1c3a5"
+        },
+        {
+          "term": "解除",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第540条・第541条・第545条",
+          "definitionSha256": "0da6cacd0ee9ed8a7b219fb333c21f8359c9ebf215593027beeb281b78ecbd77"
+        },
+        {
+          "term": "解除条件",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法127条2項",
+          "definitionSha256": "18783467c3fa64aabea9ddc433c1fcc6ea8ed02c90289554891ef9698f9971ca"
+        },
+        {
+          "term": "時効の更新",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第152条・第147条第2項",
+          "definitionSha256": "31d76efaa9577fb8291f83e76787d3d9797cfc6c57c259832cdc02c7b5662b1f"
+        }
+      ]
+    },
+    {
+      "id": "vocab-072",
+      "term": "債権者代位権",
+      "subject": "rights",
+      "reading": "さいけんしゃだいいけん",
+      "sha256": "3e8cce06348aec7a446807bc32a590f0f8a76b708815eaac3f1785dbe407f7d9",
+      "evidence": {
+        "term": "債権者代位権",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": []
+      },
+      "contrast": "債務者の権利を行使する。弁済者が元の債権を行使する代位とは別。",
+      "choices": [
+        {
+          "term": "詐害行為取消権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法424条以下",
+          "definitionSha256": "6f2f8523d95009bfef93e8f229a5e9c5cfeb57dcad017cca8f82c695fb5b37f7"
+        },
+        {
+          "term": "弁済による代位",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第499条・第501条",
+          "definitionSha256": "25d419199798bd449c21cdebc42cc01de4587d51b0b7ac2530b7bb446541c6d0"
+        },
+        {
+          "term": "物上代位",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法304・372条",
+          "definitionSha256": "09a03862eb1be6bc2c87f9aff6e434ef2ce8f608ec59c3cb627072b34f86a85d"
+        },
+        {
+          "term": "債権者代位権",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法423条以下",
+          "definitionSha256": "b92a5dbab873162393d77630b52ef0b3ee6f0af6f6c5e65c8b5f8dbf32d38ba1"
+        }
+      ]
+    },
+    {
+      "id": "vocab-073",
+      "term": "詐害行為取消権",
+      "subject": "rights",
+      "reading": "さがいこういとりけしけん",
+      "sha256": "deb513a15e1b8c16b14c97ae3fbc161e914a9d9ed8ed15a68ba11a9a25f55c92",
+      "evidence": {
+        "term": "詐害行為取消権",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": []
+      },
+      "contrast": "債務者の財産を保全する制度。意思表示の取消しとは要件と対象が異なる。",
+      "choices": [
+        {
+          "term": "詐害行為取消権",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法424条以下",
+          "definitionSha256": "6f2f8523d95009bfef93e8f229a5e9c5cfeb57dcad017cca8f82c695fb5b37f7"
+        },
+        {
+          "term": "債権者代位権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法423条以下",
+          "definitionSha256": "b92a5dbab873162393d77630b52ef0b3ee6f0af6f6c5e65c8b5f8dbf32d38ba1"
+        },
+        {
+          "term": "同時履行の抗弁権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法533条",
+          "definitionSha256": "b8b6eae33d7ec7d29f7d58c74adf82d00a4872137851aff9cac85ba4cf094648"
+        },
+        {
+          "term": "求償",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第459条",
+          "definitionSha256": "41721e3ca5a47c8a5f0179fd7c8e966f452edbc1460a493809e606832adc1369"
+        }
+      ]
+    },
+    {
+      "id": "vocab-074",
+      "term": "同時履行の抗弁権",
+      "subject": "rights",
+      "reading": "どうじりこうのこうべんけん",
+      "sha256": "29a1a8ce0bb4ec09c9724b0211922f8c3b00d8c2a842c2788695a16ceaf9b0e3",
+      "evidence": {
+        "term": "同時履行の抗弁権",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": []
+      },
+      "contrast": "相手の対価債務が弁済期にないときは行使できない。",
+      "choices": [
+        {
+          "term": "催告の抗弁権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法452・454条",
+          "definitionSha256": "f7e3cae94fb08110a938d93788d4c516676babe0017d3f37e165da45d7e45a92"
+        },
+        {
+          "term": "同時履行の抗弁権",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法533条",
+          "definitionSha256": "b8b6eae33d7ec7d29f7d58c74adf82d00a4872137851aff9cac85ba4cf094648"
+        },
+        {
+          "term": "検索の抗弁権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法453・454条",
+          "definitionSha256": "bb2acc490903c4ec2708cfceb348ff61123b0b3fd322554d100459c5b9aea47a"
+        },
+        {
+          "term": "留置権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第295条",
+          "definitionSha256": "4b670032849fbe697d93a905fad04ae437292ef897baed0a22c10118a41e6639"
+        }
+      ]
+    },
+    {
+      "id": "vocab-075",
+      "term": "催告の抗弁権",
+      "subject": "rights",
+      "reading": "さいこくのこうべんけん",
+      "sha256": "100590895e5f6f96a33e56aedfbb6a0cc1756d20370f9d88bceefeb040349767",
+      "evidence": {
+        "term": "催告の抗弁権",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "exam-questions-rights.js"
+        ]
+      },
+      "contrast": "主債務者の破産等は例外。連帯保証人には認められない。",
+      "choices": [
+        {
+          "term": "検索の抗弁権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法453・454条",
+          "definitionSha256": "bb2acc490903c4ec2708cfceb348ff61123b0b3fd322554d100459c5b9aea47a"
+        },
+        {
+          "term": "同時履行の抗弁権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法533条",
+          "definitionSha256": "b8b6eae33d7ec7d29f7d58c74adf82d00a4872137851aff9cac85ba4cf094648"
+        },
+        {
+          "term": "催告の抗弁権",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法452・454条",
+          "definitionSha256": "f7e3cae94fb08110a938d93788d4c516676babe0017d3f37e165da45d7e45a92"
+        },
+        {
+          "term": "催告",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第541条・第150条",
+          "definitionSha256": "7468858f06124de313b2c029c2a6fb2df427ff328431949c1e1805628cb64e33"
+        }
+      ]
+    },
+    {
+      "id": "vocab-076",
+      "term": "検索の抗弁権",
+      "subject": "rights",
+      "reading": "けんさくのこうべんけん",
+      "sha256": "620b4693959c248b159ca24c8502824d00ae30441859a9fd4dc954275fd60474",
+      "evidence": {
+        "term": "検索の抗弁権",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "exam-questions-rights.js"
+        ]
+      },
+      "contrast": "単なる主債務者への請求ではなく財産への執行。連帯保証人には認められない。",
+      "choices": [
+        {
+          "term": "催告の抗弁権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法452・454条",
+          "definitionSha256": "f7e3cae94fb08110a938d93788d4c516676babe0017d3f37e165da45d7e45a92"
+        },
+        {
+          "term": "同時履行の抗弁権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法533条",
+          "definitionSha256": "b8b6eae33d7ec7d29f7d58c74adf82d00a4872137851aff9cac85ba4cf094648"
+        },
+        {
+          "term": "求償",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第459条",
+          "definitionSha256": "41721e3ca5a47c8a5f0179fd7c8e966f452edbc1460a493809e606832adc1369"
+        },
+        {
+          "term": "検索の抗弁権",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法453・454条",
+          "definitionSha256": "bb2acc490903c4ec2708cfceb348ff61123b0b3fd322554d100459c5b9aea47a"
+        }
+      ]
+    },
+    {
+      "id": "vocab-077",
+      "term": "混同",
+      "subject": "rights",
+      "reading": "こんどう",
+      "sha256": "92fe06a0aa89660d3a9cfa1e861db4dee88c9949deb41e28cecc94a78df62997",
+      "evidence": {
+        "term": "混同",
+        "subject": "rights",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 9
+          }
+        ],
+        "currentBankFiles": [
+          "business-fresh-contracts.js",
+          "business-fresh-front.js",
+          "business-fresh-practice.js",
+          "business-hard-contracts.js",
+          "business-hard-front.js",
+          "exam-questions-business.js",
+          "exam-questions-restrictions.js",
+          "exam-questions-rights.js",
+          "exam-questions-tax-other.js",
+          "restrictions-cases-agriculture-fill.js",
+          "restrictions-cases-building-readjustment.js",
+          "restrictions-cases-city-land.js",
+          "restrictions-supplement-bank.js",
+          "tax-cases-v59.js"
+        ]
+      },
+      "contrast": "他人の権利の目的であるときなどの例外に注意。ここでは債権の混同を問う。",
+      "choices": [
+        {
+          "term": "混同",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法520条",
+          "definitionSha256": "8d61e2f5d1dfd1c104f4e09c03c2664beb1154a3ae74f5283cdd59fb0b6f50ea"
+        },
+        {
+          "term": "相殺",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第505条・第506条",
+          "definitionSha256": "28b80a0a6bd21919f67042f0a1b9b2eacfe36e28c8e9afcb8cbe201bdbdb2f3c"
+        },
+        {
+          "term": "更改",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法513条以下",
+          "definitionSha256": "869ec0b8a70f66b2bddc05b8168acdbbc9131318cad427aac31cde768ad40274"
+        },
+        {
+          "term": "弁済",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第474条・第473条",
+          "definitionSha256": "ab5ab2ea554f94241a3318ba72c64b9fa4953e5da8a20e94c9b4103ca499a3ab"
+        }
+      ]
+    },
+    {
+      "id": "vocab-078",
+      "term": "更改",
+      "subject": "rights",
+      "reading": "こうかい",
+      "sha256": "90a97774691c23f2b47c5bae820c547ec94849782b08e3670857faecff8dc81c",
+      "evidence": {
+        "term": "更改",
+        "subject": "rights",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 9
+          }
+        ],
+        "currentBankFiles": []
+      },
+      "contrast": "単なる支払期限の変更とは別。旧債務に代わる新債務を成立させる。",
+      "choices": [
+        {
+          "term": "混同",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法520条",
+          "definitionSha256": "8d61e2f5d1dfd1c104f4e09c03c2664beb1154a3ae74f5283cdd59fb0b6f50ea"
+        },
+        {
+          "term": "更改",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法513条以下",
+          "definitionSha256": "869ec0b8a70f66b2bddc05b8168acdbbc9131318cad427aac31cde768ad40274"
+        },
+        {
+          "term": "相殺",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第505条・第506条",
+          "definitionSha256": "28b80a0a6bd21919f67042f0a1b9b2eacfe36e28c8e9afcb8cbe201bdbdb2f3c"
+        },
+        {
+          "term": "弁済による代位",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第499条・第501条",
+          "definitionSha256": "25d419199798bd449c21cdebc42cc01de4587d51b0b7ac2530b7bb446541c6d0"
+        }
+      ]
+    },
+    {
+      "id": "vocab-079",
+      "term": "代襲相続",
+      "subject": "rights",
+      "reading": "だいしゅうそうぞく",
+      "sha256": "eeb0fc93c2a5ff5d14d534f98827a3e86306e56114713a25851d1a4e0fb0b212",
+      "evidence": {
+        "term": "代襲相続",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": []
+      },
+      "contrast": "相続放棄は代襲原因にならない。兄弟姉妹の代襲では再代襲しない。",
+      "choices": [
+        {
+          "term": "相続欠格",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法891条",
+          "definitionSha256": "61b88cc74e128bc6b7da08a8868f9c0f08277903c9ac78fbc43c777558fe0e9a"
+        },
+        {
+          "term": "推定相続人の廃除",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法892・893条",
+          "definitionSha256": "88cbf85981c2b4de692093666e087a03be808626bf0c047ff3c6452240666e86"
+        },
+        {
+          "term": "代襲相続",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法887・889条",
+          "definitionSha256": "a7a123b56f5cbad04d6158a027ef38f6c99c43121080bf22290c90e3088e2007"
+        },
+        {
+          "term": "相続放棄",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法938・939条",
+          "definitionSha256": "a4cdef710f46619e7266897a744953289e1836343dcc129f44665b5d7a92a847"
+        }
+      ]
+    },
+    {
+      "id": "vocab-080",
+      "term": "相続欠格",
+      "subject": "rights",
+      "reading": "そうぞくけっかく",
+      "sha256": "19d398ceed688ae33fbfce64e5a303150dd67ead2211a03a9e2fbeec148a8ecb",
+      "evidence": {
+        "term": "相続欠格",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": []
+      },
+      "contrast": "法定原因による当然の失権。家裁の判断で行う廃除とは区別する。",
+      "choices": [
+        {
+          "term": "推定相続人の廃除",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法892・893条",
+          "definitionSha256": "88cbf85981c2b4de692093666e087a03be808626bf0c047ff3c6452240666e86"
+        },
+        {
+          "term": "相続放棄",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法938・939条",
+          "definitionSha256": "a4cdef710f46619e7266897a744953289e1836343dcc129f44665b5d7a92a847"
+        },
+        {
+          "term": "限定承認",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法922・923条",
+          "definitionSha256": "a7528541a9f7f94142c1ba51469f411640d1f328235f79758db1302afdafcfb2"
+        },
+        {
+          "term": "相続欠格",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法891条",
+          "definitionSha256": "61b88cc74e128bc6b7da08a8868f9c0f08277903c9ac78fbc43c777558fe0e9a"
+        }
+      ]
+    },
+    {
+      "id": "vocab-081",
+      "term": "推定相続人の廃除",
+      "subject": "rights",
+      "reading": "すいていそうぞくにんのはいじょ",
+      "sha256": "1913f5f8cb7759fd4b38ff5a263184fd7625a60ce35fa5db7e372ce69c38a544",
+      "evidence": {
+        "term": "推定相続人の廃除",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": []
+      },
+      "contrast": "遺留分を有する推定相続人が対象。家庭裁判所の手続による。",
+      "choices": [
+        {
+          "term": "推定相続人の廃除",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法892・893条",
+          "definitionSha256": "88cbf85981c2b4de692093666e087a03be808626bf0c047ff3c6452240666e86"
+        },
+        {
+          "term": "相続欠格",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法891条",
+          "definitionSha256": "61b88cc74e128bc6b7da08a8868f9c0f08277903c9ac78fbc43c777558fe0e9a"
+        },
+        {
+          "term": "相続放棄",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法938・939条",
+          "definitionSha256": "a4cdef710f46619e7266897a744953289e1836343dcc129f44665b5d7a92a847"
+        },
+        {
+          "term": "代襲相続",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法887・889条",
+          "definitionSha256": "a7a123b56f5cbad04d6158a027ef38f6c99c43121080bf22290c90e3088e2007"
+        }
+      ]
+    },
+    {
+      "id": "vocab-082",
+      "term": "根抵当権",
+      "subject": "rights",
+      "reading": "ねていとうけん",
+      "sha256": "5186d12767338b3e7448e78674cd3d4ec04b3e1c57acc2495007fd4438474209",
+      "evidence": {
+        "term": "根抵当権",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": []
+      },
+      "contrast": "特定の一本の債権だけを担保する仕組みとは異なる。担保する範囲と上限額を区別する。",
+      "choices": [
+        {
+          "term": "物上代位",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法304・372条",
+          "definitionSha256": "09a03862eb1be6bc2c87f9aff6e434ef2ce8f608ec59c3cb627072b34f86a85d"
+        },
+        {
+          "term": "根抵当権",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法398条の2",
+          "definitionSha256": "3c3639412b1d78e75973486ee260ee9fcc05325a5c1529b1df0431b9f66a6898"
+        },
+        {
+          "term": "極度額",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法398条の2・465条の2",
+          "definitionSha256": "ada6fca2e3e6ffba1129e75929060a7c00bd7e4961178a352fba924f50242db9"
+        },
+        {
+          "term": "法定地上権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法388条",
+          "definitionSha256": "b84879d53352b1fbdd40e8d6aa21911e7fb7ab618e5485d289b97b9de8d505be"
+        }
+      ]
+    },
+    {
+      "id": "vocab-083",
+      "term": "極度額",
+      "subject": "rights",
+      "reading": "きょくどがく",
+      "sha256": "91fc8cab5261ab68f67703cc2301fe59e9491e64a47d9b2e7e7496d3c96beb7d",
+      "evidence": {
+        "term": "極度額",
+        "subject": "rights",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 2
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-rights.js"
+        ]
+      },
+      "contrast": "元本だけの額とは限らない。個人根保証では定めがなければ契約は無効。",
+      "choices": [
+        {
+          "term": "元本",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法404・405条",
+          "definitionSha256": "79ad4893fed79cabd50a17b62bd467122f59a80012a28317eb0e778aae567bee"
+        },
+        {
+          "term": "弁済額",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法473条以下・金銭債務の弁済",
+          "definitionSha256": "8c133174fbc410e69579fade115dbbb1d3a377f4788030b01b96bc8b6630f17e"
+        },
+        {
+          "term": "極度額",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法398条の2・465条の2",
+          "definitionSha256": "ada6fca2e3e6ffba1129e75929060a7c00bd7e4961178a352fba924f50242db9"
+        },
+        {
+          "term": "違約金",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第420条第3項",
+          "definitionSha256": "86577a7071ffe9a3bcb721688078dd2172321e73911da96ff5c236747b219b1b"
+        }
+      ]
+    },
+    {
+      "id": "vocab-084",
+      "term": "物上代位",
+      "subject": "rights",
+      "reading": "ぶつじょうだいい",
+      "sha256": "0ec75642351e1df1c3c369b92cd0182cd64ee51d58cbb89c40b8da9db0533090",
+      "evidence": {
+        "term": "物上代位",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "exam-questions-rights.js"
+        ]
+      },
+      "contrast": "担保物に代わる価値を対象とする。払い渡し等の前の差押えが必要。",
+      "choices": [
+        {
+          "term": "弁済による代位",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第499条・第501条",
+          "definitionSha256": "25d419199798bd449c21cdebc42cc01de4587d51b0b7ac2530b7bb446541c6d0"
+        },
+        {
+          "term": "債権者代位権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法423条以下",
+          "definitionSha256": "b92a5dbab873162393d77630b52ef0b3ee6f0af6f6c5e65c8b5f8dbf32d38ba1"
+        },
+        {
+          "term": "求償",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第459条",
+          "definitionSha256": "41721e3ca5a47c8a5f0179fd7c8e966f452edbc1460a493809e606832adc1369"
+        },
+        {
+          "term": "物上代位",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法304・372条",
+          "definitionSha256": "09a03862eb1be6bc2c87f9aff6e434ef2ce8f608ec59c3cb627072b34f86a85d"
+        }
+      ]
+    },
+    {
+      "id": "vocab-085",
+      "term": "背信的悪意者",
+      "subject": "rights",
+      "reading": "はいしんてきあくいしゃ",
+      "sha256": "741b8005cdd546c4308d864be8e00a8918c60414c8e8fa2f1e33bb9a2fd9c4a7",
+      "evidence": {
+        "term": "背信的悪意者",
+        "subject": "rights",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 1
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-rights.js"
+        ]
+      },
+      "contrast": "単なる悪意とは別。民法177条の第三者から除かれる。",
+      "choices": [
+        {
+          "term": "背信的悪意者",
+          "correct": true,
+          "sourceUrl": "https://www.retio.or.jp/wp-content/uploads/2024/12/295.pdf",
+          "sourceLocator": "民法177条・背信的悪意者の判例",
+          "definitionSha256": "587beaf9c6f329f6e57db93fb507515cc400ee4fd158872ede940a6d6cde7dd6"
+        },
+        {
+          "term": "悪意",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第96条第3項",
+          "definitionSha256": "f797993fbd257558a0fe83073307271165c130ebfda8579966075b9bcc95ae75"
+        },
+        {
+          "term": "善意",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第94条第2項",
+          "definitionSha256": "a69fb565c93b9d842004afead7d2735c6f1f7f83b09ac09a1468b3470af41934"
+        },
+        {
+          "term": "過失",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第96条第2項・第3項",
+          "definitionSha256": "2fe202e6a3a6fa7e92756da5744d0a9a3b68d2145d0497e3721a6bd7efd2ea22"
+        }
+      ]
+    },
+    {
+      "id": "vocab-086",
+      "term": "明認方法",
+      "subject": "rights",
+      "reading": "めいにんほうほう",
+      "sha256": "00a228d03b1ca2826807f7af4e934dda28055b0a524ba56fd98cba072e0f09f6",
+      "evidence": {
+        "term": "明認方法",
+        "subject": "rights",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 6
+          }
+        ],
+        "currentBankFiles": []
+      },
+      "contrast": "登記に代わる一定の公示方法。立木等の権利の所在を外部に示す。",
+      "choices": [
+        {
+          "term": "公告",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/329AC0000000119/20250601_504AC0000000068",
+          "sourceLocator": "土地区画整理法第103条第4項・第104条",
+          "definitionSha256": "5130367f8656d370eca09ae10aba5652d18b240dcef377c80e0f2cf5bddec6fe"
+        },
+        {
+          "term": "明認方法",
+          "correct": true,
+          "sourceUrl": "https://www.courts.go.jp/assets/hanrei/hanrei-pdf-20191.pdf",
+          "sourceLocator": "立木の明認方法に関する判例",
+          "definitionSha256": "83b4238dd21b0cb47777f9397dc1e4ee83ce2b6758c5b34c06edfbbd59955c45"
+        },
+        {
+          "term": "重要事項説明",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅地建物取引業法第35条第1項",
+          "definitionSha256": "55938616f849c20238a081729e20448bc5c2c3f32d7b98f1e235b84594e22c3d"
+        },
+        {
+          "term": "建築確認",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+          "sourceLocator": "建築基準法6・6条の2",
+          "definitionSha256": "c8bb842727e3b39561568c930d5acf151df0166124f97c12574a18eab8dd0550"
+        }
+      ]
+    },
+    {
+      "id": "vocab-087",
+      "term": "敷地利用権",
+      "subject": "rights",
+      "reading": "しきちりようけん",
+      "sha256": "fd9124983e84726395845ea1b9450aeb38fd8bce57761380b4be5959d3ae5aa2",
+      "evidence": {
+        "term": "敷地利用権",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": []
+      },
+      "contrast": "土地の所有権だけに限られず、借地権等も含み得る。",
+      "choices": [
+        {
+          "term": "地役権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法280条",
+          "definitionSha256": "0c57326d35b1fb9fa955b3ac97bfdf81520a5e79b078d763112086b3c20a7d29"
+        },
+        {
+          "term": "法定地上権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法388条",
+          "definitionSha256": "b84879d53352b1fbdd40e8d6aa21911e7fb7ab618e5485d289b97b9de8d505be"
+        },
+        {
+          "term": "敷地利用権",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/337AC0000000069/20260401_507AC0000000047",
+          "sourceLocator": "区分所有法2条6項・22条",
+          "definitionSha256": "231f8d04a802f475b414f223c05e7a7bbbd58d75b6a189c9920453f22611ffb2"
+        },
+        {
+          "term": "配偶者居住権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法1028条以下",
+          "definitionSha256": "f3ecd54e4321751d48e82c124c61ee6c1f2e8b07c1359e5ef38878428c5dd714"
+        }
+      ]
+    },
+    {
+      "id": "vocab-088",
+      "term": "規約共用部分",
+      "subject": "rights",
+      "reading": "きやくきょうようぶぶん",
+      "sha256": "d74daff83b9221a53c41544b6d2f70b8adfc0f608cf41766dd84056aa37c6f05",
+      "evidence": {
+        "term": "規約共用部分",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": []
+      },
+      "contrast": "第三者に対抗するにはその旨の登記が必要。法定共用部分と区別する。",
+      "choices": [
+        {
+          "term": "敷地利用権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/337AC0000000069/20260401_507AC0000000047",
+          "sourceLocator": "区分所有法2条6項・22条",
+          "definitionSha256": "231f8d04a802f475b414f223c05e7a7bbbd58d75b6a189c9920453f22611ffb2"
+        },
+        {
+          "term": "主要構造部",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+          "sourceLocator": "建築基準法2条5号",
+          "definitionSha256": "d28f8de1585756ffebc1e6744057f51c9451ba2985d792c5ca7a319b1498cb7b"
+        },
+        {
+          "term": "構造耐力上主要な部分",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325CO0000000338/20251201_507CO0000000377",
+          "sourceLocator": "建築基準法施行令1条3号",
+          "definitionSha256": "c40c24208c222880d57c2a98bee69da604adfd950c8ea95afffda72e79409e78"
+        },
+        {
+          "term": "規約共用部分",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/337AC0000000069/20260401_507AC0000000047",
+          "sourceLocator": "区分所有法4条2項",
+          "definitionSha256": "01053d73413c3a51ab3312dfd40f3afb32236ae09257b6396ab2b3e010e454c0"
+        }
+      ]
+    },
+    {
+      "id": "vocab-089",
+      "term": "契約不適合責任",
+      "subject": "rights",
+      "reading": "けいやくふてきごうせきにん",
+      "sha256": "098fe68a4a622af2bbb4ff7a55dd3a4bea54996150f3696875ba7215487d7b18",
+      "evidence": {
+        "term": "契約不適合責任",
+        "subject": "rights",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 10
+          },
+          {
+            "year": "2023",
+            "question": 3
+          }
+        ],
+        "currentBankFiles": [
+          "business-fresh-contracts.js",
+          "business-fullscore-bank.js",
+          "exam-questions-business.js",
+          "exam-questions-rights.js"
+        ]
+      },
+      "contrast": "追完・代金減額等を区別し、損害賠償や解除の要件も別に確認する。",
+      "choices": [
+        {
+          "term": "契約不適合責任",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法562〜565条",
+          "definitionSha256": "28a7c9d120cd04288999c9d6c3f585d629522bcc6638bd2bacfdd9c253d799cc"
+        },
+        {
+          "term": "危険負担",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法536・567条",
+          "definitionSha256": "39d9c47b95d5d0d3c6e37c086951fbca35f010e4d97a48eb0aff76935cd64d9e"
+        },
+        {
+          "term": "手付金等の保全措置",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法41条・41条の2",
+          "definitionSha256": "a90822b54bd2099b54b467b593f249697d7d704616e6dc305917c39c0bb73549"
+        },
+        {
+          "term": "建物状況調査",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法34条の2・35条・既存住宅状況調査方法基準",
+          "definitionSha256": "d4c8b8b71416174d0d4ab5d51f6b1fb892de026be309a8ef5d49d2a94cb5cd90"
+        }
+      ]
+    },
+    {
+      "id": "vocab-090",
+      "term": "危険負担",
+      "subject": "rights",
+      "reading": "きけんふたん",
+      "sha256": "a309ab37e6a770955c2ddfbc67dfb47ed67cdf3353786df2fc8af8b7b35a9b44",
+      "evidence": {
+        "term": "危険負担",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "exam-questions-rights.js"
+        ]
+      },
+      "contrast": "売主の契約不適合責任と区別する。引渡し等の前後で扱いを確認する。",
+      "choices": [
+        {
+          "term": "契約不適合責任",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法562〜565条",
+          "definitionSha256": "28a7c9d120cd04288999c9d6c3f585d629522bcc6638bd2bacfdd9c253d799cc"
+        },
+        {
+          "term": "危険負担",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法536・567条",
+          "definitionSha256": "39d9c47b95d5d0d3c6e37c086951fbca35f010e4d97a48eb0aff76935cd64d9e"
+        },
+        {
+          "term": "同時履行の抗弁権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法533条",
+          "definitionSha256": "b8b6eae33d7ec7d29f7d58c74adf82d00a4872137851aff9cac85ba4cf094648"
+        },
+        {
+          "term": "限定承認",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法922・923条",
+          "definitionSha256": "a7528541a9f7f94142c1ba51469f411640d1f328235f79758db1302afdafcfb2"
+        }
+      ]
+    },
+    {
+      "id": "vocab-091",
+      "term": "法定地上権",
+      "subject": "rights",
+      "reading": "ほうていちじょうけん",
+      "sha256": "5f694e94b9fbd353611c961066ba17c3d59cc20db5c9fbcbced293d396ae183b",
+      "evidence": {
+        "term": "法定地上権",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "exam-questions-rights.js"
+        ]
+      },
+      "contrast": "抵当権設定時の土地・建物の所有関係など、法定の成立要件がある。",
+      "choices": [
+        {
+          "term": "地役権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法280条",
+          "definitionSha256": "0c57326d35b1fb9fa955b3ac97bfdf81520a5e79b078d763112086b3c20a7d29"
+        },
+        {
+          "term": "敷地利用権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/337AC0000000069/20260401_507AC0000000047",
+          "sourceLocator": "区分所有法2条6項・22条",
+          "definitionSha256": "231f8d04a802f475b414f223c05e7a7bbbd58d75b6a189c9920453f22611ffb2"
+        },
+        {
+          "term": "法定地上権",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法388条",
+          "definitionSha256": "b84879d53352b1fbdd40e8d6aa21911e7fb7ab618e5485d289b97b9de8d505be"
+        },
+        {
+          "term": "配偶者居住権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法1028条以下",
+          "definitionSha256": "f3ecd54e4321751d48e82c124c61ee6c1f2e8b07c1359e5ef38878428c5dd714"
+        }
+      ]
+    },
+    {
+      "id": "vocab-092",
+      "term": "地役権",
+      "subject": "rights",
+      "reading": "ちえきけん",
+      "sha256": "ad01809f127cba9eb5f1797558f2d7b8b0191925d3593aff5e89c9348371700c",
+      "evidence": {
+        "term": "地役権",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "restrictions-cases-building-readjustment.js"
+        ]
+      },
+      "contrast": "人のためだけでなく土地の便益のための権利。通行地役権などがある。",
+      "choices": [
+        {
+          "term": "法定地上権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法388条",
+          "definitionSha256": "b84879d53352b1fbdd40e8d6aa21911e7fb7ab618e5485d289b97b9de8d505be"
+        },
+        {
+          "term": "敷地利用権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/337AC0000000069/20260401_507AC0000000047",
+          "sourceLocator": "区分所有法2条6項・22条",
+          "definitionSha256": "231f8d04a802f475b414f223c05e7a7bbbd58d75b6a189c9920453f22611ffb2"
+        },
+        {
+          "term": "配偶者居住権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法1028条以下",
+          "definitionSha256": "f3ecd54e4321751d48e82c124c61ee6c1f2e8b07c1359e5ef38878428c5dd714"
+        },
+        {
+          "term": "地役権",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法280条",
+          "definitionSha256": "0c57326d35b1fb9fa955b3ac97bfdf81520a5e79b078d763112086b3c20a7d29"
+        }
+      ]
+    },
+    {
+      "id": "vocab-093",
+      "term": "相続放棄",
+      "subject": "rights",
+      "reading": "そうぞくほうき",
+      "sha256": "acf9ec8b89118c7c64fb973dff9865f73c61aaa610ed4d36355c027cb0a029e5",
+      "evidence": {
+        "term": "相続放棄",
+        "subject": "rights",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 5
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-rights.js"
+        ]
+      },
+      "contrast": "自ら選ぶ家裁への申述。放棄した人の子への代襲相続は起きない。",
+      "choices": [
+        {
+          "term": "相続放棄",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法938・939条",
+          "definitionSha256": "a4cdef710f46619e7266897a744953289e1836343dcc129f44665b5d7a92a847"
+        },
+        {
+          "term": "限定承認",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法922・923条",
+          "definitionSha256": "a7528541a9f7f94142c1ba51469f411640d1f328235f79758db1302afdafcfb2"
+        },
+        {
+          "term": "相続欠格",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法891条",
+          "definitionSha256": "61b88cc74e128bc6b7da08a8868f9c0f08277903c9ac78fbc43c777558fe0e9a"
+        },
+        {
+          "term": "推定相続人の廃除",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法892・893条",
+          "definitionSha256": "88cbf85981c2b4de692093666e087a03be808626bf0c047ff3c6452240666e86"
+        }
+      ]
+    },
+    {
+      "id": "vocab-094",
+      "term": "限定承認",
+      "subject": "rights",
+      "reading": "げんていしょうにん",
+      "sha256": "6038178c6fae9e5210c746f015f7af19461675717f7da3e055ad48d70ecc1899",
+      "evidence": {
+        "term": "限定承認",
+        "subject": "rights",
+        "pastQuestions": [],
+        "currentBankFiles": []
+      },
+      "contrast": "相続人が複数のときは共同相続人の全員で行う。相続人の地位を失う放棄とは別。",
+      "choices": [
+        {
+          "term": "相続放棄",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法938・939条",
+          "definitionSha256": "a4cdef710f46619e7266897a744953289e1836343dcc129f44665b5d7a92a847"
+        },
+        {
+          "term": "限定承認",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法922・923条",
+          "definitionSha256": "a7528541a9f7f94142c1ba51469f411640d1f328235f79758db1302afdafcfb2"
+        },
+        {
+          "term": "代襲相続",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法887・889条",
+          "definitionSha256": "a7a123b56f5cbad04d6158a027ef38f6c99c43121080bf22290c90e3088e2007"
+        },
+        {
+          "term": "相続欠格",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法891条",
+          "definitionSha256": "61b88cc74e128bc6b7da08a8868f9c0f08277903c9ac78fbc43c777558fe0e9a"
+        }
+      ]
+    },
+    {
+      "id": "vocab-095",
+      "term": "配偶者居住権",
+      "subject": "rights",
+      "reading": "はいぐうしゃきょじゅうけん",
+      "sha256": "695623edd7f7e0761e6029c15b50ed66ae7f5cebcca162c132b77f6d21502eb3",
+      "evidence": {
+        "term": "配偶者居住権",
+        "subject": "rights",
+        "pastQuestions": [
+          {
+            "year": "2023",
+            "question": 7
+          }
+        ],
+        "currentBankFiles": []
+      },
+      "contrast": "所定の要件がある。配偶者短期居住権や建物所有権とは区別する。",
+      "choices": [
+        {
+          "term": "敷地利用権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/337AC0000000069/20260401_507AC0000000047",
+          "sourceLocator": "区分所有法2条6項・22条",
+          "definitionSha256": "231f8d04a802f475b414f223c05e7a7bbbd58d75b6a189c9920453f22611ffb2"
+        },
+        {
+          "term": "地役権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法280条",
+          "definitionSha256": "0c57326d35b1fb9fa955b3ac97bfdf81520a5e79b078d763112086b3c20a7d29"
+        },
+        {
+          "term": "配偶者居住権",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法1028条以下",
+          "definitionSha256": "f3ecd54e4321751d48e82c124c61ee6c1f2e8b07c1359e5ef38878428c5dd714"
+        },
+        {
+          "term": "法定地上権",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法388条",
+          "definitionSha256": "b84879d53352b1fbdd40e8d6aa21911e7fb7ab618e5485d289b97b9de8d505be"
+        }
+      ]
+    },
+    {
+      "id": "vocab-096",
+      "term": "弁済業務保証金",
+      "subject": "business",
+      "reading": "べんさいぎょうむほしょうきん",
+      "sha256": "34e3a12bab79a01a3d318ddfdf1ee5cd4d8b64133b14700d44a89f5272f85363",
+      "evidence": {
+        "term": "弁済業務保証金",
+        "subject": "business",
+        "pastQuestions": [
+          {
+            "year": "2024",
+            "question": 36
+          },
+          {
+            "year": "2023",
+            "question": 44
+          }
+        ],
+        "currentBankFiles": [
+          "business-fullscore-bank.js",
+          "business-fullscore-supplement.js",
+          "exam-questions-business.js"
+        ]
+      },
+      "contrast": "供託するのは保証協会。対象債権者から宅建業者は除かれる。",
+      "choices": [
+        {
+          "term": "弁済業務保証金分担金",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法64条の9",
+          "definitionSha256": "510c2961f57355e0a63485b7f344ce57ae8c788e2817e4e96c0dfe40e5cf46a3"
+        },
+        {
+          "term": "還付充当金",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法64条の10",
+          "definitionSha256": "722ec9388022db48061902f8cc4197fc0060707f34cae06f69f21ac148c7b914"
+        },
+        {
+          "term": "営業保証金の供託",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅地建物取引業法第25条・第27条",
+          "definitionSha256": "da5b10457cd2eaf6d368c91b4242585ecf66faf85150b19b69594d6b831fb904"
+        },
+        {
+          "term": "弁済業務保証金",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法64条の7・64条の8",
+          "definitionSha256": "8b225e0e51b7b5d9d97f11b3080abdb34e59ca53f0c00b1f01a62418d51eb4c2"
+        }
+      ]
+    },
+    {
+      "id": "vocab-097",
+      "term": "弁済業務保証金分担金",
+      "subject": "business",
+      "reading": "べんさいぎょうむほしょうきんぶんたんきん",
+      "sha256": "859b5eec88ea8c3b726972a59b7d754115f8381ee444d81de9f00a45f9639929",
+      "evidence": {
+        "term": "弁済業務保証金分担金",
+        "subject": "business",
+        "pastQuestions": [
+          {
+            "year": "2024",
+            "question": 36
+          },
+          {
+            "year": "2023",
+            "question": 44
+          }
+        ],
+        "currentBankFiles": [
+          "business-fullscore-bank.js",
+          "exam-questions-business.js"
+        ]
+      },
+      "contrast": "社員が協会へ納付する。社員自身の供託と混同しない。",
+      "choices": [
+        {
+          "term": "弁済業務保証金分担金",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法64条の9",
+          "definitionSha256": "510c2961f57355e0a63485b7f344ce57ae8c788e2817e4e96c0dfe40e5cf46a3"
+        },
+        {
+          "term": "弁済業務保証金",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法64条の7・64条の8",
+          "definitionSha256": "8b225e0e51b7b5d9d97f11b3080abdb34e59ca53f0c00b1f01a62418d51eb4c2"
+        },
+        {
+          "term": "還付充当金",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法64条の10",
+          "definitionSha256": "722ec9388022db48061902f8cc4197fc0060707f34cae06f69f21ac148c7b914"
+        },
+        {
+          "term": "手付",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第557条",
+          "definitionSha256": "aee72e7082a66b391214c931c816ee01caee155bb1ad59d0326e6cffcc21226e"
+        }
+      ]
+    },
+    {
+      "id": "vocab-098",
+      "term": "還付",
+      "subject": "business",
+      "reading": "かんぷ",
+      "sha256": "068b6d15ed29856610aaa722ec569da295cdb4464f2bf436783fc7eed500bc0e",
+      "evidence": {
+        "term": "還付",
+        "subject": "business",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 35
+          },
+          {
+            "year": "2024",
+            "question": 27
+          },
+          {
+            "year": "2024",
+            "question": 36
+          },
+          {
+            "year": "2023",
+            "question": 30
+          },
+          {
+            "year": "2023",
+            "question": 44
+          }
+        ],
+        "currentBankFiles": [
+          "business-fresh-front.js",
+          "business-fullscore-bank.js",
+          "business-fullscore-supplement.js",
+          "business-hard-front.js",
+          "exam-questions-business.js"
+        ]
+      },
+      "contrast": "債権者が弁済を受ける。供託した側が回収する取戻しとは別。",
+      "choices": [
+        {
+          "term": "取戻し",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法30条・64条の11",
+          "definitionSha256": "73f8d746baefb3e5729e80c672d9687874a92d26bcc521318028707ea57c8cec"
+        },
+        {
+          "term": "還付",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法27条・64条の8",
+          "definitionSha256": "2846720107ca04e7ba1d9b2ab9402bba38a070b1b5dbee96f0fd7de9be56d4a5"
+        },
+        {
+          "term": "還付充当金",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法64条の10",
+          "definitionSha256": "722ec9388022db48061902f8cc4197fc0060707f34cae06f69f21ac148c7b914"
+        },
+        {
+          "term": "弁済業務保証金分担金",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法64条の9",
+          "definitionSha256": "510c2961f57355e0a63485b7f344ce57ae8c788e2817e4e96c0dfe40e5cf46a3"
+        }
+      ]
+    },
+    {
+      "id": "vocab-099",
+      "term": "取戻し",
+      "subject": "business",
+      "reading": "とりもどし",
+      "sha256": "91e66f805dde102be5557aaebbe1525649970dc4ac7f42a8aadff09a0acc75a5",
+      "evidence": {
+        "term": "取戻し",
+        "subject": "business",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "business-fresh-front.js",
+          "business-fullscore-supplement.js",
+          "business-hard-front.js"
+        ]
+      },
+      "contrast": "公告の要否等は取戻しの原因で異なる。債権者への還付とは別。",
+      "choices": [
+        {
+          "term": "還付",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法27条・64条の8",
+          "definitionSha256": "2846720107ca04e7ba1d9b2ab9402bba38a070b1b5dbee96f0fd7de9be56d4a5"
+        },
+        {
+          "term": "還付充当金",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法64条の10",
+          "definitionSha256": "722ec9388022db48061902f8cc4197fc0060707f34cae06f69f21ac148c7b914"
+        },
+        {
+          "term": "取戻し",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法30条・64条の11",
+          "definitionSha256": "73f8d746baefb3e5729e80c672d9687874a92d26bcc521318028707ea57c8cec"
+        },
+        {
+          "term": "弁済供託",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第494条",
+          "definitionSha256": "d3b38b92e06d146d1bde46f2b6584b93963002a8cf5621466c6330a9d8d33b28"
+        }
+      ]
+    },
+    {
+      "id": "vocab-100",
+      "term": "還付充当金",
+      "subject": "business",
+      "reading": "かんぷじゅうとうきん",
+      "sha256": "c416a0f6a58bc7f9c81335545c233976482ebe7b7fd80050379e5b2543c034a2",
+      "evidence": {
+        "term": "還付充当金",
+        "subject": "business",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "business-fullscore-supplement.js",
+          "exam-questions-business.js"
+        ]
+      },
+      "contrast": "入会時の分担金とは別。還付を受けた債権者が払うものではない。",
+      "choices": [
+        {
+          "term": "弁済業務保証金分担金",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法64条の9",
+          "definitionSha256": "510c2961f57355e0a63485b7f344ce57ae8c788e2817e4e96c0dfe40e5cf46a3"
+        },
+        {
+          "term": "還付",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法27条・64条の8",
+          "definitionSha256": "2846720107ca04e7ba1d9b2ab9402bba38a070b1b5dbee96f0fd7de9be56d4a5"
+        },
+        {
+          "term": "取戻し",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法30条・64条の11",
+          "definitionSha256": "73f8d746baefb3e5729e80c672d9687874a92d26bcc521318028707ea57c8cec"
+        },
+        {
+          "term": "還付充当金",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法64条の10",
+          "definitionSha256": "722ec9388022db48061902f8cc4197fc0060707f34cae06f69f21ac148c7b914"
+        }
+      ]
+    },
+    {
+      "id": "vocab-101",
+      "term": "免許換え",
+      "subject": "business",
+      "reading": "めんきょがえ",
+      "sha256": "546c2ba88c702c42fbd4384ecb031594b06f803e2724c27bd4e27623cdfaebcf",
+      "evidence": {
+        "term": "免許換え",
+        "subject": "business",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 41
+          },
+          {
+            "year": "2024",
+            "question": 38
+          }
+        ],
+        "currentBankFiles": [
+          "business-fresh-front.js",
+          "business-fullscore-supplement.js"
+        ]
+      },
+      "contrast": "同じ都道府県内だけの移転で当然に免許換えになるわけではない。",
+      "choices": [
+        {
+          "term": "免許換え",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法7条",
+          "definitionSha256": "715ac579209ff6f5135191eea7bb6f9b9412901a9ef27eb6ffd89e32ed32150f"
+        },
+        {
+          "term": "免許の更新",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法3条2・3項",
+          "definitionSha256": "2e94ff925177ed57dfd578936da8852ce5503e9cc1c965345fcd6640d48ebb77"
+        },
+        {
+          "term": "変更の届出",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法9条",
+          "definitionSha256": "afc4b2c061918115dc9f75730cd876ce72f327ed09eb1225480c864b4cc98123"
+        },
+        {
+          "term": "廃業等の届出",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法11条",
+          "definitionSha256": "f2c2526de5837ac7343a74993b6f4737d9a667f8c451f15b655f144489e030b7"
+        }
+      ]
+    },
+    {
+      "id": "vocab-102",
+      "term": "専任媒介契約",
+      "subject": "business",
+      "reading": "せんにんばいかいけいやく",
+      "sha256": "b4b52416174ddfffede267279b801a376bbff4fb6cdb5f24f15a4184358b4829",
+      "evidence": {
+        "term": "専任媒介契約",
+        "subject": "business",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 28
+          },
+          {
+            "year": "2025",
+            "question": 39
+          },
+          {
+            "year": "2024",
+            "question": 32
+          },
+          {
+            "year": "2023",
+            "question": 40
+          }
+        ],
+        "currentBankFiles": [
+          "business-fresh-contracts.js",
+          "business-fullscore-supplement.js",
+          "business-hard-contracts.js",
+          "exam-questions-business.js"
+        ]
+      },
+      "contrast": "自己発見取引ができる通常の専任を問う。専属専任は自己発見取引も制限。",
+      "choices": [
+        {
+          "term": "専属専任媒介契約",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法34条の2・標準媒介契約約款",
+          "definitionSha256": "fa4841c39917dd9be96fda950d90103213dfef0f6ce14f5730c7687c6ab18cd5"
+        },
+        {
+          "term": "専任媒介契約",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法34条の2・標準媒介契約約款",
+          "definitionSha256": "34c97990f1d15c7ac7176ba0b60398e337d22f226618f5d9835510fc4537ab09"
+        },
+        {
+          "term": "一般媒介契約",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法34条の2・標準媒介契約約款",
+          "definitionSha256": "12b9910def445e2dfe46de5157879ba79c47c28dd41b3b64cf2d6ec26788bb7d"
+        },
+        {
+          "term": "代理",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第99条",
+          "definitionSha256": "4533e52e3ba14215a9fb783dcaf80164e3595fac9731d9aaa3ea19c289575c8a"
+        }
+      ]
+    },
+    {
+      "id": "vocab-103",
+      "term": "専属専任媒介契約",
+      "subject": "business",
+      "reading": "せんぞくせんにんばいかいけいやく",
+      "sha256": "04b64b65be559041f00f2d570c30e30070ce3876e51c33bd1340c25d723fc7ee",
+      "evidence": {
+        "term": "専属専任媒介契約",
+        "subject": "business",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 28
+          },
+          {
+            "year": "2025",
+            "question": 39
+          },
+          {
+            "year": "2024",
+            "question": 32
+          },
+          {
+            "year": "2023",
+            "question": 40
+          }
+        ],
+        "currentBankFiles": [
+          "business-fresh-contracts.js",
+          "exam-questions-business.js"
+        ]
+      },
+      "contrast": "通常の専任との区別は自己発見取引の可否。",
+      "choices": [
+        {
+          "term": "専任媒介契約",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法34条の2・標準媒介契約約款",
+          "definitionSha256": "34c97990f1d15c7ac7176ba0b60398e337d22f226618f5d9835510fc4537ab09"
+        },
+        {
+          "term": "一般媒介契約",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法34条の2・標準媒介契約約款",
+          "definitionSha256": "12b9910def445e2dfe46de5157879ba79c47c28dd41b3b64cf2d6ec26788bb7d"
+        },
+        {
+          "term": "専属専任媒介契約",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法34条の2・標準媒介契約約款",
+          "definitionSha256": "fa4841c39917dd9be96fda950d90103213dfef0f6ce14f5730c7687c6ab18cd5"
+        },
+        {
+          "term": "代理",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第99条",
+          "definitionSha256": "4533e52e3ba14215a9fb783dcaf80164e3595fac9731d9aaa3ea19c289575c8a"
+        }
+      ]
+    },
+    {
+      "id": "vocab-104",
+      "term": "建物状況調査",
+      "subject": "business",
+      "reading": "たてものじょうきょうちょうさ",
+      "sha256": "7bc7bda13782886a2b3364818a3426d71b6202c5a09535ef81700e6ecfab3cc4",
+      "evidence": {
+        "term": "建物状況調査",
+        "subject": "business",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 37
+          },
+          {
+            "year": "2024",
+            "question": 32
+          },
+          {
+            "year": "2024",
+            "question": 37
+          },
+          {
+            "year": "2023",
+            "question": 27
+          },
+          {
+            "year": "2023",
+            "question": 31
+          },
+          {
+            "year": "2023",
+            "question": 40
+          }
+        ],
+        "currentBankFiles": [
+          "business-fresh-contracts.js",
+          "business-fullscore-bank.js",
+          "business-fullscore-supplement.js",
+          "business-hard-contracts.js",
+          "exam-questions-business.js"
+        ]
+      },
+      "contrast": "法適合の確認や将来の性能保証ではない。調査範囲と有効な調査結果を確認する。",
+      "choices": [
+        {
+          "term": "建築確認",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+          "sourceLocator": "建築基準法6・6条の2",
+          "definitionSha256": "c8bb842727e3b39561568c930d5acf151df0166124f97c12574a18eab8dd0550"
+        },
+        {
+          "term": "大規模の修繕",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+          "sourceLocator": "建築基準法2条14号",
+          "definitionSha256": "506bb194c266dc76d0863a1efee06efae3261f8a66fd6a56ef1809df63725532"
+        },
+        {
+          "term": "契約不適合責任",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法562〜565条",
+          "definitionSha256": "28a7c9d120cd04288999c9d6c3f585d629522bcc6638bd2bacfdd9c253d799cc"
+        },
+        {
+          "term": "建物状況調査",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法34条の2・35条・既存住宅状況調査方法基準",
+          "definitionSha256": "d4c8b8b71416174d0d4ab5d51f6b1fb892de026be309a8ef5d49d2a94cb5cd90"
+        }
+      ]
+    },
+    {
+      "id": "vocab-105",
+      "term": "手付金等の保全措置",
+      "subject": "business",
+      "reading": "てつけきんとうのほぜんそち",
+      "sha256": "407727983aaae2d0c7b627877c9efd88b6c359076cddd644d1eab96570582004",
+      "evidence": {
+        "term": "手付金等の保全措置",
+        "subject": "business",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 28
+          },
+          {
+            "year": "2024",
+            "question": 34
+          }
+        ],
+        "currentBankFiles": [
+          "business-fullscore-bank.js",
+          "business-fullscore-supplement.js",
+          "exam-questions-business.js"
+        ]
+      },
+      "contrast": "未完成・完成や金額等で要否が異なる。買主が宅建業者等の場合も別扱い。",
+      "choices": [
+        {
+          "term": "手付金等の保全措置",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法41条・41条の2",
+          "definitionSha256": "a90822b54bd2099b54b467b593f249697d7d704616e6dc305917c39c0bb73549"
+        },
+        {
+          "term": "手付",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第557条",
+          "definitionSha256": "aee72e7082a66b391214c931c816ee01caee155bb1ad59d0326e6cffcc21226e"
+        },
+        {
+          "term": "営業保証金の供託",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅地建物取引業法第25条・第27条",
+          "definitionSha256": "da5b10457cd2eaf6d368c91b4242585ecf66faf85150b19b69594d6b831fb904"
+        },
+        {
+          "term": "建物状況調査",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法34条の2・35条・既存住宅状況調査方法基準",
+          "definitionSha256": "d4c8b8b71416174d0d4ab5d51f6b1fb892de026be309a8ef5d49d2a94cb5cd90"
+        }
+      ]
+    },
+    {
+      "id": "vocab-106",
+      "term": "一般媒介契約",
+      "subject": "business",
+      "reading": "いっぱんばいかいけいやく",
+      "sha256": "8a5606487918171c4942c92f14bec7884a7498a5407c0b80400f137373f156a0",
+      "evidence": {
+        "term": "一般媒介契約",
+        "subject": "business",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 39
+          }
+        ],
+        "currentBankFiles": [
+          "business-fresh-contracts.js",
+          "business-fullscore-bank.js",
+          "business-hard-contracts.js",
+          "exam-questions-business.js"
+        ]
+      },
+      "contrast": "重複依頼できる。依頼先を明示する型と明示しない型がある。",
+      "choices": [
+        {
+          "term": "専任媒介契約",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法34条の2・標準媒介契約約款",
+          "definitionSha256": "34c97990f1d15c7ac7176ba0b60398e337d22f226618f5d9835510fc4537ab09"
+        },
+        {
+          "term": "一般媒介契約",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法34条の2・標準媒介契約約款",
+          "definitionSha256": "12b9910def445e2dfe46de5157879ba79c47c28dd41b3b64cf2d6ec26788bb7d"
+        },
+        {
+          "term": "専属専任媒介契約",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法34条の2・標準媒介契約約款",
+          "definitionSha256": "fa4841c39917dd9be96fda950d90103213dfef0f6ce14f5730c7687c6ab18cd5"
+        },
+        {
+          "term": "代理",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第99条",
+          "definitionSha256": "4533e52e3ba14215a9fb783dcaf80164e3595fac9731d9aaa3ea19c289575c8a"
+        }
+      ]
+    },
+    {
+      "id": "vocab-107",
+      "term": "指定流通機構",
+      "subject": "business",
+      "reading": "していりゅうつうきこう",
+      "sha256": "99b9cd1a43f7214ca895e084498551c3981bb0357e8ac16535e5d460671526ee",
+      "evidence": {
+        "term": "指定流通機構",
+        "subject": "business",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 28
+          },
+          {
+            "year": "2025",
+            "question": 39
+          },
+          {
+            "year": "2024",
+            "question": 32
+          },
+          {
+            "year": "2023",
+            "question": 40
+          }
+        ],
+        "currentBankFiles": [
+          "business-fresh-contracts.js",
+          "business-fullscore-bank.js",
+          "business-fullscore-supplement.js",
+          "business-hard-contracts.js",
+          "exam-questions-business.js"
+        ]
+      },
+      "contrast": "専任等の登録義務と結びつく。保証金を供託する保証協会とは別。",
+      "choices": [
+        {
+          "term": "宅地建物取引業保証協会",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法64条の2・64条の3",
+          "definitionSha256": "ae95668e7002907e3da1dfefb1b9852ae9df036184b6001ecfba95db84e7ccba"
+        },
+        {
+          "term": "免許権者",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法3条1項",
+          "definitionSha256": "b523304719953e778e1934e6ac1870b27ea33c5a820767731f3c0593b6bd19d1"
+        },
+        {
+          "term": "指定流通機構",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法50条の2の2以下",
+          "definitionSha256": "dac7f96aac273825ab1c9ceb9f336eb925d4fcd01a75a0145c7b93a2771ad99c"
+        },
+        {
+          "term": "指定確認検査機関",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+          "sourceLocator": "建築基準法6条の2・77条の21以下",
+          "definitionSha256": "c9b27f8efd6a86f703c10f5885b60b90b5a131e3bf7546bffa3d4cf51a13d123"
+        }
+      ]
+    },
+    {
+      "id": "vocab-108",
+      "term": "取引態様",
+      "subject": "business",
+      "reading": "とりひきたいよう",
+      "sha256": "b081cc7e5aca6a3e10f112a13238e3047f1d1e27aa440b7ca946ea2ef6bff569",
+      "evidence": {
+        "term": "取引態様",
+        "subject": "business",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 28
+          },
+          {
+            "year": "2025",
+            "question": 38
+          },
+          {
+            "year": "2024",
+            "question": 33
+          },
+          {
+            "year": "2023",
+            "question": 31
+          }
+        ],
+        "currentBankFiles": [
+          "business-fresh-contracts.js",
+          "business-fullscore-bank.js",
+          "business-fullscore-supplement.js",
+          "business-hard-front.js"
+        ]
+      },
+      "contrast": "売主・貸主等の当事者か、代理か、媒介かを明示する。",
+      "choices": [
+        {
+          "term": "媒介",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅地建物取引業法第2条第2号・第34条の2",
+          "definitionSha256": "6221786038f088668b1cedafed6ff83b345d992cd89c63a27427ee69827637ad"
+        },
+        {
+          "term": "代理",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第99条",
+          "definitionSha256": "4533e52e3ba14215a9fb783dcaf80164e3595fac9731d9aaa3ea19c289575c8a"
+        },
+        {
+          "term": "法定・約定",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第404条・第419条",
+          "definitionSha256": "9de164c487fae2faf8eecc1826600a6da3ad5a9da3ab2f0cb6c2a55284e783ac"
+        },
+        {
+          "term": "取引態様",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法34条",
+          "definitionSha256": "064df7ab4428abc74736153ec87f7d25e14b2a04b8387e2d6273f5c0764d9e2f"
+        }
+      ]
+    },
+    {
+      "id": "vocab-109",
+      "term": "クーリング・オフ",
+      "subject": "business",
+      "reading": "くーりんぐおふ",
+      "sha256": "3efea2a8c9489bb8c46ba499104331bf7228b7565575c6605bf77ddaa3a4f7b3",
+      "evidence": {
+        "term": "クーリング・オフ",
+        "subject": "business",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 30
+          },
+          {
+            "year": "2025",
+            "question": 40
+          },
+          {
+            "year": "2024",
+            "question": 30
+          },
+          {
+            "year": "2024",
+            "question": 39
+          },
+          {
+            "year": "2023",
+            "question": 35
+          }
+        ],
+        "currentBankFiles": []
+      },
+      "contrast": "場所、買主属性、告知後の期間、引渡し・代金完済等の要件がある。",
+      "choices": [
+        {
+          "term": "クーリング・オフ",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法37条の2",
+          "definitionSha256": "a3b9877a0325915683ad3fa8f1dacb0be08fa777157fed0f032f48b4a765c2e6"
+        },
+        {
+          "term": "手付",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第557条",
+          "definitionSha256": "aee72e7082a66b391214c931c816ee01caee155bb1ad59d0326e6cffcc21226e"
+        },
+        {
+          "term": "取消し",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第120条・第121条",
+          "definitionSha256": "df0c5363074c4c339931611c82560a08ef1e5ae7ec9e31b26eace213cbd3f233"
+        },
+        {
+          "term": "解除条件",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法127条2項",
+          "definitionSha256": "18783467c3fa64aabea9ddc433c1fcc6ea8ed02c90289554891ef9698f9971ca"
+        }
+      ]
+    },
+    {
+      "id": "vocab-110",
+      "term": "履行の着手",
+      "subject": "business",
+      "reading": "りこうのちゃくしゅ",
+      "sha256": "42c87a67e7e9764e478f4e469aab1ad487b5676dd900de3b37b8e395d09807a1",
+      "evidence": {
+        "term": "履行の着手",
+        "subject": "business",
+        "pastQuestions": [],
+        "currentBankFiles": []
+      },
+      "contrast": "単なる内心の準備とは別。相手方の履行着手は手付解除の可否に関係する。",
+      "choices": [
+        {
+          "term": "催告",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第541条・第150条",
+          "definitionSha256": "7468858f06124de313b2c029c2a6fb2df427ff328431949c1e1805628cb64e33"
+        },
+        {
+          "term": "履行の着手",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法557条・手付解除の判例",
+          "definitionSha256": "f3355e969ec93ccf57b34c5035b6e3c5041d61ec66487ae7506d641424d45f35"
+        },
+        {
+          "term": "手付金等の保全措置",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法41条・41条の2",
+          "definitionSha256": "a90822b54bd2099b54b467b593f249697d7d704616e6dc305917c39c0bb73549"
+        },
+        {
+          "term": "追認",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法第122条",
+          "definitionSha256": "f3e348e52388f06414d36be9550d8f22196e5ea0e90ed98cd7b7ba055cb4ee31"
+        }
+      ]
+    },
+    {
+      "id": "vocab-111",
+      "term": "37条書面",
+      "subject": "business",
+      "reading": "さんじゅうななじょうしょめん",
+      "sha256": "a2e3c63038542915aa6e1bdc24cf92d0282a4a35e795e52d6f8200921d3515e9",
+      "evidence": {
+        "term": "37条書面",
+        "subject": "business",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 29
+          },
+          {
+            "year": "2025",
+            "question": 33
+          },
+          {
+            "year": "2024",
+            "question": 35
+          },
+          {
+            "year": "2024",
+            "question": 44
+          },
+          {
+            "year": "2023",
+            "question": 26
+          },
+          {
+            "year": "2023",
+            "question": 43
+          }
+        ],
+        "currentBankFiles": [
+          "business-fresh-contracts.js",
+          "business-fresh-front.js",
+          "business-fresh-practice.js",
+          "business-fullscore-bank.js",
+          "business-fullscore-supplement.js",
+          "business-hard-contracts.js",
+          "exam-questions-business.js"
+        ]
+      },
+      "contrast": "契約成立前の35条説明と区別する。承諾等の要件を満たせば電磁的方法も可能。",
+      "choices": [
+        {
+          "term": "重要事項説明",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅地建物取引業法第35条第1項",
+          "definitionSha256": "55938616f849c20238a081729e20448bc5c2c3f32d7b98f1e235b84594e22c3d"
+        },
+        {
+          "term": "建物状況調査",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法34条の2・35条・既存住宅状況調査方法基準",
+          "definitionSha256": "d4c8b8b71416174d0d4ab5d51f6b1fb892de026be309a8ef5d49d2a94cb5cd90"
+        },
+        {
+          "term": "37条書面",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法37条",
+          "definitionSha256": "188867733cc9b3ad7eb285ce2347163d0fafba8b7b0e38829448f8f1087bf937"
+        },
+        {
+          "term": "公告",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/329AC0000000119/20250601_504AC0000000068",
+          "sourceLocator": "土地区画整理法第103条第4項・第104条",
+          "definitionSha256": "5130367f8656d370eca09ae10aba5652d18b240dcef377c80e0f2cf5bddec6fe"
+        }
+      ]
+    },
+    {
+      "id": "vocab-112",
+      "term": "区域区分",
+      "subject": "restrictions",
+      "reading": "くいきくぶん",
+      "sha256": "e0d6f7c12199e14f54bb1a9b190b678eecf42e0a3de532416292ae4b29cfb695",
+      "evidence": {
+        "term": "区域区分",
+        "subject": "restrictions",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 16
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-restrictions.js",
+          "restrictions-cases-city-land.js"
+        ]
+      },
+      "contrast": "すべての都市計画区域で当然に行うものではない。",
+      "choices": [
+        {
+          "term": "用途地域",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法第8条第1項第1号・第9条",
+          "definitionSha256": "dd88b087094ff543875aa52d89da8791c789d064177624c4109020402d72deae"
+        },
+        {
+          "term": "地区計画",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法12条の5",
+          "definitionSha256": "31a1254cfcd79bf6467aaf877d718b9ee105478ae8320907c1db317b05a5af29"
+        },
+        {
+          "term": "準都市計画区域",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法5条の2",
+          "definitionSha256": "7935f1badaf6766c0cf5152d8b456342874cf1ee4b9521775ccabe8f0e541286"
+        },
+        {
+          "term": "区域区分",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法7条",
+          "definitionSha256": "7c5d5090a0300876c801f481e5d0256e8e112dd44917ad900f6cb067d267aff4"
+        }
+      ]
+    },
+    {
+      "id": "vocab-113",
+      "term": "準都市計画区域",
+      "subject": "restrictions",
+      "reading": "じゅんとしけいかくくいき",
+      "sha256": "d609619878d981987f3c6a9b52269db952e6bd80a33ba7521c4311f8b223f78e",
+      "evidence": {
+        "term": "準都市計画区域",
+        "subject": "restrictions",
+        "pastQuestions": [
+          {
+            "year": "2024",
+            "question": 15
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-restrictions.js",
+          "restrictions-cases-building-readjustment.js",
+          "restrictions-cases-city-land.js",
+          "restrictions-supplement-bank.js"
+        ]
+      },
+      "contrast": "都市計画区域の外。市街化区域等への区域区分は行わない。",
+      "choices": [
+        {
+          "term": "準都市計画区域",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法5条の2",
+          "definitionSha256": "7935f1badaf6766c0cf5152d8b456342874cf1ee4b9521775ccabe8f0e541286"
+        },
+        {
+          "term": "都市計画区域",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法第4条第2項・第5条",
+          "definitionSha256": "ee516cca28f82da00dd7190c6122211ff4a5352b7e60d91432cef24d4641a278"
+        },
+        {
+          "term": "市街化調整区域",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法第7条第3項",
+          "definitionSha256": "127399832f06a2b9af2b0b163b7690539515a995d832d70874230d57b4db301a"
+        },
+        {
+          "term": "用途地域",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法第8条第1項第1号・第9条",
+          "definitionSha256": "dd88b087094ff543875aa52d89da8791c789d064177624c4109020402d72deae"
+        }
+      ]
+    },
+    {
+      "id": "vocab-114",
+      "term": "特定工作物",
+      "subject": "restrictions",
+      "reading": "とくていこうさくぶつ",
+      "sha256": "f70dac72475503706ed6189c03d9b9dd32c677deb04065373129e8da50ce72e3",
+      "evidence": {
+        "term": "特定工作物",
+        "subject": "restrictions",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 16
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-restrictions.js",
+          "restrictions-cases-city-land.js"
+        ]
+      },
+      "contrast": "第一種と第二種で対象や規模要件が違う。ここでは都市計画法の用語。",
+      "choices": [
+        {
+          "term": "主要構造部",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+          "sourceLocator": "建築基準法2条5号",
+          "definitionSha256": "d28f8de1585756ffebc1e6744057f51c9451ba2985d792c5ca7a319b1498cb7b"
+        },
+        {
+          "term": "特定工作物",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法4条11項・施行令1条",
+          "definitionSha256": "631fbb9439db7e0e5dc243809aab6e267fa2da93123b8c42da383ab6caa767e2"
+        },
+        {
+          "term": "構造耐力上主要な部分",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325CO0000000338/20251201_507CO0000000377",
+          "sourceLocator": "建築基準法施行令1条3号",
+          "definitionSha256": "c40c24208c222880d57c2a98bee69da604adfd950c8ea95afffda72e79409e78"
+        },
+        {
+          "term": "開発行為",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法第4条第12項",
+          "definitionSha256": "675352b67fbdd1434dbb795f02cce1df0065eabae6b7e3e97b497b79098fd49e"
+        }
+      ]
+    },
+    {
+      "id": "vocab-115",
+      "term": "主要構造部",
+      "subject": "restrictions",
+      "reading": "しゅようこうぞうぶ",
+      "sha256": "95220892284254e42cca862514eed9f6886dff564f15c0e03837834c4cd36715",
+      "evidence": {
+        "term": "主要構造部",
+        "subject": "restrictions",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 43
+          }
+        ],
+        "currentBankFiles": [
+          "restrictions-cases-building-readjustment.js",
+          "restrictions-supplement-bank.js"
+        ]
+      },
+      "contrast": "基礎等を含む構造耐力上主要な部分と同じ集合ではない。",
+      "choices": [
+        {
+          "term": "構造耐力上主要な部分",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325CO0000000338/20251201_507CO0000000377",
+          "sourceLocator": "建築基準法施行令1条3号",
+          "definitionSha256": "c40c24208c222880d57c2a98bee69da604adfd950c8ea95afffda72e79409e78"
+        },
+        {
+          "term": "建築面積",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325CO0000000338/20251201_507CO0000000377",
+          "sourceLocator": "建築基準法施行令第2条第1項第2号",
+          "definitionSha256": "5598f3e2d5e5a82e22a7c79f97f75f7946ea43319885c1e6f0be3f451e577885"
+        },
+        {
+          "term": "主要構造部",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+          "sourceLocator": "建築基準法2条5号",
+          "definitionSha256": "d28f8de1585756ffebc1e6744057f51c9451ba2985d792c5ca7a319b1498cb7b"
+        },
+        {
+          "term": "敷地",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325CO0000000338/20251201_507CO0000000377",
+          "sourceLocator": "建築基準法施行令第1条第1号",
+          "definitionSha256": "86c9174e1ec3a3d75db63743ef4501c98aaa595d2dd2652e87c03237d68034c7"
+        }
+      ]
+    },
+    {
+      "id": "vocab-116",
+      "term": "構造耐力上主要な部分",
+      "subject": "restrictions",
+      "reading": "こうぞうたいりょくじょうしゅようなぶぶん",
+      "sha256": "8e11de4b0419572dbbf6645080427ae93d4f560e98c01edf45f3b5946d8de1f4",
+      "evidence": {
+        "term": "構造耐力上主要な部分",
+        "subject": "restrictions",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 29
+          },
+          {
+            "year": "2025",
+            "question": 45
+          },
+          {
+            "year": "2024",
+            "question": 40
+          },
+          {
+            "year": "2023",
+            "question": 27
+          },
+          {
+            "year": "2023",
+            "question": 45
+          }
+        ],
+        "currentBankFiles": [
+          "business-fresh-contracts.js",
+          "business-fresh-practice.js",
+          "business-fullscore-supplement.js",
+          "business-hard-practice.js",
+          "exam-questions-business.js"
+        ]
+      },
+      "contrast": "力を支える部分。主要構造部に含まれる階段等の分類とは一致しない。",
+      "choices": [
+        {
+          "term": "主要構造部",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+          "sourceLocator": "建築基準法2条5号",
+          "definitionSha256": "d28f8de1585756ffebc1e6744057f51c9451ba2985d792c5ca7a319b1498cb7b"
+        },
+        {
+          "term": "床面積",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325CO0000000338/20251201_507CO0000000377",
+          "sourceLocator": "建築基準法施行令第2条第1項第3号",
+          "definitionSha256": "d6e2d953b9f0756c4bc7f8849717ade80007e7b7838cd7fe769a634b45301d92"
+        },
+        {
+          "term": "敷地",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325CO0000000338/20251201_507CO0000000377",
+          "sourceLocator": "建築基準法施行令第1条第1号",
+          "definitionSha256": "86c9174e1ec3a3d75db63743ef4501c98aaa595d2dd2652e87c03237d68034c7"
+        },
+        {
+          "term": "構造耐力上主要な部分",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325CO0000000338/20251201_507CO0000000377",
+          "sourceLocator": "建築基準法施行令1条3号",
+          "definitionSha256": "c40c24208c222880d57c2a98bee69da604adfd950c8ea95afffda72e79409e78"
+        }
+      ]
+    },
+    {
+      "id": "vocab-117",
+      "term": "大規模の修繕",
+      "subject": "restrictions",
+      "reading": "だいきぼのしゅうぜん",
+      "sha256": "5468eba6f8bcc3d7383df8f1da146b9b0b67ba2fa86eedc08430f02201f45f39",
+      "evidence": {
+        "term": "大規模の修繕",
+        "subject": "restrictions",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 17
+          }
+        ],
+        "currentBankFiles": [
+          "restrictions-supplement-bank.js"
+        ]
+      },
+      "contrast": "建物全体の半分ではなく、主要構造部の一種以上の過半。",
+      "choices": [
+        {
+          "term": "大規模の修繕",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+          "sourceLocator": "建築基準法2条14号",
+          "definitionSha256": "506bb194c266dc76d0863a1efee06efae3261f8a66fd6a56ef1809df63725532"
+        },
+        {
+          "term": "大規模の模様替",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+          "sourceLocator": "建築基準法2条15号",
+          "definitionSha256": "ad94389b8f404a46a9aa60ff1a4734d9e441433e693f61e487eefd2b354eeb2f"
+        },
+        {
+          "term": "建物状況調査",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法34条の2・35条・既存住宅状況調査方法基準",
+          "definitionSha256": "d4c8b8b71416174d0d4ab5d51f6b1fb892de026be309a8ef5d49d2a94cb5cd90"
+        },
+        {
+          "term": "建築確認",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+          "sourceLocator": "建築基準法6・6条の2",
+          "definitionSha256": "c8bb842727e3b39561568c930d5acf151df0166124f97c12574a18eab8dd0550"
+        }
+      ]
+    },
+    {
+      "id": "vocab-118",
+      "term": "既存不適格",
+      "subject": "restrictions",
+      "reading": "きぞんふてきかく",
+      "sha256": "47ba0ebaf237244769785e7d7ee6c2c99cfde5abd4e3a203c50779eea9c63b16",
+      "evidence": {
+        "term": "既存不適格",
+        "subject": "restrictions",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "restrictions-cases-building-readjustment.js"
+        ]
+      },
+      "contrast": "当初からの違反建築と区別する。増改築等では現行規定の適用を確認する。",
+      "choices": [
+        {
+          "term": "契約不適合責任",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+          "sourceLocator": "民法562〜565条",
+          "definitionSha256": "28a7c9d120cd04288999c9d6c3f585d629522bcc6638bd2bacfdd9c253d799cc"
+        },
+        {
+          "term": "既存不適格",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+          "sourceLocator": "建築基準法3条2項・3項",
+          "definitionSha256": "6da590976c9bf18b5b6cc2ead71fc81ae1fa050840d705cf36f2611e4a40a035"
+        },
+        {
+          "term": "建築確認",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+          "sourceLocator": "建築基準法6・6条の2",
+          "definitionSha256": "c8bb842727e3b39561568c930d5acf151df0166124f97c12574a18eab8dd0550"
+        },
+        {
+          "term": "建物状況調査",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法34条の2・35条・既存住宅状況調査方法基準",
+          "definitionSha256": "d4c8b8b71416174d0d4ab5d51f6b1fb892de026be309a8ef5d49d2a94cb5cd90"
+        }
+      ]
+    },
+    {
+      "id": "vocab-119",
+      "term": "保留地",
+      "subject": "restrictions",
+      "reading": "ほりゅうち",
+      "sha256": "4930c71e0db0d8fbb861d4c1683690a094179c1cda5a653a1a357929756b7ca4",
+      "evidence": {
+        "term": "保留地",
+        "subject": "restrictions",
+        "pastQuestions": [
+          {
+            "year": "2024",
+            "question": 20
+          }
+        ],
+        "currentBankFiles": [
+          "restrictions-cases-building-readjustment.js",
+          "restrictions-supplement-bank.js"
+        ]
+      },
+      "contrast": "従前の所有者の換地ではない。法定の目的と処分方法による。",
+      "choices": [
+        {
+          "term": "仮換地",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/329AC0000000119/20250601_504AC0000000068",
+          "sourceLocator": "土地区画整理法第98条・第99条",
+          "definitionSha256": "19ed1479426d70fca291027f06bcc8d859009f1b156db956d9c75bfce048e482"
+        },
+        {
+          "term": "清算金",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/329AC0000000119/20250601_504AC0000000068",
+          "sourceLocator": "土地区画整理法94・110条",
+          "definitionSha256": "b114ed68be41b8cf84743c16532002c0a22d6c064d6b2b515d7463bdaf5b8626"
+        },
+        {
+          "term": "保留地",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/329AC0000000119/20250601_504AC0000000068",
+          "sourceLocator": "土地区画整理法96・104条",
+          "definitionSha256": "d506ee44be68abb0d0b3e8c76263633fdac044e79419846144dd367ff7ebd16f"
+        },
+        {
+          "term": "減歩",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/329AC0000000119/20250601_504AC0000000068",
+          "sourceLocator": "土地区画整理法2・89・96条",
+          "definitionSha256": "c3c2fd218e206a94e818fab978679fa6daf72f0067df9e2f2e8c4246e4eacec1"
+        }
+      ]
+    },
+    {
+      "id": "vocab-120",
+      "term": "清算金",
+      "subject": "restrictions",
+      "reading": "せいさんきん",
+      "sha256": "28c769d5e62d4ac092ea1eb8f1d478378dbcf28959bb12cab3fa8c12723e5b76",
+      "evidence": {
+        "term": "清算金",
+        "subject": "restrictions",
+        "pastQuestions": [
+          {
+            "year": "2023",
+            "question": 20
+          }
+        ],
+        "currentBankFiles": [
+          "restrictions-cases-building-readjustment.js",
+          "restrictions-supplement-bank.js"
+        ]
+      },
+      "contrast": "単なる工事代金や税ではなく、換地等の価値の不均衡を調整する。",
+      "choices": [
+        {
+          "term": "減歩",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/329AC0000000119/20250601_504AC0000000068",
+          "sourceLocator": "土地区画整理法2・89・96条",
+          "definitionSha256": "c3c2fd218e206a94e818fab978679fa6daf72f0067df9e2f2e8c4246e4eacec1"
+        },
+        {
+          "term": "保留地",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/329AC0000000119/20250601_504AC0000000068",
+          "sourceLocator": "土地区画整理法96・104条",
+          "definitionSha256": "d506ee44be68abb0d0b3e8c76263633fdac044e79419846144dd367ff7ebd16f"
+        },
+        {
+          "term": "還付充当金",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法64条の10",
+          "definitionSha256": "722ec9388022db48061902f8cc4197fc0060707f34cae06f69f21ac148c7b914"
+        },
+        {
+          "term": "清算金",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/329AC0000000119/20250601_504AC0000000068",
+          "sourceLocator": "土地区画整理法94・110条",
+          "definitionSha256": "b114ed68be41b8cf84743c16532002c0a22d6c064d6b2b515d7463bdaf5b8626"
+        }
+      ]
+    },
+    {
+      "id": "vocab-121",
+      "term": "採草放牧地",
+      "subject": "restrictions",
+      "reading": "さいそうほうぼくち",
+      "sha256": "b3752990dd78159ceea32dcd5c77704f3dc15f1d7d65d55beef366f624d445ab",
+      "evidence": {
+        "term": "採草放牧地",
+        "subject": "restrictions",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "restrictions-cases-agriculture-fill.js"
+        ]
+      },
+      "contrast": "農地法上、農地とは別に定義される。登記の地目だけで判断しない。",
+      "choices": [
+        {
+          "term": "採草放牧地",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC0000000229/20250601_504AC0000000068",
+          "sourceLocator": "農地法2条1項",
+          "definitionSha256": "eb0f79ffd1802e17cc0243a4909e503f0aac098d1420e84ffae047ba79b5ea86"
+        },
+        {
+          "term": "農地転用",
+          "correct": false,
+          "sourceUrl": "https://www.maff.go.jp/j/nousin/noukei/230222.html",
+          "sourceLocator": "農林水産省『農地の違反転用』／農地法第4条・第5条",
+          "definitionSha256": "ee59e6ed60e16f1d9b0f43d7a9394c57c55d7fea0b5ecd03300c92537c1ddba0"
+        },
+        {
+          "term": "宅地造成",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/336AC0000000191/20250601_504AC0000000068",
+          "sourceLocator": "宅地造成及び特定盛土等規制法2条2号",
+          "definitionSha256": "4f1472bb193bddba69e303fe422421a65e0c3deafed478ea6cbdf7a0fc52c872"
+        },
+        {
+          "term": "保留地",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/329AC0000000119/20250601_504AC0000000068",
+          "sourceLocator": "土地区画整理法96・104条",
+          "definitionSha256": "d506ee44be68abb0d0b3e8c76263633fdac044e79419846144dd367ff7ebd16f"
+        }
+      ]
+    },
+    {
+      "id": "vocab-122",
+      "term": "特定盛土等",
+      "subject": "restrictions",
+      "reading": "とくていもりどとう",
+      "sha256": "e123640bf228bd644a33090ee827f22dd3bdd9d1935c28807b541b2c7f9dcf84",
+      "evidence": {
+        "term": "特定盛土等",
+        "subject": "restrictions",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 17
+          },
+          {
+            "year": "2025",
+            "question": 19
+          },
+          {
+            "year": "2024",
+            "question": 19
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-restrictions.js",
+          "restrictions-authored-bank.js",
+          "restrictions-cases-agriculture-fill.js",
+          "restrictions-supplement-bank.js"
+        ]
+      },
+      "contrast": "宅地に及ぶ災害と政令の要件を確認する。許可等には規制区域・規模等の条件がある。",
+      "choices": [
+        {
+          "term": "土石の堆積",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/336AC0000000191/20250601_504AC0000000068",
+          "sourceLocator": "宅地造成及び特定盛土等規制法2条4号",
+          "definitionSha256": "ad0011b53549b6ba2667af93e7d75b274530dd4ba473b3ee4fa16dcca629dd08"
+        },
+        {
+          "term": "特定盛土等",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/336AC0000000191/20250601_504AC0000000068",
+          "sourceLocator": "宅地造成及び特定盛土等規制法2条3号",
+          "definitionSha256": "e4fd40ce4f74f97981f833c96345db5714ff8e6c5677e4d3d48558a8f8de8443"
+        },
+        {
+          "term": "農地転用",
+          "correct": false,
+          "sourceUrl": "https://www.maff.go.jp/j/nousin/noukei/230222.html",
+          "sourceLocator": "農林水産省『農地の違反転用』／農地法第4条・第5条",
+          "definitionSha256": "ee59e6ed60e16f1d9b0f43d7a9394c57c55d7fea0b5ecd03300c92537c1ddba0"
+        },
+        {
+          "term": "減歩",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/329AC0000000119/20250601_504AC0000000068",
+          "sourceLocator": "土地区画整理法2・89・96条",
+          "definitionSha256": "c3c2fd218e206a94e818fab978679fa6daf72f0067df9e2f2e8c4246e4eacec1"
+        }
+      ]
+    },
+    {
+      "id": "vocab-123",
+      "term": "土石の堆積",
+      "subject": "restrictions",
+      "reading": "どせきのたいせき",
+      "sha256": "df8534b8f4db21cb9e5016a538d465f4f83d14b977fe63f283ccc70b546350e1",
+      "evidence": {
+        "term": "土石の堆積",
+        "subject": "restrictions",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 19
+          },
+          {
+            "year": "2024",
+            "question": 19
+          }
+        ],
+        "currentBankFiles": [
+          "restrictions-cases-agriculture-fill.js",
+          "restrictions-supplement-bank.js"
+        ]
+      },
+      "contrast": "恒久的な土地の造成と、一定期間後に除却する土石の堆積を区別する。",
+      "choices": [
+        {
+          "term": "宅地造成",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/336AC0000000191/20250601_504AC0000000068",
+          "sourceLocator": "宅地造成及び特定盛土等規制法2条2号",
+          "definitionSha256": "4f1472bb193bddba69e303fe422421a65e0c3deafed478ea6cbdf7a0fc52c872"
+        },
+        {
+          "term": "特定盛土等",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/336AC0000000191/20250601_504AC0000000068",
+          "sourceLocator": "宅地造成及び特定盛土等規制法2条3号",
+          "definitionSha256": "e4fd40ce4f74f97981f833c96345db5714ff8e6c5677e4d3d48558a8f8de8443"
+        },
+        {
+          "term": "土石の堆積",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/336AC0000000191/20250601_504AC0000000068",
+          "sourceLocator": "宅地造成及び特定盛土等規制法2条4号",
+          "definitionSha256": "ad0011b53549b6ba2667af93e7d75b274530dd4ba473b3ee4fa16dcca629dd08"
+        },
+        {
+          "term": "農地転用",
+          "correct": false,
+          "sourceUrl": "https://www.maff.go.jp/j/nousin/noukei/230222.html",
+          "sourceLocator": "農林水産省『農地の違反転用』／農地法第4条・第5条",
+          "definitionSha256": "ee59e6ed60e16f1d9b0f43d7a9394c57c55d7fea0b5ecd03300c92537c1ddba0"
+        }
+      ]
+    },
+    {
+      "id": "vocab-124",
+      "term": "地区計画",
+      "subject": "restrictions",
+      "reading": "ちくけいかく",
+      "sha256": "8cbf0b38508650baf0cff8b7e9d6187910d34e379baab2b15a4a42aed052a641",
+      "evidence": {
+        "term": "地区計画",
+        "subject": "restrictions",
+        "pastQuestions": [
+          {
+            "year": "2024",
+            "question": 15
+          },
+          {
+            "year": "2023",
+            "question": 15
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-restrictions.js",
+          "restrictions-cases-building-readjustment.js",
+          "restrictions-cases-city-land.js"
+        ]
+      },
+      "contrast": "用途地域だけでは足りない地区のきめ細かなまちづくりに用いる。",
+      "choices": [
+        {
+          "term": "用途地域",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法第8条第1項第1号・第9条",
+          "definitionSha256": "dd88b087094ff543875aa52d89da8791c789d064177624c4109020402d72deae"
+        },
+        {
+          "term": "区域区分",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法7条",
+          "definitionSha256": "7c5d5090a0300876c801f481e5d0256e8e112dd44917ad900f6cb067d267aff4"
+        },
+        {
+          "term": "特別用途地区",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法9条14項・建築基準法49条",
+          "definitionSha256": "aafe01fb1abb34cdaccd83d1e696b521f66c9eeb7c716c8995e05a10c29b1f4d"
+        },
+        {
+          "term": "地区計画",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法12条の5",
+          "definitionSha256": "31a1254cfcd79bf6467aaf877d718b9ee105478ae8320907c1db317b05a5af29"
+        }
+      ]
+    },
+    {
+      "id": "vocab-125",
+      "term": "特別用途地区",
+      "subject": "restrictions",
+      "reading": "とくべつようとちく",
+      "sha256": "48c7df2e81a42d74892cc32110ddd8bc145bb2f83aafe6c60e8bddc99cf11354",
+      "evidence": {
+        "term": "特別用途地区",
+        "subject": "restrictions",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "restrictions-cases-building-readjustment.js",
+          "restrictions-cases-city-land.js"
+        ]
+      },
+      "contrast": "用途地域そのものとは別。条例による制限・緩和の要件を確認する。",
+      "choices": [
+        {
+          "term": "特別用途地区",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法9条14項・建築基準法49条",
+          "definitionSha256": "aafe01fb1abb34cdaccd83d1e696b521f66c9eeb7c716c8995e05a10c29b1f4d"
+        },
+        {
+          "term": "用途地域",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法第8条第1項第1号・第9条",
+          "definitionSha256": "dd88b087094ff543875aa52d89da8791c789d064177624c4109020402d72deae"
+        },
+        {
+          "term": "地区計画",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法12条の5",
+          "definitionSha256": "31a1254cfcd79bf6467aaf877d718b9ee105478ae8320907c1db317b05a5af29"
+        },
+        {
+          "term": "防火地域",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法9条21項・建築基準法61条",
+          "definitionSha256": "7086018ddef4ed1df3581dceaefe5a003372636175038f35eaf12d4cb1b4bad8"
+        }
+      ]
+    },
+    {
+      "id": "vocab-126",
+      "term": "防火地域",
+      "subject": "restrictions",
+      "reading": "ぼうかちいき",
+      "sha256": "b6c944a34263dad1a1b3b1b77666bdbe8136509cb41ea7688640cf9e91d5a41e",
+      "evidence": {
+        "term": "防火地域",
+        "subject": "restrictions",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 37
+          },
+          {
+            "year": "2024",
+            "question": 17
+          },
+          {
+            "year": "2024",
+            "question": 18
+          },
+          {
+            "year": "2023",
+            "question": 17
+          },
+          {
+            "year": "2023",
+            "question": 18
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-restrictions.js",
+          "restrictions-cases-building-readjustment.js"
+        ]
+      },
+      "contrast": "準防火地域も火災防除が目的。両者の要求性能は建物の規模等により異なる。",
+      "choices": [
+        {
+          "term": "区域区分",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法7条",
+          "definitionSha256": "7c5d5090a0300876c801f481e5d0256e8e112dd44917ad900f6cb067d267aff4"
+        },
+        {
+          "term": "防火地域",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法9条21項・建築基準法61条",
+          "definitionSha256": "7086018ddef4ed1df3581dceaefe5a003372636175038f35eaf12d4cb1b4bad8"
+        },
+        {
+          "term": "用途地域",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法第8条第1項第1号・第9条",
+          "definitionSha256": "dd88b087094ff543875aa52d89da8791c789d064177624c4109020402d72deae"
+        },
+        {
+          "term": "特別用途地区",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法9条14項・建築基準法49条",
+          "definitionSha256": "aafe01fb1abb34cdaccd83d1e696b521f66c9eeb7c716c8995e05a10c29b1f4d"
+        }
+      ]
+    },
+    {
+      "id": "vocab-127",
+      "term": "準防火地域",
+      "subject": "restrictions",
+      "reading": "じゅんぼうかちいき",
+      "sha256": "81d2451a8c0c93b384daf11e308634b6d1d9b39353d20da1e143b2c33d0b7cdb",
+      "evidence": {
+        "term": "準防火地域",
+        "subject": "restrictions",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 37
+          },
+          {
+            "year": "2023",
+            "question": 17
+          },
+          {
+            "year": "2023",
+            "question": 18
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-restrictions.js",
+          "restrictions-cases-building-readjustment.js"
+        ]
+      },
+      "contrast": "防火規制がない地域ではない。防火地域と目的は共通なので目的だけで二者択一にしない。",
+      "choices": [
+        {
+          "term": "市街化調整区域",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法第7条第3項",
+          "definitionSha256": "127399832f06a2b9af2b0b163b7690539515a995d832d70874230d57b4db301a"
+        },
+        {
+          "term": "用途地域",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法第8条第1項第1号・第9条",
+          "definitionSha256": "dd88b087094ff543875aa52d89da8791c789d064177624c4109020402d72deae"
+        },
+        {
+          "term": "準防火地域",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法9条21項・建築基準法61条",
+          "definitionSha256": "c56ef06fa483a735313fd7edf09f85eb7b0c1d3b74cbc2a368a63c67d742ca8f"
+        },
+        {
+          "term": "地区計画",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法12条の5",
+          "definitionSha256": "31a1254cfcd79bf6467aaf877d718b9ee105478ae8320907c1db317b05a5af29"
+        }
+      ]
+    },
+    {
+      "id": "vocab-128",
+      "term": "開発許可",
+      "subject": "restrictions",
+      "reading": "かいはつきょか",
+      "sha256": "c54378008e1ced43d5d58b14e30965902df9f7728daa88a5c4d5759186b9cde0",
+      "evidence": {
+        "term": "開発許可",
+        "subject": "restrictions",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 16
+          },
+          {
+            "year": "2023",
+            "question": 16
+          }
+        ],
+        "currentBankFiles": [
+          "business-fresh-contracts.js",
+          "business-hard-contracts.js",
+          "exam-questions-business.js",
+          "exam-questions-restrictions.js",
+          "restrictions-cases-agriculture-fill.js",
+          "restrictions-cases-city-land.js",
+          "restrictions-supplement-bank.js"
+        ]
+      },
+      "contrast": "建築確認や農地法の許可とは別。区域・規模等の適用除外を確認する。",
+      "choices": [
+        {
+          "term": "建築確認",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+          "sourceLocator": "建築基準法6・6条の2",
+          "definitionSha256": "c8bb842727e3b39561568c930d5acf151df0166124f97c12574a18eab8dd0550"
+        },
+        {
+          "term": "農地転用",
+          "correct": false,
+          "sourceUrl": "https://www.maff.go.jp/j/nousin/noukei/230222.html",
+          "sourceLocator": "農林水産省『農地の違反転用』／農地法第4条・第5条",
+          "definitionSha256": "ee59e6ed60e16f1d9b0f43d7a9394c57c55d7fea0b5ecd03300c92537c1ddba0"
+        },
+        {
+          "term": "免許換え",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法7条",
+          "definitionSha256": "715ac579209ff6f5135191eea7bb6f9b9412901a9ef27eb6ffd89e32ed32150f"
+        },
+        {
+          "term": "開発許可",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法29・33・34条",
+          "definitionSha256": "013e8148e122b995070dc30ac3eca19dbcf6854c34aa77cb25fc446716a4301c"
+        }
+      ]
+    },
+    {
+      "id": "vocab-129",
+      "term": "建築確認",
+      "subject": "restrictions",
+      "reading": "けんちくかくにん",
+      "sha256": "77fb6b8a0c9ff4c9d55a8c0cb5b420f569c506d91f09d4e84c1698a6fb1e650c",
+      "evidence": {
+        "term": "建築確認",
+        "subject": "restrictions",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 17
+          },
+          {
+            "year": "2025",
+            "question": 28
+          },
+          {
+            "year": "2025",
+            "question": 30
+          },
+          {
+            "year": "2024",
+            "question": 23
+          },
+          {
+            "year": "2023",
+            "question": 31
+          }
+        ],
+        "currentBankFiles": [
+          "business-fresh-contracts.js",
+          "exam-questions-business.js",
+          "exam-questions-restrictions.js",
+          "restrictions-cases-building-readjustment.js",
+          "restrictions-cases-city-land.js",
+          "restrictions-supplement-bank.js"
+        ]
+      },
+      "contrast": "開発許可や完成後の検査とは別。対象となる建物・工事の条件がある。",
+      "choices": [
+        {
+          "term": "建築確認",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+          "sourceLocator": "建築基準法6・6条の2",
+          "definitionSha256": "c8bb842727e3b39561568c930d5acf151df0166124f97c12574a18eab8dd0550"
+        },
+        {
+          "term": "開発許可",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法29・33・34条",
+          "definitionSha256": "013e8148e122b995070dc30ac3eca19dbcf6854c34aa77cb25fc446716a4301c"
+        },
+        {
+          "term": "建物状況調査",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法34条の2・35条・既存住宅状況調査方法基準",
+          "definitionSha256": "d4c8b8b71416174d0d4ab5d51f6b1fb892de026be309a8ef5d49d2a94cb5cd90"
+        },
+        {
+          "term": "大規模の修繕",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+          "sourceLocator": "建築基準法2条14号",
+          "definitionSha256": "506bb194c266dc76d0863a1efee06efae3261f8a66fd6a56ef1809df63725532"
+        }
+      ]
+    },
+    {
+      "id": "vocab-130",
+      "term": "減歩",
+      "subject": "restrictions",
+      "reading": "げんぶ",
+      "sha256": "92b3480b6f93826a4e07cbee4b1ce29e1ec5605d5f0251aa0f7c236c7f0031c8",
+      "evidence": {
+        "term": "減歩",
+        "subject": "restrictions",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "restrictions-cases-building-readjustment.js",
+          "restrictions-supplement-bank.js"
+        ]
+      },
+      "contrast": "減らされた面積を指す場合もある。換地の価値調整に用いる清算金とは別。",
+      "choices": [
+        {
+          "term": "保留地",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/329AC0000000119/20250601_504AC0000000068",
+          "sourceLocator": "土地区画整理法96・104条",
+          "definitionSha256": "d506ee44be68abb0d0b3e8c76263633fdac044e79419846144dd367ff7ebd16f"
+        },
+        {
+          "term": "減歩",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/329AC0000000119/20250601_504AC0000000068",
+          "sourceLocator": "土地区画整理法2・89・96条",
+          "definitionSha256": "c3c2fd218e206a94e818fab978679fa6daf72f0067df9e2f2e8c4246e4eacec1"
+        },
+        {
+          "term": "清算金",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/329AC0000000119/20250601_504AC0000000068",
+          "sourceLocator": "土地区画整理法94・110条",
+          "definitionSha256": "b114ed68be41b8cf84743c16532002c0a22d6c064d6b2b515d7463bdaf5b8626"
+        },
+        {
+          "term": "仮換地",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/329AC0000000119/20250601_504AC0000000068",
+          "sourceLocator": "土地区画整理法第98条・第99条",
+          "definitionSha256": "19ed1479426d70fca291027f06bcc8d859009f1b156db956d9c75bfce048e482"
+        }
+      ]
+    },
+    {
+      "id": "vocab-131",
+      "term": "宅地造成",
+      "subject": "restrictions",
+      "reading": "たくちぞうせい",
+      "sha256": "e874002907e8a9b27086096dc95ff80565916e2a3482882a05010db7f3452659",
+      "evidence": {
+        "term": "宅地造成",
+        "subject": "restrictions",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 17
+          },
+          {
+            "year": "2025",
+            "question": 19
+          },
+          {
+            "year": "2024",
+            "question": 19
+          },
+          {
+            "year": "2023",
+            "question": 19
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-restrictions.js",
+          "restrictions-authored-bank.js",
+          "restrictions-cases-agriculture-fill.js",
+          "restrictions-supplement-bank.js"
+        ]
+      },
+      "contrast": "この法の宅地は農地等・公共施設用地を除く。宅地内での変更すべてをこの用語に含めない。",
+      "choices": [
+        {
+          "term": "特定盛土等",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/336AC0000000191/20250601_504AC0000000068",
+          "sourceLocator": "宅地造成及び特定盛土等規制法2条3号",
+          "definitionSha256": "e4fd40ce4f74f97981f833c96345db5714ff8e6c5677e4d3d48558a8f8de8443"
+        },
+        {
+          "term": "土石の堆積",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/336AC0000000191/20250601_504AC0000000068",
+          "sourceLocator": "宅地造成及び特定盛土等規制法2条4号",
+          "definitionSha256": "ad0011b53549b6ba2667af93e7d75b274530dd4ba473b3ee4fa16dcca629dd08"
+        },
+        {
+          "term": "宅地造成",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/336AC0000000191/20250601_504AC0000000068",
+          "sourceLocator": "宅地造成及び特定盛土等規制法2条2号",
+          "definitionSha256": "4f1472bb193bddba69e303fe422421a65e0c3deafed478ea6cbdf7a0fc52c872"
+        },
+        {
+          "term": "減歩",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/329AC0000000119/20250601_504AC0000000068",
+          "sourceLocator": "土地区画整理法2・89・96条",
+          "definitionSha256": "c3c2fd218e206a94e818fab978679fa6daf72f0067df9e2f2e8c4246e4eacec1"
+        }
+      ]
+    },
+    {
+      "id": "vocab-132",
+      "term": "大規模の模様替",
+      "subject": "restrictions",
+      "reading": "だいきぼのもようがえ",
+      "sha256": "4a32c16d6b1f489dd50ee6895cf48510878646458a4488a9316d15e3bb29a136",
+      "evidence": {
+        "term": "大規模の模様替",
+        "subject": "restrictions",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "restrictions-supplement-bank.js"
+        ]
+      },
+      "contrast": "同等材料等で元に戻す修繕と区別する。主要構造部の一種以上の過半が基準。",
+      "choices": [
+        {
+          "term": "大規模の修繕",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+          "sourceLocator": "建築基準法2条14号",
+          "definitionSha256": "506bb194c266dc76d0863a1efee06efae3261f8a66fd6a56ef1809df63725532"
+        },
+        {
+          "term": "建物状況調査",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法34条の2・35条・既存住宅状況調査方法基準",
+          "definitionSha256": "d4c8b8b71416174d0d4ab5d51f6b1fb892de026be309a8ef5d49d2a94cb5cd90"
+        },
+        {
+          "term": "建築確認",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+          "sourceLocator": "建築基準法6・6条の2",
+          "definitionSha256": "c8bb842727e3b39561568c930d5acf151df0166124f97c12574a18eab8dd0550"
+        },
+        {
+          "term": "大規模の模様替",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+          "sourceLocator": "建築基準法2条15号",
+          "definitionSha256": "ad94389b8f404a46a9aa60ff1a4734d9e441433e693f61e487eefd2b354eeb2f"
+        }
+      ]
+    },
+    {
+      "id": "vocab-133",
+      "term": "課税標準",
+      "subject": "taxOther",
+      "reading": "かぜいひょうじゅん",
+      "sha256": "0d5c8f241d82add221bac9609e66d7e36e1e34afada70132e9b0a5462540fc3b",
+      "evidence": {
+        "term": "課税標準",
+        "subject": "taxOther",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 24
+          },
+          {
+            "year": "2024",
+            "question": 24
+          },
+          {
+            "year": "2023",
+            "question": 23
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-tax-other.js",
+          "tax-cases-v59.js"
+        ]
+      },
+      "contrast": "売買価格と同じとは限らない。税額そのものや控除額とは別。",
+      "choices": [
+        {
+          "term": "課税標準",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法73条の13・349条等",
+          "definitionSha256": "fd2f5e01aa9ce345cb1a91bc705110f5cdcd4f3fbd1be0d0637309b27974e6fd"
+        },
+        {
+          "term": "免税点",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法73条の15・351条",
+          "definitionSha256": "e558a00a73dd77e5b561cd76bfcdfb9fbeea58ddf29a70263320ffac6802528e"
+        },
+        {
+          "term": "税額控除",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法73条の24等",
+          "definitionSha256": "2bf67db9bd0b9b98ba0974e6e5c188b8e62036dc1f073cf7082c13ee9d9160e9"
+        },
+        {
+          "term": "取得費",
+          "correct": false,
+          "sourceUrl": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/joto/3252.htm",
+          "sourceLocator": "国税庁No.3252・所得税法38条",
+          "definitionSha256": "4ff765e8d3af0423c201cd92fc4effab03ac31f3f0b2ad89b7d4ac497587bfdb"
+        }
+      ]
+    },
+    {
+      "id": "vocab-134",
+      "term": "免税点",
+      "subject": "taxOther",
+      "reading": "めんぜいてん",
+      "sha256": "a7a0edaffb6dac0ea617625f7ee8847028187d4bcac7a7f0a2c72d353cc81501",
+      "evidence": {
+        "term": "免税点",
+        "subject": "taxOther",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "tax-cases-v59.js"
+        ]
+      },
+      "contrast": "控除額ではない。2026年改正があるため、旧過去問の金額を流用しない。",
+      "choices": [
+        {
+          "term": "税額控除",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法73条の24等",
+          "definitionSha256": "2bf67db9bd0b9b98ba0974e6e5c188b8e62036dc1f073cf7082c13ee9d9160e9"
+        },
+        {
+          "term": "免税点",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法73条の15・351条",
+          "definitionSha256": "e558a00a73dd77e5b561cd76bfcdfb9fbeea58ddf29a70263320ffac6802528e"
+        },
+        {
+          "term": "課税標準",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法73条の13・349条等",
+          "definitionSha256": "fd2f5e01aa9ce345cb1a91bc705110f5cdcd4f3fbd1be0d0637309b27974e6fd"
+        },
+        {
+          "term": "譲渡費用",
+          "correct": false,
+          "sourceUrl": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/joto/3255.htm",
+          "sourceLocator": "国税庁No.3255・所得税法33条",
+          "definitionSha256": "b02738a7289b5afcd84f78389197c20df5d45e3ef3df44849a891a998ab2c4bc"
+        }
+      ]
+    },
+    {
+      "id": "vocab-135",
+      "term": "取得費",
+      "subject": "taxOther",
+      "reading": "しゅとくひ",
+      "sha256": "2f0676145d1391cb4991dbbf42e032ad310393179ef10d9acbf44f2768c7a1c0",
+      "evidence": {
+        "term": "取得費",
+        "subject": "taxOther",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "exam-questions-tax-other.js",
+          "tax-cases-v59.js"
+        ]
+      },
+      "contrast": "売却のための費用とは別。取得時の費用でも既に必要経費にしたもの等は除く。",
+      "choices": [
+        {
+          "term": "譲渡費用",
+          "correct": false,
+          "sourceUrl": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/joto/3255.htm",
+          "sourceLocator": "国税庁No.3255・所得税法33条",
+          "definitionSha256": "b02738a7289b5afcd84f78389197c20df5d45e3ef3df44849a891a998ab2c4bc"
+        },
+        {
+          "term": "課税標準",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法73条の13・349条等",
+          "definitionSha256": "fd2f5e01aa9ce345cb1a91bc705110f5cdcd4f3fbd1be0d0637309b27974e6fd"
+        },
+        {
+          "term": "取得費",
+          "correct": true,
+          "sourceUrl": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/joto/3252.htm",
+          "sourceLocator": "国税庁No.3252・所得税法38条",
+          "definitionSha256": "4ff765e8d3af0423c201cd92fc4effab03ac31f3f0b2ad89b7d4ac497587bfdb"
+        },
+        {
+          "term": "税額控除",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法73条の24等",
+          "definitionSha256": "2bf67db9bd0b9b98ba0974e6e5c188b8e62036dc1f073cf7082c13ee9d9160e9"
+        }
+      ]
+    },
+    {
+      "id": "vocab-136",
+      "term": "譲渡費用",
+      "subject": "taxOther",
+      "reading": "じょうとひよう",
+      "sha256": "427d892daba0f40de054a6f86fd5db80641bc039134a862932bc7df84bf41fca",
+      "evidence": {
+        "term": "譲渡費用",
+        "subject": "taxOther",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "tax-cases-v59.js"
+        ]
+      },
+      "contrast": "通常の修繕・維持費や固定資産税等は含まれない。",
+      "choices": [
+        {
+          "term": "取得費",
+          "correct": false,
+          "sourceUrl": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/joto/3252.htm",
+          "sourceLocator": "国税庁No.3252・所得税法38条",
+          "definitionSha256": "4ff765e8d3af0423c201cd92fc4effab03ac31f3f0b2ad89b7d4ac497587bfdb"
+        },
+        {
+          "term": "税額控除",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法73条の24等",
+          "definitionSha256": "2bf67db9bd0b9b98ba0974e6e5c188b8e62036dc1f073cf7082c13ee9d9160e9"
+        },
+        {
+          "term": "課税標準",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法73条の13・349条等",
+          "definitionSha256": "fd2f5e01aa9ce345cb1a91bc705110f5cdcd4f3fbd1be0d0637309b27974e6fd"
+        },
+        {
+          "term": "譲渡費用",
+          "correct": true,
+          "sourceUrl": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/joto/3255.htm",
+          "sourceLocator": "国税庁No.3255・所得税法33条",
+          "definitionSha256": "b02738a7289b5afcd84f78389197c20df5d45e3ef3df44849a891a998ab2c4bc"
+        }
+      ]
+    },
+    {
+      "id": "vocab-137",
+      "term": "収益還元法",
+      "subject": "taxOther",
+      "reading": "しゅうえきかんげんほう",
+      "sha256": "1a23b7e23a08e0e38a6f6ba837bf887be9595025657a31669878a47c7a84b119",
+      "evidence": {
+        "term": "収益還元法",
+        "subject": "taxOther",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 25
+          },
+          {
+            "year": "2024",
+            "question": 25
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-tax-other.js"
+        ]
+      },
+      "contrast": "求める試算価格は収益価格。取引事例や再調達原価から求める手法と区別する。",
+      "choices": [
+        {
+          "term": "収益還元法",
+          "correct": true,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "e486c8ab570780d1e4d5607e4a99cb19270238af196d572abd171e988e475aad"
+        },
+        {
+          "term": "取引事例比較法",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "40e9994963c3d901f5b0f55f4ff6e69387a754f05f6d17c3354aaf4d8f90f2b4"
+        },
+        {
+          "term": "原価法",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "cf71c0bc8fcb1c70a87c6c75fa887291cf3d691c8fe0784e94bfcfe787dd53bf"
+        },
+        {
+          "term": "減価償却（税務）",
+          "correct": false,
+          "sourceUrl": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/joto/3261.htm",
+          "sourceLocator": "国税庁No.3261・建物の取得費",
+          "definitionSha256": "b67c6883d38e308fdde8164e9b978043116f1e68a5f8fd8cc81a9e9191356e27"
+        }
+      ]
+    },
+    {
+      "id": "vocab-138",
+      "term": "比準価格",
+      "subject": "taxOther",
+      "reading": "ひじゅんかかく",
+      "sha256": "613a8011f03a791000bd811ce4d6e9eef026dc1bce5b5fdba249b83b2c9ec42c",
+      "evidence": {
+        "term": "比準価格",
+        "subject": "taxOther",
+        "pastQuestions": [
+          {
+            "year": "2023",
+            "question": 25
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-tax-other.js"
+        ]
+      },
+      "contrast": "価格名と算出手法を対応させる。比準価格は取引事例から求める。",
+      "choices": [
+        {
+          "term": "積算価格",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "116befaeba2934222934cca1741d35d0cdf79b84a319a0058a79bfdf1541b79a"
+        },
+        {
+          "term": "比準価格",
+          "correct": true,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "0b8ca7f0e66a2c64ff0576e518cae6ed9df434aee8ef7ce1c1515e2b920ab720"
+        },
+        {
+          "term": "収益価格",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "6b5d1a60781138e4bf1f7b748c45bf34e3509878e7cb3fb42b00bbd62549a0e5"
+        },
+        {
+          "term": "再調達原価",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "676e9ec44afe72eee5f2ffc843c5fb609d55a799e8a58f919202c4d3ba44b122"
+        }
+      ]
+    },
+    {
+      "id": "vocab-139",
+      "term": "積算価格",
+      "subject": "taxOther",
+      "reading": "せきさんかかく",
+      "sha256": "129ecd6de7f6df6fd556cc239a9996af54e4b69908b6267fab7d0f170a975896",
+      "evidence": {
+        "term": "積算価格",
+        "subject": "taxOther",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "exam-questions-tax-other.js"
+        ]
+      },
+      "contrast": "再調達原価から減価修正して求める。税務の取得費とは別。",
+      "choices": [
+        {
+          "term": "比準価格",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "0b8ca7f0e66a2c64ff0576e518cae6ed9df434aee8ef7ce1c1515e2b920ab720"
+        },
+        {
+          "term": "収益価格",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "6b5d1a60781138e4bf1f7b748c45bf34e3509878e7cb3fb42b00bbd62549a0e5"
+        },
+        {
+          "term": "積算価格",
+          "correct": true,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "116befaeba2934222934cca1741d35d0cdf79b84a319a0058a79bfdf1541b79a"
+        },
+        {
+          "term": "再調達原価",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "676e9ec44afe72eee5f2ffc843c5fb609d55a799e8a58f919202c4d3ba44b122"
+        }
+      ]
+    },
+    {
+      "id": "vocab-140",
+      "term": "減価修正",
+      "subject": "taxOther",
+      "reading": "げんかしゅうせい",
+      "sha256": "2de05c6a8e66b8cfbbd5ef5e47a9b67a018fd37a8d64af88ca67f7b3539cd952",
+      "evidence": {
+        "term": "減価修正",
+        "subject": "taxOther",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 25
+          },
+          {
+            "year": "2023",
+            "question": 25
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-tax-other.js"
+        ]
+      },
+      "contrast": "税務の減価償却と同じではない。摩耗だけでなく機能・経済要因も含む。",
+      "choices": [
+        {
+          "term": "減価償却（税務）",
+          "correct": false,
+          "sourceUrl": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/joto/3261.htm",
+          "sourceLocator": "国税庁No.3261・建物の取得費",
+          "definitionSha256": "b67c6883d38e308fdde8164e9b978043116f1e68a5f8fd8cc81a9e9191356e27"
+        },
+        {
+          "term": "時点修正",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "edb67414044c6b92399a370c079e848ef03b7588d606a2a6838a97fd74700246"
+        },
+        {
+          "term": "事情補正",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "60ae30a886f1c81a35f018fceed592e66adc9f6415c0e4ff8fba77f7f71f8317"
+        },
+        {
+          "term": "減価修正",
+          "correct": true,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "4e4ae7041433c1d4ef60118b217e59e09585f927473dbcdc0e9286b525c1b8f4"
+        }
+      ]
+    },
+    {
+      "id": "vocab-141",
+      "term": "扇状地",
+      "subject": "taxOther",
+      "reading": "せんじょうち",
+      "sha256": "27a2e2fb8181aa8ddd9310b136eff5926687b9919ce8713763682d42bf143ec4",
+      "evidence": {
+        "term": "扇状地",
+        "subject": "taxOther",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "exam-questions-tax-other.js"
+        ]
+      },
+      "contrast": "谷の出口を頂点とする堆積地形。川沿いの微高地や低湿地と区別する。",
+      "choices": [
+        {
+          "term": "扇状地",
+          "correct": true,
+          "sourceUrl": "https://www.gsi.go.jp/bousaichiri/bousaichiri41051.html",
+          "sourceLocator": "国土地理院・治水地形分類図の内容",
+          "definitionSha256": "c23cf0c9427469562cb7b0bb8a3c6b9a83eb2bbc9dd8a53b81e59fbbd231a3b2"
+        },
+        {
+          "term": "自然堤防",
+          "correct": false,
+          "sourceUrl": "https://www.gsi.go.jp/bousaichiri/bousaichiri41051.html",
+          "sourceLocator": "国土地理院・治水地形分類図の内容",
+          "definitionSha256": "1949f8f3b58f600a07584158c399d036e43ee7263421d9651d8f9ef13208c9b8"
+        },
+        {
+          "term": "後背湿地",
+          "correct": false,
+          "sourceUrl": "https://www.gsi.go.jp/bousaichiri/bousaichiri41051.html",
+          "sourceLocator": "国土地理院・治水地形分類図の内容",
+          "definitionSha256": "7a85e1debbe2f04e73e05777107953444b5eff54fbce39f7e41ec779a685b8cc"
+        },
+        {
+          "term": "液状化",
+          "correct": false,
+          "sourceUrl": "https://www.gsi.go.jp/bousaichiri/bousaichiri41051.html",
+          "sourceLocator": "国土地理院・地形と液状化",
+          "definitionSha256": "350cd4a8c9397cf0c2a859aabd4ff45ac4bb3c078f61e8c5db705c8614317689"
+        }
+      ]
+    },
+    {
+      "id": "vocab-142",
+      "term": "自然堤防",
+      "subject": "taxOther",
+      "reading": "しぜんていぼう",
+      "sha256": "cba3e960d7c6fa3da509e16d4be6246127c98341248f068f35289edf0e18685f",
+      "evidence": {
+        "term": "自然堤防",
+        "subject": "taxOther",
+        "pastQuestions": [
+          {
+            "year": "2023",
+            "question": 49
+          }
+        ],
+        "currentBankFiles": []
+      },
+      "contrast": "人工の堤防ではない。後ろ側には低湿地が分布することがある。",
+      "choices": [
+        {
+          "term": "扇状地",
+          "correct": false,
+          "sourceUrl": "https://www.gsi.go.jp/bousaichiri/bousaichiri41051.html",
+          "sourceLocator": "国土地理院・治水地形分類図の内容",
+          "definitionSha256": "c23cf0c9427469562cb7b0bb8a3c6b9a83eb2bbc9dd8a53b81e59fbbd231a3b2"
+        },
+        {
+          "term": "自然堤防",
+          "correct": true,
+          "sourceUrl": "https://www.gsi.go.jp/bousaichiri/bousaichiri41051.html",
+          "sourceLocator": "国土地理院・治水地形分類図の内容",
+          "definitionSha256": "1949f8f3b58f600a07584158c399d036e43ee7263421d9651d8f9ef13208c9b8"
+        },
+        {
+          "term": "後背湿地",
+          "correct": false,
+          "sourceUrl": "https://www.gsi.go.jp/bousaichiri/bousaichiri41051.html",
+          "sourceLocator": "国土地理院・治水地形分類図の内容",
+          "definitionSha256": "7a85e1debbe2f04e73e05777107953444b5eff54fbce39f7e41ec779a685b8cc"
+        },
+        {
+          "term": "不同沈下",
+          "correct": false,
+          "sourceUrl": "https://www.kansai-airports.co.jp/sustainability/society/tech-jacking-up/",
+          "sourceLocator": "関西エアポート・ジャッキアップなどの不同沈下対策",
+          "definitionSha256": "95adfa086696e8e9024e25b5685ece10390a2024532dbd059e6320cd8a3e99d7"
+        }
+      ]
+    },
+    {
+      "id": "vocab-143",
+      "term": "後背湿地",
+      "subject": "taxOther",
+      "reading": "こうはいしっち",
+      "sha256": "15f6133894548caac9f7ab2eb2405c77676701136fda249e0ce95267d72a2d83",
+      "evidence": {
+        "term": "後背湿地",
+        "subject": "taxOther",
+        "pastQuestions": [
+          {
+            "year": "2023",
+            "question": 49
+          }
+        ],
+        "currentBankFiles": []
+      },
+      "contrast": "微高地とは逆に低い土地。浸水や軟弱地盤に注意する。",
+      "choices": [
+        {
+          "term": "自然堤防",
+          "correct": false,
+          "sourceUrl": "https://www.gsi.go.jp/bousaichiri/bousaichiri41051.html",
+          "sourceLocator": "国土地理院・治水地形分類図の内容",
+          "definitionSha256": "1949f8f3b58f600a07584158c399d036e43ee7263421d9651d8f9ef13208c9b8"
+        },
+        {
+          "term": "扇状地",
+          "correct": false,
+          "sourceUrl": "https://www.gsi.go.jp/bousaichiri/bousaichiri41051.html",
+          "sourceLocator": "国土地理院・治水地形分類図の内容",
+          "definitionSha256": "c23cf0c9427469562cb7b0bb8a3c6b9a83eb2bbc9dd8a53b81e59fbbd231a3b2"
+        },
+        {
+          "term": "後背湿地",
+          "correct": true,
+          "sourceUrl": "https://www.gsi.go.jp/bousaichiri/bousaichiri41051.html",
+          "sourceLocator": "国土地理院・治水地形分類図の内容",
+          "definitionSha256": "7a85e1debbe2f04e73e05777107953444b5eff54fbce39f7e41ec779a685b8cc"
+        },
+        {
+          "term": "地すべり",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/333AC0000000030",
+          "sourceLocator": "地すべり等防止法2条1項",
+          "definitionSha256": "a5928d37a0e8fd55ef394bac74900c6813658806f370cf3af3588fad57cdfb4e"
+        }
+      ]
+    },
+    {
+      "id": "vocab-144",
+      "term": "不同沈下",
+      "subject": "taxOther",
+      "reading": "ふどうちんか",
+      "sha256": "a9e4c0f64234a6af8ec92d2112161af197a6d438b38fa8682f4ec86c506b090f",
+      "evidence": {
+        "term": "不同沈下",
+        "subject": "taxOther",
+        "pastQuestions": [],
+        "currentBankFiles": []
+      },
+      "contrast": "不等沈下ともいう。両者を別概念の選択肢にしない。",
+      "choices": [
+        {
+          "term": "液状化",
+          "correct": false,
+          "sourceUrl": "https://www.gsi.go.jp/bousaichiri/bousaichiri41051.html",
+          "sourceLocator": "国土地理院・地形と液状化",
+          "definitionSha256": "350cd4a8c9397cf0c2a859aabd4ff45ac4bb3c078f61e8c5db705c8614317689"
+        },
+        {
+          "term": "地すべり",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/333AC0000000030",
+          "sourceLocator": "地すべり等防止法2条1項",
+          "definitionSha256": "a5928d37a0e8fd55ef394bac74900c6813658806f370cf3af3588fad57cdfb4e"
+        },
+        {
+          "term": "土石の堆積",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/336AC0000000191/20250601_504AC0000000068",
+          "sourceLocator": "宅地造成及び特定盛土等規制法2条4号",
+          "definitionSha256": "ad0011b53549b6ba2667af93e7d75b274530dd4ba473b3ee4fa16dcca629dd08"
+        },
+        {
+          "term": "不同沈下",
+          "correct": true,
+          "sourceUrl": "https://www.kansai-airports.co.jp/sustainability/society/tech-jacking-up/",
+          "sourceLocator": "関西エアポート・ジャッキアップなどの不同沈下対策",
+          "definitionSha256": "95adfa086696e8e9024e25b5685ece10390a2024532dbd059e6320cd8a3e99d7"
+        }
+      ]
+    },
+    {
+      "id": "vocab-145",
+      "term": "地すべり",
+      "subject": "taxOther",
+      "reading": "じすべり",
+      "sha256": "4a21d0fa404fe89300a213b171ef29f370c8d7b87116e7972f3b11650ec69ed0",
+      "evidence": {
+        "term": "地すべり",
+        "subject": "taxOther",
+        "pastQuestions": [],
+        "currentBankFiles": []
+      },
+      "contrast": "がけ崩れ等と区別する。常にゆっくり動くと限定しない。",
+      "choices": [
+        {
+          "term": "地すべり",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/333AC0000000030",
+          "sourceLocator": "地すべり等防止法2条1項",
+          "definitionSha256": "a5928d37a0e8fd55ef394bac74900c6813658806f370cf3af3588fad57cdfb4e"
+        },
+        {
+          "term": "液状化",
+          "correct": false,
+          "sourceUrl": "https://www.gsi.go.jp/bousaichiri/bousaichiri41051.html",
+          "sourceLocator": "国土地理院・地形と液状化",
+          "definitionSha256": "350cd4a8c9397cf0c2a859aabd4ff45ac4bb3c078f61e8c5db705c8614317689"
+        },
+        {
+          "term": "不同沈下",
+          "correct": false,
+          "sourceUrl": "https://www.kansai-airports.co.jp/sustainability/society/tech-jacking-up/",
+          "sourceLocator": "関西エアポート・ジャッキアップなどの不同沈下対策",
+          "definitionSha256": "95adfa086696e8e9024e25b5685ece10390a2024532dbd059e6320cd8a3e99d7"
+        },
+        {
+          "term": "扇状地",
+          "correct": false,
+          "sourceUrl": "https://www.gsi.go.jp/bousaichiri/bousaichiri41051.html",
+          "sourceLocator": "国土地理院・治水地形分類図の内容",
+          "definitionSha256": "c23cf0c9427469562cb7b0bb8a3c6b9a83eb2bbc9dd8a53b81e59fbbd231a3b2"
+        }
+      ]
+    },
+    {
+      "id": "vocab-146",
+      "term": "液状化",
+      "subject": "taxOther",
+      "reading": "えきじょうか",
+      "sha256": "7d1dd9025d9c1ce6c932dd29e173cbf9dc480a29db8698e15cc143dd18729660",
+      "evidence": {
+        "term": "液状化",
+        "subject": "taxOther",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 49
+          },
+          {
+            "year": "2023",
+            "question": 49
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-tax-other.js"
+        ]
+      },
+      "contrast": "地表へ水や砂が噴き出す噴砂は、その結果の一つ。",
+      "choices": [
+        {
+          "term": "不同沈下",
+          "correct": false,
+          "sourceUrl": "https://www.kansai-airports.co.jp/sustainability/society/tech-jacking-up/",
+          "sourceLocator": "関西エアポート・ジャッキアップなどの不同沈下対策",
+          "definitionSha256": "95adfa086696e8e9024e25b5685ece10390a2024532dbd059e6320cd8a3e99d7"
+        },
+        {
+          "term": "液状化",
+          "correct": true,
+          "sourceUrl": "https://www.gsi.go.jp/bousaichiri/bousaichiri41051.html",
+          "sourceLocator": "国土地理院・地形と液状化",
+          "definitionSha256": "350cd4a8c9397cf0c2a859aabd4ff45ac4bb3c078f61e8c5db705c8614317689"
+        },
+        {
+          "term": "地すべり",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/333AC0000000030",
+          "sourceLocator": "地すべり等防止法2条1項",
+          "definitionSha256": "a5928d37a0e8fd55ef394bac74900c6813658806f370cf3af3588fad57cdfb4e"
+        },
+        {
+          "term": "土石の堆積",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/336AC0000000191/20250601_504AC0000000068",
+          "sourceLocator": "宅地造成及び特定盛土等規制法2条4号",
+          "definitionSha256": "ad0011b53549b6ba2667af93e7d75b274530dd4ba473b3ee4fa16dcca629dd08"
+        }
+      ]
+    },
+    {
+      "id": "vocab-147",
+      "term": "税額控除",
+      "subject": "taxOther",
+      "reading": "ぜいがくこうじょ",
+      "sha256": "a95bb5561e322a7b48d34c7b836ef9b13f7ba2cc83c72bffe5a61b83102f708d",
+      "evidence": {
+        "term": "税額控除",
+        "subject": "taxOther",
+        "pastQuestions": [],
+        "currentBankFiles": []
+      },
+      "contrast": "課税標準から差し引く控除とは段階が違う。免税点とも別。",
+      "choices": [
+        {
+          "term": "免税点",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法73条の15・351条",
+          "definitionSha256": "e558a00a73dd77e5b561cd76bfcdfb9fbeea58ddf29a70263320ffac6802528e"
+        },
+        {
+          "term": "課税標準",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法73条の13・349条等",
+          "definitionSha256": "fd2f5e01aa9ce345cb1a91bc705110f5cdcd4f3fbd1be0d0637309b27974e6fd"
+        },
+        {
+          "term": "税額控除",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法73条の24等",
+          "definitionSha256": "2bf67db9bd0b9b98ba0974e6e5c188b8e62036dc1f073cf7082c13ee9d9160e9"
+        },
+        {
+          "term": "取得費",
+          "correct": false,
+          "sourceUrl": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/joto/3252.htm",
+          "sourceLocator": "国税庁No.3252・所得税法38条",
+          "definitionSha256": "4ff765e8d3af0423c201cd92fc4effab03ac31f3f0b2ad89b7d4ac497587bfdb"
+        }
+      ]
+    },
+    {
+      "id": "vocab-148",
+      "term": "固定資産税",
+      "subject": "taxOther",
+      "reading": "こていしさんぜい",
+      "sha256": "5565b0a635672c0d336fd1a3459c0a55349b1746ac3a2ff8dc164e95f9665cb3",
+      "evidence": {
+        "term": "固定資産税",
+        "subject": "taxOther",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 24
+          },
+          {
+            "year": "2024",
+            "question": 24
+          }
+        ],
+        "currentBankFiles": [
+          "business-fresh-contracts.js",
+          "exam-questions-tax-other.js",
+          "tax-cases-v59.js"
+        ]
+      },
+      "contrast": "保有に対する税。取得時の税や登記の税とは別。",
+      "choices": [
+        {
+          "term": "都市計画税",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法702条以下",
+          "definitionSha256": "2a56e61e5682834f14c61a7eeed76ed7d93c84d27d00aff44d6cd0eea38ccc5a"
+        },
+        {
+          "term": "不動産取得税",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法73条の2・73条の7",
+          "definitionSha256": "5025286ca89597ce0db2d31cdde02a79888b035bd67697cf4d43c25775eef918"
+        },
+        {
+          "term": "登録免許税",
+          "correct": false,
+          "sourceUrl": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/inshi/7191.htm",
+          "sourceLocator": "国税庁No.7191・登録免許税法2条",
+          "definitionSha256": "9facbf17df06895188d50c068ecdb27b5bcdbdaef1dc3a0c2cb5de468146965e"
+        },
+        {
+          "term": "固定資産税",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法342・343・359条",
+          "definitionSha256": "20b1ffcaeadc86beb0c5e28fff8a759d8e7c8088558a81be7aa21f5fce14251d"
+        }
+      ]
+    },
+    {
+      "id": "vocab-149",
+      "term": "都市計画税",
+      "subject": "taxOther",
+      "reading": "としけいかくぜい",
+      "sha256": "5daa2e232d41094e72634ab2da40467207a4fe0cd5bd16ced7a4ccfe9c725e89",
+      "evidence": {
+        "term": "都市計画税",
+        "subject": "taxOther",
+        "pastQuestions": [],
+        "currentBankFiles": []
+      },
+      "contrast": "固定資産税と課税対象が同じとは限らず、償却資産は対象でない。",
+      "choices": [
+        {
+          "term": "都市計画税",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法702条以下",
+          "definitionSha256": "2a56e61e5682834f14c61a7eeed76ed7d93c84d27d00aff44d6cd0eea38ccc5a"
+        },
+        {
+          "term": "固定資産税",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法342・343・359条",
+          "definitionSha256": "20b1ffcaeadc86beb0c5e28fff8a759d8e7c8088558a81be7aa21f5fce14251d"
+        },
+        {
+          "term": "不動産取得税",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法73条の2・73条の7",
+          "definitionSha256": "5025286ca89597ce0db2d31cdde02a79888b035bd67697cf4d43c25775eef918"
+        },
+        {
+          "term": "印紙税",
+          "correct": false,
+          "sourceUrl": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/inshi/7100.htm",
+          "sourceLocator": "国税庁No.7100・印紙税法2・3条",
+          "definitionSha256": "8c6344755fe3b9b2b342876f1ac2e94f89f0fe64b2c5f2fb72b3ebe427529e18"
+        }
+      ]
+    },
+    {
+      "id": "vocab-150",
+      "term": "登録免許税",
+      "subject": "taxOther",
+      "reading": "とうろくめんきょぜい",
+      "sha256": "f91a999dc39d95de6b681c1d1e915da85606f04861feb64d3d273e11deb3cf85",
+      "evidence": {
+        "term": "登録免許税",
+        "subject": "taxOther",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 23
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-tax-other.js",
+          "tax-cases-v59.js"
+        ]
+      },
+      "contrast": "登記等に対する国税。取得に対する都道府県税と区別する。",
+      "choices": [
+        {
+          "term": "不動産取得税",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法73条の2・73条の7",
+          "definitionSha256": "5025286ca89597ce0db2d31cdde02a79888b035bd67697cf4d43c25775eef918"
+        },
+        {
+          "term": "登録免許税",
+          "correct": true,
+          "sourceUrl": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/inshi/7191.htm",
+          "sourceLocator": "国税庁No.7191・登録免許税法2条",
+          "definitionSha256": "9facbf17df06895188d50c068ecdb27b5bcdbdaef1dc3a0c2cb5de468146965e"
+        },
+        {
+          "term": "固定資産税",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法342・343・359条",
+          "definitionSha256": "20b1ffcaeadc86beb0c5e28fff8a759d8e7c8088558a81be7aa21f5fce14251d"
+        },
+        {
+          "term": "印紙税",
+          "correct": false,
+          "sourceUrl": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/inshi/7100.htm",
+          "sourceLocator": "国税庁No.7100・印紙税法2・3条",
+          "definitionSha256": "8c6344755fe3b9b2b342876f1ac2e94f89f0fe64b2c5f2fb72b3ebe427529e18"
+        }
+      ]
+    },
+    {
+      "id": "vocab-151",
+      "term": "不動産取得税",
+      "subject": "taxOther",
+      "reading": "ふどうさんしゅとくぜい",
+      "sha256": "88a653b01eb892961f07c43bf5535a768fffb7b5c586a015ab9a8eb648001d0b",
+      "evidence": {
+        "term": "不動産取得税",
+        "subject": "taxOther",
+        "pastQuestions": [
+          {
+            "year": "2024",
+            "question": 24
+          },
+          {
+            "year": "2023",
+            "question": 24
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-tax-other.js",
+          "tax-cases-v59.js"
+        ]
+      },
+      "contrast": "登記の有無で当然に決まる税ではない。相続と贈与の扱いを区別する。",
+      "choices": [
+        {
+          "term": "登録免許税",
+          "correct": false,
+          "sourceUrl": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/inshi/7191.htm",
+          "sourceLocator": "国税庁No.7191・登録免許税法2条",
+          "definitionSha256": "9facbf17df06895188d50c068ecdb27b5bcdbdaef1dc3a0c2cb5de468146965e"
+        },
+        {
+          "term": "固定資産税",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法342・343・359条",
+          "definitionSha256": "20b1ffcaeadc86beb0c5e28fff8a759d8e7c8088558a81be7aa21f5fce14251d"
+        },
+        {
+          "term": "不動産取得税",
+          "correct": true,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法73条の2・73条の7",
+          "definitionSha256": "5025286ca89597ce0db2d31cdde02a79888b035bd67697cf4d43c25775eef918"
+        },
+        {
+          "term": "都市計画税",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法702条以下",
+          "definitionSha256": "2a56e61e5682834f14c61a7eeed76ed7d93c84d27d00aff44d6cd0eea38ccc5a"
+        }
+      ]
+    },
+    {
+      "id": "vocab-152",
+      "term": "印紙税",
+      "subject": "taxOther",
+      "reading": "いんしぜい",
+      "sha256": "bf15327f8cce2c5f96339a4cc5c9315831da5e4551c1e6568336dcebbaef5ef9",
+      "evidence": {
+        "term": "印紙税",
+        "subject": "taxOther",
+        "pastQuestions": [
+          {
+            "year": "2023",
+            "question": 23
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-tax-other.js",
+          "tax-cases-v59.js"
+        ]
+      },
+      "contrast": "取引そのものではなく課税文書の作成に対する税。電子契約は別に確認する。",
+      "choices": [
+        {
+          "term": "登録免許税",
+          "correct": false,
+          "sourceUrl": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/inshi/7191.htm",
+          "sourceLocator": "国税庁No.7191・登録免許税法2条",
+          "definitionSha256": "9facbf17df06895188d50c068ecdb27b5bcdbdaef1dc3a0c2cb5de468146965e"
+        },
+        {
+          "term": "不動産取得税",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法73条の2・73条の7",
+          "definitionSha256": "5025286ca89597ce0db2d31cdde02a79888b035bd67697cf4d43c25775eef918"
+        },
+        {
+          "term": "都市計画税",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/325AC0000000226/20260401_508AC0000000002",
+          "sourceLocator": "地方税法702条以下",
+          "definitionSha256": "2a56e61e5682834f14c61a7eeed76ed7d93c84d27d00aff44d6cd0eea38ccc5a"
+        },
+        {
+          "term": "印紙税",
+          "correct": true,
+          "sourceUrl": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/inshi/7100.htm",
+          "sourceLocator": "国税庁No.7100・印紙税法2・3条",
+          "definitionSha256": "8c6344755fe3b9b2b342876f1ac2e94f89f0fe64b2c5f2fb72b3ebe427529e18"
+        }
+      ]
+    },
+    {
+      "id": "vocab-153",
+      "term": "取引事例比較法",
+      "subject": "taxOther",
+      "reading": "とりひきじれいひかくほう",
+      "sha256": "0dc2e8cfd705d17645b55c8a0b48bb9c5490950bd75d1b9f4fbe781122c9242d",
+      "evidence": {
+        "term": "取引事例比較法",
+        "subject": "taxOther",
+        "pastQuestions": [
+          {
+            "year": "2023",
+            "question": 25
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-tax-other.js"
+        ]
+      },
+      "contrast": "求める試算価格は比準価格。取引価格をそのまま使う方法ではない。",
+      "choices": [
+        {
+          "term": "取引事例比較法",
+          "correct": true,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "40e9994963c3d901f5b0f55f4ff6e69387a754f05f6d17c3354aaf4d8f90f2b4"
+        },
+        {
+          "term": "原価法",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "cf71c0bc8fcb1c70a87c6c75fa887291cf3d691c8fe0784e94bfcfe787dd53bf"
+        },
+        {
+          "term": "収益還元法",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "e486c8ab570780d1e4d5607e4a99cb19270238af196d572abd171e988e475aad"
+        },
+        {
+          "term": "減価償却（税務）",
+          "correct": false,
+          "sourceUrl": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/joto/3261.htm",
+          "sourceLocator": "国税庁No.3261・建物の取得費",
+          "definitionSha256": "b67c6883d38e308fdde8164e9b978043116f1e68a5f8fd8cc81a9e9191356e27"
+        }
+      ]
+    },
+    {
+      "id": "vocab-154",
+      "term": "原価法",
+      "subject": "taxOther",
+      "reading": "げんかほう",
+      "sha256": "60875dffcc605e66b6218dac73f28ecf985f4020737fe03d193520a598580afb",
+      "evidence": {
+        "term": "原価法",
+        "subject": "taxOther",
+        "pastQuestions": [
+          {
+            "year": "2025",
+            "question": 25
+          },
+          {
+            "year": "2023",
+            "question": 25
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-tax-other.js"
+        ]
+      },
+      "contrast": "求める試算価格は積算価格。購入時の原価をそのまま使うわけではない。",
+      "choices": [
+        {
+          "term": "取引事例比較法",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "40e9994963c3d901f5b0f55f4ff6e69387a754f05f6d17c3354aaf4d8f90f2b4"
+        },
+        {
+          "term": "原価法",
+          "correct": true,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "cf71c0bc8fcb1c70a87c6c75fa887291cf3d691c8fe0784e94bfcfe787dd53bf"
+        },
+        {
+          "term": "収益還元法",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "e486c8ab570780d1e4d5607e4a99cb19270238af196d572abd171e988e475aad"
+        },
+        {
+          "term": "減価償却（税務）",
+          "correct": false,
+          "sourceUrl": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/joto/3261.htm",
+          "sourceLocator": "国税庁No.3261・建物の取得費",
+          "definitionSha256": "b67c6883d38e308fdde8164e9b978043116f1e68a5f8fd8cc81a9e9191356e27"
+        }
+      ]
+    },
+    {
+      "id": "vocab-155",
+      "term": "正常価格",
+      "subject": "taxOther",
+      "reading": "せいじょうかかく",
+      "sha256": "db781913e7f7c280203c824740b57ce036e9beb8304fe2165ffc506950367026",
+      "evidence": {
+        "term": "正常価格",
+        "subject": "taxOther",
+        "pastQuestions": [],
+        "currentBankFiles": [
+          "exam-questions-tax-other.js"
+        ]
+      },
+      "contrast": "試算の手法名ではなく、鑑定で求める価格の種類。",
+      "choices": [
+        {
+          "term": "限定価格",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論5章",
+          "definitionSha256": "cf5d151ee6a9811c7fabe2429f6efdffa3043136d1241d85d553fe32a513f75d"
+        },
+        {
+          "term": "特定価格",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論5章",
+          "definitionSha256": "df02e7246d185c6ce162272fee10837d23278649394bd424fa6ff13b7cdfab3e"
+        },
+        {
+          "term": "正常価格",
+          "correct": true,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論5章",
+          "definitionSha256": "aa19f1639b347cda075417fcbc3393d0f60a6625887ed9b7ca87dab2ee05ae06"
+        },
+        {
+          "term": "特殊価格",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論5章",
+          "definitionSha256": "d4a21f71f636be18642e9ebafaf53c00acbad34420e8bb815933d2dbf7bdaf2e"
+        }
+      ]
+    },
+    {
+      "id": "vocab-156",
+      "term": "限定価格",
+      "subject": "taxOther",
+      "reading": "げんていかかく",
+      "sha256": "8e0d52e274bac794e219c3bac011e574fac5a1623efc908ed41cc5be157a5299",
+      "evidence": {
+        "term": "限定価格",
+        "subject": "taxOther",
+        "pastQuestions": [],
+        "currentBankFiles": []
+      },
+      "contrast": "売出し価格の上限ではない。特定当事者間で正常価格と異なる経済価値が生じる場合。",
+      "choices": [
+        {
+          "term": "正常価格",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論5章",
+          "definitionSha256": "aa19f1639b347cda075417fcbc3393d0f60a6625887ed9b7ca87dab2ee05ae06"
+        },
+        {
+          "term": "特定価格",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論5章",
+          "definitionSha256": "df02e7246d185c6ce162272fee10837d23278649394bd424fa6ff13b7cdfab3e"
+        },
+        {
+          "term": "特殊価格",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論5章",
+          "definitionSha256": "d4a21f71f636be18642e9ebafaf53c00acbad34420e8bb815933d2dbf7bdaf2e"
+        },
+        {
+          "term": "限定価格",
+          "correct": true,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論5章",
+          "definitionSha256": "cf5d151ee6a9811c7fabe2429f6efdffa3043136d1241d85d553fe32a513f75d"
+        }
+      ]
+    },
+    {
+      "id": "vocab-157",
+      "term": "最有効使用",
+      "subject": "taxOther",
+      "reading": "さいゆうこうしよう",
+      "sha256": "4ec0c5042b305380d37ea9901df79bf1235382d9601ede6cafd521a583f44e0b",
+      "evidence": {
+        "term": "最有効使用",
+        "subject": "taxOther",
+        "pastQuestions": [],
+        "currentBankFiles": []
+      },
+      "contrast": "現在の使用が最有効使用とは限らない。違法な使い方での最大収益を意味しない。",
+      "choices": [
+        {
+          "term": "最有効使用",
+          "correct": true,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論4章",
+          "definitionSha256": "a1cf173eba06aba0de222422b62ecf7591810801dc6fe3f6c8642fca99621798"
+        },
+        {
+          "term": "地区計画",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法12条の5",
+          "definitionSha256": "31a1254cfcd79bf6467aaf877d718b9ee105478ae8320907c1db317b05a5af29"
+        },
+        {
+          "term": "取引態様",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+          "sourceLocator": "宅建業法34条",
+          "definitionSha256": "064df7ab4428abc74736153ec87f7d25e14b2a04b8387e2d6273f5c0764d9e2f"
+        },
+        {
+          "term": "用途地域",
+          "correct": false,
+          "sourceUrl": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+          "sourceLocator": "都市計画法第8条第1項第1号・第9条",
+          "definitionSha256": "dd88b087094ff543875aa52d89da8791c789d064177624c4109020402d72deae"
+        }
+      ]
+    },
+    {
+      "id": "vocab-158",
+      "term": "収益価格",
+      "subject": "taxOther",
+      "reading": "しゅうえきかかく",
+      "sha256": "4627707971807e867b49cb57c772c18c5279254e28af1b4e4b61daa26445cd82",
+      "evidence": {
+        "term": "収益価格",
+        "subject": "taxOther",
+        "pastQuestions": [
+          {
+            "year": "2023",
+            "question": 25
+          }
+        ],
+        "currentBankFiles": [
+          "exam-questions-tax-other.js"
+        ]
+      },
+      "contrast": "収益還元法と対応する価格名。取引事例や原価による価格名と区別する。",
+      "choices": [
+        {
+          "term": "比準価格",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "0b8ca7f0e66a2c64ff0576e518cae6ed9df434aee8ef7ce1c1515e2b920ab720"
+        },
+        {
+          "term": "収益価格",
+          "correct": true,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "6b5d1a60781138e4bf1f7b748c45bf34e3509878e7cb3fb42b00bbd62549a0e5"
+        },
+        {
+          "term": "積算価格",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "116befaeba2934222934cca1741d35d0cdf79b84a319a0058a79bfdf1541b79a"
+        },
+        {
+          "term": "再調達原価",
+          "correct": false,
+          "sourceUrl": "https://www.mlit.go.jp/common/001043585.pdf",
+          "sourceLocator": "不動産鑑定評価基準・総論7章",
+          "definitionSha256": "676e9ec44afe72eee5f2ffc843c5fb609d55a799e8a58f919202c4d3ba44b122"
+        }
+      ]
+    }
+  ],
+  "coverageSources": {
+    "officialExamScope": "https://www.retio.or.jp/exam/faq/",
+    "officialPastPapers": "https://www.retio.or.jp/exam/past_ques_ans/other/",
+    "guide2026": "https://www.retio.or.jp/wp-content/uploads/2026/05/R8%E3%82%A4%E3%83%B3%E3%82%BF%E3%83%BC%E3%83%8D%E3%83%83%E3%83%88%E7%94%B3%E8%BE%BC%E8%A9%A6%E9%A8%93%E6%A1%88%E5%86%85.pdf",
+    "lawBaseline": "2026-04-01",
+    "reviewedPastQuestions": 150,
+    "years": [
+      2023,
+      2024,
+      2025
+    ],
+    "literalPastHits": 53,
+    "currentBankHits": 69,
+    "selectionLimit": "重要な定義・対比の採用であり、出題頻度の推定や完全網羅・出題保証ではない。"
+  }
+}

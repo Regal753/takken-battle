@@ -9,6 +9,7 @@ const bank = require("./rights-transfer-bank.js");
 const officialData = require("./official-exam-data.js");
 const legacy = execFileSync("git", ["show", "a65ed1a0da87d1fb27b497e5f0b060bc4243a5e5:app.js"], { encoding: "utf8" });
 const legacy76 = execFileSync("git", ["show", "1b552fe1366bd43fc106bd16ba663853b03cd9e5:app.js"], { encoding: "utf8" });
+const legacy76Vocabulary = execFileSync("git", ["show", "1b552fe1366bd43fc106bd16ba663853b03cd9e5:vocabulary-bank.js"], { encoding: "utf8" });
 async function main() {
   const root = __dirname, out = path.join(root, "output/coverage-ui");
   const reviewRuntime = process.env.TAKKEN_REVIEW_RUNTIME_REF
@@ -19,6 +20,7 @@ async function main() {
     const url = new URL(req.url, "http://localhost"), relative = decodeURIComponent(url.pathname).replace(/^\/+/, "") || "index.html";
     if (relative === "legacy-app.js") { res.setHeader("Content-Type", "text/javascript; charset=utf-8"); res.end(legacy); return; }
     if (relative === "legacy76-app.js") { res.setHeader("Content-Type", "text/javascript; charset=utf-8"); res.end(legacy76); return; }
+    if (relative === "legacy76-vocabulary-bank.js") { res.setHeader("Content-Type", "text/javascript; charset=utf-8"); res.end(legacy76Vocabulary); return; }
     const file = path.resolve(root, relative);
     if (!file.startsWith(root + path.sep)) { res.writeHead(403).end(); return; }
     fs.readFile(file, (error, body) => {
@@ -26,6 +28,7 @@ async function main() {
       if (relative === "app.js" && reviewRuntime) body = reviewRuntime;
       res.setHeader("Content-Type", ({ ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8" })[path.extname(file)] || "application/octet-stream");
       if (relative === "index.html" && url.searchParams.has("legacy")) body = body.toString("utf8").replace(/\.\/app\.js\?v=[^"]+/, url.searchParams.get("legacy") === "76" ? "./legacy76-app.js" : "./legacy-app.js");
+      if (relative === "index.html" && url.searchParams.get("legacy") === "76") body = body.toString("utf8").replace(/\.\/vocabulary-bank\.js\?v=[^"]+/, "./legacy76-vocabulary-bank.js");
       res.end(body);
     });
   });
@@ -212,12 +215,13 @@ async function main() {
     assert.match(await page.locator("#rightsTransferStatus").textContent(), /初回 5\/6.*解き直し 6\/6/);
     await page.goto(`${base}?review=coverage-objective&today=1&legacy=1`, { waitUntil: "networkidle" });
     if (completed.stateSchemaVersion === 17) await page.locator("#todayCommandStartButton").click();
-    else assert.match(await page.locator("#saveTransferStatus").textContent(), /新しい保存形式v18/, "old main must protect the newer PR76 schema");
+    else assert.match(await page.locator("#saveTransferStatus").textContent(), /新しい保存形式v19/, "old main must protect the appended vocabulary schema");
     assert.deepEqual((await saved(page)).rightsTransferQuiz, retry, "main schema17 normal save preserves additive field");
-    if (completed.stateSchemaVersion === 18) {
+    if (completed.stateSchemaVersion === 19) {
       await page.goto(`${base}?review=coverage-objective&today=1&legacy=76`, { waitUntil: "networkidle" });
-      await page.locator("#todayCommandStartButton").click();
-      assert.deepEqual((await saved(page)).rightsTransferQuiz, retry, "standalone PR76 normal save preserves the added checkpoint");
+      assert.match(await page.locator("#saveTransferStatus").textContent(), /新しい保存形式v19/, "schema18 PR76 must protect schema19");
+      assert.equal(await page.locator("body").evaluate(node => node.classList.contains("is-save-read-only")), true);
+      assert.deepEqual((await saved(page)).rightsTransferQuiz, retry, "standalone PR76 read-only guard preserves the checkpoint");
     }
     await page.goto(`${base}?review=coverage-objective&today=1`, { waitUntil: "networkidle" });
     const packageText = await page.evaluate(k => JSON.stringify(window.TAKKEN_SAVE_TRANSFER.createSavePackage(JSON.parse(localStorage.getItem(k)))), key(page));
