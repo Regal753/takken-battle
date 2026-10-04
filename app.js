@@ -496,6 +496,8 @@
     VOCABULARY_TOPICS.every((topic) => topic.id && topic.label) && VOCABULARY_QUESTIONS.every((item) =>
       /^vocab-\d{3}$/.test(item.id) && Number(item.id.slice(6)) >= 1 && Number(item.id.slice(6)) <= VOCABULARY_EXPECTED_QUESTIONS &&
       VOCABULARY_TOPICS.some((topic) => topic.id === item.unitId) &&
+      VOCABULARY_BANK.CARDS_BY_ID?.[item.id]?.term === VOCABULARY_BANK.QUESTIONS_BY_ID?.[item.id]?.term &&
+      typeof VOCABULARY_BANK.CARDS_BY_ID[item.id].meaning === "string" && VOCABULARY_BANK.CARDS_BY_ID[item.id].meaning.trim() &&
       item.sourceFacts?.length === 4 && item.sourceFacts.every((fact) => fact.reason && fact.statement));
   if (!VOCABULARY_READY) { showBankLoadRecovery(["用語の意味（問題データの整合性）"]); return; }
   const ALL_PRACTICAL_QUESTION_BY_ID = Object.freeze({
@@ -1314,6 +1316,13 @@
     vocabularyRetained: $("#vocabularyRetained"),
     vocabularyReview: $("#vocabularyReview"),
     vocabularyStatus: $("#vocabularyStatus"),
+    vocabularyCard: $("#vocabularyCard"),
+    vocabularyReveal: $("#vocabularyReveal"),
+    vocabularyAnswer: $("#vocabularyAnswer"),
+    vocabularyMeaning: $("#vocabularyMeaning"),
+    vocabularyGrade: $("#vocabularyGrade"),
+    vocabularyKnown: $("#vocabularyKnown"),
+    vocabularyAgain: $("#vocabularyAgain"),
     practicalDrillSummary: $("#practicalDrillSummary"),
     practicalDrillOverview: $("#practicalDrillOverview"),
     practicalDrillScope: $("#practicalDrillScope"),
@@ -1543,6 +1552,7 @@
   let isAdvancing = false;
   let isFlushingEvents = false;
   let practicalGroundingDraft = { questionId: "", axes: new Set() };
+  let vocabularyRevealedKey = "";
   let activeDayKey = todayKey();
   const logConnection = {
     checked: false,
@@ -4948,7 +4958,7 @@
           : state.practicalDrill.bankId === SUBJECT_SPRINT_BANK_ID
             ? "進行中の科目補強セット"
           : state.practicalDrill.bankId === VOCABULARY_BANK_ID
-            ? "進行中の用語ノック"
+            ? "進行中の用語カード"
           : "進行中の実践セット"
       };
     }
@@ -5042,7 +5052,7 @@
       business: { target: elements.businessMasteryPanel, focusSelector: "#businessKnockMode", label: "宅建業法の高難度ノック設定" },
       restrictions: { target: elements.restrictionMasteryPanel, focusSelector: "#restrictionExamStart", label: "法令上の制限の診断とノック" },
       rights: { target: elements.rightsMasteryPanel, focusSelector: "#rightsMasteryTwenty", label: "権利関係の根拠ノック設定" },
-      vocabulary: { target: elements.vocabularyPanel, focusSelector: "#vocabularyStart", label: "用語の意味ノック設定" },
+      vocabulary: { target: elements.vocabularyPanel, focusSelector: "#vocabularyStart", label: "用語カード設定" },
       tax: { target: elements.passPlanPanel, focusSelector: "#taxAuthoredTen", label: "税の新作10問の開始設定" },
       other: { target: elements.passPlanPanel, focusSelector: '[data-subject-sprint="other"]', label: "その他12問の開始設定" },
       all: { target: elements.themeDrawer, focusSelector: "#studyScopeSelect", label: "全科目の日課範囲メニュー" },
@@ -9844,6 +9854,11 @@
     const guaranteeSpecialSession = drill.bankId === GUARANTEE_SPECIAL_BANK_ID;
     const subjectSprintSession = drill.bankId === SUBJECT_SPRINT_BANK_ID;
     const vocabularySession = drill.bankId === VOCABULARY_BANK_ID;
+    elements.vocabularyCard.hidden = !vocabularySession;
+    elements.practicalDrillPrompt.classList.toggle("vocabulary-term", vocabularySession);
+    elements.practicalDrillPrompt.setAttribute("aria-label", vocabularySession ? "用語" : "問題文");
+    elements.practicalConfidenceHint.hidden = vocabularySession;
+    elements.practicalDrillChoices.hidden = vocabularySession;
     const bankAttempts = activeIds.reduce((sum, id) => sum + (drill.history[id]?.attempts || 0), 0);
     const restrictionSprintSession = subjectSprintSession && drill.scope === "restrictions";
     const guaranteeSummary = guaranteeSpecialSession ? guaranteeSpecialSummary() : null;
@@ -9860,14 +9875,15 @@
     const bankLabel = knockSession ? hardKnockSession ? "高難度・事例ノック" : "基礎変形ノック"
       : drill.bankId === BUSINESS_FULLSCORE_BANK_ID ? "満点変形"
       : guaranteeSpecialSession ? "保証協会特訓"
-        : vocabularySession ? "用語の意味ノック" : subjectSprintSession ? "科目補強" : "実践";
+        : vocabularySession ? "用語カード" : subjectSprintSession ? "科目補強" : "実践";
     elements.practicalDrillPanel.querySelector("summary strong").textContent = vocabularySession
-      ? "用語の意味ノック" : "分野別の振り返り";
+      ? "用語カード" : "分野別の振り返り";
     elements.practicalDrillComplete.querySelector(":scope > strong").textContent = vocabularySession
-      ? "用語ノックを完了" : "実践セットを完了";
+      ? "用語カードを完了" : "実践セットを完了";
     const summaryPrefix = drill.bankId === LEGACY_PRACTICAL_BANK_ID ? "" : `${bankLabel}累計 `;
-    elements.practicalDrillSummary.textContent =
-      `${summaryPrefix}接触 ${contacted} / ${activeIds.length}・根拠クリア ${grounded}・再出題 ${drill.retryIds.filter((id) => activeIds.includes(id)).length}`;
+    elements.practicalDrillSummary.textContent = vocabularySession
+      ? `用語${activeIds.length}語・もう一度 ${drill.retryIds.filter((id) => activeIds.includes(id)).length}語`
+      : `${summaryPrefix}接触 ${contacted} / ${activeIds.length}・根拠クリア ${grounded}・再出題 ${drill.retryIds.filter((id) => activeIds.includes(id)).length}`;
     if (elements.practicalDrillScope?.querySelector(`option[value="${drill.scope}"]`)) {
       elements.practicalDrillScope.value = drill.scope;
     }
@@ -9896,7 +9912,7 @@
         : guaranteeSpecialSession ? "保証協会・営業保証金"
           : restrictionExamSession
             ? `法令${RESTRICTION_EXAM_SESSION_SIZE}問・${RESTRICTION_EXAM_TARGET_MINUTES}分 根拠診断`
-          : vocabularySession ? "用語の意味ノック" : subjectSprintSession ? `${subjectSprintTopic?.label || practicalScopeLabel(drill.scope)}・高速補強`
+          : vocabularySession ? "用語カード" : subjectSprintSession ? `${subjectSprintTopic?.label || practicalScopeLabel(drill.scope)}・高速補強`
         : unitSession ? unitSession.label : scopeLabel;
       const restrictionExamResult = restrictionExamSession ? currentRestrictionExamResult(drill) : null;
       const restrictionExamVerdict = restrictionExamResult?.passed ? "合格圏目安" : "要再診断";
@@ -9909,7 +9925,7 @@
             ? `${completionLabel}を完了。初回は正答${restrictionExamResult.firstPassCorrect}/8、根拠あり${restrictionExamResult.groundedCorrect}/8、迷い${restrictionExamResult.uncertainAnswers}・ヤマ勘${restrictionExamResult.guessAnswers}、所要${formatElapsed(restrictionExamResult.elapsedMs)}/${RESTRICTION_EXAM_TARGET_MINUTES}:00。判定は${restrictionExamVerdict}です。迷い・ヤマ勘・誤答も再出題で回収しました。`
             : `${completionLabel}を完了しましたが、今回結果を復元できませんでした。もう一度測り直してください。`
         : vocabularySession
-          ? `用語${drill.sessionIds.length}問と迷い・勘・誤答の再出題を完了。意味を言えて正解${grounded}/${activeIds.length}、別日定着${vocabularySummary().retained}/${activeIds.length}。通常問題や模試の得点には算入しません。同日の解き直しだけでは別日定着になりません。`
+          ? `用語${drill.sessionIds.length}語の確認を完了しました。通常問題や模試の得点には算入しません。`
         : subjectSprintSession
           ? `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計${bankAttempts}解答、根拠クリア${grounded}問です。${subjectSprintTopic?.id === "catchup" ? `都市計画法以外${subjectSprintTopic.sourceQuestionIds.length}問の未接触は残り${subjectSprintTopicUntouched}問。${subjectSprintTopicUntouched ? "同じ20問診断を続けると未接触を優先して回収します。" : `${subjectSprintTopic.sourceQuestionIds.length}問すべてへ接触済みです。`}` : ""}`
         : `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計${bankAttempts}解答、根拠クリア${grounded}問です。`;
@@ -9921,7 +9937,7 @@
           ? "宅建業法ノックへ戻る"
         : restrictionExamSession
           ? `法令${RESTRICTION_EXAM_SESSION_SIZE}問・${RESTRICTION_EXAM_TARGET_MINUTES}分をもう一周`
-        : vocabularySession ? "同じ条件で用語ノックを続ける"
+        : vocabularySession ? "同じ条件で用語カードを続ける"
         : subjectSprintSession
           ? `${subjectSprintTopic?.label || practicalScopeLabel(drill.scope)}をもう一周`
         : unitSession
@@ -9949,6 +9965,10 @@
       return;
     }
     const attempt = drill.currentAttempt;
+    if (vocabularySession) {
+      renderVocabularyCard(question, attempt);
+      return;
+    }
     const forecastRequired = practicalForecastRequired(drill, attempt);
     const sessionRetryCount = drill.retryIds.filter((id) => drill.sessionIds.includes(id)).length;
     elements.practicalDrillStage.textContent = drill.stage === "retry"
@@ -10132,6 +10152,10 @@
     const unreadAuthoredCase = SUBJECT_SPRINT_QUESTION_BY_ID[currentId]?.authoredCase && !drill.preAnswerConfidence;
     if (!drill.currentAttempt && (isHardBusinessQuestionId(currentId) || unreadAuthoredCase)) {
       return elements.practicalDrillPrompt;
+    }
+    if (drill.bankId === VOCABULARY_BANK_ID) {
+      return drill.currentAttempt ? elements.practicalDrillNextButton
+        : elements.vocabularyReveal.hidden ? elements.vocabularyKnown : elements.vocabularyReveal;
     }
     if (practicalForecastRequired(drill) && !drill.preAnswerConfidence) {
       return elements.practicalDrillForecast?.querySelector("button");
@@ -11137,6 +11161,58 @@
     }
   }
 
+  function vocabularyCardKey(drill = state.practicalDrill) {
+    return [drill.presentationKey, drill.sessionStartedAt, drill.stage, drill.position, drill.queue[drill.position]].join("|");
+  }
+
+  function renderVocabularyCard(question, attempt) {
+    const drill = state.practicalDrill;
+    const card = VOCABULARY_BANK.CARDS_BY_ID[question.id];
+    const revealed = Boolean(attempt) || vocabularyRevealedKey === vocabularyCardKey(drill);
+    elements.practicalDrillStage.textContent = drill.stage === "retry" ? "もう一度" : "用語カード";
+    elements.practicalDrillProgress.textContent = `${drill.position + 1} / ${drill.queue.length}語`;
+    elements.practicalDrillUnit.textContent = "意味を思い出す";
+    elements.practicalDrillRetryStatus.textContent = `もう一度 ${drill.retryIds.filter(id => drill.sessionIds.includes(id)).length}語`;
+    elements.practicalDrillPrompt.removeAttribute("data-structured");
+    elements.practicalDrillPrompt.textContent = card.term;
+    elements.practicalDrillChoices.replaceChildren();
+    elements.practicalDrillForecast.hidden = true;
+    elements.practicalGroundingChecklist.hidden = true;
+    elements.vocabularyReveal.hidden = revealed;
+    elements.vocabularyAnswer.hidden = !revealed;
+    // Do not leave the answer in the unrevealed DOM or count a reveal as mastery.
+    elements.vocabularyMeaning.textContent = revealed ? card.meaning : "";
+    elements.vocabularyGrade.hidden = Boolean(attempt);
+    // Saved legacy answers and a failed next-position save advance without
+    // grading again. Their original confidence and history remain intact.
+    elements.practicalDrillFeedback.hidden = !attempt;
+    elements.practicalDrillVerdict.textContent = "";
+    elements.practicalDrillReasoning.replaceChildren();
+    elements.practicalDrillSources.replaceChildren();
+    elements.practicalDrillConfidence.hidden = true;
+    elements.practicalDrillNextButton.disabled = false;
+    elements.practicalDrillNextButton.textContent = "次の用語へ";
+  }
+
+  function revealVocabularyCard() {
+    if (state.practicalDrill.bankId !== VOCABULARY_BANK_ID || state.practicalDrill.currentAttempt || !currentPracticalQuestion()) return;
+    vocabularyRevealedKey = vocabularyCardKey();
+    renderPracticalDrill();
+    elements.vocabularyKnown.focus({ preventScroll: true });
+  }
+
+  function gradeVocabularyCard(confidence) {
+    const drill = state.practicalDrill;
+    const question = currentPresentedPracticalQuestion();
+    if (drill.bankId !== VOCABULARY_BANK_ID || drill.currentAttempt || !question ||
+        vocabularyRevealedKey !== vocabularyCardKey(drill) || !["confident", "uncertain"].includes(confidence)) return;
+    const attempts = drill.attempts;
+    answerPracticalDrill(question.answer, { vocabularyConfidence: confidence });
+    if (state.practicalDrill.attempts === attempts + 1 && state.practicalDrill.currentAttempt?.id === question.id) {
+      advancePracticalDrill();
+    }
+  }
+
   function normalizeVocabularyPreset(input) {
     return {
       mode: ["weak", "all", "topic"].includes(input?.mode) ? input.mode : "weak",
@@ -11191,11 +11267,11 @@
     elements.vocabularyTopicField.hidden = elements.vocabularyMode.value !== "topic";
     [elements.vocabularyMode, elements.vocabularyTopic, elements.vocabularySize, elements.vocabularyCustomStart]
       .forEach((control) => { control.disabled = Boolean(active); });
-    elements.vocabularyStart.textContent = vocabularyActive ? "用語ノックの続きから再開"
-      : active ? "進行中のセットを再開" : "弱点・未接触を10問";
+    elements.vocabularyStart.textContent = vocabularyActive ? "用語カードの続きから再開"
+      : active ? "進行中のセットを再開" : "用語10語を始める";
     elements.vocabularyStatus.textContent = vocabularyActive
       ? `第${state.practicalDrill.position + 1}問から再開できます。解答・再出題も保存済みです。`
-      : active ? `${active.label}を先に再開します。終わった後に用語ノックを選べます。`
+      : active ? `${active.label}を先に再開します。終わった後に用語カードを選べます。`
       : `全${total}問。未接触${total - summary.contacted}問、要復習${summary.review}問。用語だけの記録です。`;
   }
 
@@ -11203,7 +11279,7 @@
     if (vocabularyBlockingSession()?.kind === "calculation") {
       renderCalculationDrill();
       focusStudyNavigationTarget(elements.calculationDrillPanel, { focusSelector: "#calculationDrillPrompt" });
-      setTodayCommandStatus("進行中の計算・金額特訓を保存位置から再開します。完了後に用語ノックを選べます。");
+      setTodayCommandStatus("進行中の計算・金額特訓を保存位置から再開します。完了後に用語カードを選べます。");
       return;
     }
     if (resumeActiveLearningSession()) return;
@@ -11238,7 +11314,7 @@
       restrictionExamSession: null, sessionStartedAt: new Date().toISOString(), completedAt: ""
     };
     if (!saveState()) {
-      rollbackFailedPracticalDrillMutation(previousState, "用語ノックを開始できませんでした。保存管理を確認して再試行してください。");
+      rollbackFailedPracticalDrillMutation(previousState, "用語カードを開始できませんでした。保存管理を確認して再試行してください。");
       return;
     }
     renderPracticalDrill();
@@ -11516,16 +11592,16 @@
     window.requestAnimationFrame(() => currentPracticalInputTarget(drill)?.focus({ preventScroll: true }));
   }
 
-  function answerPracticalDrill(selected) {
+  function answerPracticalDrill(selected, { vocabularyConfidence = "" } = {}) {
     const drill = state.practicalDrill;
     const question = currentPresentedPracticalQuestion();
     if (!question || drill.currentAttempt || !Number.isInteger(selected) || selected < 0 || selected > 3) return;
     const guaranteeSpecial = drill.bankId === GUARANTEE_SPECIAL_BANK_ID;
     const forecastValues = practicalForecastValues(drill);
     const forecastSession = forecastValues.length > 0;
-    const predictedConfidence = forecastSession && forecastValues.includes(drill.preAnswerConfidence)
-      ? drill.preAnswerConfidence
-      : "";
+    const predictedConfidence = drill.bankId === VOCABULARY_BANK_ID && ["confident", "uncertain"].includes(vocabularyConfidence)
+      ? vocabularyConfidence
+      : forecastSession && forecastValues.includes(drill.preAnswerConfidence) ? drill.preAnswerConfidence : "";
     if (forecastSession && !predictedConfidence) return;
     if (restrictionGroundingRequired(drill) && !restrictionGroundingComplete(question)) return;
     const selectedChoiceTop = elements.practicalDrillChoices
@@ -15423,6 +15499,9 @@
     );
     elements.restrictionTopicOpen?.addEventListener("click", openRestrictionTopicPicker);
     elements.rightsMasteryTwenty?.addEventListener("click", () => startSubjectSprint("rights", RIGHTS_KNOCK_SESSION_SIZE, "knock"));
+    elements.vocabularyReveal?.addEventListener("click", revealVocabularyCard);
+    elements.vocabularyKnown?.addEventListener("click", () => gradeVocabularyCard("confident"));
+    elements.vocabularyAgain?.addEventListener("click", () => gradeVocabularyCard("uncertain"));
     elements.vocabularyStart?.addEventListener("click", () => startVocabularySession({ mode: "weak", size: "10" }));
     elements.vocabularyCustomStart?.addEventListener("click", () => startVocabularySession());
     elements.vocabularyMode?.addEventListener("change", renderVocabulary);

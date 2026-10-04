@@ -475,7 +475,34 @@
       legalBaseline: LEGAL_BASELINE
     });
   });
-  return freeze({ VERSION, LEGAL_BASELINE, SOURCES, TOPICS, UNITS: TOPICS, QUESTIONS,
+  // Preserve the reviewed legacy questions/IDs for saved four-choice sessions.
+  const cardMeanings = {
+    "vocab-003": "必要な注意を欠いた落ち度があること。",
+    "vocab-005": "当事者以外の者。保護される範囲は条文ごとに異なる。",
+    "vocab-007": "取消権を使い、行為を初めから無効だったものとみなすこと。",
+    "vocab-009": "行為を後から認めること。取消し得る行為を追認すると、以後取り消せなくなる。",
+    "vocab-013": "義務の内容に従って実行すること。",
+    "vocab-021": "賃料を払って物を使用・収益し、契約終了時に返す契約。",
+    "vocab-029": "宅建業者を除く取引相手の一定の債権を担保するため、金銭等を供託所に預けること。",
+    "vocab-030": "父母・祖父母など、自分に直接つながる上の世代の血族。",
+    "vocab-031": "子・孫など、自分に直接つながる下の世代の血族。",
+    "vocab-032": "兄弟姉妹・叔父叔母など、共通の祖先を介して別の枝につながる血族。",
+    "vocab-033": "配偶者の血族や血族の配偶者など、婚姻を介してつながる親族。配偶者自身とは区別する。",
+    "vocab-036": "法律上の要件を満たす場合に、その物に関する債権の弁済まで物を留め置ける権利。",
+    "vocab-039": "原則、建物の外壁や柱の中心線で囲む部分を水平に投影した面積。",
+    "vocab-040": "各階などの壁や柱の中心線で囲む部分を水平に投影した面積。",
+    "vocab-050": "工作物・施設等を道路に継続して設け、道路を使うこと。原則、道路管理者の許可が必要。",
+    "vocab-054": "契約時などに渡す金銭。解約手付の場合、相手方の履行着手前は買主が放棄、売主が倍額を現実に提供して解除できる。",
+    "vocab-056": "契約の判断に必要な事項を、宅建士が原則として契約成立前に説明すること。",
+    "vocab-057": "一定の土地取引について、契約締結後2週間以内に権利取得者が届け出る制度。",
+    "vocab-059": "土地区画整理で換地計画の関係事項を権利者に通知し、土地の権利関係を定める処分。",
+    "vocab-061": "その事業を実施する主体。許可する主体とは役割が異なる。"
+  };
+  const CARDS_BY_ID = Object.fromEntries(QUESTIONS.map(q => [q.id, {
+    id: q.id, term: q.term, meaning: cardMeanings[q.id] || q.memoryRule,
+    sourceUrl: q.sourceUrl, sourceLocator: q.sourceLocator, legalBaseline: q.legalBaseline
+  }]));
+  return freeze({ VERSION, LEGAL_BASELINE, SOURCES, TOPICS, UNITS: TOPICS, QUESTIONS, CARDS_BY_ID,
     QUESTIONS_BY_ID: Object.fromEntries(QUESTIONS.map(question => [question.id, question])),
     QUESTION_IDS: QUESTIONS.map(question => question.id) });
 });

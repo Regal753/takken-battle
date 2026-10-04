@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20261004-learning-vocab-pwa-b1b3d346353b",
-  "digest": "sha256:b1b3d346353b6e65cb63cacf2d61ec2b6c8d2689c51aec640104ddb8ef26be90",
+  "version": "20261004-vocabulary-cards-7456ead81208",
+  "digest": "sha256:7456ead8120821f47480f3aaab2503da8e5f2468907da84152bcc3a734cdf965",
   "assetCount": 69,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "34a3c5f3534c55cd69799d3fb6bc613dc4cb128e9d2fe4a44161966804b7e192"
+      "sha256": "f792fe8915f920cc8737539b67e5cf469dd85620ee7705434975dbf29c2dbb2c"
     },
     {
       "path": "assets/battle/grassland-route.webp",
@@ -166,7 +166,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "a705dceef55267ec6b4fd01ae180c2a6f04d7c690ea2d74d72be0ca607274cb0"
+      "sha256": "9224b8e63526053a59b688681499f1215ed776b5e361e789ae7b70e6a555341f"
     },
     {
       "path": "manifest.webmanifest",
@@ -262,7 +262,7 @@
     },
     {
       "path": "styles.css",
-      "sha256": "ca4a2bc3c3c918e536e179d1fa8b5aab2714e84a5ba3dc7c0f5bc1712a23dca8"
+      "sha256": "fd4aa57e3233bc38f3b20df5d50d8407b236701cb5bd0c8de2b4b0aeb0706d57"
     },
     {
       "path": "subject-sprint-bank.js",
@@ -278,7 +278,7 @@
     },
     {
       "path": "vocabulary-bank.js",
-      "sha256": "7d5daef6fe1c52cb45098afecc912824cfe7c6e0640827d170f55aaa62ae5c8f"
+      "sha256": "ce18018be17a8401528220d28c6f2d661890cdaf19ab3bd72308ec08e2400237"
     }
   ]
 }

@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20261004-learning-vocab-pwa-b1b3d346353b";
+  const VERSION = "20261004-vocabulary-cards-7456ead81208";
   const BANNER_ID = "pwaUpdateNotice";
   const UPDATE_CHECK_INTERVAL_MS = 60_000;
   let reloadRequested = false;
