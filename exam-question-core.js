@@ -764,6 +764,7 @@
       choiceFacts: balancedChoices,
       choiceTruths: balancedTruths,
       memoryRule,
+      ...(input.reasoningChecks ? { reasoningChecks: Object.freeze(input.reasoningChecks.map(check => Object.freeze({ ...check }))) } : {}),
       sourceRef: sourceLabelOverride || source.label,
       sourceLocator: sourceLocator || sourceLocatorByQuestionId[id] || `${source.label}｜論点「${tag}」`,
       sourceUrl: sourceUrlOverride || source.url,

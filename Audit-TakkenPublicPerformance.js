@@ -13,8 +13,9 @@ releaseIntegrityTools.assertVersionMatchesDigest(releaseIntegrity.version, relea
 // The 64-word vocabulary bank and save-safe study flow add 114,793 raw /
 // 22,591 level-9 gzip bytes over the preceding 50-script release.
 // Add that measured delta rounded up to 1 KB; preserve the prior headroom.
-const MAX_PUBLIC_JS_BYTES = 2_677_000;
-const MAX_PUBLIC_JS_GZIP_BYTES = 681_000;
+// Local integration measured +71757 raw / +12513 gzip vs PR76 head.
+const MAX_PUBLIC_JS_BYTES = 2749000;
+const MAX_PUBLIC_JS_GZIP_BYTES = 694000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
   "pwa-runtime.js",

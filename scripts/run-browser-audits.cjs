@@ -7,7 +7,7 @@ const { spawn } = require("node:child_process");
 const { performance } = require("node:perf_hooks");
 
 const ROOT = path.resolve(__dirname, "..");
-const EXPECTED_AUDIT_COUNT = 32;
+const EXPECTED_AUDIT_COUNT = 34;
 const SHARDS = Object.freeze(["a", "b", "c"]);
 // Preserve the complete former CI command list and add the vocabulary audit. Round-robin assignment spreads
 // expensive interaction and exam/save audits across independent runners.
@@ -39,6 +39,8 @@ const AUDITS = Object.freeze([
   "Audit-TakkenReiwaExamUi.cjs",
   "Audit-TakkenCaseExamUi.cjs",
   "Audit-TakkenRightsKnockUi.cjs",
+  "Audit-TakkenLearningEffectivenessUi.cjs",
+  "Audit-TakkenDailyCoverageUi.cjs",
   "Audit-TakkenChatgptHelpUi.cjs",
   "Audit-TakkenConcurrentSaveUi.cjs",
   "Audit-TakkenBankRecoveryUi.cjs",

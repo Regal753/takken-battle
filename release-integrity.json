@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20261003-vocabulary-knock-065282b28b14",
-  "digest": "sha256:065282b28b14e37ccc367e7345068238979d9205eaa6ef2853fdce3867e040ff",
-  "assetCount": 67,
+  "version": "20261004-learning-vocab-integration-8af5e70e5de7",
+  "digest": "sha256:8af5e70e5de70eab51947c274bce7d09a181069090e0a4d17504faffea042d6f",
+  "assetCount": 69,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "3299bb4fa6ffadb12ea805ae1344ee63223dd843af9f3807d73e3714d9884c0d"
+      "sha256": "af83e5f36c12dfce6a779c65b9e6ab5a0cb2af538f2e2a40bf38aeec9256b74d"
     },
     {
       "path": "assets/battle/grassland-route.webp",
@@ -137,8 +137,12 @@
       "sha256": "2635e204d0b17949be41b3593b059ff3ac673de62f1f3821a492aeecd867cb72"
     },
     {
+      "path": "exam-daily-coverage.js",
+      "sha256": "a98a3fc44f7a0dc73d7815f4784ecaf97bc918b59fae89747ac39613879016f0"
+    },
+    {
       "path": "exam-question-core.js",
-      "sha256": "c6ea092f1cbbe556be635e4086b050ce95150c612a36324710a315e78fb4e9f4"
+      "sha256": "da6ae9e73d02995b9058f4b63cefee8407f3ec6765c79ca8b99cb09ad65d05e6"
     },
     {
       "path": "exam-questions-business.js",
@@ -150,7 +154,7 @@
     },
     {
       "path": "exam-questions-rights.js",
-      "sha256": "3c8c8f4c70f7ee632d805e85564e82afaa15cd5ac43a14e892f7d7151e80dca2"
+      "sha256": "2e12525af30761a14e8f987d0597d5c06ba334497bdebe616d4d8242c078d544"
     },
     {
       "path": "exam-questions-tax-other.js",
@@ -162,7 +166,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "62555d2c58f10fd21a8b836328637577cf1e9cc631a1de0c75688d9f84332ae3"
+      "sha256": "a705dceef55267ec6b4fd01ae180c2a6f04d7c690ea2d74d72be0ca607274cb0"
     },
     {
       "path": "manifest.webmanifest",
@@ -182,7 +186,7 @@
     },
     {
       "path": "pass-readiness.js",
-      "sha256": "4dff8695ff1573c00abec15272e927f06943ecdde40bb96bbab87ba145ba2939"
+      "sha256": "a2d1619911a7853bce891f1d75997d43e4285cf5e734e1e13a6bf906100650e1"
     },
     {
       "path": "practical-question-bank.js",
@@ -237,6 +241,10 @@
       "sha256": "bf8b3a1a40209275cf3a15c919ecc641d783f1ed5fccc9555971d3519e001db3"
     },
     {
+      "path": "rights-transfer-bank.js",
+      "sha256": "d0ed2776fb4aada4233429cbe647ca2f4b4ed58ab2717cfc395bd306af1ceeff"
+    },
+    {
       "path": "save-store.js",
       "sha256": "aaa1bf133f898fcd5e498060aafaa6d9ff0f6fca744eb62fb752547fdb9f692c"
     },
@@ -246,19 +254,19 @@
     },
     {
       "path": "service-worker.js",
-      "sha256": "03fc1826f228aa4dd65d34d6da733a278a84822c5bc3a70a66ae688d4b24b361"
+      "sha256": "1a3cfc8da3aa18d0df6c0dd74b7b6c9f0e9d7b6d3cdbbaadc627bee59685f8d9"
     },
     {
       "path": "state-sync.js",
-      "sha256": "fee78de5890695dfbe894946d7cd8a44338e9d4dbff7948411f5a36b9a26e4be"
+      "sha256": "df97491f592dd18bbc06ea40a70f41e245f8bea4984b9e58aaf50299598216ef"
     },
     {
       "path": "styles.css",
-      "sha256": "b370e2010fb5027e909be6732536617291890d7a5450fdcc9da5a7aa744ff578"
+      "sha256": "ca4a2bc3c3c918e536e179d1fa8b5aab2714e84a5ba3dc7c0f5bc1712a23dca8"
     },
     {
       "path": "subject-sprint-bank.js",
-      "sha256": "99df6cb88b97e85be5f2a7d324403bc1efe0c9ac0531b6cc685eefbf987c6403"
+      "sha256": "2ec13d5cd06a1e8087b58a60ad038a4bc271be783d6153680a65601acca34d54"
     },
     {
       "path": "tax-authored-bank.js",

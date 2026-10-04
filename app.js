@@ -7,6 +7,8 @@
   // normalizes unknown IDs and the initial autosave can replace a saved queue.
   const sprintBankAtBoot = window.TAKKEN_SUBJECT_SPRINT_BANK;
   const missingQuestionBanks = [
+    ["試験カテゴリ", Boolean(window.TAKKEN_EXAM_DAILY_COVERAGE?.PRICE_IDS?.length === 4)],
+    ["権利の条件判断", window.TAKKEN_RIGHTS_TRANSFER_BANK?.QUESTIONS?.length === 6],
     ["計算・金額", window.TAKKEN_CALCULATION_DRILL?.QUESTIONS?.length === 35],
     ["基礎の実践", window.TAKKEN_PRACTICAL_VARIATIONS?.QUESTIONS?.length === 180],
     ["業法の旧問", window.TAKKEN_BUSINESS_FULLSCORE_BANK?.QUESTIONS?.length === 134],
@@ -77,6 +79,8 @@
   const VOCABULARY_BANK = window.TAKKEN_VOCABULARY_BANK;
   const RESTRICTIONS_AUTHORED_BANK = window.TAKKEN_RESTRICTIONS_AUTHORED_BANK;
   const TAX_AUTHORED_BANK = window.TAKKEN_TAX_AUTHORED_BANK;
+  const DAILY_COVERAGE = window.TAKKEN_EXAM_DAILY_COVERAGE;
+  const RIGHTS_TRANSFER = window.TAKKEN_RIGHTS_TRANSFER_BANK;
   const PASS_READINESS = window.TAKKEN_PASS_READINESS;
   const EXAM_CURRENT_YEAR = window.TAKKEN_EXAM_CURRENT_YEAR_2026;
   const PRACTICAL_QUESTIONS = PRACTICAL_VARIATIONS?.QUESTIONS || [];
@@ -5262,13 +5266,15 @@
     const minimum = equivalentScores.length
       ? Math.min(...equivalentScores)
       : 0;
-    const stability = latestThree.length < 3 || !transferableSet
-      ? "測定中"
-      : mean >= 40 && minimum >= 37
-        ? "安定40"
-        : mean >= 37 && minimum >= 35
-          ? "合格域"
-          : "測定中";
+    const transferAssessment = PASS_READINESS.assessOfficialTransfer({
+      initialCount: initial.length,
+      latestThreeInitial: latestThree.map((item, index) => ({
+        examId: item.examId,
+        dayKey: String(item.startedDayKey || localDateKey(item.completedAt) || ""),
+        score50: equivalentScores[index]
+      }))
+    }, todayKey());
+    const stability = transferAssessment.label;
     return {
       history,
       qualifying,
@@ -6820,15 +6826,17 @@
   }
 
   function passSubjectIds(subjectKey) {
-    return [...new Set(TEXTBOOK_CHAPTERS
-      .filter((chapter) => chapter.sectionId === subjectKey)
-      .flatMap((chapter) => chapter.ids))];
+    return [...new Set(TEXTBOOK_CHAPTERS.flatMap(chapter => chapter.ids))].filter(id => {
+      const category = DAILY_COVERAGE.category(QUESTIONS[id]);
+      return subjectKey === "tax" ? ["tax", "price"].includes(category)
+        : subjectKey === "other" ? category === "exempt" : category === subjectKey;
+    });
   }
 
   function subjectSprintSourceContacts(subjectKey) {
     const scope = subjectKey === "tax" ? "taxOther" : subjectKey;
     return new Set(SUBJECT_SPRINT_QUESTIONS
-      .filter((question) => question.scopeId === scope)
+      .filter(question => subjectKey === "tax" ? ["tax", "price"].includes(DAILY_COVERAGE.category(question)) : subjectKey === "other" ? DAILY_COVERAGE.category(question) === "exempt" : question.scopeId === scope)
       .filter((question) => (state.practicalDrill?.history?.[question.id]?.attempts || 0) > 0)
       .map((question) => question.sourceQuestionId)
       .filter(Boolean));
@@ -6839,7 +6847,7 @@
     const evidence = new Map();
     const now = new Date();
     SUBJECT_SPRINT_QUESTIONS
-      .filter((question) => question.scopeId === scope)
+      .filter(question => subjectKey === "tax" ? ["tax", "price"].includes(DAILY_COVERAGE.category(question)) : subjectKey === "other" ? DAILY_COVERAGE.category(question) === "exempt" : question.scopeId === scope)
       .forEach((question) => {
         const sourceId = question.sourceQuestionId;
         const history = state.practicalDrill?.history?.[question.id] || {};
@@ -6951,7 +6959,8 @@
       ? EXAM_CURRENT_YEAR.assessAllFreshness(todayKey())
       : { current: false, failClosed: true, status: "unavailable" };
     const officialReadiness = officialReadinessStats();
-    const completedTextbookUnits = TEXTBOOK_CHAPTERS.filter((chapter) =>
+    const eligibleTextbookUnits = TEXTBOOK_CHAPTERS.filter(chapter => chapter.ids.some(id => DAILY_COVERAGE.eligible(QUESTIONS[id], state.examProfile)));
+    const completedTextbookUnits = eligibleTextbookUnits.filter((chapter) =>
       chapter.ids.every(isContacted)
     ).length;
     return PASS_READINESS.calculatePassReadiness({
@@ -6969,7 +6978,7 @@
         }))
       },
       textbookFirstPass: {
-        totalUnits: TEXTBOOK_CHAPTERS.length,
+        totalUnits: eligibleTextbookUnits.length,
         completedUnits: completedTextbookUnits,
         minutesPerUnit: PASS_READINESS.FIRST_PASS_UNIT_MINUTES || 12
       },
@@ -6992,10 +7001,11 @@
   }
 
   function nextPassThemeChapter(themeKey) {
-    const sectionIds = themeKey === "tax-other" ? ["tax", "other"] : [themeKey];
-    return TEXTBOOK_CHAPTERS
-      .filter((chapter) => sectionIds.includes(chapter.sectionId))
-      .find((chapter) => chapter.ids.some((id) => !isContacted(id))) || null;
+    const lane = themeKey === "tax-other" ? nextTaxPriceLane() : null;
+    return TEXTBOOK_CHAPTERS.find(chapter => chapter.ids.some(id =>
+      DAILY_COVERAGE.eligible(QUESTIONS[id], state.examProfile) &&
+      (lane ? DAILY_COVERAGE.category(QUESTIONS[id]) === lane.category : chapter.sectionId === themeKey) && !isContacted(id)
+    )) || null;
   }
 
   function passThemeScope(themeKey) {
@@ -7012,38 +7022,31 @@
     return businessAnsweredTodayIds().length;
   }
 
+  function answeredTodaySourceIds(category) {
+    const ids = new Set(TEXTBOOK_CHAPTERS.flatMap(chapter => chapter.ids).filter(id =>
+      DAILY_COVERAGE.category(QUESTIONS[id]) === category && answeredToday(id)
+    ));
+    SUBJECT_SPRINT_QUESTIONS.filter(q => DAILY_COVERAGE.category(q) === category &&
+      localDateKey(state.practicalDrill?.history?.[q.id]?.lastAnsweredAt) === todayKey()
+    ).forEach(q => ids.add(q.sourceQuestionId));
+    return ids;
+  }
+
+  function nextTaxPriceLane() {
+    const counts = Object.fromEntries(DAILY_COVERAGE.lanes(state.examProfile).map(lane => [lane.category, answeredTodaySourceIds(lane.category).size]));
+    return DAILY_COVERAGE.nextLane(state.examProfile, counts);
+  }
+
   function themeAnswersToday(themeKey) {
     if (themeKey === "tax-other") {
-      // Completing many "other" questions cannot hide an untouched tax lane.
-      return Math.min(6, themeAnswersToday("tax")) +
-        (state.examProfile === EXAM_PROFILE_FIVE_EXEMPT ? 0 : Math.min(6, themeAnswersToday("other")));
+      const counts = Object.fromEntries(DAILY_COVERAGE.lanes(state.examProfile).map(lane => [lane.category, answeredTodaySourceIds(lane.category).size]));
+      return DAILY_COVERAGE.completedCount(state.examProfile, counts);
     }
     if (themeKey === "mock") {
-      const completed = [...(state.mockHistory || [])]
-        .filter((item) =>
-          localDateKey(item.completedAt) === todayKey() &&
-          normalizeExamProfile(item.examProfile) === state.examProfile
-        )
-        .sort((left, right) => (Date.parse(right.completedAt) || 0) - (Date.parse(left.completedAt) || 0))[0];
-      return completed
-        ? Math.min(
-            examProfileQuestionCount(state.examProfile),
-            Number(completed.questionCount) || examProfileQuestionCount(completed.examProfile)
-          )
-        : 0;
+      const completed = [...(state.mockHistory || [])].filter(item => localDateKey(item.completedAt) === todayKey() && normalizeExamProfile(item.examProfile) === state.examProfile).sort((a,b) => (Date.parse(b.completedAt)||0)-(Date.parse(a.completedAt)||0))[0];
+      return completed ? Math.min(examProfileQuestionCount(state.examProfile), Number(completed.questionCount)||examProfileQuestionCount(completed.examProfile)) : 0;
     }
-    const sectionIds = themeKey === "tax-other" ? ["tax", "other"] : [themeKey];
-    const baseCount = TEXTBOOK_CHAPTERS
-      .filter((chapter) => sectionIds.includes(chapter.sectionId))
-      .flatMap((chapter) => chapter.ids)
-      .filter((id, index, ids) => ids.indexOf(id) === index && answeredToday(id)).length;
-    const scope = passThemeScope(themeKey);
-    const sprintScopes = themeKey === "tax-other" ? ["taxOther", "other"] : [scope];
-    const sprintCount = SUBJECT_SPRINT_QUESTIONS.filter((question) =>
-      sprintScopes.includes(question.scopeId) &&
-      localDateKey(state.practicalDrill?.history?.[question.id]?.lastAnsweredAt) === todayKey()
-    ).length;
-    return baseCount + sprintCount;
+    return answeredTodaySourceIds(themeKey === "other" ? "exempt" : themeKey).size;
   }
 
   function shortSundayAnswersToday() {
@@ -7073,9 +7076,13 @@
   }
 
   function nextThemeSprintScope(themeKey) {
-    if (themeKey !== "tax-other") return passThemeScope(themeKey);
-    if (state.examProfile === EXAM_PROFILE_FIVE_EXEMPT) return "taxOther";
-    return themeAnswersToday("tax") < 6 ? "taxOther" : "other";
+    return themeKey === "tax-other" ? nextTaxPriceLane()?.scope || "taxOther" : passThemeScope(themeKey);
+  }
+
+  function nextThemeSprintPlan(themeKey) {
+    const lane = themeKey === "tax-other" ? nextTaxPriceLane() : null;
+    return lane ? { scope: lane.scope, topic: lane.topic, size: Math.max(1, lane.target - answeredTodaySourceIds(lane.category).size), categoryLabel: lane.label }
+      : { scope: passThemeScope(themeKey), topic: "", size: Math.max(1, 8 - themeAnswersToday(themeKey)) };
   }
 
   function nextMockFormId() {
@@ -7090,12 +7097,13 @@
     return [...counts.entries()].sort((left, right) => left[1] - right[1] || left[0].localeCompare(right[0]))[0]?.[0] || "case-form-2026-a";
   }
 
-  function setPassCommandAction(button, action, label, { scope = "", unitId = "", size = 0 } = {}) {
+  function setPassCommandAction(button, action, label, { scope = "", unitId = "", size = 0, topic = "" } = {}) {
     if (!button) return;
     button.dataset.routeAction = "";
     button.dataset.commandAction = action;
     button.dataset.scopeId = scope;
     button.dataset.unitId = unitId;
+    button.dataset.topicId = topic;
     button.dataset.sessionSize = String(Math.max(0, Math.trunc(Number(size) || 0)));
     button.textContent = label;
   }
@@ -7148,7 +7156,7 @@
       if (elements.businessKnockMode) elements.businessKnockMode.value = "all-random";
       startBusinessKnockSession(remaining, { daily: true });
     } else if (action === "subject-sprint") {
-      startSubjectSprint(button.dataset.scopeId, Number(button.dataset.sessionSize) || 0);
+      startSubjectSprint(button.dataset.scopeId, Number(button.dataset.sessionSize) || 0, button.dataset.topicId || "");
     } else if (action === "foundation-theme") {
       startPassFoundationChapter(button.dataset.unitId);
     } else if (action === "law-gate") {
@@ -7278,9 +7286,8 @@
           ? { action: "foundation-theme", label: `${theme.label}の未接触単元へ`, unitId: nextChapter.id }
           : {
               action: "subject-sprint",
-              label: `${theme.label}を${themeTarget}問補強`,
-              scope: nextThemeSprintScope(theme.key),
-              size: Math.max(1, themeTarget - themeCount)
+              label: `${nextThemeSprintPlan(theme.key).categoryLabel || theme.label}を${nextThemeSprintPlan(theme.key).size}問補強`,
+              ...nextThemeSprintPlan(theme.key)
             };
       // The weekday plan is sequential: finish the fixed business-law knock
       // before exposing the subject-of-the-day action. Showing both actions at
@@ -7619,9 +7626,9 @@
         theme.key === "mock" ? `今日の${snapshot.examProfile.questions}問・${snapshot.examProfile.minutes}分へ`
           : nextChapter ? `${theme.label}の未接触単元へ` : `${theme.label}を高速補強`,
         {
-          scope: nextThemeSprintScope(theme.key),
+          ...nextThemeSprintPlan(theme.key),
           unitId: nextChapter?.id || "",
-          size: theme.key === "mock" ? 0 : Math.max(1, theme.key === "tax-other" ? 12 - themeAnswersToday(theme.key) : 8 - themeAnswersToday(theme.key))
+          ...(theme.key === "mock" ? { size: 0 } : {})
         });
       elements.passThemeAction.disabled = Boolean(active);
     }
@@ -8944,6 +8951,7 @@
 
   function subjectSprintTopicDefinition(scope, topicId) {
     if (scope === "rights") return SUBJECT_SPRINT_RIGHTS_TOPICS[String(topicId || "")] || null;
+    if (scope === "other") return topicId === "price" ? { id: "price", label: "価格", sourceQuestionIds: DAILY_COVERAGE.PRICE_IDS } : topicId === "exempt" ? { id: "exempt", label: "問46〜50", sourceQuestionIds: DAILY_COVERAGE.EXEMPT_IDS } : null;
     if (scope === "taxOther") return SUBJECT_SPRINT_TAX_TOPICS[String(topicId || "")] || null;
     if (scope !== "restrictions") return null;
     const topic = SUBJECT_SPRINT_RESTRICTION_TOPICS[String(topicId || "")];
@@ -8956,7 +8964,7 @@
   }
 
   function subjectSprintSessionTopic(drill = state.practicalDrill) {
-    if (drill?.bankId !== SUBJECT_SPRINT_BANK_ID || !["rights", "restrictions", "taxOther"].includes(drill?.scope)) return null;
+    if (drill?.bankId !== SUBJECT_SPRINT_BANK_ID || !["rights", "restrictions", "taxOther", "other"].includes(drill?.scope)) return null;
     const token = String(drill.presentationKey || "")
       .split(":")
       .find((part) => part.startsWith("topic-"));
@@ -9115,7 +9123,86 @@
     };
   }
 
+  function renderRightsTransferStatus() {
+    const status = document.querySelector("#rightsTransferStatus");
+    const button = document.querySelector("#rightsTransferStart");
+    if (!status || !button) return;
+    const ledger = RIGHTS_TRANSFER.normalize(state.rightsTransferQuiz);
+    button.disabled = ledger.version !== 1 || saveStoreSession?.writeBlocked;
+    button.textContent = ledger.session && !ledger.session.completedAt ? "条件判断6問の続きから再開" : ledger.firstResult ? "条件判断6問を解き直す" : "条件を変えた6問で判断力を確認";
+    status.textContent = ledger.firstResult ? `初回 ${ledger.firstResult.score}/6${ledger.lastResult?.sessionId !== ledger.firstSessionId ? `・直近の解き直し ${ledger.lastResult.score}/6` : ""}。本試験の初見得点とは別の、6問の条件判断です。` : ledger.firstStartedAt ? `途中の回答を保存しています。最初の結果は6問を終えてから表示します。` : "保証・債権譲渡の別事例。最初の結果と解き直しを分けて保存します。";
+  }
+
+  function startRightsTransferQuiz() {
+    const previous = cloneStateForSync(state);
+    try {
+      state.rightsTransferQuiz = RIGHTS_TRANSFER.start(state.rightsTransferQuiz, createOpaqueId("rights-transfer"), new Date().toISOString());
+      if (!saveState()) { state = previous; setTodayCommandStatus("条件判断の開始を保存できませんでした。もう一度お試しください。", true); return; }
+      renderRightsTransferQuiz();
+      renderRightsTransferStatus();
+      const dialog = document.querySelector("#rightsTransferDialog");
+      if (!dialog.open) dialog.showModal();
+    } catch { state = previous; setTodayCommandStatus("保存された条件判断を確認できませんでした。保存管理をご確認ください。", true); }
+  }
+
+  function answerRightsTransferQuiz(id, selected) {
+    if (RIGHTS_TRANSFER.current(state.rightsTransferQuiz)?.id !== id) return;
+    const previous = cloneStateForSync(state);
+    try {
+      state.rightsTransferQuiz = RIGHTS_TRANSFER.answer(state.rightsTransferQuiz, id, selected, new Date().toISOString());
+      if (!saveState()) { state = previous; document.querySelector("#rightsTransferMessage").textContent = "回答を保存できませんでした。加算していません。もう一度選んでください。"; return; }
+      renderRightsTransferQuiz();
+      renderRightsTransferStatus();
+    } catch { state = previous; document.querySelector("#rightsTransferMessage").textContent = "回答を保存できませんでした。もう一度選んでください。"; }
+  }
+
+  function renderRightsTransferQuiz() {
+    const ledger = RIGHTS_TRANSFER.normalize(state.rightsTransferQuiz);
+    const q = RIGHTS_TRANSFER.current(ledger);
+    const content = document.querySelector("#rightsTransferContent");
+    const progress = document.querySelector("#rightsTransferProgress");
+    document.querySelector("#rightsTransferMessage").textContent = "";
+    content.replaceChildren();
+    if (q) {
+      const position = Object.keys(ledger.session.answers).length + 1;
+      progress.textContent = `${ledger.session.id === ledger.firstSessionId ? "最初の確認" : "解き直し"} ${position}/6。途中の正誤・解説は6問終了後に表示します。法令基準日：2026年4月1日。`;
+      content.dataset.questionId = q.id;
+      const premise = document.createElement("p"); premise.textContent = q.premise;
+      const stem = document.createElement("p"); stem.textContent = q.stem;
+      const choices = document.createElement("div"); choices.className = "transfer-choices";
+      BUSINESS_MASTERY.choiceOrder(q.id, ledger.session.id, 4).forEach((canonicalIndex, shownIndex) => {
+        const button = document.createElement("button"); button.type = "button";
+        button.dataset.transferChoice = String(canonicalIndex);
+        button.textContent = `${shownIndex + 1}. ${q.choices[canonicalIndex]}`;
+        button.addEventListener("click", () => answerRightsTransferQuiz(q.id, canonicalIndex));
+        choices.append(button);
+      });
+      content.append(premise, stem, choices);
+      return;
+    }
+    delete content.dataset.questionId;
+    const result = ledger.lastResult;
+    if (!result) { progress.textContent = "途中の回答を確認してください。学習に戻って続きから再開できます。"; return; }
+    progress.textContent = `${result.sessionId === ledger.firstSessionId ? "最初の結果" : "解き直しの結果"} ${result.score}/6。初回 ${ledger.firstResult?.score ?? "未完了"}/6。正解数は本試験の得点・定着・日課に加算しません。`;
+    for (const item of RIGHTS_TRANSFER.QUESTIONS) {
+      const selected = result.answers[item.id]?.selected;
+      const article = document.createElement("article"); article.dataset.transferReview = item.id;
+      const heading = document.createElement("h3"); heading.textContent = `${selected === item.answer ? "正解" : "誤答"}：${item.topic}`;
+      const premise = document.createElement("p"); premise.textContent = item.premise;
+      const chosen = document.createElement("p"); chosen.textContent = `あなたの回答：${item.choices[selected]} / 正解：${item.choices[item.answer]}`;
+      const contrast = document.createElement("p"); contrast.textContent = item.contrast;
+      const details = document.createElement("details");
+      const summary = document.createElement("summary"); summary.textContent = "全選択肢の理由を確認";
+      details.append(summary);
+      item.choices.forEach((choice, i) => { const p = document.createElement("p"); p.textContent = `${i === item.answer ? "○" : "×"} ${choice} → ${item.reasons[i]}`; details.append(p); });
+      const source = document.createElement("a"); source.className = "official-source-link"; source.href = item.sourceUrl; source.target = "_blank"; source.rel = "noopener noreferrer"; source.textContent = `${item.locator}（基準日 ${item.legalBaseline}、確認日 ${item.verifiedAt}）`;
+      article.append(heading, premise, chosen, contrast, details, source); content.append(article);
+    }
+  }
+
+
   function renderRightsMastery() {
+    renderRightsTransferStatus();
     if (!elements.rightsMasteryTwenty) return;
     const items = SUBJECT_SPRINT_QUESTIONS.filter((question) => question.scopeId === "rights").map((question) => {
       const history = state.practicalDrill.history[question.id] || {};
@@ -9966,7 +10053,8 @@
       practicalStatementReviewStep(question),
       ...(groundingFrameStep ? [groundingFrameStep] : []),
       practicalReasoningStep(groundingFrameStep ? 4 : 3, "間違いやすい境界", question.trap),
-      practicalReasoningStep(groundingFrameStep ? 5 : 4, "次に再現する一文", question.memoryRule)
+      practicalReasoningStep(groundingFrameStep ? 5 : 4, "次に再現する一文", question.memoryRule),
+      ...reasoningTransferElements(question)
     );
     renderChatgptHelp(elements.practicalDrillFeedback, question, attempt, {
       anchor: elements.practicalDrillVerdict,
@@ -12391,7 +12479,44 @@
     else host.append(panel);
   }
 
+  // Oral retrieval before revealing a model explanation. This is deliberately
+  // unscored: opening an explanation is not evidence of independent mastery.
+  function reasoningTransferElements(question) {
+    const checks = question.reasoningChecks || window.TAKKEN_EXAM_QUESTIONS?.[question.sourceQuestionId || question.id]?.reasoningChecks;
+    if (!Array.isArray(checks) || !checks.length) return [];
+    const section = document.createElement("section");
+    section.className = "reasoning-transfer";
+    const heading = document.createElement("h4");
+    heading.textContent = "条件を変えて、理由を説明する";
+    const note = document.createElement("p");
+    note.textContent = "答えを見る前に、誰・条件・結論を声に出して説明。翌日の復習でも確認しよう。この確認は採点・定着数に加えません。";
+    section.append(heading, note);
+    for (const check of checks) {
+      const article = document.createElement("article");
+      const title = document.createElement("strong");
+      title.textContent = check.axis;
+      const prompt = document.createElement("p");
+      prompt.textContent = check.prompt;
+      const details = document.createElement("details");
+      const summary = document.createElement("summary");
+      summary.textContent = "説明の例と根拠を確認";
+      const answer = document.createElement("p");
+      answer.textContent = check.answer;
+      const source = document.createElement("a");
+      source.className = "official-source-link";
+      source.href = check.sourceUrl;
+      source.target = "_blank";
+      source.rel = "noopener noreferrer";
+      source.textContent = check.sourceLocator + "（法令基準日 " + check.legalBaseline + "）";
+      details.append(summary, answer, source);
+      article.append(title, prompt, details);
+      section.append(article);
+    }
+    return [section];
+  }
+
   function renderFeedback(question) {
+    elements.feedbackBox.querySelectorAll(".reasoning-transfer").forEach(node => node.remove());
     const answered = state.answered;
     elements.feedbackBox.querySelector(".chatgpt-help")?.remove();
     removeAdaptiveFeedback();
@@ -12436,6 +12561,7 @@
     renderPriorMistakeRecall(question);
     renderMistakeCapture(question);
     renderMemoryRule(question);
+    elements.explainText.after(...reasoningTransferElements(question));
     renderAdaptiveFeedback(question);
     renderChatgptHelp(elements.feedbackBox, question, answered, { anchor: elements.feedbackTitle });
     elements.nextButton.textContent = nextActionLabel();
@@ -15172,6 +15298,8 @@
   }
 
   function bindEvents() {
+    document.querySelector("#rightsTransferStart")?.addEventListener("click", startRightsTransferQuiz);
+    document.querySelector("#rightsTransferClose")?.addEventListener("click", () => document.querySelector("#rightsTransferDialog").close());
     elements.nextButton.addEventListener("click", nextQuestion);
     elements.dockNextButton?.addEventListener("click", nextQuestion);
     elements.dockExplainButton?.addEventListener("click", showFeedback);

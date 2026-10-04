@@ -585,6 +585,10 @@
       });
     }
     const practical = state?.practicalDrill;
+    const transfer = state?.rightsTransferQuiz?.session;
+    if (isObject(transfer) && transfer.id && !transfer.completedAt) {
+      sessions.push({ kind: "rights-transfer", id: transfer.id });
+    }
     if (isObject(practical) && ["active", "retry"].includes(practical.stage)) {
       sessions.push({
         kind: "practical",
@@ -600,6 +604,7 @@
     if (descriptor.kind === "mock") return state?.mock || null;
     if (descriptor.kind === "calculation") return state?.calculationDrill || null;
     if (descriptor.kind === "practical") return practicalSessionView(state?.practicalDrill);
+    if (descriptor.kind === "rights-transfer") return state?.rightsTransferQuiz?.session || null;
     return null;
   }
 
@@ -614,7 +619,7 @@
     };
     // Calculation is a parallel helper, so it must not hide a practical session.
     // Preserve the original cross-kind start/completion conflict contract too.
-    ["official", "mock", "calculation", "practical"].forEach((kind) => {
+    ["official", "mock", "calculation", "practical", "rights-transfer"].forEach((kind) => {
       appendConflict(
         baseSessions.find((session) => session.kind === kind) || null,
         localSessions.find((session) => session.kind === kind) || null,
@@ -646,7 +651,7 @@
         activeSessionPayload(local, localSession),
         activeSessionPayload(remote, remoteSession)
       );
-      if (samePayload || localSession?.kind !== "practical") return null;
+      if (samePayload || !["practical", "rights-transfer"].includes(localSession?.kind)) return null;
     }
     return {
       code: "concurrent-active-session",
@@ -845,6 +850,27 @@
       clocksEqual: equal(effectiveLocalClock, remoteClock)
     };
     const merged = mergeValue(safeBase, safeLocal, safeRemote, [], context);
+    // A checkpoint session and its answers are one record. Mixing fields from
+    // different sessions could turn a retry into apparent first-attempt evidence.
+    const transferBase = safeBase.rightsTransferQuiz;
+    const transferLocal = safeLocal.rightsTransferQuiz;
+    const transferRemote = safeRemote.rightsTransferQuiz;
+    if (transferBase || transferLocal || transferRemote) {
+      const winner = equal(transferLocal, transferBase) ? transferRemote
+        : equal(transferRemote, transferBase) ? transferLocal
+        : context.preferred === "remote" ? transferRemote : transferLocal;
+      const ledger = clone(winner || transferBase || {});
+      const initial = [transferBase, transferLocal, transferRemote]
+        .filter(item => item?.firstSessionId && parsedTime(item.firstStartedAt))
+        .sort((a, b) => parsedTime(a.firstStartedAt) - parsedTime(b.firstStartedAt))[0];
+      if (initial && ledger.version === 1) {
+        ledger.firstSessionId = initial.firstSessionId;
+        ledger.firstStartedAt = initial.firstStartedAt;
+        ledger.firstResult = clone([transferBase, transferLocal, transferRemote]
+          .find(item => item?.firstResult?.sessionId === initial.firstSessionId)?.firstResult || null);
+      }
+      merged.rightsTransferQuiz = ledger;
+    }
     merged.stateSchemaVersion = Math.max(
       0,
       Number(safeBase.stateSchemaVersion) || 0,
