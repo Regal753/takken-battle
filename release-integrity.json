@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "20261004-vocabulary-expanded-f720848134d0",
-  "digest": "sha256:f720848134d079367276ceefb57ec15ba90ea92adf191863c71d11c85f5eb873",
+  "version": "20261004-vocabulary-expanded-31de6d5303ce",
+  "digest": "sha256:31de6d5303ceeab5f6d6dc1597ecdafc16c4cc468ed78c877c355217db9798d5",
   "assetCount": 70,
   "assets": [
     {
@@ -166,7 +166,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "617e276010ca2bfeb80a801225c1a38dc3dad43a9d3200707295d8012f89dcab"
+      "sha256": "b73b53e8c3808fb982d18241da3831898594f61155f7e0348942ab9dfafb2440"
     },
     {
       "path": "manifest.webmanifest",

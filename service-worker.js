@@ -1,6 +1,6 @@
 "use strict";
 
-const VERSION = "20261004-vocabulary-expanded-f720848134d0";
+const VERSION = "20261004-vocabulary-expanded-31de6d5303ce";
 const CACHE_NAME = `takken-battle-${VERSION}`;
 const IMMUTABLE = [
   "styles.css", "reiwa-exam.css", "exam-blueprint.js", "exam-question-core.js", "exam-questions-rights.js",
