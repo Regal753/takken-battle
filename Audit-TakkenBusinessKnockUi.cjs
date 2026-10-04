@@ -358,6 +358,8 @@ async function presentedFixture(page) {
     window.Date = FixedDate;
   });
   const errors = [];
+  const failedRequests = [];
+  page.on("requestfailed", request => failedRequests.push({ url: request.url(), error: request.failure()?.errorText }));
   page.on("pageerror", (error) => errors.push(`page: ${error.message}`));
   page.on("console", (message) => { if (message.type() === "error") errors.push(`console: ${message.text()}`); });
 
@@ -1162,6 +1164,24 @@ async function presentedFixture(page) {
 
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({ status: "ok", sequentialTopCommand: true, explicitProgressLabels: true, knockOnlyTransferSummary: true, hardDaily20: true, hardSeparate180Stats: true, freshOnly20: true, freshPartial7: true, freshExhaustionNoFallback: true, freshActiveResumePreserved: true, hard54Schema14Migration: true, hard55AnsweredReload: true, hardMissingAssetSavePreserved: true, hardLegacyAnsweredMigration: true, hardFormats: ["single", "count", "combination"], hardCaseWidths: [320, 390, 1440], hardScreenshots, nextQuestionKeepsViewport: true, plannerSizes: [10, 20, 50, 100], unitFiltered: true, weakDuePrioritized: true, random100Unique: true, randomOrderPreserved: true, reloadPreserved: true, retryLoop: true, retryAnswerPositionsRotated: true, sameDayLevelCapped: true, structuredPromptFormats: ["combination", "count", "case"], singleChoiceBlocks: 4, legacyRawFallback: true, coreFallbackWithoutKnock: true, overflow390: 0, overflow320: 0, errors: 0 }));
+  } catch (error) {
+    const diagnostic = await page.evaluate(() => ({
+      url: location.href, readyState: document.readyState,
+      rootHidden: document.querySelector('.app-root')?.hidden,
+      recovery: document.querySelector('#bankLoadDetail')?.textContent || null,
+      drawer: document.querySelector('#businessLegacyDrawer')?.outerHTML.slice(0, 500),
+      units: document.querySelectorAll('#businessKnockUnit option').length,
+      banks: Object.fromEntries(Object.entries(window).filter(([key]) => key.startsWith('TAKKEN_')).map(([key, value]) => [key, {
+        questions: value?.QUESTIONS?.length, items: Array.isArray(value) ? value.length : undefined,
+        version: value?.VERSION
+      }]))
+    })).catch(cause => ({ captureError: String(cause) }));
+    diagnostic.errors = errors;
+    diagnostic.failedRequests = failedRequests;
+    console.error('BUSINESS_KNOCK_FAILURE_DIAGNOSTIC ' + JSON.stringify(diagnostic));
+    fs.writeFileSync(path.join(hardScreenshots, 'failure.json'), JSON.stringify(diagnostic, null, 2));
+    await page.screenshot({ path: path.join(hardScreenshots, 'failure.png'), fullPage: true }).catch(() => {});
+    throw error;
   } finally {
     await browser.close();
     await local.close();
