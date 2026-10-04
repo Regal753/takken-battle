@@ -64,7 +64,7 @@ async function verifyHelp(page, hostSelector, choicesSelector, selected, width) 
   const popupPromise = page.waitForEvent("popup");
   await link.click();
   const popup = await popupPromise;
-  await popup.waitForLoadState("domcontentloaded");
+  await popup.waitForURL("https://chatgpt.com/**", { waitUntil: "domcontentloaded" });
   assert.equal(new URL(popup.url()).origin, "https://chatgpt.com");
   await popup.close();
   assert.equal(await saveText(page), before, "opening ChatGPT must not alter study progress");

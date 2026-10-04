@@ -1,9 +1,25 @@
 "use strict";
 
 (() => {
-  const VERSION = "20261002-whole-review-f02edd9e3025";
+  const VERSION = "20261004-learning-vocab-pwa-b1b3d346353b";
   const BANNER_ID = "pwaUpdateNotice";
+  const UPDATE_CHECK_INTERVAL_MS = 60_000;
   let reloadRequested = false;
+  let registration = null;
+  let checkInFlight = null;
+  let checkAgain = false;
+  let lastCheckAt = -Infinity;
+
+  const canLeavePage = () => {
+    if (window.dispatchEvent(new Event("takken:before-pwa-update", { cancelable: true }))) return true;
+    reloadRequested = false;
+    const notice = document.getElementById(BANNER_ID);
+    if (notice) {
+      notice.querySelector("p").textContent = "保存できていない変更があります。保存欄を確認してJSONでバックアップし、保存エラーを解消してから更新してください。";
+      notice.querySelector("button").disabled = false;
+    }
+    return false;
+  };
 
   const showUpdateNotice = (registration) => {
     if (!registration?.waiting || document.getElementById(BANNER_ID)) return;
@@ -12,15 +28,19 @@
     notice.className = "pwa-update-notice";
     notice.setAttribute("role", "status");
     const message = document.createElement("p");
-    message.textContent = "新しい教材データを取得済みです。今の解答は保存されています。";
+    message.textContent = "新しい教材データを取得済みです。区切りのよい所で更新してください。";
     notice.append(message);
     const reload = document.createElement("button");
     reload.type = "button";
     reload.textContent = "自分で更新する";
     reload.addEventListener("click", () => {
+      if (!canLeavePage()) return;
       reload.disabled = true;
       reloadRequested = true;
-      registration.waiting.postMessage({ type: "TAKKEN_SKIP_WAITING" });
+      if (registration.waiting) registration.waiting.postMessage({ type: "TAKKEN_SKIP_WAITING" });
+      // Another tab may already have activated this notice's waiting worker.
+      // Keep this tab open until its own explicit click, then use that worker.
+      else window.location.reload();
     });
     notice.append(reload);
     document.body.append(notice);
@@ -53,24 +73,44 @@
 
   window.addEventListener("load", () => {
     navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (reloadRequested) window.location.reload();
+      if (reloadRequested && canLeavePage()) window.location.reload();
     });
-    navigator.serviceWorker
-      .register(`./service-worker.js?v=${VERSION}`, { scope: "./", updateViaCache: "none" })
-      .then((registration) => {
-        showUpdateNotice(registration);
-        registration.addEventListener("updatefound", () => {
-          const installing = registration.installing;
-          if (!installing) return;
-          installing.addEventListener("statechange", () => {
-            if (installing.state === "installed" && navigator.serviceWorker.controller) {
-              showUpdateNotice(registration);
-            }
+    const checkForUpdate = () => {
+      if (reloadRequested || navigator.onLine === false || document.visibilityState === "hidden") return;
+      if (checkInFlight) { checkAgain = true; return; }
+      if (Date.now() - lastCheckAt < UPDATE_CHECK_INTERVAL_MS) return;
+      lastCheckAt = Date.now();
+      checkInFlight = (async () => {
+        if (!registration) {
+          registration = await navigator.serviceWorker.register(`./service-worker.js?v=${VERSION}`, {
+            scope: "./", updateViaCache: "none"
           });
-        });
-      })
-      .catch(() => {
-        // The learning app remains fully usable online when a browser blocks SW.
+          registration.addEventListener("updatefound", () => {
+            const installing = registration.installing;
+            if (!installing) return;
+            installing.addEventListener("statechange", () => {
+              if (installing.state === "installed" && navigator.serviceWorker.controller) {
+                showUpdateNotice(registration);
+              }
+            });
+          });
+        } else {
+          await registration.update();
+        }
+        showUpdateNotice(registration);
+      })().catch(() => {
+        // Offline/blocked registration must be retryable on the next reconnect.
+        // Checking never activates a worker or reloads an unfinished answer.
+        lastCheckAt = -Infinity;
+      }).finally(() => {
+        checkInFlight = null;
+        if (checkAgain) { checkAgain = false; checkForUpdate(); }
       });
+    };
+    window.addEventListener("offline", () => { lastCheckAt = -Infinity; });
+    window.addEventListener("online", checkForUpdate);
+    window.addEventListener("pageshow", checkForUpdate);
+    document.addEventListener("visibilitychange", checkForUpdate);
+    checkForUpdate();
   });
 })();

@@ -6,7 +6,7 @@ const path = require("node:path");
 const { chromium } = require("playwright");
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20261002-whole-review-f02edd9e3025";
+const expectedVersion = process.argv[3] || "20261004-learning-vocab-pwa-b1b3d346353b";
 const chromePath = process.env.TAKKEN_CHROME_PATH || undefined;
 const canonicalIndex = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
 const expectedScriptCount = [...canonicalIndex.matchAll(/<script\b[^>]*\bsrc=/gi)].length;
@@ -64,7 +64,7 @@ assert.ok(expectedScriptCount > 0, "canonical index has no runtime scripts");
     const mobile320 = await inspect();
     for (const result of [mobile390, mobile320]) {
       assert.equal(result.overflow, 0, "deployed page has horizontal overflow");
-      assert.equal(result.schema, 17, "deployed page did not initialize save schema v17");
+      assert.equal(result.schema, 18, "deployed page did not initialize save schema v18");
       assert.equal(result.manifestVersion, expectedVersion, "deployed manifest version mismatch");
       assert.equal(result.scriptVersions.length, expectedScriptCount, "deployed runtime script count mismatch");
       assert.ok(result.scriptVersions.every((version) => version === expectedVersion), "deployed runtime versions are mixed");

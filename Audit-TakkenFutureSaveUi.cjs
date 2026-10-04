@@ -11,11 +11,11 @@ const chromePath = process.env.TAKKEN_CHROME_PATH || "";
 
 // CI runs without historical git objects. Optional immutable refs prove the
 // guard against the real v53/v54/v57/v58 apps; the fallback tests schema guards.
-const oldClients = [13, 14, 15, 16].map(schema => {
+const oldClients = [13, 14, 15, 16, 17].map(schema => {
   const ref = process.env[`TAKKEN_SCHEMA${schema}_APP_REF`] || "";
   const app = ref
     ? execFileSync("git", ["show", `${ref}:app.js`], { cwd: __dirname, encoding: "utf8", maxBuffer: 4 * 1024 * 1024 })
-    : fs.readFileSync(path.join(__dirname, "app.js"), "utf8").replace("const STATE_SCHEMA_VERSION = 17;", `const STATE_SCHEMA_VERSION = ${schema};`);
+    : fs.readFileSync(path.join(__dirname, "app.js"), "utf8").replace("const STATE_SCHEMA_VERSION = 18;", `const STATE_SCHEMA_VERSION = ${schema};`);
   assert.ok(app.includes(`const STATE_SCHEMA_VERSION = ${schema};`), `the old-client proof must run schema${schema}`);
   return { schema, ref, app };
 });
@@ -100,6 +100,7 @@ async function openLegacyDrawer(page) {
     assert.equal(JSON.parse(law16Fixture.raw).stateSchemaVersion, 16);
     const tax17Fixture = await page.evaluate(() => {
       const current = JSON.parse(localStorage.getItem("takken-battle-study-clean-v2-hard-review-future-save-ui"));
+      current.stateSchemaVersion = 17;
       const bank = window.TAKKEN_SUBJECT_SPRINT_BANK;
       const question = bank.QUESTIONS.find(q => q.sourceQuestionId === "tc59-001");
       const presentationKey = "2026-09-12:tax:old-client-guard";
@@ -114,7 +115,20 @@ async function openLegacyDrawer(page) {
     });
     assert.equal(JSON.parse(tax17Fixture.raw).stateSchemaVersion, 17);
     assert.match(tax17Fixture.id, /^sprint-tax-tc59-/);
-    const protectedFixtures = [hard15Fixture, law16Fixture, tax17Fixture];
+    const vocabulary18Fixture = await page.evaluate(() => {
+      const current = JSON.parse(localStorage.getItem("takken-battle-study-clean-v2-hard-review-future-save-ui"));
+      current.stateSchemaVersion = 18;
+      const question = window.TAKKEN_VOCABULARY_BANK.QUESTIONS[0];
+      current.practicalDrill = {
+        ...current.practicalDrill, bankId: "vocabulary", bankVersion: 1, planMode: "vocabulary", stage: "active",
+        scope: "vocabulary", sessionSize: 1, sessionIds: [question.id], queue: [question.id], position: 0,
+        presentationKey: "2026-10-02:vocabulary:old-client-guard", preAnswerConfidence: "guess", currentAttempt: null,
+        vocabularyPreset: { mode: "topic", size: "10", topicId: question.unitId },
+        history: { [question.id]: { attempts: 1, correct: 0, wrong: 1, lastConfidence: "wrong", lastAnsweredAt: "2026-10-02T10:00:00+09:00" } }
+      };
+      return { raw: JSON.stringify(current), id: question.id, schema: 18, label: "vocab" };
+    });
+    const protectedFixtures = [hard15Fixture, law16Fixture, tax17Fixture, vocabulary18Fixture];
     for (const protectedFixture of protectedFixtures) for (const oldClient of oldClients.filter(client => client.schema < protectedFixture.schema)) for (const phase of ["load", "stale-save"]) {
       const olderContext = await browser.newContext({ viewport: { width: 390, height: 844 }, timezoneId: "Asia/Tokyo" });
       const olderPage = await olderContext.newPage();
@@ -150,7 +164,7 @@ async function openLegacyDrawer(page) {
       const current = JSON.parse(localStorage.getItem(key));
       const future = {
         ...current,
-        stateSchemaVersion: 18,
+        stateSchemaVersion: 19,
         futureSchemaSentinel: { retained: true, bytes: "do-not-downgrade" }
       };
       const raw = JSON.stringify(future);
@@ -177,10 +191,10 @@ async function openLegacyDrawer(page) {
       };
     }, fixture);
     assert.equal(result.rawUnchanged, true);
-    assert.equal(result.storedSchema, 18);
+    assert.equal(result.storedSchema, 19);
     assert.deepEqual(result.sentinel, { retained: true, bytes: "do-not-downgrade" });
     assert.equal(result.bodyReadOnly, true);
-    assert.match(`${result.protection} ${result.transfer}`, /新しい保存形式v18|読み取り専用/);
+    assert.match(`${result.protection} ${result.transfer}`, /新しい保存形式v19|読み取り専用/);
     assert.ok(result.controls > 20);
     assert.deepEqual(result.enabledControlIds, [], `enabled read-only controls: ${result.enabledControlIds.join(", ")}`);
     assert.equal(result.exportDisabled, true);
@@ -208,7 +222,7 @@ async function openLegacyDrawer(page) {
       );
       const future = {
         ...JSON.parse(localStorage.getItem(key)),
-        stateSchemaVersion: 18,
+        stateSchemaVersion: 19,
         futureSchemaSentinel: { retained: true, bytes: "stale-open-tab-must-not-downcast" }
       };
       const raw = JSON.stringify(future);
@@ -217,6 +231,8 @@ async function openLegacyDrawer(page) {
     });
     await stalePage.locator("#markButton").click();
     await stalePage.waitForTimeout(50);
+    assert.equal(await stalePage.evaluate(() => window.dispatchEvent(new Event("takken:before-pwa-update", { cancelable: true }))), true,
+      "future-schema protection must allow the explicit update needed to recover this stale tab");
     const stale = await stalePage.evaluate(({ key, raw }) => ({
       rawUnchanged: localStorage.getItem(key) === raw,
       storedSchema: JSON.parse(localStorage.getItem(key)).stateSchemaVersion,
@@ -228,10 +244,10 @@ async function openLegacyDrawer(page) {
         .map((control) => control.id || control.outerHTML.slice(0, 80))
     }), staleFixture);
     assert.equal(stale.rawUnchanged, true, "stale tab must not rewrite the future-schema primary raw");
-    assert.equal(stale.storedSchema, 18);
+    assert.equal(stale.storedSchema, 19);
     assert.deepEqual(stale.sentinel, { retained: true, bytes: "stale-open-tab-must-not-downcast" });
     assert.equal(stale.readOnly, true);
-    assert.match(stale.notice, /別タブで新しい保存形式v18|読み取り専用/);
+    assert.match(stale.notice, /別タブで新しい保存形式v19|読み取り専用/);
     assert.deepEqual(stale.enabledControls, []);
     await stalePage.close();
 
@@ -438,7 +454,7 @@ async function openLegacyDrawer(page) {
         practical: state.practicalDrill
       };
     }, v36DowncastFixture);
-    assert.equal(recoveredFromV36.schema, 17);
+    assert.equal(recoveredFromV36.schema, 18);
     assert.equal(recoveredFromV36.practical.bankId, v36DowncastFixture.session.bankId);
     assert.equal(recoveredFromV36.practical.stage, v36DowncastFixture.session.stage);
     assert.deepEqual(recoveredFromV36.practical.queue, v36DowncastFixture.session.queue);
@@ -512,7 +528,7 @@ async function openLegacyDrawer(page) {
         recovery: state.guaranteeAssociationRecovery
       };
     }, v11Fixture);
-    assert.equal(recoveredFromV11.schema, 17);
+    assert.equal(recoveredFromV11.schema, 18);
     assert.equal(recoveredFromV11.stage, "idle", "v11 must not reopen a stale guarantee recovery session");
     assert.deepEqual(recoveredFromV11.queue, []);
     assert.deepEqual(recoveredFromV11.retryIds, []);
@@ -546,7 +562,7 @@ async function openLegacyDrawer(page) {
       const current = JSON.parse(localStorage.getItem(key));
       const previous = {
         ...current,
-        stateSchemaVersion: 18,
+        stateSchemaVersion: 19,
         futureSchemaSentinel: { retained: true, bytes: "future-previous-must-survive" }
       };
       const previousRaw = JSON.stringify(previous);
@@ -576,7 +592,7 @@ async function openLegacyDrawer(page) {
     assert.equal(recovery.previousUnchanged, true);
     assert.equal(recovery.corruptCopyRetained, true);
     assert.equal(recovery.readOnly, true);
-    assert.match(recovery.notice, /直前セーブは新しい保存形式v18|読み取り専用/);
+    assert.match(recovery.notice, /直前セーブは新しい保存形式v19|読み取り専用/);
     assert.deepEqual(recovery.enabledControls, []);
     assert.equal(recovery.overflow, 0);
     await recoveryPage.close();
@@ -616,7 +632,7 @@ async function openLegacyDrawer(page) {
     await migrationPage.reload({ waitUntil: "networkidle" });
     const migration = await migrationPage.evaluate(({ key, questionId }) => {
       const state = JSON.parse(localStorage.getItem(key));
-      const backup = localStorage.getItem(`${key}-before-upgrade-v10-to-v17`);
+      const backup = localStorage.getItem(`${key}-before-upgrade-v10-to-v18`);
       return {
         schema: state.stateSchemaVersion,
         migratedHistory: state.practicalDrill?.history?.[questionId],
@@ -624,7 +640,7 @@ async function openLegacyDrawer(page) {
         notice: document.querySelector("#saveTransferStatus")?.textContent || ""
       };
     }, migrationFixture);
-    assert.equal(migration.schema, 17);
+    assert.equal(migration.schema, 18);
     assert.deepEqual(migration.migratedHistory && {
       attempts: migration.migratedHistory.attempts,
       correct: migration.migratedHistory.correct,
@@ -648,7 +664,7 @@ async function openLegacyDrawer(page) {
     assert.deepEqual(errors, []);
     console.log(JSON.stringify({
       status: "ok",
-      schema: 17,
+      schema: 18,
       schema13And14Hard15Guard: ["load", "stale-save"],
       protectedSaveSchemas: protectedFixtures.map(({ schema, label }) => ({ schema, label })),
       schema16Tax17Guard: ["load", "stale-save"],
