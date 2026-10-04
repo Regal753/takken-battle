@@ -102,7 +102,10 @@ jobs:
         if: matrix.shard == 'b'
         env:
           TAKKEN_CHROME_PATH: /usr/bin/google-chrome
-        run: node Audit-TakkenPwaUpgrade.cjs --auto-reconnect
+        run: |
+          node Audit-TakkenPwaUpgrade.cjs --auto-reconnect
+          node Audit-TakkenPwaUpgrade.cjs --multi-tab
+          node Audit-TakkenPwaUpgrade.cjs --save-failure
 
   validate:
     if: ${{ always() }}

@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20261004-pwa-reconnect-580af685a0a1",
-  "digest": "sha256:580af685a0a129ff11818c7211fe7494f94fbcbc2176d27f7fbd16d49af50082",
+  "version": "20261004-pwa-reconnect-review-dc18c73889b0",
+  "digest": "sha256:dc18c73889b02cb68434f53e213eed01036aed38a7fe618c451d6e870ee4d477",
   "assetCount": 66,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "ab6928ba9d67e1e347c3542edfec0c0ffd7779f6cea8421d428a84a1656b34d2"
+      "sha256": "fe0ceccc0369cc9bd4431aac7ebfb73654efccd9815961f09e90c70241864764"
     },
     {
       "path": "assets/battle/grassland-route.webp",
@@ -190,7 +190,7 @@
     },
     {
       "path": "pwa-runtime.js",
-      "sha256": "48bd142926497ae93fdea6ecabd7fca49595694c4cd39425ceacacb688dfd397"
+      "sha256": "d77c4bf3ff2682dd0747b7338a647aa9db69be2c5331dd61722dc8af2b160889"
     },
     {
       "path": "question-balance.js",

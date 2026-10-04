@@ -1,6 +1,6 @@
 "use strict";
 
-const VERSION = "20261004-pwa-reconnect-580af685a0a1";
+const VERSION = "20261004-pwa-reconnect-review-dc18c73889b0";
 const CACHE_NAME = `takken-battle-${VERSION}`;
 const IMMUTABLE = [
   "styles.css", "reiwa-exam.css", "exam-blueprint.js", "exam-question-core.js", "exam-questions-rights.js",

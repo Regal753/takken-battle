@@ -15237,6 +15237,13 @@
       }
     });
     window.addEventListener("storage", handleStorageSync);
+    window.addEventListener("takken:before-pwa-update", (event) => {
+      // Persist in-memory edits (including a remote merge) before leaving.
+      // Future-schema protection must still allow recovery into the new app.
+      if (saveStoreSession.writeBlocked) return;
+      const saved = saveState();
+      if (!saved && !saveStoreSession.writeBlocked) event.preventDefault();
+    });
   }
 
   function configurePublicStaticMode() {
