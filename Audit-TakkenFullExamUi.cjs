@@ -142,6 +142,9 @@ async function main() {
       const route = await page.locator("#foundationRoutePrimaryButton").textContent().catch(() => "missing");
       throw new Error(`foundation entry did not settle: ${route}; console=${JSON.stringify(consoleErrors)}; page=${JSON.stringify(pageErrors)}`, { cause: error });
     }
+    if (!(await page.locator("#officialReadinessStatus").textContent()).includes("未確認")) {
+      throw new Error("Missing readiness module must remain unverified without blocking the fallback workflow.");
+    }
     const foundationEntry = await page.evaluate(() => ({
       title: document.querySelector("#todayCommandTitle")?.textContent?.trim() || "",
       action: document.querySelector("#foundationRoutePrimaryButton")?.textContent?.trim() || "",

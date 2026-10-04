@@ -5266,7 +5266,7 @@
     const minimum = equivalentScores.length
       ? Math.min(...equivalentScores)
       : 0;
-    const transferAssessment = PASS_READINESS.assessOfficialTransfer({
+    const transferAssessment = PASS_READINESS?.assessOfficialTransfer?.({
       initialCount: initial.length,
       latestThreeInitial: latestThree.map((item, index) => ({
         examId: item.examId,
@@ -5274,7 +5274,7 @@
         score50: equivalentScores[index]
       }))
     }, todayKey());
-    const stability = transferAssessment.label;
+    const stability = transferAssessment?.label || "判定機能を読み込めないため未確認";
     return {
       history,
       qualifying,
@@ -15571,6 +15571,13 @@
       }
     });
     window.addEventListener("storage", handleStorageSync);
+    window.addEventListener("takken:before-pwa-update", (event) => {
+      // Persist in-memory edits (including a remote merge) before leaving.
+      // Future-schema protection must still allow recovery into the new app.
+      if (saveStoreSession.writeBlocked) return;
+      const saved = saveState();
+      if (!saved && !saveStoreSession.writeBlocked) event.preventDefault();
+    });
   }
 
   function configurePublicStaticMode() {

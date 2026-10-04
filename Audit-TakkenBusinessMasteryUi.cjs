@@ -684,6 +684,11 @@ async function installFullScoreProofFixture(page, mode) {
     timezoneId: "Asia/Tokyo"
   });
   const context = page.context();
+  // This audit checks navigation after durable exposure tracking, not external
+  // PDF availability. Make the document response deterministic and await it.
+  await context.route(/^https:\/\/(?:www|goukaku)\.retio\.or\.jp\//, route => route.fulfill({
+    status: 200, contentType: "text/html", body: "<title>Official PDF navigation fixture</title>"
+  }));
   const errors = [];
   page.on("pageerror", (error) => errors.push(`page: ${error.message}`));
   page.on("console", (message) => {
@@ -745,6 +750,7 @@ async function installFullScoreProofFixture(page, mode) {
     const dailyPopupPromise = context.waitForEvent("page");
     await page.locator("#officialDrillQuestionLink").click();
     const dailyPopup = await dailyPopupPromise;
+    await dailyPopup.waitForURL(/^https:\/\//, { waitUntil: "domcontentloaded" });
     assert.match(dailyPopup.url(), /^https:\/\//);
     await dailyPopup.close();
     let dailySaved = await readSavedState(page);

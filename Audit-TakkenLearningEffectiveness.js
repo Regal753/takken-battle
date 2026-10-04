@@ -53,6 +53,7 @@ assert.match(checks[0].answer, /連帯根保証/);
 assert.match(checks[5].answer, /差押え前の原因/);
 assert.match(checks[5].answer, /他人の債権/);
 const app = fs.readFileSync("app.js", "utf8");
-assert.match(app, /PASS_READINESS\.assessOfficialTransfer/);
+assert.match(app, /PASS_READINESS\?\.assessOfficialTransfer\?\./);
+assert.match(app, /transferAssessment\?\.label \|\| "判定機能を読み込めないため未確認"/);
 assert.doesNotMatch(app, /\? "安定40"|\? "合格域"/);
 console.log("Audit-TakkenLearningEffectiveness: OK (score floors, freshness, independence, six unscored contrast checks)");

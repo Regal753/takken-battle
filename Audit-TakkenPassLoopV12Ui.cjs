@@ -465,7 +465,8 @@ async function runStabilityScenario(browser, baseUrl) {
   await gotoReview(page, baseUrl, namespace);
   const stability = await page.locator("#officialReadinessStatus").textContent();
   const title = await page.locator("#officialReadinessStatus").getAttribute("title");
-  assert.match(stability, /^安定40・初見3\/10・再0\/3$/);
+  // The last first-seen score is 16 days old on the fixed July 31 clock.
+  assert.match(stability, /^40点以上・再確認待ち・初見3\/10・再0\/3$/);
   assert.match(title, /平均40\.0・最低40/);
   await page.locator(".pass-plan-summary").click();
   await page.locator(".official-ledger > summary").click();

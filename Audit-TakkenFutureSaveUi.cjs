@@ -231,6 +231,8 @@ async function openLegacyDrawer(page) {
     });
     await stalePage.locator("#markButton").click();
     await stalePage.waitForTimeout(50);
+    assert.equal(await stalePage.evaluate(() => window.dispatchEvent(new Event("takken:before-pwa-update", { cancelable: true }))), true,
+      "future-schema protection must allow the explicit update needed to recover this stale tab");
     const stale = await stalePage.evaluate(({ key, raw }) => ({
       rawUnchanged: localStorage.getItem(key) === raw,
       storedSchema: JSON.parse(localStorage.getItem(key)).stateSchemaVersion,
