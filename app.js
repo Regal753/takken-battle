@@ -4798,21 +4798,33 @@
     };
   }
 
+  function eligibleFoundationChapters() {
+    return TEXTBOOK_CHAPTERS.map(chapter => ({
+      ...chapter,
+      ids: chapter.ids.filter(id => DAILY_COVERAGE.eligible(QUESTIONS[id], state.examProfile))
+    })).filter(chapter => chapter.ids.length > 0);
+  }
+
   function textbookChaptersForScope(scopeId = state.studyScope) {
-    if (scopeId === "all") return [...TEXTBOOK_CHAPTERS];
-    return TEXTBOOK_CHAPTERS.filter((chapter) =>
+    const chapters = eligibleFoundationChapters();
+    if (scopeId === "all") return chapters;
+    return chapters.filter((chapter) =>
       studyScopeIdForChapter(chapter) === scopeId
     );
   }
 
   function foundationProgress() {
-    const snapshots = TEXTBOOK_CHAPTERS.map(unitLearningSnapshot);
+    const chapters = eligibleFoundationChapters();
+    const ids = [...new Set(chapters.flatMap(chapter => chapter.ids))];
+    const snapshots = chapters.map(unitLearningSnapshot);
     return {
       snapshots,
+      totalUnits: snapshots.length,
+      totalQuestions: ids.length,
       completedUnits: snapshots.filter((item) => item.baseContacted === item.baseIds.length).length,
       retainedUnits: snapshots.filter((item) => item.baseRetained === item.baseIds.length).length,
-      contactedQuestions: TEXTBOOK_IDS.filter(isContacted).length,
-      retainedQuestions: retainedCount(TEXTBOOK_IDS),
+      contactedQuestions: ids.filter(isContacted).length,
+      retainedQuestions: retainedCount(ids),
       practicalContacted: PRACTICAL_QUESTION_IDS.filter((id) =>
         (state.practicalDrill?.history?.[id]?.attempts || 0) > 0
       ).length,
@@ -4823,8 +4835,9 @@
   }
 
   function foundationCoverageComplete() {
-    return TEXTBOOK_CHAPTERS.length > 0 &&
-      TEXTBOOK_CHAPTERS.every((chapter) => chapter.ids.every(isContacted));
+    const chapters = eligibleFoundationChapters();
+    return chapters.length > 0 &&
+      chapters.every((chapter) => chapter.ids.every(isContacted));
   }
 
   function selectedFoundationChapter(scopeId = state.studyScope) {
@@ -5777,7 +5790,7 @@
     if (!foundationCoverageComplete() && !businessFullScoreOfficialUnlocked()) {
       const progress = foundationProgress();
       setOfficialExamStatus(
-        `公式${examProfileQuestionCount(normalizeExamProfile(state.examProfile))}問は全体基礎一周、または業法の基礎44問定着＋変形${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS}問初回走査後に解放します。現在は単元${progress.completedUnits}/${TEXTBOOK_CHAPTERS.length}です。`,
+        `公式${examProfileQuestionCount(normalizeExamProfile(state.examProfile))}問は全体基礎一周、または業法の基礎44問定着＋変形${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS}問初回走査後に解放します。現在は単元${progress.completedUnits}/${progress.totalUnits}です。`,
         true
       );
       return;
@@ -6365,7 +6378,7 @@
     if (!foundationCoverageComplete()) {
       const progress = foundationProgress();
       setTodayCommandStatus(
-        `公式20問は基礎一周後に解放します。現在は単元${progress.completedUnits}/${TEXTBOOK_CHAPTERS.length}です。`,
+        `公式20問は基礎一周後に解放します。現在は単元${progress.completedUnits}/${progress.totalUnits}です。`,
         true
       );
       return;
@@ -6393,7 +6406,7 @@
     if (!foundationCoverageComplete()) {
       const progress = foundationProgress();
       setOfficialDrillStatus(
-        `公式20問は基礎一周後に解放します。現在は単元${progress.completedUnits}/${TEXTBOOK_CHAPTERS.length}です。`,
+        `公式20問は基礎一周後に解放します。現在は単元${progress.completedUnits}/${progress.totalUnits}です。`,
         true
       );
       return false;
@@ -6695,8 +6708,8 @@
     elements.foundationRouteStage.textContent = descriptor.stage;
     elements.foundationRouteTitle.textContent = descriptor.title;
     elements.foundationRouteText.textContent = descriptor.text;
-    elements.foundationUnitsProgress.textContent = `${progress.completedUnits} / ${TEXTBOOK_CHAPTERS.length}`;
-    elements.foundationQuestionsProgress.textContent = `${progress.contactedQuestions} / ${TEXTBOOK_IDS.length}`;
+    elements.foundationUnitsProgress.textContent = `${progress.completedUnits} / ${progress.totalUnits}`;
+    elements.foundationQuestionsProgress.textContent = `${progress.contactedQuestions} / ${progress.totalQuestions}`;
     elements.foundationPracticalProgress.textContent = `${progress.practicalGrounded} / ${PRACTICAL_QUESTION_IDS.length}`;
     setRouteAction(elements.foundationRoutePrimaryButton, descriptor, `日課: ${descriptor.button}`);
 
@@ -6959,7 +6972,7 @@
       ? EXAM_CURRENT_YEAR.assessAllFreshness(todayKey())
       : { current: false, failClosed: true, status: "unavailable" };
     const officialReadiness = officialReadinessStats();
-    const eligibleTextbookUnits = TEXTBOOK_CHAPTERS.filter(chapter => chapter.ids.some(id => DAILY_COVERAGE.eligible(QUESTIONS[id], state.examProfile)));
+    const eligibleTextbookUnits = eligibleFoundationChapters();
     const completedTextbookUnits = eligibleTextbookUnits.filter((chapter) =>
       chapter.ids.every(isContacted)
     ).length;
@@ -7601,7 +7614,9 @@
           ? `${officialEvidence.validAttemptCount}/3試験回`
           : officialEvidence.distinctExamCount < 3 || officialEvidence.distinctDayCount < 3
             ? "要再測定（別3試験回・別3日）"
-            : `得点未達（平均${officialEvidence.mean.toFixed(1)}・最低${officialEvidence.minimum.toFixed(1)}）`;
+            : officialEvidence.status === "stale"
+              ? `40点以上・再確認待ち（最新14日以内・3回21日以内。平均${officialEvidence.mean.toFixed(1)}・最低${officialEvidence.minimum.toFixed(1)}）`
+              : `得点未達（平均${officialEvidence.mean.toFixed(1)}・最低${officialEvidence.minimum.toFixed(1)}）`;
     const excludedMockNote = mockEvidence.excludedTimedCount > 0
       ? `・旧フォーム履歴 ${mockEvidence.excludedTimedCount}回は安定判定外`
       : "";
@@ -7708,17 +7723,16 @@
         : "本試験終了";
     elements.coreCoverageStatus.textContent = `接触 ${contactedCount()} / ${CURRICULUM_ORDER.length}`;
     elements.coreRetentionStatus.textContent = `定着 ${retainedCount()} / ${CURRICULUM_ORDER.length}`;
-    const completedTextbookUnits = TEXTBOOK_CHAPTERS.filter((chapter) =>
-      chapter.ids.every(isContacted)
-    ).length;
-    elements.foundationGateStatus.textContent = `単元 ${completedTextbookUnits} / ${TEXTBOOK_CHAPTERS.length}`;
+    const foundation = foundationProgress();
+    const completedTextbookUnits = foundation.completedUnits;
+    elements.foundationGateStatus.textContent = `単元 ${completedTextbookUnits} / ${foundation.totalUnits}`;
     elements.foundationGateStatus.title = foundationComplete
       ? `高速一周の接触完了。${examProfileQuestionCount()}問測定と不足点補強へ進めます。`
-      : `8/31まで残り${TEXTBOOK_CHAPTERS.length - completedTextbookUnits}単元。令和実戦${examProfileSummary()}は現在地診断として利用できます。`;
+      : `8/31まで残り${foundation.totalUnits - completedTextbookUnits}単元。令和実戦${examProfileSummary()}は現在地診断として利用できます。`;
     elements.textbookCoverageStatus.textContent =
-      `接触 ${TEXTBOOK_IDS.filter(isContacted).length} / ${TEXTBOOK_IDS.length}`;
+      `接触 ${foundation.contactedQuestions} / ${foundation.totalQuestions}`;
     elements.textbookRetentionStatus.textContent =
-      `単元完了 ${completedTextbookUnits} / ${TEXTBOOK_CHAPTERS.length}・定着 ${retainedCount(TEXTBOOK_IDS)} / ${TEXTBOOK_IDS.length}`;
+      `単元完了 ${completedTextbookUnits} / ${foundation.totalUnits}・定着 ${foundation.retainedQuestions} / ${foundation.totalQuestions}`;
     elements.officialReadinessStatus.textContent =
       `${readiness.stability}・初見${readiness.initial.length}/${OFFICIAL_INITIAL_TARGET}` +
       `・再${readiness.retests.length}/${OFFICIAL_RETEST_TARGET}`;
@@ -7736,7 +7750,7 @@
       : "未学習論点を先行させない";
     elements.dailyMissionStatus.textContent = foundationComplete
       ? `${missionCount} / 4`
-      : `${completedTextbookUnits} / ${TEXTBOOK_CHAPTERS.length}単元`;
+      : `${completedTextbookUnits} / ${foundation.totalUnits}単元`;
     elements.dailyMissionSummary.textContent = !foundationComplete
       ? "業法20問＋曜日別の未接触分野"
       : missionCount === 4
@@ -7796,7 +7810,7 @@
         selectedDisabled;
       elements.officialExamStartButton.title = foundationComplete || businessUnlocked
         ? ""
-        : `全45単元の読後問題、または業法の基礎44問定着＋変形${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS}問初回走査後に解放（現在${completedTextbookUnits}/${TEXTBOOK_CHAPTERS.length}）`;
+        : `受験対象${foundation.totalUnits}単元の読後問題、または業法の基礎44問定着＋変形${BUSINESS_FULLSCORE_EXPECTED_QUESTIONS}問初回走査後に解放（現在${completedTextbookUnits}/${foundation.totalUnits}）`;
     }
     if (elements.officialDrillOpenButton) {
       elements.officialDrillOpenButton.disabled = !foundationComplete;

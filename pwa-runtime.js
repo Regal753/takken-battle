@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20261004-learning-vocab-pwa-75eb8e1d4c7f";
+  const VERSION = "20261004-learning-vocab-pwa-b1b3d346353b";
   const BANNER_ID = "pwaUpdateNotice";
   const UPDATE_CHECK_INTERVAL_MS = 60_000;
   let reloadRequested = false;

@@ -6,10 +6,14 @@ const http = require("node:http");
 const { execFileSync } = require("node:child_process");
 const { chromium } = require("playwright");
 const bank = require("./rights-transfer-bank.js");
+const officialData = require("./official-exam-data.js");
 const legacy = execFileSync("git", ["show", "a65ed1a0da87d1fb27b497e5f0b060bc4243a5e5:app.js"], { encoding: "utf8" });
 const legacy76 = execFileSync("git", ["show", "1b552fe1366bd43fc106bd16ba663853b03cd9e5:app.js"], { encoding: "utf8" });
 async function main() {
   const root = __dirname, out = path.join(root, "output/coverage-ui");
+  const reviewRuntime = process.env.TAKKEN_REVIEW_RUNTIME_REF
+    ? execFileSync("git", ["show", `${process.env.TAKKEN_REVIEW_RUNTIME_REF}:app.js`], { encoding: "utf8" })
+    : null;
   fs.mkdirSync(out, { recursive: true });
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, "http://localhost"), relative = decodeURIComponent(url.pathname).replace(/^\/+/, "") || "index.html";
@@ -19,6 +23,7 @@ async function main() {
     if (!file.startsWith(root + path.sep)) { res.writeHead(403).end(); return; }
     fs.readFile(file, (error, body) => {
       if (error) { res.writeHead(404).end(); return; }
+      if (relative === "app.js" && reviewRuntime) body = reviewRuntime;
       res.setHeader("Content-Type", ({ ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8" })[path.extname(file)] || "application/octet-stream");
       if (relative === "index.html" && url.searchParams.has("legacy")) body = body.toString("utf8").replace(/\.\/app\.js\?v=[^"]+/, url.searchParams.get("legacy") === "76" ? "./legacy76-app.js" : "./legacy-app.js");
       res.end(body);
@@ -61,6 +66,62 @@ async function main() {
     throw Error("sprint did not complete");
   }
   try {
+    // Regression probes use separate synthetic saves and real UI handlers.
+    const reviewRegressions = [];
+    for (const [profile, omitPrice, shouldUnlock] of [["general", false, false], ["fiveExempt", true, false], ["fiveExempt", false, true]]) {
+      const row = await open(`gate-${profile}-${omitPrice}`, "2026-08-16");
+      const expected = await row.page.evaluate(({ k, profile, omitPrice }) => {
+        const s = JSON.parse(localStorage.getItem(k)), chapters = Object.values(window.TAKKEN_EXAM_BLUEPRINT.textbookRanges).flatMap(range => range.chapters);
+        const excluded = new Set(["o003", "o004", "o005", "o006", "o007", "o008", "o009", "o010"]);
+        const eligible = chapters.map(chapter => chapter.ids.filter(id => profile === "general" || !excluded.has(id))).filter(ids => ids.length);
+        s.examProfile = profile;
+        s.questionStats = Object.fromEntries(chapters.flatMap(chapter => chapter.ids).filter(id => !excluded.has(id) && (!omitPrice || !["o001", "o002"].includes(id))).map(id => [id, { attempts: 1, correct: 1, wrong: 0, lastAnsweredAt: "2026-08-15T10:00:00+09:00" }]));
+        localStorage.setItem(k, JSON.stringify(s));
+        return { totalUnits: eligible.length, completedUnits: eligible.filter(ids => ids.every(id => s.questionStats[id]?.attempts)).length };
+      }, { k: key(row.page), profile, omitPrice });
+      await row.page.reload({ waitUntil: "networkidle" });
+      const disabled = await row.page.locator("#officialExamStartButton").isDisabled();
+      const progress = await row.page.locator("#foundationGateStatus").textContent();
+      const contactProgress = await row.page.locator("#foundationUnitsProgress").textContent();
+      let started = null;
+      if (!disabled) {
+        await row.page.evaluate(() => document.querySelector("#officialExamStartButton").click());
+        started = (await saved(row.page)).officialExamSession;
+      }
+      const stillUnanswered = Object.keys((await saved(row.page)).questionStats).every(id => !/^o00[3-9]$|^o010$/.test(id));
+      const displayedCount = shouldUnlock && !disabled ? await row.page.locator("#officialExamProgress").textContent() : "";
+      reviewRegressions.push({ id: `profile-gate-${profile}-${omitPrice}`, passed: disabled === !shouldUnlock && progress.includes(`${expected.completedUnits} / ${expected.totalUnits}`) && contactProgress.includes(`${expected.completedUnits} / ${expected.totalUnits}`) && stillUnanswered && (!shouldUnlock || started?.examProfile === "fiveExempt" && displayedCount.includes("45")), disabled, progress, contactProgress, startedProfile: started?.examProfile, displayedCount, expected });
+      await row.context.close();
+    }
+    const officialAttempt = (examId, score, day) => {
+      const exam = officialData.EXAM_BY_ID[examId], answers = Object.fromEntries(exam.answers.map((value, index) => {
+        const accepted = Array.isArray(value) ? value : [value];
+        return [index + 1, index < score ? accepted[0] : [1, 2, 3, 4].find(choice => !accepted.includes(choice))];
+      }));
+      const scored = officialData.scoreAnswers(examId, answers);
+      return { recordId: `fixture-${examId}`, examId, year: exam.year, attemptType: "initial", sourceMode: "timed-answer-sheet", examProfile: "general", questionCount: 50, evidenceVersion: 3, scoringBasis: "historical-official-key", startedAt: `${day}T10:00:00+09:00`, startedDayKey: day, startedUtcOffsetMinutes: -540, appUnseenAtStart: true, currentLawBaseline: "2026-04-01", timed120: true, answers, score: scored.score, rights: scored.sectionScores.rights, restrictions: scored.sectionScores.restrictions, business: scored.sectionScores.business, taxOther: scored.sectionScores.taxOther, elapsedMinutes: 110, completedAt: `${day}T11:50:00+09:00` };
+    };
+    for (const [name, days, score, expectedText] of [
+      ["stale-latest", ["2026-07-25", "2026-07-26", "2026-07-27"], 40, "再確認待ち"],
+      ["stale-span", ["2026-07-01", "2026-08-14", "2026-08-15"], 40, "再確認待ち"],
+      ["below-target", ["2026-08-13", "2026-08-14", "2026-08-15"], 37, "得点未達"],
+      ["fresh-target", ["2026-08-13", "2026-08-14", "2026-08-15"], 40, "通過"]
+    ]) {
+      const row = await open(name, "2026-08-16"), history = days.map((day, i) => officialAttempt(String(2023 + i), score, day));
+      await row.page.evaluate(({ k, history }) => { const s = JSON.parse(localStorage.getItem(k)); s.officialExamHistory = history; localStorage.setItem(k, JSON.stringify(s)); }, { k: key(row.page), history });
+      await row.page.reload({ waitUntil: "networkidle" });
+      const status = await row.page.locator("#passReadinessStatus").textContent();
+      reviewRegressions.push({ id: name, passed: status.includes(expectedText) && (expectedText !== "再確認待ち" || !status.includes("得点未達")), status, expectedText });
+      if (name === "stale-latest") {
+        if (!(await row.page.locator("#passPlanPanel").evaluate(node => node.open))) await row.page.locator("#passPlanPanel > summary").click();
+        await row.page.locator("#passReadinessCard").screenshot({ path: path.join(out, "stale-readiness-390.png") });
+        assert.equal(await row.page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false);
+      }
+      await row.context.close();
+    }
+    fs.writeFileSync(path.join(out, "review-regressions.json"), JSON.stringify(reviewRegressions, null, 2));
+    assert.deepEqual(reviewRegressions.filter(row => !row.passed), [], "PR76 profile gate and stale-score UI regressions");
+    if (process.argv.includes("--review-regressions-only")) { console.log(JSON.stringify({ status: "passed", reviewRegressions })); return; }
     for (const profile of ["general", "fiveExempt"]) {
       const { page, context } = await open(profile);
       await seed(page, profile, { exempt: profile === "fiveExempt" ? 8 : 0 });

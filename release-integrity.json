@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20261004-learning-vocab-pwa-75eb8e1d4c7f",
-  "digest": "sha256:75eb8e1d4c7fa76b3644e8a6c8adfe385a67bf0620ce21eb065d57fe673203a5",
+  "version": "20261004-learning-vocab-pwa-b1b3d346353b",
+  "digest": "sha256:b1b3d346353b6e65cb63cacf2d61ec2b6c8d2689c51aec640104ddb8ef26be90",
   "assetCount": 69,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "5217e99b8b9f01f84141241614b2bca8c301b9d034ff31e1e0890c4d54f1bbfd"
+      "sha256": "34a3c5f3534c55cd69799d3fb6bc613dc4cb128e9d2fe4a44161966804b7e192"
     },
     {
       "path": "assets/battle/grassland-route.webp",
