@@ -4,6 +4,7 @@ const assert = require("node:assert/strict");
 const fs = require("node:fs");
 const path = require("node:path");
 const vm = require("node:vm");
+const crypto = require("node:crypto");
 const bank = require("./vocabulary-bank.js");
 const source = fs.readFileSync(path.join(__dirname, "vocabulary-bank.js"), "utf8");
 const nonblank = value => typeof value === "string" && value.trim().length > 0;
@@ -101,6 +102,25 @@ assert.match(byTerm("仮換地").trap, /所有権/);
 assert.match(correctText("国土法の事後届出"), /締結後/);
 assert.match(correctText("国土法の規制区域"), /締結する前/);
 assert.match(correctText("法定・約定"), /法令.*合意/);
+// Keep the reviewed legal conditions and detect stale review records after edits.
+const review = require("./vocabulary-legal-review-20261004.json");
+assert.equal(review.legalBaseline, bank.LEGAL_BASELINE);
+assert.equal(review.questions.length, 64);
+assert.equal(review.counts.choicesReviewed, 256);
+for (const [index, row] of review.questions.entries()) {
+  const q = bank.QUESTIONS[index];
+  assert.equal(row.id, q.id);
+  assert.equal(row.answerIndex, q.answer, `${q.id}: preserve the reviewed answer slot`);
+  assert.equal(row.contentSha256, crypto.createHash("sha256").update(JSON.stringify(q)).digest("hex"),
+    `${q.id}: content changed since legal review; recheck and update its review record`);
+  assert.ok(row.references.length && row.references.every(ref => review.sources[ref.law] && ref.articles.length));
+}
+assert.deepEqual(review.questions.filter(q => q.status === "修正").map(q => q.id),
+  ["vocab-011", "vocab-024", "vocab-029", "vocab-060"]);
+assert.match(byTerm("債権").choices.find(choice => choice.includes("支払う義務")), /^買主が/);
+assert.match(byTerm("時効の援用").choiceExplanations.find(e => e.judgment.includes("数え直す")).reason, /完成前.*権利承認/);
+assert.match(byTerm("営業保証金の供託").explain, /宅建業者を除く取引相手/);
+assert.match(byTerm("仮換地").explain, /効力発生日.*開始日が別に定められる/);
 assert.doesNotMatch(source, /chatgpt\.com\/c\/|[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i,
   "do not publish private conversation links or identifiers");
 
@@ -113,4 +133,4 @@ assert.deepEqual(JSON.parse(JSON.stringify(sandbox.window.TAKKEN_VOCABULARY_BANK
 
 console.log(JSON.stringify({ status: "ok", questions: bank.QUESTIONS.length, topics: topicCounts,
   legalBaseline: bank.LEGAL_BASELINE, correctSlots: slots, correctIsLongest,
-  officialSourceHosts: [...officialHosts], semanticSpotChecks: 24 }, null, 2));
+  officialSourceHosts: [...officialHosts], semanticSpotChecks: 28, legalReview: review.counts }, null, 2));

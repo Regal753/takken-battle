@@ -1,0 +1,1446 @@
+{
+  "reviewedAt": "2026-10-04",
+  "legalBaseline": "2026-04-01",
+  "baseCommit": "c6e0467f81f7aa1138115431a283cad5fa8b3b4a",
+  "reviewMethod": "設問・定義・正答・全誤答と256肢の解説・記憶則・注意点を公式条文等と目視照合。内容ハッシュはレビュー後の未確認変更を検出するだけで、法的正確性を自動証明するものではない。",
+  "baselineSource": "https://www.retio.or.jp/exam/exam_detail/",
+  "counts": {
+    "total": 64,
+    "unchanged": 60,
+    "corrected": 4,
+    "unverified": 0,
+    "choicesReviewed": 256
+  },
+  "sources": {
+    "business": {
+      "title": "宅地建物取引業法",
+      "asOf": "2026-04-01",
+      "revision": "327AC1000000176_20260401_507AC0000000068",
+      "url": "https://laws.e-gov.go.jp/law/327AC1000000176/20260401_507AC0000000068",
+      "api": "https://laws.e-gov.go.jp/api/2/law_data/327AC1000000176?asof=2026-04-01",
+      "sha256": "ffa0597c4eb5dde12dc2037b928598424b85c1e02ea65908ee5786bc6d155ced"
+    },
+    "deposit": {
+      "title": "供託法",
+      "asOf": "2026-04-01",
+      "revision": "132AC0000000015_20160401_426AC0000000069",
+      "url": "https://laws.e-gov.go.jp/law/132AC0000000015/20160401_426AC0000000069",
+      "api": "https://laws.e-gov.go.jp/api/2/law_data/132AC0000000015?asof=2026-04-01",
+      "sha256": "da70d0a12910368f76cf49ca97d34fa221f675bf206a3f0079e58349a85672d5"
+    },
+    "roadTraffic": {
+      "title": "道路交通法",
+      "asOf": "2026-04-01",
+      "revision": "335AC0000000105_20260401_506AC0000000034",
+      "url": "https://laws.e-gov.go.jp/law/335AC0000000105/20260401_506AC0000000034",
+      "api": "https://laws.e-gov.go.jp/api/2/law_data/335AC0000000105?asof=2026-04-01",
+      "sha256": "42871691f6764814ed1f9e7481c5c13b0b1c27465aea8eae40e66420c60ab271"
+    },
+    "land": {
+      "title": "国土利用計画法",
+      "asOf": "2026-04-01",
+      "revision": "349AC1000000092_20250601_504AC0000000068",
+      "url": "https://laws.e-gov.go.jp/law/349AC1000000092/20250601_504AC0000000068",
+      "api": "https://laws.e-gov.go.jp/api/2/law_data/349AC1000000092?asof=2026-04-01",
+      "sha256": "08639d4882e1c3056fd62c46d883e78e8f8c6151805d6cdc7caa2be47ad55bd1"
+    },
+    "road": {
+      "title": "道路法",
+      "asOf": "2026-04-01",
+      "revision": "327AC1000000180_20251001_507AC0000000022",
+      "url": "https://laws.e-gov.go.jp/law/327AC1000000180/20251001_507AC0000000022",
+      "api": "https://laws.e-gov.go.jp/api/2/law_data/327AC1000000180?asof=2026-04-01",
+      "sha256": "1a7e189827e2f69920c1a8792532b9d3bc57e6b1f08c25b7f9f5aed9504d7c33"
+    },
+    "city": {
+      "title": "都市計画法",
+      "asOf": "2026-04-01",
+      "revision": "343AC0000000100_20250604_507AC0000000051",
+      "url": "https://laws.e-gov.go.jp/law/343AC0000000100/20250604_507AC0000000051",
+      "api": "https://laws.e-gov.go.jp/api/2/law_data/343AC0000000100?asof=2026-04-01",
+      "sha256": "4f590789fe53420f846170652499ec8b5ff3ae8afee1769c7aea43b83d34aee8"
+    },
+    "buildingOrder": {
+      "title": "建築基準法施行令",
+      "asOf": "2026-04-01",
+      "revision": "325CO0000000338_20251201_507CO0000000377",
+      "url": "https://laws.e-gov.go.jp/law/325CO0000000338/20251201_507CO0000000377",
+      "api": "https://laws.e-gov.go.jp/api/2/law_data/325CO0000000338?asof=2026-04-01",
+      "sha256": "c5e72ad19dc8aa42e70e9a24d27e169f564b0514703ff1d4469c66dafcbe53fc"
+    },
+    "building": {
+      "title": "建築基準法",
+      "asOf": "2026-04-01",
+      "revision": "325AC0000000201_20260401_507AC0000000068",
+      "url": "https://laws.e-gov.go.jp/law/325AC0000000201/20260401_507AC0000000068",
+      "api": "https://laws.e-gov.go.jp/api/2/law_data/325AC0000000201?asof=2026-04-01",
+      "sha256": "5bdd631aa0f6efa11cd86a734d704237fae2ba9c75da8d4a691a4491a9c8c31d"
+    },
+    "agriculture": {
+      "title": "農地法",
+      "asOf": "2026-04-01",
+      "revision": "327AC0000000229_20250601_504AC0000000068",
+      "url": "https://laws.e-gov.go.jp/law/327AC0000000229/20250601_504AC0000000068",
+      "api": "https://laws.e-gov.go.jp/api/2/law_data/327AC0000000229?asof=2026-04-01",
+      "sha256": "a1108498815b8f2ca95e343d4de23429de3d25423a89551e7ea54083eaf1117d"
+    },
+    "civil": {
+      "title": "民法",
+      "asOf": "2026-04-01",
+      "revision": "129AC0000000089_20260401_506AC0000000033",
+      "url": "https://laws.e-gov.go.jp/law/129AC0000000089/20260401_506AC0000000033",
+      "api": "https://laws.e-gov.go.jp/api/2/law_data/129AC0000000089?asof=2026-04-01",
+      "sha256": "45ad5e222659fbd3cfd77b2e96261681f91b607779f29c71f93b857d9c2d21bf"
+    },
+    "readjustment": {
+      "title": "土地区画整理法",
+      "asOf": "2026-04-01",
+      "revision": "329AC0000000119_20250601_504AC0000000068",
+      "url": "https://laws.e-gov.go.jp/law/329AC0000000119/20250601_504AC0000000068",
+      "api": "https://laws.e-gov.go.jp/api/2/law_data/329AC0000000119?asof=2026-04-01",
+      "sha256": "d6d0f961b6953cd47c3eda23e1c53dd08ee0f9a6286b6c8a29fd42b7cb1095b9"
+    }
+  },
+  "supplementalSources": [
+    {
+      "title": "姫路市 直系尊属・直系卑属FAQ",
+      "url": "https://www.city.himeji.lg.jp/faq/faq_detail.php?frmId=491"
+    },
+    {
+      "title": "国税庁4508 受贈者要件(1)注・2026年4月1日現在",
+      "url": "https://www.nta.go.jp/taxes/shiraberu/taxanswer/sozoku/4508.htm"
+    },
+    {
+      "title": "国土交通省 道路占用許可と道路使用許可（資料22頁）",
+      "url": "https://www.mlit.go.jp/road/ir/ir-council/traffic/pdf03/2.pdf"
+    }
+  ],
+  "limitations": [
+    "元の法務省「戸籍ABC」「供託Q&A」はHTTP403で本文未取得。制限は迂回せず、上記条文・別の公式資料で内容を照合した。元URLの到達性は未確認のまま。",
+    "法令基準日は2026年4月1日。一般的な用語問題として明示された前提を評価しており、条件を追加した全例外事例への正答を保証するものではない。",
+    "学習者による難度・識別力の測定とiPhone実機Safari確認は未実施。"
+  ],
+  "questions": [
+    {
+      "id": "vocab-001",
+      "term": "善意",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 0,
+      "note": "虚偽表示の善意を事情の不知に限定。無過失と区別しており、一般化した保護要件の断定はない。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "94",
+            "95",
+            "96"
+          ]
+        }
+      ],
+      "contentSha256": "5b768b8e02035eca8457cc5ce5f647838ab4c30cab396c1b1c162a234d8fd72a"
+    },
+    {
+      "id": "vocab-002",
+      "term": "悪意",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 1,
+      "note": "悪意は詐欺の事情を知ること。害意・有罪と区別し、第三者保護の要件自体は問わない。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "96"
+          ]
+        }
+      ],
+      "contentSha256": "bca10f0302954b9400f959bbcb28c9fa43d7af822f959d3fcd006589c48a8da9"
+    },
+    {
+      "id": "vocab-003",
+      "term": "過失",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 2,
+      "note": "知らないことと注意上の落ち度を区別。善意だけで無過失とはしない。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "96"
+          ]
+        }
+      ],
+      "contentSha256": "22e04029ec068c6f0ebcce858112708707308f16267d425149811b7a9f86f5b0"
+    },
+    {
+      "id": "vocab-004",
+      "term": "対抗",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 3,
+      "note": "対抗を第三者に権利取得等を主張することとし、契約成立・訴訟・権利剥奪と区別。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "177",
+            "555",
+            "99"
+          ]
+        }
+      ],
+      "contentSha256": "c87e2e5289de9eeb8838be3f4ed7b35af2ee0efe920e364639836ea343f8278d"
+    },
+    {
+      "id": "vocab-005",
+      "term": "第三者",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 0,
+      "note": "第三者の範囲・保護要件は条文ごとに確認すると明示。当事者以外なら全員保護とはしない。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "94",
+            "177"
+          ]
+        }
+      ],
+      "contentSha256": "7c09963d627761d24c89933b287c88f7f83aed36ff534c220ff6dfeb930eaf20"
+    },
+    {
+      "id": "vocab-006",
+      "term": "無効",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 1,
+      "note": "無効の本来の効果不発生、取消可能・解除・追認の区別と返還の可能性を確認。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "119",
+            "121_2",
+            "121",
+            "122",
+            "545"
+          ]
+        }
+      ],
+      "contentSha256": "5941f727620c2094ae6d1a0f678f5d48a8bf269f60a9648f73e38616e6a67593"
+    },
+    {
+      "id": "vocab-007",
+      "term": "取消し",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 2,
+      "note": "取消しの遡及的無効と、取消可能な状態・追認・解除を区別。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "120",
+            "121",
+            "122"
+          ]
+        }
+      ],
+      "contentSha256": "cd0fd1ffea37404b9b582ecd15173c6086851ba3d4cf245fa3b4328a35ad3a38"
+    },
+    {
+      "id": "vocab-008",
+      "term": "解除",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 3,
+      "note": "有効な売買の解除と原状回復を説明。契約未成立や追認・履行とは区別。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "540",
+            "541",
+            "545"
+          ]
+        }
+      ],
+      "contentSha256": "f84183705a32db14deb20b4079627857cef17129a08d5f1a4fa14f4792a734ad"
+    },
+    {
+      "id": "vocab-009",
+      "term": "追認",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 0,
+      "note": "取消可能行為の追認という設問の範囲で取消不可の効果を確認。無効行為・無権代理の追認と混同しない。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "119",
+            "122",
+            "124"
+          ]
+        }
+      ],
+      "contentSha256": "34346a075647890ecff6b89160420726870fbba437f86c4c88b1833924f13718"
+    },
+    {
+      "id": "vocab-010",
+      "term": "遡及",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 1,
+      "note": "起算日への遡及を例とし、将来効・進行停止・更新と区別。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "144",
+            "147"
+          ]
+        }
+      ],
+      "contentSha256": "cd96f026c22b702cf0bbc9860f21aee83f96788b3170a6e301b99729dd0a5733"
+    },
+    {
+      "id": "vocab-011",
+      "term": "債権",
+      "status": "修正",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 2,
+      "note": "誤答肢の「買主に」を「買主が」に修正し、代金を負担する買主を解説と一致させた。正答は不変。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "555",
+            "99"
+          ]
+        }
+      ],
+      "contentSha256": "ed8a074a3cb32483d93475f7de354abe11046a885581ba96fda93628d59ef908"
+    },
+    {
+      "id": "vocab-012",
+      "term": "債務",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 3,
+      "note": "買主の代金支払義務と、請求権・所有権・引渡請求権を区別。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "555"
+          ]
+        }
+      ],
+      "contentSha256": "a54815e011197357f1377f2cccd483b34c29082471892771153d449a52584293"
+    },
+    {
+      "id": "vocab-013",
+      "term": "履行",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 0,
+      "note": "引渡債務の内容に沿う実行が履行。契約成立・遅延理由の説明・権利承継だけとは区別。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "415",
+            "555"
+          ]
+        }
+      ],
+      "contentSha256": "af249e0e67f96d7c66d94b642c8ac19d326ae12c0455ee93db8311fc038025d9"
+    },
+    {
+      "id": "vocab-014",
+      "term": "債務不履行",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 1,
+      "note": "債務本旨に従わない履行を説明し、損害賠償には別途要件があることも明記。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "415"
+          ]
+        }
+      ],
+      "contentSha256": "62a5d8715ec5099c7fa86823c3fec2a82bdfc90b1a474105bb6d7571fc7a6703"
+    },
+    {
+      "id": "vocab-015",
+      "term": "弁済",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 2,
+      "note": "債務の本旨に従った給付と消滅を説明。第三者弁済の存在を否定しない。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "473",
+            "474"
+          ]
+        }
+      ],
+      "contentSha256": "fc3b2c56f81b53711cf26deadf50cd6cc6d20cb685a05f65c9591e93be92c538"
+    },
+    {
+      "id": "vocab-016",
+      "term": "相殺",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 3,
+      "note": "相殺は要件を満たす相互債権の対当額消滅。全額消滅・権利移転・期間更新ではない。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "505",
+            "506"
+          ]
+        }
+      ],
+      "contentSha256": "8cae81d15d08df957bff30d31fdbdb5d7c1c9f1d86a58717b2470857fb74c0b7"
+    },
+    {
+      "id": "vocab-017",
+      "term": "求償",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 0,
+      "note": "保証人の主債務者への求償を要件・範囲に従うと限定。委託の有無による範囲を一律としない。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "459",
+            "459_2",
+            "462"
+          ]
+        }
+      ],
+      "contentSha256": "2dd2e13bb3d2a152ee5b672b0da336aa7f1660b23272c8cf4af6c23599d4a832"
+    },
+    {
+      "id": "vocab-018",
+      "term": "弁済による代位",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 1,
+      "note": "弁済代位は求償可能な範囲内の債権・担保権行使。代理や所有権取得と区別。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "499",
+            "501"
+          ]
+        }
+      ],
+      "contentSha256": "cf14c26b89cda9a47ccfa9cea8fcfe1c69cff4631e5b2d27d56eb18285911c87"
+    },
+    {
+      "id": "vocab-019",
+      "term": "連帯債務",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 2,
+      "note": "各連帯債務者への全部請求と内部負担を区別し、二重回収できるとはしない。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "436"
+          ]
+        }
+      ],
+      "contentSha256": "80b259976392480f9f4c07768c48d7e9872afc854c4ddafe1bda04a2efe03735"
+    },
+    {
+      "id": "vocab-020",
+      "term": "保証人",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 3,
+      "note": "保証人の履行責任を説明。保証人を免責される証人・受領代理人等とはしない。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "446"
+          ]
+        }
+      ],
+      "contentSha256": "4a1a267a5960039eb2fe60271cb8638b9a2d7054b8790dee1dcb63c39d6c2974"
+    },
+    {
+      "id": "vocab-021",
+      "term": "賃貸借",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 0,
+      "note": "賃料を払う使用収益・返還と、無償の使用貸借・所有権移転とを区別。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "601",
+            "593"
+          ]
+        }
+      ],
+      "contentSha256": "7d6a04355cefa9dc00a046cae45b925d112069617b5040a286fcf8f96cd873f2"
+    },
+    {
+      "id": "vocab-022",
+      "term": "使用貸借",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 1,
+      "note": "無償の使用収益と返還を説明。賃料を伴う賃貸借・所有権移転と区別。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "593",
+            "601"
+          ]
+        }
+      ],
+      "contentSha256": "3def98785f6eae7cdf46a7567d22fa62cbbe9fb41d812f73abab7727c559bdfb"
+    },
+    {
+      "id": "vocab-023",
+      "term": "催告",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 2,
+      "note": "催告は履行の請求。時効では原則6か月の完成猶予で、催告だけで更新とはしない。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "541",
+            "150"
+          ]
+        }
+      ],
+      "contentSha256": "b5e2a74fff9e258c5d6ae7b5cbe64ae69ae3917be54a5932442a7c3e0cd95beb"
+    },
+    {
+      "id": "vocab-024",
+      "term": "時効の援用",
+      "status": "修正",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 3,
+      "note": "更新の比較解説を「完成前の権利承認」に限定。完成した時効の援用と混同しない。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "145",
+            "152"
+          ]
+        }
+      ],
+      "contentSha256": "ae5337e70bcace35183fd702ac23a273466dfc2a326e9fb3c25d126616c3ddd5"
+    },
+    {
+      "id": "vocab-025",
+      "term": "時効の完成猶予",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 0,
+      "note": "完成猶予を一定期間の完成阻止とし、時計の停止や期間の数え直しとはしない。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "147",
+            "150"
+          ]
+        }
+      ],
+      "contentSha256": "611fe8838554da9813a858390974a6b48539c38e977ae3129d869011e5ff3539"
+    },
+    {
+      "id": "vocab-026",
+      "term": "時効の更新",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 1,
+      "note": "更新は一定事由により新たな進行が始まること。完成猶予・遡及・無効と区別。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "147",
+            "152"
+          ]
+        }
+      ],
+      "contentSha256": "fb9b287a40aa9cf828c6e3bc2b398cd85110adcc56d757c9afcb6feb46ada20e"
+    },
+    {
+      "id": "vocab-027",
+      "term": "供託",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 2,
+      "note": "元の供託Q&Aは取得403。供託法1条・民法494条・宅建業法25/27条で供託所保管、弁済供託と保証供託の区別を代替照合。",
+      "references": [
+        {
+          "law": "deposit",
+          "articles": [
+            "1"
+          ]
+        },
+        {
+          "law": "civil",
+          "articles": [
+            "494"
+          ]
+        },
+        {
+          "law": "business",
+          "articles": [
+            "25",
+            "27"
+          ]
+        }
+      ],
+      "contentSha256": "00a9805f46ebeafc169bb788b6685f12d0ee6cddaa4268a20e2185da92d6d8b2"
+    },
+    {
+      "id": "vocab-028",
+      "term": "弁済供託",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 3,
+      "note": "受領拒否・不能等で要件を満たす供託による債務消滅。単なる銀行預金や預託一般とはしない。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "494"
+          ]
+        }
+      ],
+      "contentSha256": "7511ccd64fe72f761e1ac628ce695ab052a18ff0057983210f4adb5e22fbc64a"
+    },
+    {
+      "id": "vocab-029",
+      "term": "営業保証金の供託",
+      "status": "修正",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 0,
+      "note": "営業保証金から弁済を受ける取引相手から宅建業者を除外する条件を正答解説に補足。罰金・免許取得とは別。",
+      "references": [
+        {
+          "law": "business",
+          "articles": [
+            "25",
+            "27"
+          ]
+        }
+      ],
+      "contentSha256": "ac6b21b87ad3d11f50d840d139d3479687b9c88e6acf8b3f3f566342bdc2ae69"
+    },
+    {
+      "id": "vocab-030",
+      "term": "直系尊属",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 1,
+      "note": "父母・祖父母と下の世代・傍系・配偶者を区別。元の戸籍ABCは取得403、姫路市FAQと国税庁4508で代替照合。養親も含む一般定義で、別途養子縁組した例は設問にない。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "725",
+            "726",
+            "727",
+            "889"
+          ]
+        }
+      ],
+      "contentSha256": "417beddc3927f32c97fa715db5f7af51f4ca50997e63c0b56516a4065fc836c3"
+    },
+    {
+      "id": "vocab-031",
+      "term": "直系卑属",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 2,
+      "note": "祖父から見た孫は直系卑属。尊属・傍系・姻族と区別。元の戸籍ABCは取得403、姫路市FAQと民法で代替照合。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "726",
+            "727",
+            "887"
+          ]
+        }
+      ],
+      "contentSha256": "e1c144fc8a19500140dcb68e8482cd82366ca98bd3b32cfa1bd8a50bf360f67e"
+    },
+    {
+      "id": "vocab-032",
+      "term": "傍系血族",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 3,
+      "note": "兄弟姉妹・叔父叔母の共通祖先を介する関係を確認。世代の上下だけで直系とはしない。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "725",
+            "726",
+            "889"
+          ]
+        }
+      ],
+      "contentSha256": "ff9d58db95490eda72e4767f12c083941c86499a5c83cedab529d3adf9eee66d"
+    },
+    {
+      "id": "vocab-033",
+      "term": "姻族",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 0,
+      "note": "配偶者の父母は姻族の例。配偶者本人は725条上の別区分と明記。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "725",
+            "728"
+          ]
+        }
+      ],
+      "contentSha256": "c07ee49802729e179f548e5492cc3ac50d54d021cd2d30821037487c0ff11b2d"
+    },
+    {
+      "id": "vocab-034",
+      "term": "遺留分",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 1,
+      "note": "兄弟姉妹を除く相続人の一定割合、侵害額は金銭請求。特定物の当然取得とはしない。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "1042",
+            "1046"
+          ]
+        }
+      ],
+      "contentSha256": "e4c7f11787a363462c01e2d25f471d68093a8a535149ad11f6b894b3a767551d"
+    },
+    {
+      "id": "vocab-035",
+      "term": "抵当権",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 2,
+      "note": "占有を移さず担保に供した不動産等から優先弁済。所有権取得・留置等と区別。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "369"
+          ]
+        }
+      ],
+      "contentSha256": "d263985bd41bfb35afd6fa47c236f0050fff3f927f401a53ec5720983aa1bc86"
+    },
+    {
+      "id": "vocab-036",
+      "term": "留置権",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 3,
+      "note": "物に関する債権・占有・弁済期の関係で留置を説明。所有権移転や抵当権と区別。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "295"
+          ]
+        }
+      ],
+      "contentSha256": "4202bcc772b02ab108f56f3bdd66f5b462c6afb4ad2f7130eef755f67bf341f4"
+    },
+    {
+      "id": "vocab-037",
+      "term": "先取特権",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 0,
+      "note": "法律の規定による優先弁済権。約定による抵当権、占有による留置とは別。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "303",
+            "369",
+            "295"
+          ]
+        }
+      ],
+      "contentSha256": "3f4dcaa91110081db8c6d41f702b3db9854bb7f2f5a4e2f8bc59765f0e463049"
+    },
+    {
+      "id": "vocab-038",
+      "term": "敷地",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 1,
+      "note": "一建築物又は用途上不可分の複数建築物の一団の土地。登記上の一筆や床面積とは別。",
+      "references": [
+        {
+          "law": "buildingOrder",
+          "articles": [
+            "1"
+          ]
+        }
+      ],
+      "contentSha256": "25da71b4e007dde0866589cf571a946beb9a2bf11049b4f64b8f82fea4e6e6ff"
+    },
+    {
+      "id": "vocab-039",
+      "term": "建築面積",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 2,
+      "note": "外壁・柱中心線の水平投影が原則。軒や地階等の算定例外があると明記。",
+      "references": [
+        {
+          "law": "buildingOrder",
+          "articles": [
+            "2"
+          ]
+        }
+      ],
+      "contentSha256": "2dc6e5c972db2d42c68f1e4999aada894d4af93f6678a379ba512774958857d9"
+    },
+    {
+      "id": "vocab-040",
+      "term": "床面積",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 3,
+      "note": "各階又はその一部の区画中心線による水平投影。敷地・全階合計と区別。",
+      "references": [
+        {
+          "law": "buildingOrder",
+          "articles": [
+            "2"
+          ]
+        }
+      ],
+      "contentSha256": "465a3ec33f255bf6ed25a9bd8955e83874f47652f49b71f33040da2fed7d25ec"
+    },
+    {
+      "id": "vocab-041",
+      "term": "延べ面積",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 0,
+      "note": "各階床面積の合計。容積率での不算入規定を別途考慮すると明記。",
+      "references": [
+        {
+          "law": "buildingOrder",
+          "articles": [
+            "2"
+          ]
+        },
+        {
+          "law": "building",
+          "articles": [
+            "52"
+          ]
+        }
+      ],
+      "contentSha256": "11b0c5d4c80b5937fb19e55b2db2c6f53c21117d1c2dc52b65c468e6ba827214"
+    },
+    {
+      "id": "vocab-042",
+      "term": "建蔽率",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 1,
+      "note": "建築面積÷敷地面積。同一敷地内の複数棟は合計し、床・延べ面積と区別。",
+      "references": [
+        {
+          "law": "building",
+          "articles": [
+            "53"
+          ]
+        }
+      ],
+      "contentSha256": "564523a075c78fee221059334be89640c30a824dce16f2a25619ee5b530c8abd"
+    },
+    {
+      "id": "vocab-043",
+      "term": "容積率",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 2,
+      "note": "容積率算定対象の延べ面積÷敷地面積。不算入規定を考慮し、建蔽率とは別。",
+      "references": [
+        {
+          "law": "building",
+          "articles": [
+            "52"
+          ]
+        },
+        {
+          "law": "buildingOrder",
+          "articles": [
+            "2"
+          ]
+        }
+      ],
+      "contentSha256": "c9b7f1405e251e8c8c65f6393a50e73f3845525b7410918b3cd98baac9621236"
+    },
+    {
+      "id": "vocab-044",
+      "term": "都市計画区域",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 3,
+      "note": "一体の都市として整備・開発・保全が必要な区域。市町村全域や市街化区域と同義ではない。",
+      "references": [
+        {
+          "law": "city",
+          "articles": [
+            "4",
+            "5",
+            "7"
+          ]
+        }
+      ],
+      "contentSha256": "1136e9ee2e72c9a4f6d84bdbe5906d8765a4cfc0c9897e0f35ef1f87f738ac9a"
+    },
+    {
+      "id": "vocab-045",
+      "term": "市街化区域",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 0,
+      "note": "既成市街地と概ね10年以内に優先的・計画的に市街化すべき区域。調整区域と対比。",
+      "references": [
+        {
+          "law": "city",
+          "articles": [
+            "7"
+          ]
+        }
+      ],
+      "contentSha256": "86a3244aed84517e1809852c7f599275527dcc1b4e52185dda45c65654f489f6"
+    },
+    {
+      "id": "vocab-046",
+      "term": "市街化調整区域",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 1,
+      "note": "市街化を抑制すべき区域。すべての建築を一律禁止する説明はしていない。",
+      "references": [
+        {
+          "law": "city",
+          "articles": [
+            "7"
+          ]
+        }
+      ],
+      "contentSha256": "db1fe8be3bced1c61a200afe0bc7072712ebced29c599a11f204cba02050a55a"
+    },
+    {
+      "id": "vocab-047",
+      "term": "用途地域",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 2,
+      "note": "土地利用の方向・建築物用途等を定める地域区分。部屋用途・農地転用・所有者別区分とは別。",
+      "references": [
+        {
+          "law": "city",
+          "articles": [
+            "8",
+            "9"
+          ]
+        }
+      ],
+      "contentSha256": "9d288f519cac3d2b98f41b02f9b7f6beac38f0a0dc7ccb92824167ca8c0a5858"
+    },
+    {
+      "id": "vocab-048",
+      "term": "開発行為",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 3,
+      "note": "主として建築物又は特定工作物のための区画形質変更。建物の内装・売買だけとは区別。",
+      "references": [
+        {
+          "law": "city",
+          "articles": [
+            "4"
+          ]
+        }
+      ],
+      "contentSha256": "54ab69056b7fb33b14cc60aa9c47f0c0b9ddaa6daeb88372638cea00f2f204ef"
+    },
+    {
+      "id": "vocab-049",
+      "term": "農地転用",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 0,
+      "note": "農地を農地以外の用途へ変えること。権利移転だけ・栽培作物変更とは別。許可の例外を否定しない。",
+      "references": [
+        {
+          "law": "agriculture",
+          "articles": [
+            "2",
+            "4",
+            "5"
+          ]
+        }
+      ],
+      "contentSha256": "da55f3f7938c8a28ae3e6304925dbf30c167ffc5ede9b610ba20ca965c28fe61"
+    },
+    {
+      "id": "vocab-050",
+      "term": "道路占用",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 1,
+      "note": "一定の工作物等で道路を継続使用する占用と道路管理者の許可。道路使用許可との両方が必要な場合も認める。",
+      "references": [
+        {
+          "law": "road",
+          "articles": [
+            "32"
+          ]
+        },
+        {
+          "law": "roadTraffic",
+          "articles": [
+            "77"
+          ]
+        }
+      ],
+      "contentSha256": "b7dc3e3ee54566214a3d2562c904ce2bb48d64ba57d84d885ba43e5bff63ec4a"
+    },
+    {
+      "id": "vocab-051",
+      "term": "道路使用許可",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 2,
+      "note": "道路上の一定行為について所轄警察署長の許可。占用との対象・許可権者の違いを確認。",
+      "references": [
+        {
+          "law": "roadTraffic",
+          "articles": [
+            "77"
+          ]
+        },
+        {
+          "law": "road",
+          "articles": [
+            "32"
+          ]
+        }
+      ],
+      "contentSha256": "a9696c31f3a2a89a0fa83cc6ff872c61badffd84eb18a64ee65ea080046c50f9"
+    },
+    {
+      "id": "vocab-052",
+      "term": "媒介",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 3,
+      "note": "契約成立のあっせんと、権限内で本人に効果を帰属させる代理を区別。",
+      "references": [
+        {
+          "law": "business",
+          "articles": [
+            "2",
+            "34_2"
+          ]
+        },
+        {
+          "law": "civil",
+          "articles": [
+            "99"
+          ]
+        }
+      ],
+      "contentSha256": "f1e5b1bc5bedd8c491fc4f9d1d63aafae760d316cd72b30609d4008c5bbb7961"
+    },
+    {
+      "id": "vocab-053",
+      "term": "代理",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 0,
+      "note": "代理権の範囲内で本人のためにすることを示すという設問の前提で、本人への効果帰属を確認。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "99"
+          ]
+        },
+        {
+          "law": "business",
+          "articles": [
+            "34_2"
+          ]
+        }
+      ],
+      "contentSha256": "049f59726b29763cbf6677b391e252d61496192bd29230886b849d2116ecfd66"
+    },
+    {
+      "id": "vocab-054",
+      "term": "手付",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 1,
+      "note": "手付放棄・倍額の現実提供と、相手方の履行着手による制限。自分の着手と取り違えない。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "557"
+          ]
+        }
+      ],
+      "contentSha256": "9ba4a87ead4284398ed9c9fc2ec5f14f79d32ea96eb1815a9e1872c8e1e3c88d"
+    },
+    {
+      "id": "vocab-055",
+      "term": "違約金",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 2,
+      "note": "違約金は賠償額の予定と推定される。「みなす」や解除不可とはしない。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "420"
+          ]
+        }
+      ],
+      "contentSha256": "969f1275c4c28e1388b8152b47e3d6283f5746261a4824bf18fa62006c9846d2"
+    },
+    {
+      "id": "vocab-056",
+      "term": "重要事項説明",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 3,
+      "note": "原則契約成立までに宅建士が説明。相手が宅建業者の場合等は別途条文確認とし、一律とはしない。",
+      "references": [
+        {
+          "law": "business",
+          "articles": [
+            "35"
+          ]
+        }
+      ],
+      "contentSha256": "6cf76c2bcc60e99c36a26822228c0923b041adabfd9d7ed1533198b36ba9f38a"
+    },
+    {
+      "id": "vocab-057",
+      "term": "国土法の事後届出",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 0,
+      "note": "事後届出は権利取得者が契約日から2週間以内。注視・監視区域の事前届出と規制区域の許可を区別。",
+      "references": [
+        {
+          "law": "land",
+          "articles": [
+            "23",
+            "14",
+            "27_4",
+            "27_7"
+          ]
+        }
+      ],
+      "contentSha256": "3f9969ba101447a695025389b3470bb5580656d31256156284582d14effd1f9b"
+    },
+    {
+      "id": "vocab-058",
+      "term": "国土法の規制区域",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 1,
+      "note": "対象となる土地売買等の契約は事前許可、無許可契約は効力を生じない。届出制と区別。",
+      "references": [
+        {
+          "law": "land",
+          "articles": [
+            "14"
+          ]
+        }
+      ],
+      "contentSha256": "6afe5d12bb2e1a04a420193cd5a3b63449c6555a984986e9ee5bf5d942ab657f"
+    },
+    {
+      "id": "vocab-059",
+      "term": "換地処分",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 2,
+      "note": "換地処分は関係権利者への通知。主要な効果は公告翌日とし、すべての権利が同時に移るとはしない。",
+      "references": [
+        {
+          "law": "readjustment",
+          "articles": [
+            "103",
+            "104"
+          ]
+        }
+      ],
+      "contentSha256": "f0b23342c0a2449d37edcf08839738adb87ab9377d021aec3858d34ba88728c7"
+    },
+    {
+      "id": "vocab-060",
+      "term": "仮換地",
+      "status": "修正",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 3,
+      "note": "使用収益は原則指定の効力発生日からで、開始日を別に定める場合もあると補足。指定だけで所有権は移らない。",
+      "references": [
+        {
+          "law": "readjustment",
+          "articles": [
+            "98",
+            "99",
+            "104"
+          ]
+        }
+      ],
+      "contentSha256": "0fbd04f3997337ed4c12b2f375dd7364437f541d9f7b52c00700389d9be0c4f6"
+    },
+    {
+      "id": "vocab-061",
+      "term": "施行者",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 0,
+      "note": "施行者は事業を施行する者。個人・組合等もあり、常に知事とはしない。",
+      "references": [
+        {
+          "law": "readjustment",
+          "articles": [
+            "2",
+            "3"
+          ]
+        }
+      ],
+      "contentSha256": "cb489cc86f3d0184f66047a3281dd0bef8422c8c9e43aaa8f41d1bdb64e30956"
+    },
+    {
+      "id": "vocab-062",
+      "term": "公告",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 1,
+      "note": "広く知らせる公告と特定の権利者への通知を区別。公告による法的効果も確認。",
+      "references": [
+        {
+          "law": "readjustment",
+          "articles": [
+            "103",
+            "104"
+          ]
+        }
+      ],
+      "contentSha256": "46917b60ee6a7b00aa7db05f09626c44f3ed26dbe1da4dc213868dcb41fcbdc4"
+    },
+    {
+      "id": "vocab-063",
+      "term": "許可権者",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 2,
+      "note": "許可権者は当該許可権限を持つ行政庁。事業主体や区域により国・知事・市長となり、一律の相手にしない。",
+      "references": [
+        {
+          "law": "readjustment",
+          "articles": [
+            "76"
+          ]
+        }
+      ],
+      "contentSha256": "ec84b470874eea2ff422e4894b4e6c70c56452cc7767e168d227eb19ac7f8318"
+    },
+    {
+      "id": "vocab-064",
+      "term": "法定・約定",
+      "status": "問題なし",
+      "definition": "確認済み",
+      "correctAnswer": "確認済み・変更なし",
+      "allChoiceReasons": "4肢確認済み",
+      "answerIndex": 3,
+      "note": "法定と当事者の約定を区別。強行規定や上限による制限を否定しない。",
+      "references": [
+        {
+          "law": "civil",
+          "articles": [
+            "404",
+            "419"
+          ]
+        }
+      ],
+      "contentSha256": "67eadd9252d8e0a651f5c65afd9863a45f62418ba2a732cd992b33a2da02d6ba"
+    }
+  ]
+}

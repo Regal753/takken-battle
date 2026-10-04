@@ -162,7 +162,7 @@ if (!app.includes("function exitCalculationDrill()")) issues.push("Calculation c
 if (!html.includes("id=\"calculationDrillPanel\"")) issues.push("Calculation drill panel is missing.");
 if (!html.includes("id=\"todayCommandCalculationButton\"")) issues.push("Calculation drill quick entry is missing.");
 if (!html.includes("id=\"calculationDrillExitButton\"")) issues.push("Calculation drill completion exit button is missing.");
-if (!html.includes("calculation-drill.js?v=20261004-learning-vocab-integration-8af5e70e5de7")) issues.push("Calculation data script is not loaded.");
+if (!html.includes("calculation-drill.js?v=20261004-vocabulary-legal-review-b40e8722efce")) issues.push("Calculation data script is not loaded.");
 
 const report = {
   status: issues.length ? "error" : "ok",

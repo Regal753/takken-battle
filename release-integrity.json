@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
-  "version": "20261004-learning-vocab-integration-8af5e70e5de7",
-  "digest": "sha256:8af5e70e5de70eab51947c274bce7d09a181069090e0a4d17504faffea042d6f",
+  "version": "20261004-vocabulary-legal-review-b40e8722efce",
+  "digest": "sha256:b40e8722efcebd07251dfc1344d74d147eefe77da5ec0383b489c5c785025f17",
   "assetCount": 69,
   "assets": [
     {
@@ -278,7 +278,7 @@
     },
     {
       "path": "vocabulary-bank.js",
-      "sha256": "fab3e522209c3dad58b47989a52ecd4038b1743a2fbfa852578b0665f9f6a175"
+      "sha256": "7d5daef6fe1c52cb45098afecc912824cfe7c6e0640827d170f55aaa62ae5c8f"
     }
   ]
 }
