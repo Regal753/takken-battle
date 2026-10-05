@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20261004-vocabulary-expanded-31de6d5303ce",
-  "digest": "sha256:31de6d5303ceeab5f6d6dc1597ecdafc16c4cc468ed78c877c355217db9798d5",
+  "version": "20261005-mobile-readability-93b5fedd3215",
+  "digest": "sha256:93b5fedd3215037f4d33d19949cf14af928bf0755fd4b5a3db4c44381b8896ed",
   "assetCount": 70,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "39f11377e957dc7d820fc2216f2a82bb291d4a67f187d0dd6143648cd2ee88a0"
+      "sha256": "b6f3e08eb8cd8035255d35ab49644c59c004c5f7f09e81b93d10114c944ffe49"
     },
     {
       "path": "assets/battle/grassland-route.webp",
@@ -262,7 +262,7 @@
     },
     {
       "path": "styles.css",
-      "sha256": "fd4aa57e3233bc38f3b20df5d50d8407b236701cb5bd0c8de2b4b0aeb0706d57"
+      "sha256": "555d3458de1b9ad375c228f37abc6032d5e0c381acd5e35c327ebd2555b0b342"
     },
     {
       "path": "subject-sprint-bank.js",
