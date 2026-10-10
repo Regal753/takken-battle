@@ -9569,9 +9569,34 @@
     );
   }
 
-  function practicalPromptItem(block, blockIndex, sharedPremiseGroups = []) {
+  function isRestrictionCase(question) {
+    return question?.authoredCase === true && question.sectionId === "restrictions" &&
+      typeof question.premise === "string" && typeof question.stem === "string";
+  }
+
+  function restrictionCaseConditions(premise) {
+    const conditions = document.createElement("section");
+    conditions.className = "restriction-case-conditions";
+    conditions.setAttribute("aria-label", "問題の条件");
+    const heading = document.createElement("strong");
+    heading.textContent = "条件";
+    const list = document.createElement("ul");
+    // Only add reading breaks. Keep every character of the original conditions,
+    // including exclusions that decide whether a statutory exception applies.
+    const sentences = premise.match(/[^。]*。|[^。]+$/gu) || [premise];
+    sentences.forEach((sentence) => {
+      const row = document.createElement("li");
+      row.textContent = sentence;
+      list.append(row);
+    });
+    conditions.append(heading, list);
+    return conditions;
+  }
+
+  function practicalPromptItem(block, blockIndex, sharedPremiseGroups = [], restrictionCase = false) {
     const item = document.createElement("article");
     item.className = "practical-prompt-item";
+    item.classList.toggle("restriction-case-statement", restrictionCase);
     item.setAttribute("role", "listitem");
 
     const marker = document.createElement("strong");
@@ -9592,7 +9617,8 @@
     judgmentLabel.textContent = "判断";
     const judgmentText = document.createElement("p");
     judgmentText.textContent = block.judgment;
-    judgment.append(judgmentLabel, judgmentText);
+    if (!restrictionCase) judgment.append(judgmentLabel);
+    judgment.append(judgmentText);
 
     item.append(marker);
     if (ownPremises.length) {
@@ -9663,12 +9689,14 @@
   }
 
   function renderPracticalPrompt(question, sharedPremiseGroups = []) {
+    const restrictionCase = isRestrictionCase(question);
+    elements.practicalDrillPrompt.classList.toggle("restriction-case-prompt", restrictionCase);
     const model = question?.displayModel;
     const items = Array.isArray(model?.items) ? model.items : [];
     const hasItems = items.length && items.every((block) =>
       validPracticalDisplayBlock(block, Boolean(BUSINESS_HARD_QUESTION_BY_ID[question.id]) || Boolean(question.authoredCase)));
     const structured = typeof model?.intro === "string" && model.intro.trim() &&
-      (hasItems || sharedPremiseGroups.length);
+      (hasItems || sharedPremiseGroups.length || restrictionCase);
     if (!structured) {
       elements.practicalDrillPrompt.removeAttribute("data-structured");
       elements.practicalDrillPrompt.textContent = question.text;
@@ -9676,14 +9704,15 @@
     }
     const intro = document.createElement("p");
     intro.className = "practical-prompt-intro";
-    intro.textContent = model.intro;
+    intro.textContent = restrictionCase ? question.stem : model.intro;
     const parts = [intro];
+    if (restrictionCase) parts.push(restrictionCaseConditions(question.premise));
     if (sharedPremiseGroups.length) parts.push(practicalSharedPremises(sharedPremiseGroups));
     if (hasItems) {
       const list = document.createElement("div");
       list.className = "practical-prompt-items";
       list.setAttribute("role", "list");
-      list.replaceChildren(...items.map((block, index) => practicalPromptItem(block, index, sharedPremiseGroups)));
+      list.replaceChildren(...items.map((block, index) => practicalPromptItem(block, index, sharedPremiseGroups, restrictionCase)));
       parts.push(list);
     }
     elements.practicalDrillPrompt.dataset.structured = "true";
@@ -12154,6 +12183,7 @@
 
   function removeStructuredQuestionPrompt() {
     elements.quizCard?.querySelector(".core-statement-prompt")?.remove();
+    elements.quizCard?.querySelector(".restriction-case-conditions")?.remove();
   }
 
   function statementLineParts(line) {
@@ -12174,7 +12204,12 @@
     const normalizeReiwaQuestion = window.TAKKEN_REIWA_QUESTION_VIEW?.normalizeQuestion;
     if (normalizeReiwaQuestion && (question?.authoredCase || String(question?.id || "").startsWith("reiwa-"))) {
       const view = normalizeReiwaQuestion(question);
-      elements.questionText.textContent = [view.premise, view.stem].filter(Boolean).join("\n\n");
+      if (isRestrictionCase(question)) {
+        elements.questionText.textContent = view.stem;
+        elements.questionText.after(restrictionCaseConditions(view.premise));
+      } else {
+        elements.questionText.textContent = [view.premise, view.stem].filter(Boolean).join("\n\n");
+      }
       if (!view.statements.length || shouldCutCheck(question.id)) return;
       const panel = document.createElement("section");
       panel.className = "core-statement-prompt reiwa-statement-prompt";

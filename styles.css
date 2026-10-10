@@ -7971,6 +7971,71 @@ button.mission-step:disabled {
   gap: 12px;
 }
 
+.restriction-case-conditions {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-left: 3px solid #85b9a8;
+  border-radius: 6px;
+  color: #e5f2ed;
+  background: rgba(101, 176, 155, 0.08);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 1.75;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.restriction-case-conditions > strong {
+  color: #b9d8cc;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.restriction-case-conditions ul {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding-left: 1.15em;
+}
+
+.restriction-case-prompt .restriction-case-conditions {
+  margin-bottom: 0;
+}
+
+.practical-prompt-item.restriction-case-statement {
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px 10px;
+  border: 0;
+  border-bottom: 1px solid rgba(195, 216, 209, 0.25);
+  border-radius: 0;
+  background: transparent;
+}
+
+.restriction-case-statement .practical-prompt-marker {
+  width: 30px;
+  height: 30px;
+  grid-row: auto;
+  font-size: 15px;
+}
+
+.restriction-case-statement .practical-prompt-judgment {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #f2f5ff;
+  background: transparent;
+}
+
+.restriction-case-statement .practical-prompt-judgment p {
+  font-size: 16px;
+  font-weight: 650;
+  line-height: 1.75;
+}
+
 .practical-prompt-shared {
   display: grid;
   gap: 7px;
