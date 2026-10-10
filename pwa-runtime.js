@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20261004-vocabulary-expanded-31de6d5303ce";
+  const VERSION = "20261010-restrictions-reading-943b55ddc991";
   const BANNER_ID = "pwaUpdateNotice";
   const UPDATE_CHECK_INTERVAL_MS = 60_000;
   let reloadRequested = false;
