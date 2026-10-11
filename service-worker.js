@@ -1,6 +1,6 @@
 "use strict";
 
-const VERSION = "20261010-restrictions-reading-943b55ddc991";
+const VERSION = "20261011-restrictions-reading-1d92f71b5fe3";
 const CACHE_NAME = `takken-battle-${VERSION}`;
 const IMMUTABLE = [
   "styles.css", "reiwa-exam.css", "exam-blueprint.js", "exam-question-core.js", "exam-questions-rights.js",

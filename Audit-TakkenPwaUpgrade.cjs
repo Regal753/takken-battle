@@ -11,7 +11,7 @@ const { chromium } = require("playwright");
 const { execFileSync } = require("node:child_process");
 
 const ROOT = process.cwd();
-const CURRENT_VERSION = "20261010-restrictions-reading-943b55ddc991";
+const CURRENT_VERSION = "20261011-restrictions-reading-1d92f71b5fe3";
 const OLD_VERSION = "20260822-controlled-old-runtime";
 const SAVE_KEY = "takken-battle-study-clean-v2-hard";
 const SENTINEL_KEY = "takken-pwa-upgrade-sentinel";
