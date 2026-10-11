@@ -9694,7 +9694,13 @@
     if (!validPracticalDisplayBlock(block, sharedCasePremise)) {
       button.removeAttribute("data-structured");
       button.removeAttribute("aria-describedby");
-      button.textContent = `${index + 1}. ${choice}`;
+      const number = document.createElement("span");
+      number.className = "practical-choice-number";
+      number.textContent = `${index + 1}. `;
+      const copy = document.createElement("span");
+      copy.className = "practical-choice-copy";
+      copy.textContent = choice;
+      button.replaceChildren(number, copy);
       return button;
     }
     const relevantGroups = sharedPremiseGroups.filter((group) => group.blockIndexes.includes(index));
@@ -10028,7 +10034,11 @@
         .forEach((button) => {
           button.textContent = vocabularySession
             ? ({ confident: "意味を言える", uncertain: "迷い", guess: "勘" })[button.dataset.practicalForecast]
-            : ({ confident: "4条件を自力で言えた", uncertain: "2択・一部あいまい", guess: "ヤマ勘" })[button.dataset.practicalForecast];
+            : ({
+              confident: restrictionSprintSession && question.groundingFrame ? "4条件を言えた" : "根拠を言えた",
+              uncertain: "2択・一部あいまい",
+              guess: "ヤマ勘"
+            })[button.dataset.practicalForecast];
           button.hidden = button.dataset.practicalForecast === "guess" && !practicalForecastValues(drill).includes("guess");
           const selected = button.dataset.practicalForecast === drill.preAnswerConfidence;
           button.setAttribute("aria-pressed", String(selected));
