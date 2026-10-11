@@ -22,7 +22,7 @@ async function expected(page,key) {
     const drill=JSON.parse(localStorage.getItem(k)).practicalDrill;
     const id=drill.queue[drill.position];
     const q=window.TAKKEN_SUBJECT_SPRINT_BANK.presentQuestion(id,drill.presentationOverrides?.[id]||drill.presentationKey);
-    return {id:q.id,answer:q.answer,choices:q.choices,text:q.text,premise:q.premise,format:q.format,model:q.displayModel,facts:q.sourceFacts};
+    return {id:q.id,answer:q.answer,choices:q.choices,text:q.text,premise:q.premise,stem:q.stem,format:q.format,model:q.displayModel,facts:q.sourceFacts};
   },key);
 }
 async function setQuestion(page,key,id) {
@@ -93,6 +93,11 @@ async function main() {
     for(const id of samples) {
       await setQuestion(page,key,id);
       const q=await expected(page,key);
+      const prompt=page.locator("#practicalDrillPrompt");
+      assert.equal(await prompt.locator(":scope > .practical-prompt-intro").textContent(),q.stem,`${id}: ask before conditions`);
+      assert.equal(await prompt.locator(".restriction-case-conditions").count(),1,`${id}: conditions appear once`);
+      assert.equal(await prompt.locator(".restriction-case-conditions ul").textContent(),q.premise,`${id}: every legal condition retained verbatim`);
+      assert.equal(await prompt.locator(".restriction-case-statement .practical-prompt-label").count(),0,`${id}: statements need no repeated judgment label`);
       const promptPosition=await page.locator("#practicalDrillPrompt").evaluate(node=>({top:node.getBoundingClientRect().top,height:innerHeight}));
       assert.ok(promptPosition.top>=0 && promptPosition.top<promptPosition.height-68,`${id}: start at the premise, not the controls below the statements`);
       assert.ok((await page.locator("#practicalDrillPrompt").textContent()).includes(q.premise),`${id}: common premise visible`);
