@@ -10,14 +10,11 @@ const releaseIntegrity = require("./release-integrity.json");
 const ROOT = __dirname;
 const EXPECTED_CACHE_VERSION = releaseIntegrity.version;
 releaseIntegrityTools.assertVersionMatchesDigest(releaseIntegrity.version, releaseIntegrity.digest);
-// The 64-word vocabulary bank and save-safe study flow add 114,793 raw /
-// 22,591 level-9 gzip bytes over the preceding 50-script release.
-// Add that measured delta rounded up to 1 KB; preserve the prior headroom.
-// Local integration measured +71757 raw / +12513 gzip vs PR76 head.
-const MAX_PUBLIC_JS_BYTES = 2749000;
-// The 94 source-backed additions add 16,146 gzip bytes over PR78.
-// Keep a 710 KB ceiling for this measured 158-term delivery.
-const MAX_PUBLIC_JS_GZIP_BYTES = 710000;
+// The 40-question reform bank and save-safe integration add 113,573 raw /
+// 20,809 level-9 gzip bytes over main ad6fba9 (2,700,342 / 704,810).
+// Round only this measured addition to 1 KB and preserve the prior headroom.
+const MAX_PUBLIC_JS_BYTES = 2863000;
+const MAX_PUBLIC_JS_GZIP_BYTES = 731000;
 const RELEASE_CONTRACT_PATHS = [
   "index.html",
   "pwa-runtime.js",

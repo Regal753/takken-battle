@@ -149,7 +149,7 @@ async function main() {
     await answer(page, key, "uncertain");
     while ((await saved(page, key)).practicalDrill.stage === "retry") await answer(page, key);
     const completed = await saved(page, key);
-    assert.equal(completed.stateSchemaVersion, 19);
+    assert.equal(completed.stateSchemaVersion, 20);
     assert.equal(completed.practicalDrill.history[again.id].overconfidentWrong || 0, 0, "objective grading is not a confidence prediction");
     assert.equal(completed.practicalDrill.history[again.id].wrong, 4, "two new objectively wrong selections are added to the preserved two wrong answers");
     assert.match(await page.locator("#practicalDrillCompleteText").textContent(), /通常問題や模試の得点には算入しません/);
@@ -228,12 +228,12 @@ async function main() {
       }, old.key);
       await old.page.reload({ waitUntil: "networkidle" });
       const migrated = await saved(old.page, old.key);
-      assert.equal(migrated.stateSchemaVersion, 19);
+      assert.equal(migrated.stateSchemaVersion, 20);
       assert.equal(migrated.practicalDrill.bankVersion, 2);
       for (const field of ["queue", "sessionIds", "retryIds", "history", "currentAttempt", "position", "presentationKey", "attempts", "correctAttempts"]) {
         assert.deepEqual(migrated.practicalDrill[field], prior.drill[field], "additive upgrade preserves " + field);
       }
-      assert.equal(await old.page.evaluate(key => localStorage.getItem(key + "-before-upgrade-v18-to-v19"), old.key), prior.raw);
+      assert.equal(await old.page.evaluate(key => localStorage.getItem(key + "-before-upgrade-v18-to-v20"), old.key), prior.raw);
       assert.equal(await old.page.locator("#practicalDrillFeedback").isVisible(), answered);
       await old.context.close(); checks++;
     }
@@ -381,7 +381,7 @@ async function main() {
     }, legacy.key);
     await legacy.page.reload({ waitUntil: "networkidle" });
     const migrated = await saved(legacy.page, legacy.key);
-    assert.equal(migrated.stateSchemaVersion, 19);
+    assert.equal(migrated.stateSchemaVersion, 20);
     assert.equal(Object.values(migrated.practicalDrill.history)[0].attempts, 3, "schema17 existing history survives migration");
     await legacy.page.locator("#vocabularyStart").click();
     assert.deepEqual((await saved(legacy.page, legacy.key)).practicalDrill, migrated.practicalDrill, "vocab action resumes another unfinished drill");
@@ -400,7 +400,7 @@ async function main() {
     await calculation.context.close();
     checks++;
     assert.deepEqual(errors, []);
-    console.log(JSON.stringify({ status: "ok", checks, questions: total, schema: 19, viewports: [1280, 390, 320], termOnly: true, meaningChoices: 4, objectiveGrading: true, renderedTerms: 158, reload: true, topicRestart: true, legacyFourChoiceCompatible: true, failedGradeAndAdvanceProtected: true, otherSessionPreserved: true, missingBankProtected: true, examEvidenceUnchanged: true }));
+    console.log(JSON.stringify({ status: "ok", checks, questions: total, schema: 20, viewports: [1280, 390, 320], termOnly: true, meaningChoices: 4, objectiveGrading: true, renderedTerms: 158, reload: true, topicRestart: true, legacyFourChoiceCompatible: true, failedGradeAndAdvanceProtected: true, otherSessionPreserved: true, missingBankProtected: true, examEvidenceUnchanged: true }));
   } finally { await browser.close(); await server.close(); }
 }
 main().catch(error => { console.error(error.stack || String(error)); process.exitCode = 1; });

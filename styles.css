@@ -33,7 +33,7 @@
 .vocabulary-metrics > div { padding: 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); }
 .vocabulary-metrics dt { color: var(--muted); font-size: 12px; }
 .vocabulary-metrics dd { margin: 5px 0 0; color: var(--green); font-weight: 800; font-size: 19px; }
-.vocabulary-settings > summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; font-weight: 700; }
+.vocabulary-settings > summary, .reform-settings > summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; font-weight: 700; }
 .vocabulary-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; padding: 12px 0; }
 .vocabulary-controls label { display: grid; gap: 6px; min-width: 0; }
 .vocabulary-controls [hidden] { display: none; }
@@ -41,6 +41,8 @@
 .vocabulary-controls button { min-height: 44px; }
 .vocabulary-status { color: var(--green); font-size: 13px; }
 .vocabulary-note { color: var(--muted); font-size: 12px; }
+.reform-panel { border-color: var(--gold); background: linear-gradient(135deg, #30301c, #102018); }
+.reform-panel .vocabulary-heading span, .reform-panel .vocabulary-metrics dd { color: var(--gold); }
 @media (max-width: 600px) {
   .vocabulary-heading { flex-direction: column; align-items: stretch; }
   .vocabulary-metrics { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -152,6 +154,7 @@
 .app-header { order: 0; }
 .public-mode-note { order: 1; }
 #todayCommandPanel { order: 2; }
+#reformPanel { order: 3; }
 #vocabularyPanel { order: 3; }
 #restrictionMasteryPanel { order: 3; }
 #rightsMasteryPanel { order: 3; }

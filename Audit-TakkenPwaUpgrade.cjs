@@ -11,7 +11,7 @@ const { chromium } = require("playwright");
 const { execFileSync } = require("node:child_process");
 
 const ROOT = process.cwd();
-const CURRENT_VERSION = "20261011-restrictions-reading-1d92f71b5fe3";
+const CURRENT_VERSION = "20261014-reform-knock-3239009f7990";
 const OLD_VERSION = "20260822-controlled-old-runtime";
 const SAVE_KEY = "takken-battle-study-clean-v2-hard";
 const SENTINEL_KEY = "takken-pwa-upgrade-sentinel";
@@ -247,7 +247,7 @@ async function cacheNames(page) {
         history: state.practicalDrill?.history?.[id],
         vocabularyHistory: state.practicalDrill?.history?.["vocab-064"],
         schema: state.stateSchemaVersion,
-        migrationBackup: localStorage.getItem(saveKey + "-before-upgrade-v18-to-v19"),
+        migrationBackup: localStorage.getItem(saveKey + "-before-upgrade-v18-to-v20"),
         prebootRaw: window.__TAKKEN_PWA_PREBOOT_RAW__,
         stateSentinel: state.pwaUpgradeSentinel
       };
@@ -256,7 +256,7 @@ async function cacheNames(page) {
     assert.deepEqual(readback.currentAttempt, beforeUpdate.currentAttempt, "currentAttempt changed during PWA upgrade");
     assert.deepEqual(readback.history, beforeUpdate.history, "answer history changed during PWA upgrade");
     assert.deepEqual(readback.vocabularyHistory, beforeUpdate.vocabularyHistory, "old vocabulary history changed during PWA upgrade");
-    assert.equal(readback.schema, 19);
+    assert.equal(readback.schema, 20);
     if (legacyRef && beforeUpdate.schema === 18) {
       const backup = JSON.parse(readback.migrationBackup);
       assert.equal(backup.stateSchemaVersion, 18);
