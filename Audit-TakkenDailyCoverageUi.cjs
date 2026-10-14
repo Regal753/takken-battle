@@ -215,11 +215,11 @@ async function main() {
     assert.match(await page.locator("#rightsTransferStatus").textContent(), /初回 5\/6.*解き直し 6\/6/);
     await page.goto(`${base}?review=coverage-objective&today=1&legacy=1`, { waitUntil: "networkidle" });
     if (completed.stateSchemaVersion === 17) await page.locator("#todayCommandStartButton").click();
-    else assert.match(await page.locator("#saveTransferStatus").textContent(), /新しい保存形式v19/, "old main must protect the appended vocabulary schema");
+    else assert.match(await page.locator("#saveTransferStatus").textContent(), /新しい保存形式v20/, "old main must protect the appended vocabulary schema");
     assert.deepEqual((await saved(page)).rightsTransferQuiz, retry, "main schema17 normal save preserves additive field");
-    if (completed.stateSchemaVersion === 19) {
+    if (completed.stateSchemaVersion === 20) {
       await page.goto(`${base}?review=coverage-objective&today=1&legacy=76`, { waitUntil: "networkidle" });
-      assert.match(await page.locator("#saveTransferStatus").textContent(), /新しい保存形式v19/, "schema18 PR76 must protect schema19");
+      assert.match(await page.locator("#saveTransferStatus").textContent(), /新しい保存形式v20/, "schema18 PR76 must protect schema20");
       assert.equal(await page.locator("body").evaluate(node => node.classList.contains("is-save-read-only")), true);
       assert.deepEqual((await saved(page)).rightsTransferQuiz, retry, "standalone PR76 read-only guard preserves the checkpoint");
     }

@@ -1,6 +1,6 @@
 "use strict";
 
-const VERSION = "20261011-restrictions-reading-1d92f71b5fe3";
+const VERSION = "20261014-reform-reading-7c0d4b13a868";
 const CACHE_NAME = `takken-battle-${VERSION}`;
 const IMMUTABLE = [
   "styles.css", "reiwa-exam.css", "exam-blueprint.js", "exam-question-core.js", "exam-questions-rights.js",
@@ -10,7 +10,7 @@ const IMMUTABLE = [
   "business-hard-front.js", "business-hard-contracts.js", "business-hard-practice.js",
   "business-fresh-front.js", "business-fresh-contracts.js", "business-fresh-practice.js", "business-hard-bank.js",
   "guarantee-association-drill.js",
-  "vocabulary-expansion-data.js", "vocabulary-bank.js",
+  "vocabulary-expansion-data.js", "vocabulary-bank.js", "reform-2026-bank.js", "reform-2026-queue.js",
   "practical-question-bank.js", "question-bank.js", "question-balance.js", "reward-system.js",
   "official-exam-data.js", "official-law-baseline.js", "official-topic-map.js", "calculation-drill.js",
   "save-store.js", "save-transfer.js", "state-sync.js", "business-mastery.js", "business-knock.js",

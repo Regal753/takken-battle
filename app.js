@@ -22,6 +22,12 @@
       Array.isArray(window.TAKKEN_VOCABULARY_BANK.TOPICS) &&
       window.TAKKEN_VOCABULARY_BANK.TOPICS.length === VOCABULARY_EXPECTED_TOPICS &&
       window.TAKKEN_VOCABULARY_BANK.LEGAL_BASELINE === "2026-04-01"],
+    ["2026法改正ノック", window.TAKKEN_REFORM_2026_BANK?.VERSION === 1 &&
+      window.TAKKEN_REFORM_2026_BANK?.LEGAL_BASELINE === "2026-04-01" &&
+      Array.isArray(window.TAKKEN_REFORM_2026_BANK?.QUESTIONS) && window.TAKKEN_REFORM_2026_BANK.QUESTIONS.length > 0 &&
+      Array.isArray(window.TAKKEN_REFORM_2026_BANK?.TOPICS) && window.TAKKEN_REFORM_2026_BANK.TOPICS.length > 0],
+    ["2026法改正ノックの出題", window.TAKKEN_REFORM_2026_QUEUE?.VERSION === 1 &&
+      typeof window.TAKKEN_REFORM_2026_QUEUE?.buildQueue === "function"],
     ["科目別ノック", sprintBankAtBoot?.QUESTIONS?.length === 198 &&
       sprintBankAtBoot?.LEGAL_BASELINE === "2026-04-01" &&
       typeof sprintBankAtBoot?.presentQuestion === "function" &&
@@ -78,6 +84,8 @@
   const GUARANTEE_ASSOCIATION_DRILL = window.TAKKEN_GUARANTEE_ASSOCIATION_DRILL;
   const SUBJECT_SPRINT_BANK = window.TAKKEN_SUBJECT_SPRINT_BANK;
   const VOCABULARY_BANK = window.TAKKEN_VOCABULARY_BANK;
+  const REFORM_2026_BANK = window.TAKKEN_REFORM_2026_BANK;
+  const REFORM_2026_QUEUE = window.TAKKEN_REFORM_2026_QUEUE;
   const RESTRICTIONS_AUTHORED_BANK = window.TAKKEN_RESTRICTIONS_AUTHORED_BANK;
   const TAX_AUTHORED_BANK = window.TAKKEN_TAX_AUTHORED_BANK;
   const DAILY_COVERAGE = window.TAKKEN_EXAM_DAILY_COVERAGE;
@@ -93,6 +101,7 @@
   const GUARANTEE_SPECIAL_BANK_ID = "guarantee-association-special";
   const SUBJECT_SPRINT_BANK_ID = "subject-sprint";
   const VOCABULARY_BANK_ID = "vocabulary";
+  const REFORM_2026_BANK_ID = "reform2026";
   const LEGACY_PRACTICAL_BANK_ID = "legacy-practical";
   const BUSINESS_FULLSCORE_EXPECTED_QUESTIONS = 134;
   const BUSINESS_HARD_EXPECTED_QUESTIONS = 180;
@@ -509,15 +518,71 @@
       typeof VOCABULARY_BANK.CARDS_BY_ID[item.id].meaning === "string" && VOCABULARY_BANK.CARDS_BY_ID[item.id].meaning.trim() &&
       item.sourceFacts?.length === 4 && item.sourceFacts.every((fact) => fact.reason && fact.statement));
   if (!VOCABULARY_READY) { showBankLoadRecovery(["用語の意味（問題データの整合性）"]); return; }
+  const REFORM_2026_TOPICS = Object.freeze(REFORM_2026_BANK.TOPICS
+    .map((topic) => Object.freeze({ id: String(topic?.id || ""), label: String(topic?.label || ""), page: 0, part: 1 })));
+  const validReformEffectiveAt = (value) => typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value) &&
+    Number.isFinite(Date.parse(value)) && new Date(value).toISOString().slice(0, 10) === value &&
+    value <= REFORM_2026_BANK.LEGAL_BASELINE;
+  const REFORM_2026_QUESTIONS = Object.freeze(REFORM_2026_BANK.QUESTIONS.map((item) => {
+    const nonempty = (value) => typeof value === "string" && Boolean(value.trim());
+    if (!item || !Array.isArray(item.choices) || item.choices.length !== 4 || !item.choices.every(nonempty) ||
+        !Number.isInteger(item.answer) || item.answer < 0 || item.answer > 3 ||
+        !Array.isArray(item.statementExplanations) || item.statementExplanations.length !== 4 ||
+        !item.statementExplanations.every(nonempty) ||
+        ![item.text, item.explain, item.trap, item.memoryRule].every(nonempty) ||
+        item.legalBaseline !== "2026-04-01" || !validReformEffectiveAt(item.effectiveAt) ||
+        !Array.isArray(item.sourceFacts) || item.sourceFacts.length !== 4 ||
+        !item.sourceFacts.every((fact, index) => fact && nonempty(fact.statement) && nonempty(fact.reason) &&
+          fact.statement === item.choices[index] && fact.truth === (index === item.answer) &&
+          fact.legalBaseline === "2026-04-01" && validReformEffectiveAt(fact.effectiveAt) &&
+          /^https:\/\//.test(String(fact.sourceUrl || "")))) return null;
+    const question = normalizeFullScoreQuestion({
+      ...item,
+      formatKey: "single",
+      unitLabel: REFORM_2026_TOPICS.find((topic) => topic.id === item?.unitId)?.label || item?.unitId,
+      sourceUrls: [...new Set([item.sourceUrl, ...(Array.isArray(item.sourceUrls) ? item.sourceUrls : []),
+        ...item.sourceFacts.map((fact) => fact.sourceUrl)].filter(Boolean))]
+    });
+    return question ? Object.freeze({ ...question, scopeId: REFORM_2026_BANK_ID }) : null;
+  }).filter(Boolean));
+  const REFORM_2026_QUESTION_BY_ID = Object.freeze(Object.fromEntries(REFORM_2026_QUESTIONS.map((item) => [item.id, item])));
+  const REFORM_2026_QUESTION_IDS = Object.freeze(REFORM_2026_QUESTIONS.map((item) => item.id));
+  const REFORM_2026_READY = REFORM_2026_QUESTIONS.length === REFORM_2026_BANK.QUESTIONS.length &&
+    new Set(REFORM_2026_QUESTION_IDS).size === REFORM_2026_QUESTIONS.length &&
+    Array.isArray(REFORM_2026_BANK.QUESTION_IDS) &&
+    REFORM_2026_BANK.QUESTION_IDS.length === REFORM_2026_QUESTIONS.length &&
+    REFORM_2026_BANK.QUESTION_IDS.every((id, index) => id === REFORM_2026_QUESTION_IDS[index]) &&
+    Object.keys(REFORM_2026_BANK.QUESTIONS_BY_ID || {}).length === REFORM_2026_QUESTIONS.length &&
+    new Set(REFORM_2026_TOPICS.map((topic) => topic.id)).size === REFORM_2026_TOPICS.length &&
+    REFORM_2026_TOPICS.every((topic) => topic.id && topic.label && REFORM_2026_QUESTIONS.some((item) => item.unitId === topic.id)) &&
+    REFORM_2026_QUESTIONS.every((item) =>
+      /^reform-\d{3}$/.test(item.id) && Number(item.id.slice(7)) > 0 &&
+      REFORM_2026_TOPICS.some((topic) => topic.id === item.unitId) &&
+      REFORM_2026_BANK.QUESTIONS_BY_ID?.[item.id]?.id === item.id &&
+      REFORM_2026_BANK.QUESTIONS_BY_ID[item.id].text === item.text &&
+      REFORM_2026_BANK.QUESTIONS_BY_ID[item.id].answer === item.answer &&
+      REFORM_2026_BANK.QUESTIONS_BY_ID[item.id].legalBaseline === item.legalBaseline &&
+      REFORM_2026_BANK.QUESTIONS_BY_ID[item.id].effectiveAt === item.effectiveAt &&
+      JSON.stringify(REFORM_2026_BANK.QUESTIONS_BY_ID[item.id].choices) === JSON.stringify(item.choices) &&
+      JSON.stringify(REFORM_2026_BANK.QUESTIONS_BY_ID[item.id].sourceFacts) === JSON.stringify(item.sourceFacts) &&
+      JSON.stringify(REFORM_2026_BANK.QUESTIONS_BY_ID[item.id].statementExplanations) === JSON.stringify(item.statementExplanations) &&
+      new Set(item.choices).size === 4 && item.choices.every((choice) => choice.trim()) &&
+      item.statementExplanations.length === 4 && item.statementExplanations.every((reason) => reason.trim()) &&
+      item.explain.trim() && item.trap.trim() && item.memoryRule.trim() && item.legalBaseline === "2026-04-01" &&
+      item.sourceFacts?.length === 4 && item.sourceFacts.every((fact) =>
+        fact.statement && fact.reason && typeof fact.truth === "boolean" && /^https:\/\//.test(String(fact.sourceUrl || ""))) &&
+      item.sourceUrls.length > 0 && item.sourceUrls.every((url) => /^https:\/\//.test(url)));
+  if (!REFORM_2026_READY) { showBankLoadRecovery(["2026法改正ノック（問題データの整合性）"]); return; }
   const ALL_PRACTICAL_QUESTION_BY_ID = Object.freeze({
     ...PRACTICAL_QUESTION_BY_ID,
     ...BUSINESS_FULLSCORE_QUESTION_BY_ID,
     ...BUSINESS_HARD_QUESTION_BY_ID,
     ...GUARANTEE_SPECIAL_QUESTION_BY_ID,
     ...SUBJECT_SPRINT_QUESTION_BY_ID,
-    ...VOCABULARY_QUESTION_BY_ID
+    ...VOCABULARY_QUESTION_BY_ID,
+    ...REFORM_2026_QUESTION_BY_ID
   });
-  const PRACTICAL_SCOPES = Object.freeze(["all", "business", "rights", "lawOther", "restrictions", "taxOther", "other", "vocabulary"]);
+  const PRACTICAL_SCOPES = Object.freeze(["all", "business", "rights", "lawOther", "restrictions", "taxOther", "other", "vocabulary", "reform2026"]);
   const PRACTICAL_SCOPE_LABELS = Object.freeze({
     all: "全分野",
     business: "宅建業法",
@@ -526,7 +591,8 @@
     restrictions: "法令上の制限",
     taxOther: "税・その他",
     other: "その他",
-    vocabulary: "用語の意味"
+    vocabulary: "用語の意味",
+    reform2026: "2026法改正"
   });
   const PRACTICAL_SESSION_SIZES = Object.freeze([4, 10, 20, 45]);
   // v11 adds the guarantee-association bank IDs to practicalDrill.history.
@@ -539,7 +605,8 @@
   // The sprint presentation version stays 5 so old in-progress answers survive.
   // v17 also protects the tc59 tax cases from clients that only know v58.
   // v18 protects vocabulary IDs, forecasts and preferences from older tabs.
-  const STATE_SCHEMA_VERSION = 19;
+  // v20 protects reform2026 question IDs, forecasts and its independent preset.
+  const STATE_SCHEMA_VERSION = 20;
   // Only runtimes older than v11 could strip ga001..ga020 from practicalDrill.
   // Do not tie this recovery boundary to the current schema: later schema
   // upgrades must keep the live v11+ history authoritative over its snapshot.
@@ -1314,6 +1381,18 @@
     calculationDrillExitButton: $("#calculationDrillExitButton"),
     practicalDrillPanel: $("#practicalDrillPanel"),
     vocabularyPanel: $("#vocabularyPanel"),
+    reformPanel: $("#reformPanel"),
+    reformStart: $("#reformStart"),
+    reformCustomStart: $("#reformCustomStart"),
+    reformMode: $("#reformMode"),
+    reformTopic: $("#reformTopic"),
+    reformTopicField: $("#reformTopicField"),
+    reformSize: $("#reformSize"),
+    reformContacted: $("#reformContacted"),
+    reformGrounded: $("#reformGrounded"),
+    reformRetained: $("#reformRetained"),
+    reformReview: $("#reformReview"),
+    reformStatus: $("#reformStatus"),
     vocabularyStart: $("#vocabularyStart"),
     vocabularyCustomStart: $("#vocabularyCustomStart"),
     vocabularyMode: $("#vocabularyMode"),
@@ -1452,6 +1531,7 @@
         lastPresentationOffset: null
       },
       vocabularyPreset: { mode: "weak", size: "10", topicId: "" },
+      reformPreset: { mode: "weak", size: "10", topicId: "" },
       stage: "idle",
       scope: "business",
       unitId: "",
@@ -2518,6 +2598,7 @@
     if (bankId === GUARANTEE_SPECIAL_BANK_ID) return new Set(GUARANTEE_SPECIAL_QUESTION_IDS);
     if (bankId === SUBJECT_SPRINT_BANK_ID) return new Set(SUBJECT_SPRINT_QUESTION_IDS);
     if (bankId === VOCABULARY_BANK_ID) return new Set(VOCABULARY_QUESTION_IDS);
+    if (bankId === REFORM_2026_BANK_ID) return new Set(REFORM_2026_QUESTION_IDS);
     return new Set(PRACTICAL_QUESTION_IDS);
   }
 
@@ -2526,6 +2607,7 @@
     if (bankId === GUARANTEE_SPECIAL_BANK_ID) return GUARANTEE_SPECIAL_QUESTION_BY_ID[id] || null;
     if (bankId === SUBJECT_SPRINT_BANK_ID) return SUBJECT_SPRINT_QUESTION_BY_ID[id] || null;
     if (bankId === VOCABULARY_BANK_ID) return VOCABULARY_QUESTION_BY_ID[id] || null;
+    if (bankId === REFORM_2026_BANK_ID) return REFORM_2026_QUESTION_BY_ID[id] || null;
     return PRACTICAL_QUESTION_BY_ID[id] || null;
   }
 
@@ -2738,20 +2820,23 @@
     const requestedGuaranteeSpecialBank = input?.bankId === GUARANTEE_SPECIAL_BANK_ID;
     const requestedSubjectSprintBank = input?.bankId === SUBJECT_SPRINT_BANK_ID;
     const requestedVocabularyBank = input?.bankId === VOCABULARY_BANK_ID;
+    const requestedReformBank = input?.bankId === REFORM_2026_BANK_ID;
     const bankId = requestedFullScoreBank
       ? BUSINESS_FULLSCORE_BANK_ID
       : requestedGuaranteeSpecialBank && GUARANTEE_SPECIAL_READY
         ? GUARANTEE_SPECIAL_BANK_ID
         : requestedSubjectSprintBank && SUBJECT_SPRINT_READY
           ? SUBJECT_SPRINT_BANK_ID
-          : requestedVocabularyBank && VOCABULARY_READY ? VOCABULARY_BANK_ID : LEGACY_PRACTICAL_BANK_ID;
+          : requestedVocabularyBank && VOCABULARY_READY ? VOCABULARY_BANK_ID
+            : requestedReformBank && REFORM_2026_READY ? REFORM_2026_BANK_ID : LEGACY_PRACTICAL_BANK_ID;
     const currentBankVersion = bankId === BUSINESS_FULLSCORE_BANK_ID
       ? Number(BUSINESS_FULLSCORE_BANK?.VERSION) || Number(input?.bankVersion) || 1
       : bankId === GUARANTEE_SPECIAL_BANK_ID
         ? Number(GUARANTEE_ASSOCIATION_DRILL?.VERSION) || Number(input?.bankVersion) || 1
         : bankId === SUBJECT_SPRINT_BANK_ID
           ? Number(SUBJECT_SPRINT_BANK?.VERSION) || Number(input?.bankVersion) || 1
-          : bankId === VOCABULARY_BANK_ID ? VOCABULARY_BANK.VERSION : PRACTICAL_VARIATIONS?.VERSION || 1;
+          : bankId === VOCABULARY_BANK_ID ? VOCABULARY_BANK.VERSION
+            : bankId === REFORM_2026_BANK_ID ? REFORM_2026_BANK.VERSION : PRACTICAL_VARIATIONS?.VERSION || 1;
     const savedBankVersion = Number(input?.bankVersion || input?.version || 1);
     // Version 2 only appends vocabulary IDs. Existing questions, answer slots,
     // presentation keys and attempts remain valid across this one transition.
@@ -2786,15 +2871,17 @@
         ? GUARANTEE_SPECIAL_UNITS
         : bankId === SUBJECT_SPRINT_BANK_ID
           ? SUBJECT_SPRINT_UNIT_DEFINITIONS
-          : bankId === VOCABULARY_BANK_ID ? VOCABULARY_TOPICS : (PRACTICAL_VARIATIONS?.UNITS || []);
+          : bankId === VOCABULARY_BANK_ID ? VOCABULARY_TOPICS
+            : bankId === REFORM_2026_BANK_ID ? REFORM_2026_TOPICS : (PRACTICAL_VARIATIONS?.UNITS || []);
     const unitId = validUnits.some((unit) => unit.id === input?.unitId)
       ? String(input.unitId)
       : "";
-    const planMode = ["mastery", "knock", "guarantee", "sprint", "legacy", "vocabulary"].includes(input?.planMode)
+    const planMode = ["mastery", "knock", "guarantee", "sprint", "legacy", "vocabulary", "reform"].includes(input?.planMode)
       ? String(input.planMode)
       : bankId === BUSINESS_FULLSCORE_BANK_ID ? "mastery"
         : bankId === GUARANTEE_SPECIAL_BANK_ID ? "guarantee"
-          : bankId === SUBJECT_SPRINT_BANK_ID ? "sprint" : "legacy";
+          : bankId === SUBJECT_SPRINT_BANK_ID ? "sprint"
+            : bankId === REFORM_2026_BANK_ID ? "reform" : "legacy";
     const rawKnockPreset = input?.knockPreset && typeof input.knockPreset === "object"
       ? input.knockPreset
       : fresh.knockPreset;
@@ -2828,6 +2915,8 @@
               : fresh.sessionSize
             : bankId === VOCABULARY_BANK_ID
               ? Math.min(VOCABULARY_QUESTIONS.length, Math.max(1, boundedInteger(requestedSize, VOCABULARY_QUESTIONS.length) || 10))
+              : bankId === REFORM_2026_BANK_ID
+                ? Math.min(REFORM_2026_QUESTIONS.length, Math.max(1, boundedInteger(requestedSize, REFORM_2026_QUESTIONS.length) || 10))
               : PRACTICAL_SESSION_SIZES.includes(requestedSize) ? requestedSize : fresh.sessionSize;
     const retryIds = practicalIds(input?.retryIds, bankId);
     const sessionIds = practicalIds(input?.sessionIds, bankId);
@@ -2847,11 +2936,11 @@
     const rawAttempt = input?.currentAttempt;
     const selected = Number(rawAttempt?.selected);
     const currentQuestion = practicalQuestionFor(currentId, bankId);
-    let presentationKey = [BUSINESS_FULLSCORE_BANK_ID, GUARANTEE_SPECIAL_BANK_ID, SUBJECT_SPRINT_BANK_ID, VOCABULARY_BANK_ID].includes(bankId)
+    let presentationKey = [BUSINESS_FULLSCORE_BANK_ID, GUARANTEE_SPECIAL_BANK_ID, SUBJECT_SPRINT_BANK_ID, VOCABULARY_BANK_ID, REFORM_2026_BANK_ID].includes(bankId)
       ? String(input?.presentationKey || "").replace(/[^0-9a-z:_-]/gi, "").slice(0, 80)
       : "";
     const presentationOverrides = {};
-    if ([BUSINESS_FULLSCORE_BANK_ID, GUARANTEE_SPECIAL_BANK_ID, SUBJECT_SPRINT_BANK_ID, VOCABULARY_BANK_ID].includes(bankId) &&
+    if ([BUSINESS_FULLSCORE_BANK_ID, GUARANTEE_SPECIAL_BANK_ID, SUBJECT_SPRINT_BANK_ID, VOCABULARY_BANK_ID, REFORM_2026_BANK_ID].includes(bankId) &&
         input?.presentationOverrides && typeof input.presentationOverrides === "object" &&
         !Array.isArray(input.presentationOverrides)) {
       Object.entries(input.presentationOverrides).forEach(([id, key]) => {
@@ -2913,6 +3002,7 @@
       presentationOverrides,
       planMode,
       vocabularyPreset: normalizeVocabularyPreset(input?.vocabularyPreset),
+      reformPreset: normalizeReformPreset(input?.reformPreset),
       knockPreset: {
         difficulty: rawKnockPreset?.difficulty === "basic" ? "basic" : "hard",
         mode: knockMode,
@@ -4969,6 +5059,8 @@
             ? "進行中の科目補強セット"
           : state.practicalDrill.bankId === VOCABULARY_BANK_ID
             ? "進行中の語彙4択"
+          : state.practicalDrill.bankId === REFORM_2026_BANK_ID
+            ? "進行中の2026法改正ノック"
           : "進行中の実践セット"
       };
     }
@@ -5063,6 +5155,7 @@
       restrictions: { target: elements.restrictionMasteryPanel, focusSelector: "#restrictionExamStart", label: "法令上の制限の診断とノック" },
       rights: { target: elements.rightsMasteryPanel, focusSelector: "#rightsMasteryTwenty", label: "権利関係の根拠ノック設定" },
       vocabulary: { target: elements.vocabularyPanel, focusSelector: "#vocabularyStart", label: "語彙4択設定" },
+      reform: { target: elements.reformPanel, focusSelector: "#reformStart", label: "2026法改正ノック設定" },
       tax: { target: elements.passPlanPanel, focusSelector: "#taxAuthoredTen", label: "税の新作10問の開始設定" },
       other: { target: elements.passPlanPanel, focusSelector: '[data-subject-sprint="other"]', label: "その他12問の開始設定" },
       all: { target: elements.themeDrawer, focusSelector: "#studyScopeSelect", label: "全科目の日課範囲メニュー" },
@@ -7716,6 +7809,7 @@
 
   function renderPassPlan() {
     renderVocabulary();
+    renderReform();
     renderRightsMastery();
     renderRestrictionMastery();
     if (!elements.passPlanPanel) return;
@@ -8694,6 +8788,7 @@
         : bankId === SUBJECT_SPRINT_BANK_ID
           ? SUBJECT_SPRINT_QUESTION_IDS
           : bankId === VOCABULARY_BANK_ID ? VOCABULARY_QUESTION_IDS
+            : bankId === REFORM_2026_BANK_ID ? REFORM_2026_QUESTION_IDS
           : PRACTICAL_QUESTION_IDS;
     return ids.filter((id) =>
       ["wrong", "uncertain"].includes(state.practicalDrill?.history?.[id]?.lastConfidence)
@@ -8786,6 +8881,7 @@
     if (drill?.bankId === GUARANTEE_SPECIAL_BANK_ID) return GUARANTEE_SPECIAL_QUESTIONS;
     if (drill?.bankId === SUBJECT_SPRINT_BANK_ID) return SUBJECT_SPRINT_QUESTIONS;
     if (drill?.bankId === VOCABULARY_BANK_ID) return VOCABULARY_QUESTIONS;
+    if (drill?.bankId === REFORM_2026_BANK_ID) return REFORM_2026_QUESTIONS;
     return PRACTICAL_QUESTIONS;
   }
 
@@ -8794,6 +8890,7 @@
     if (drill?.bankId === GUARANTEE_SPECIAL_BANK_ID) return GUARANTEE_SPECIAL_UNITS;
     if (drill?.bankId === SUBJECT_SPRINT_BANK_ID) return SUBJECT_SPRINT_UNIT_DEFINITIONS;
     if (drill?.bankId === VOCABULARY_BANK_ID) return VOCABULARY_TOPICS;
+    if (drill?.bankId === REFORM_2026_BANK_ID) return REFORM_2026_TOPICS;
     return PRACTICAL_VARIATIONS?.UNITS || [];
   }
 
@@ -8801,6 +8898,16 @@
     if (!question) return null;
     if (bankId === VOCABULARY_BANK_ID) {
       if (String(presentationKey).startsWith("meaning2:")) question = VOCABULARY_MEANING_QUESTION_BY_ID[question.id];
+      const order = BUSINESS_MASTERY.choiceOrder(question.id, presentationKey, 4);
+      return {
+        ...question,
+        choices: order.map((index) => question.choices[index]),
+        answer: order.indexOf(question.answer),
+        sourceFacts: order.map((index) => question.sourceFacts[index]),
+        statementExplanations: order.map((index) => question.statementExplanations[index])
+      };
+    }
+    if (bankId === REFORM_2026_BANK_ID) {
       const order = BUSINESS_MASTERY.choiceOrder(question.id, presentationKey, 4);
       return {
         ...question,
@@ -8869,7 +8976,7 @@
   }
 
   function nextPracticalRetryPresentationKey(question, bankId, baseKey, previousKey, sequence) {
-    if (!question || ![BUSINESS_FULLSCORE_BANK_ID, GUARANTEE_SPECIAL_BANK_ID, SUBJECT_SPRINT_BANK_ID, VOCABULARY_BANK_ID].includes(bankId)) {
+    if (!question || ![BUSINESS_FULLSCORE_BANK_ID, GUARANTEE_SPECIAL_BANK_ID, SUBJECT_SPRINT_BANK_ID, VOCABULARY_BANK_ID, REFORM_2026_BANK_ID].includes(bankId)) {
       return "";
     }
     const previous = presentPracticalQuestion(question, bankId, previousKey || baseKey);
@@ -9691,6 +9798,22 @@
   function renderPracticalPrompt(question, sharedPremiseGroups = []) {
     const restrictionCase = isRestrictionCase(question);
     elements.practicalDrillPrompt.classList.toggle("restriction-case-prompt", restrictionCase);
+    if (question.scopeId === REFORM_2026_BANK_ID) {
+      // Keep every condition and character. A paragraph break separates the
+      // scene from its final question without adding a second premise card.
+      const text = String(question.text || "");
+      const lastSentence = text.lastIndexOf("。", text.length - 2) + 1;
+      const parts = lastSentence > 0 && lastSentence < text.length
+        ? [text.slice(0, lastSentence), text.slice(lastSentence)] : [text];
+      elements.practicalDrillPrompt.removeAttribute("data-structured");
+      elements.practicalDrillPrompt.replaceChildren(...parts.map((part, index) => {
+        const paragraph = document.createElement("p");
+        paragraph.className = index === parts.length - 1 ? "reform-question-ask" : "reform-question-scene";
+        paragraph.textContent = part;
+        return paragraph;
+      }));
+      return;
+    }
     const model = question?.displayModel;
     const items = Array.isArray(model?.items) ? model.items : [];
     const hasItems = items.length && items.every((block) =>
@@ -9782,6 +9905,7 @@
 
   function practicalForecastValues(drill = state.practicalDrill) {
     if (drill?.bankId === VOCABULARY_BANK_ID) return [];
+    if (drill?.bankId === REFORM_2026_BANK_ID) return ["confident", "uncertain", "guess"];
     if (drill?.bankId === GUARANTEE_SPECIAL_BANK_ID) return ["confident", "uncertain"];
     if (drill?.bankId === SUBJECT_SPRINT_BANK_ID && (drill?.scope === "restrictions" || isRightsKnockSession(drill))) {
       return ["confident", "uncertain", "guess"];
@@ -9881,7 +10005,7 @@
       return `過信ミス。正解は「${answerText}」。判断軸を修正して再出題する。`;
     }
     if (attempt.predictedConfidence === "guess") {
-      return `ヤマ勘からの誤答。正解は「${answerText}」。区域・行為・主体・数値を切り分けて再出題する。`;
+      return `ヤマ勘からの誤答。正解は「${answerText}」。${question.scopeId === REFORM_2026_BANK_ID ? "改正の対象・施行日・数値・例外" : "区域・行為・主体・数値"}を切り分けて再出題する。`;
     }
     return `迷いからの誤答。正解は「${answerText}」。判断軸を確認して再出題する。`;
   }
@@ -9900,6 +10024,8 @@
     const guaranteeSpecialSession = drill.bankId === GUARANTEE_SPECIAL_BANK_ID;
     const subjectSprintSession = drill.bankId === SUBJECT_SPRINT_BANK_ID;
     const vocabularySession = drill.bankId === VOCABULARY_BANK_ID;
+    const reformSession = drill.bankId === REFORM_2026_BANK_ID;
+    elements.practicalDrillPrompt.classList.toggle("reform-question-prompt", reformSession);
     elements.practicalDrillPrompt.classList.toggle("vocabulary-term", vocabularySession);
     elements.practicalDrillPrompt.setAttribute("aria-label", vocabularySession ? "用語" : "問題文");
     elements.practicalConfidenceHint.hidden = vocabularySession;
@@ -9907,6 +10033,7 @@
     const bankAttempts = activeIds.reduce((sum, id) => sum + (drill.history[id]?.attempts || 0), 0);
     const restrictionSprintSession = subjectSprintSession && drill.scope === "restrictions";
     const guaranteeSummary = guaranteeSpecialSession ? guaranteeSpecialSummary() : null;
+    const reformStats = reformSession ? reformSummary() : null;
     const subjectSprintTopic = subjectSprintSession ? subjectSprintSessionTopic(drill) : null;
     const restrictionExamSession = restrictionSprintSession && subjectSprintTopic?.id === "exam";
     const subjectSprintTopicUntouched = subjectSprintTopic
@@ -9920,11 +10047,11 @@
     const bankLabel = knockSession ? hardKnockSession ? "高難度・事例ノック" : "基礎変形ノック"
       : drill.bankId === BUSINESS_FULLSCORE_BANK_ID ? "満点変形"
       : guaranteeSpecialSession ? "保証協会特訓"
-        : vocabularySession ? "語彙4択" : subjectSprintSession ? "科目補強" : "実践";
+        : vocabularySession ? "語彙4択" : reformSession ? "2026法改正ノック" : subjectSprintSession ? "科目補強" : "実践";
     elements.practicalDrillPanel.querySelector("summary strong").textContent = vocabularySession
-      ? "語彙4択" : "分野別の振り返り";
+      ? "語彙4択" : reformSession ? "2026法改正ノック" : "分野別の振り返り";
     elements.practicalDrillComplete.querySelector(":scope > strong").textContent = vocabularySession
-      ? "語彙4択を完了" : "実践セットを完了";
+      ? "語彙4択を完了" : reformSession ? "法改正ノックを完了" : "実践セットを完了";
     const summaryPrefix = drill.bankId === LEGACY_PRACTICAL_BANK_ID ? "" : `${bankLabel}累計 `;
     elements.practicalDrillSummary.textContent = vocabularySession
       ? `用語${activeIds.length}語・もう一度 ${drill.retryIds.filter((id) => activeIds.includes(id)).length}語`
@@ -9957,7 +10084,7 @@
         : guaranteeSpecialSession ? "保証協会・営業保証金"
           : restrictionExamSession
             ? `法令${RESTRICTION_EXAM_SESSION_SIZE}問・${RESTRICTION_EXAM_TARGET_MINUTES}分 根拠診断`
-          : vocabularySession ? "語彙4択" : subjectSprintSession ? `${subjectSprintTopic?.label || practicalScopeLabel(drill.scope)}・高速補強`
+          : vocabularySession ? "語彙4択" : reformSession ? "2026法改正ノック" : subjectSprintSession ? `${subjectSprintTopic?.label || practicalScopeLabel(drill.scope)}・高速補強`
         : unitSession ? unitSession.label : scopeLabel;
       const restrictionExamResult = restrictionExamSession ? currentRestrictionExamResult(drill) : null;
       const restrictionExamVerdict = restrictionExamResult?.passed ? "合格圏目安" : "要再診断";
@@ -9971,6 +10098,8 @@
             : `${completionLabel}を完了しましたが、今回結果を復元できませんでした。もう一度測り直してください。`
         : vocabularySession
           ? `用語${drill.sessionIds.length}語の確認を完了しました。通常問題や模試の得点には算入しません。`
+        : reformSession
+          ? `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計接触${reformStats.contacted}/${REFORM_2026_QUESTIONS.length}、根拠あり正解${reformStats.grounded}、別日定着${reformStats.retained}、要復習${reformStats.review}問です。同日正解だけでは別日定着に数えません。`
         : subjectSprintSession
           ? `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計${bankAttempts}解答、根拠クリア${grounded}問です。${subjectSprintTopic?.id === "catchup" ? `都市計画法以外${subjectSprintTopic.sourceQuestionIds.length}問の未接触は残り${subjectSprintTopicUntouched}問。${subjectSprintTopicUntouched ? "同じ20問診断を続けると未接触を優先して回収します。" : `${subjectSprintTopic.sourceQuestionIds.length}問すべてへ接触済みです。`}` : ""}`
         : `${completionLabel}の今回${drill.sessionIds.length}問と再出題を完了。累計${bankAttempts}解答、根拠クリア${grounded}問です。`;
@@ -9983,6 +10112,7 @@
         : restrictionExamSession
           ? `法令${RESTRICTION_EXAM_SESSION_SIZE}問・${RESTRICTION_EXAM_TARGET_MINUTES}分をもう一周`
         : vocabularySession ? "同じ条件で語彙4択を続ける"
+        : reformSession ? "同じ条件で法改正ノックを続ける"
         : subjectSprintSession
           ? `${subjectSprintTopic?.label || practicalScopeLabel(drill.scope)}をもう一周`
         : unitSession
@@ -9996,7 +10126,8 @@
           ? "宅建業法ノックへ戻る"
           : restrictionExamSession
             ? "法律別ノックを選ぶ"
-          : vocabularySession ? "用語のテーマ・問題数を変える" : "分野・問題数を変える";
+          : vocabularySession ? "用語のテーマ・問題数を変える"
+            : reformSession ? "法改正のテーマ・問題数を変える" : "分野・問題数を変える";
       }
       return;
     }
@@ -10017,7 +10148,7 @@
     const forecastRequired = practicalForecastRequired(drill, attempt);
     const sessionRetryCount = drill.retryIds.filter((id) => drill.sessionIds.includes(id)).length;
     elements.practicalDrillStage.textContent = drill.stage === "retry"
-      ? restrictionSprintSession
+      ? reformSession ? "法改正・ヤマ勘・迷い・誤答を再出題" : restrictionSprintSession
         ? `${subjectSprintTopic?.label || "法令"}・ヤマ勘・迷い・誤答を再出題`
         : "迷い・誤答を再出題"
       : restrictionExamSession
@@ -10048,6 +10179,8 @@
     if (elements.practicalConfidenceHint) {
       elements.practicalConfidenceHint.textContent = vocabularySession
         ? "答える前に、用語の意味を自分のことばで言って手応えを選びます。迷い・勘は正解でも再出題します。"
+        : reformSession
+        ? "解説を見る前に、改正後のルールを根拠から言えるか選びます。迷い・ヤマ勘は正解でも、選択肢を並べ替えて再出題します。"
         : guaranteeSpecialSession
         ? "正誤・解説を見る前に手応えを選びます。根拠あり予想からの誤答は過信ミスとして残します。"
         : restrictionSprintSession && question.groundingFrame
@@ -10171,7 +10304,7 @@
       });
     elements.practicalDrillNextButton.disabled = attempt.correct && !attempt.confidence;
     elements.practicalDrillNextButton.textContent = drill.position + 1 < drill.queue.length
-      ? vocabularySession ? "次の用語へ" : "次の実践問題へ"
+      ? vocabularySession ? "次の用語へ" : reformSession ? "次の法改正問題へ" : "次の実践問題へ"
       : guaranteeSpecialSession
         ? "今回の結果を確定する"
         : (sessionRetryCount ? "再出題へ進む" : "今回のセットを完了する");
@@ -11376,6 +11509,111 @@
     focusCurrentPracticalContext({ force: true });
   }
 
+  function normalizeReformPreset(input) {
+    return {
+      mode: ["weak", "all", "topic"].includes(input?.mode) ? input.mode : "weak",
+      size: ["10", "20", "all"].includes(String(input?.size)) ? String(input.size) : "10",
+      topicId: REFORM_2026_TOPICS.some((topic) => topic.id === input?.topicId)
+        ? input.topicId : REFORM_2026_TOPICS[0]?.id || ""
+    };
+  }
+
+  function reformSummary() {
+    const records = REFORM_2026_QUESTION_IDS.map((id) => {
+      const history = state.practicalDrill.history[id] || {};
+      return { history, mastery: BUSINESS_MASTERY.stateFor(history, new Date()) };
+    });
+    return {
+      contacted: records.filter(({ history }) => history.attempts > 0).length,
+      grounded: records.filter(({ history }) => history.lastCorrect && history.lastConfidence === "confident").length,
+      retained: records.filter(({ mastery }) => ["retained", "durable"].includes(mastery)).length,
+      review: records.filter(({ history, mastery }) =>
+        ["wrong", "uncertain"].includes(history.lastConfidence) || ["retry", "due"].includes(mastery)).length
+    };
+  }
+
+  function renderReform() {
+    if (!elements.reformStart) return;
+    const summary = reformSummary();
+    const total = REFORM_2026_QUESTIONS.length;
+    const active = vocabularyBlockingSession();
+    const reformActive = state.practicalDrill.bankId === REFORM_2026_BANK_ID && active?.kind === "practical";
+    elements.reformContacted.textContent = `${summary.contacted} / ${total}`;
+    elements.reformGrounded.textContent = `${summary.grounded} / ${total}`;
+    elements.reformRetained.textContent = `${summary.retained} / ${total}`;
+    elements.reformReview.textContent = String(summary.review);
+    if (!elements.reformTopic.options.length) {
+      elements.reformTopic.replaceChildren(...REFORM_2026_TOPICS.map((topic) => {
+        const option = document.createElement("option");
+        option.value = topic.id;
+        option.textContent = `${topic.label}（${REFORM_2026_QUESTIONS.filter((item) => item.unitId === topic.id).length}問）`;
+        return option;
+      }));
+    }
+    const preset = normalizeReformPreset(state.practicalDrill.reformPreset);
+    elements.reformMode.value = preset.mode;
+    elements.reformTopic.value = preset.topicId;
+    elements.reformSize.value = preset.size;
+    elements.reformTopicField.hidden = preset.mode !== "topic";
+    [elements.reformMode, elements.reformTopic, elements.reformSize, elements.reformCustomStart]
+      .forEach((control) => { control.disabled = Boolean(active); });
+    elements.reformStart.textContent = reformActive ? "法改正ノックの続きから再開"
+      : active ? "進行中のセットを再開" : "法改正10問を始める";
+    elements.reformStatus.textContent = reformActive
+      ? `第${state.practicalDrill.position + 1}問から再開できます。解答・手応え・再出題を保存済みです。`
+      : active ? `${active.label}を先に再開します。完了後に法改正ノックを選べます。`
+      : `全${total}問・${REFORM_2026_TOPICS.length}テーマ。未接触${total - summary.contacted}問、要復習${summary.review}問。法改正だけの記録です。`;
+  }
+
+  function updateReformPreset() {
+    if (vocabularyBlockingSession()) return;
+    const previousState = cloneStateForSync(state);
+    state.practicalDrill.reformPreset = normalizeReformPreset({
+      mode: elements.reformMode.value,
+      topicId: elements.reformTopic.value,
+      size: elements.reformSize.value
+    });
+    if (!saveState()) {
+      rollbackFailedPracticalDrillMutation(previousState, "法改正ノックの条件を保存できませんでした。保存管理を確認して再試行してください。");
+      return;
+    }
+    renderReform();
+  }
+
+  function startReformSession(requestedPreset) {
+    if (vocabularyBlockingSession()?.kind === "calculation") {
+      renderCalculationDrill();
+      focusStudyNavigationTarget(elements.calculationDrillPanel, { focusSelector: "#calculationDrillPrompt" });
+      setTodayCommandStatus("進行中の計算・金額特訓を保存位置から再開します。完了後に法改正ノックを選べます。");
+      return;
+    }
+    if (resumeActiveLearningSession()) return;
+    const preset = normalizeReformPreset(requestedPreset || state.practicalDrill.reformPreset);
+    const previousState = cloneStateForSync(state);
+    const eligible = REFORM_2026_QUESTIONS.filter((question) => preset.mode !== "topic" || question.unitId === preset.topicId);
+    const sessionKey = `${todayKey()}:reform2026:${createOpaqueId("cycle")}`.replace(/[^0-9a-z:_-]/gi, "").slice(0, 80);
+    const queue = REFORM_2026_QUEUE.buildQueue(eligible, {
+      mode: preset.mode, size: preset.size, history: state.practicalDrill.history, sessionKey
+    });
+    if (!queue.length) return;
+    state.practicalDrill = {
+      ...state.practicalDrill,
+      bankId: REFORM_2026_BANK_ID, bankVersion: REFORM_2026_BANK.VERSION, planMode: "reform",
+      reformPreset: preset, presentationKey: sessionKey, presentationOverrides: {},
+      stage: "active", scope: REFORM_2026_BANK_ID, unitId: preset.mode === "topic" ? preset.topicId : "",
+      sessionSize: queue.length, sessionIds: [...queue], queue: [...queue], position: 0,
+      preAnswerConfidence: "", currentAttempt: null, retryIds: practicalRetryIdsForBank(REFORM_2026_BANK_ID),
+      restrictionExamSession: null, sessionStartedAt: new Date().toISOString(), completedAt: ""
+    };
+    if (!saveState()) {
+      rollbackFailedPracticalDrillMutation(previousState, "法改正ノックを開始できませんでした。保存管理を確認して再試行してください。");
+      return;
+    }
+    renderPracticalDrill();
+    renderPassPlan();
+    focusCurrentPracticalContext({ force: true });
+  }
+
   function startSubjectSprint(scope = "rights", requestedSize = 0, topicId = "") {
     if (resumeActiveLearningSession() || !SUBJECT_SPRINT_READY) return;
     const previousState = cloneStateForSync(state);
@@ -11561,6 +11799,10 @@
   }
 
   function restartPracticalDrill() {
+    if (state.practicalDrill?.bankId === REFORM_2026_BANK_ID) {
+      startReformSession(state.practicalDrill.reformPreset);
+      return;
+    }
     if (state.practicalDrill?.bankId === VOCABULARY_BANK_ID) {
       startVocabularySession(state.practicalDrill.vocabularyPreset);
       return;
@@ -11950,6 +12192,7 @@
   }
 
   function changePracticalDrillSettings() {
+    const wasReform = state.practicalDrill?.bankId === REFORM_2026_BANK_ID;
     const wasVocabulary = state.practicalDrill?.bankId === VOCABULARY_BANK_ID;
     const wasLegacyBusiness = isLegacyBusinessSession();
     const previousPreset = normalizeBusinessKnockPreset();
@@ -11958,7 +12201,10 @@
     const wasGuaranteeSpecial = state.practicalDrill?.bankId === GUARANTEE_SPECIAL_BANK_ID;
     const wasSubjectSprint = state.practicalDrill?.bankId === SUBJECT_SPRINT_BANK_ID;
     if (!cancelPracticalDrill()) return;
-    if (wasVocabulary) {
+    if (wasReform) {
+      elements.reformPanel?.querySelector("details")?.setAttribute("open", "");
+      focusStudyNavigationTarget(elements.reformPanel, { focusSelector: "#reformMode" });
+    } else if (wasVocabulary) {
       elements.vocabularyPanel?.querySelector("details")?.setAttribute("open", "");
       focusStudyNavigationTarget(elements.vocabularyPanel, { focusSelector: "#vocabularyMode" });
     } else if (wasLegacyBusiness) {
@@ -15565,6 +15811,10 @@
     elements.vocabularyStart?.addEventListener("click", () => startVocabularySession({ mode: "weak", size: "10" }));
     elements.vocabularyCustomStart?.addEventListener("click", () => startVocabularySession());
     elements.vocabularyMode?.addEventListener("change", renderVocabulary);
+    elements.reformStart?.addEventListener("click", () => startReformSession({ mode: "weak", size: "10" }));
+    elements.reformCustomStart?.addEventListener("click", () => startReformSession());
+    [elements.reformMode, elements.reformTopic, elements.reformSize]
+      .forEach((control) => control?.addEventListener("change", updateReformPreset));
     elements.rightsMasteryFresh?.addEventListener("click", () => startSubjectSprint("rights", RIGHTS_KNOCK_SESSION_SIZE, "untouched"));
     elements.rightsMasteryAll?.addEventListener("click", () => startSubjectSprint("rights", RIGHTS_KNOCK_SOURCE_IDS.length, "knock"));
     elements.rightsMasteryTopic?.addEventListener("change", renderRightsMastery);

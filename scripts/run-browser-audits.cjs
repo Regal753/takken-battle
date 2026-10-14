@@ -7,9 +7,9 @@ const { spawn } = require("node:child_process");
 const { performance } = require("node:perf_hooks");
 
 const ROOT = path.resolve(__dirname, "..");
-const EXPECTED_AUDIT_COUNT = 34;
+const EXPECTED_AUDIT_COUNT = 35;
 const SHARDS = Object.freeze(["a", "b", "c"]);
-// Preserve the complete former CI command list and add the vocabulary audit. Round-robin assignment spreads
+// Preserve the complete former CI command list and add the reform audit. Round-robin assignment spreads
 // expensive interaction and exam/save audits across independent runners.
 const AUDITS = Object.freeze([
   "Audit-TakkenBusinessMasteryUi.cjs",
@@ -45,7 +45,8 @@ const AUDITS = Object.freeze([
   "Audit-TakkenConcurrentSaveUi.cjs",
   "Audit-TakkenBankRecoveryUi.cjs",
   "Audit-TakkenNavigationUi.cjs",
-  "Audit-TakkenVocabularyUi.cjs"
+  "Audit-TakkenVocabularyUi.cjs",
+  "Audit-TakkenReform2026Ui.cjs"
 ]);
 
 function validateRegistry(audits = AUDITS, fileExists = file => fs.existsSync(path.join(ROOT, file))) {
