@@ -26,6 +26,8 @@
       window.TAKKEN_REFORM_2026_BANK?.LEGAL_BASELINE === "2026-04-01" &&
       Array.isArray(window.TAKKEN_REFORM_2026_BANK?.QUESTIONS) && window.TAKKEN_REFORM_2026_BANK.QUESTIONS.length > 0 &&
       Array.isArray(window.TAKKEN_REFORM_2026_BANK?.TOPICS) && window.TAKKEN_REFORM_2026_BANK.TOPICS.length > 0],
+    ["2026法改正ノックの出題", window.TAKKEN_REFORM_2026_QUEUE?.VERSION === 1 &&
+      typeof window.TAKKEN_REFORM_2026_QUEUE?.buildQueue === "function"],
     ["科目別ノック", sprintBankAtBoot?.QUESTIONS?.length === 198 &&
       sprintBankAtBoot?.LEGAL_BASELINE === "2026-04-01" &&
       typeof sprintBankAtBoot?.presentQuestion === "function" &&
@@ -83,6 +85,7 @@
   const SUBJECT_SPRINT_BANK = window.TAKKEN_SUBJECT_SPRINT_BANK;
   const VOCABULARY_BANK = window.TAKKEN_VOCABULARY_BANK;
   const REFORM_2026_BANK = window.TAKKEN_REFORM_2026_BANK;
+  const REFORM_2026_QUEUE = window.TAKKEN_REFORM_2026_QUEUE;
   const RESTRICTIONS_AUTHORED_BANK = window.TAKKEN_RESTRICTIONS_AUTHORED_BANK;
   const TAX_AUTHORED_BANK = window.TAKKEN_TAX_AUTHORED_BANK;
   const DAILY_COVERAGE = window.TAKKEN_EXAM_DAILY_COVERAGE;
@@ -9795,6 +9798,22 @@
   function renderPracticalPrompt(question, sharedPremiseGroups = []) {
     const restrictionCase = isRestrictionCase(question);
     elements.practicalDrillPrompt.classList.toggle("restriction-case-prompt", restrictionCase);
+    if (question.scopeId === REFORM_2026_BANK_ID) {
+      // Keep every condition and character. A paragraph break separates the
+      // scene from its final question without adding a second premise card.
+      const text = String(question.text || "");
+      const lastSentence = text.lastIndexOf("。", text.length - 2) + 1;
+      const parts = lastSentence > 0 && lastSentence < text.length
+        ? [text.slice(0, lastSentence), text.slice(lastSentence)] : [text];
+      elements.practicalDrillPrompt.removeAttribute("data-structured");
+      elements.practicalDrillPrompt.replaceChildren(...parts.map((part, index) => {
+        const paragraph = document.createElement("p");
+        paragraph.className = index === parts.length - 1 ? "reform-question-ask" : "reform-question-scene";
+        paragraph.textContent = part;
+        return paragraph;
+      }));
+      return;
+    }
     const model = question?.displayModel;
     const items = Array.isArray(model?.items) ? model.items : [];
     const hasItems = items.length && items.every((block) =>
@@ -10006,6 +10025,7 @@
     const subjectSprintSession = drill.bankId === SUBJECT_SPRINT_BANK_ID;
     const vocabularySession = drill.bankId === VOCABULARY_BANK_ID;
     const reformSession = drill.bankId === REFORM_2026_BANK_ID;
+    elements.practicalDrillPrompt.classList.toggle("reform-question-prompt", reformSession);
     elements.practicalDrillPrompt.classList.toggle("vocabulary-term", vocabularySession);
     elements.practicalDrillPrompt.setAttribute("aria-label", vocabularySession ? "用語" : "問題文");
     elements.practicalConfidenceHint.hidden = vocabularySession;
@@ -11572,18 +11592,9 @@
     const previousState = cloneStateForSync(state);
     const eligible = REFORM_2026_QUESTIONS.filter((question) => preset.mode !== "topic" || question.unitId === preset.topicId);
     const sessionKey = `${todayKey()}:reform2026:${createOpaqueId("cycle")}`.replace(/[^0-9a-z:_-]/gi, "").slice(0, 80);
-    const hash = (value) => [...value].reduce((sum, char) => (Math.imul(sum, 31) + char.codePointAt(0)) >>> 0, 2166136261);
-    const priority = (question) => {
-      const history = state.practicalDrill.history[question.id] || {};
-      if (["wrong", "uncertain"].includes(history.lastConfidence)) return 0;
-      if (BUSINESS_MASTERY.stateFor(history, new Date()) === "due") return 1;
-      return history.attempts > 0 ? 3 : 2;
-    };
-    const size = preset.size === "all" ? eligible.length : Math.min(eligible.length, Number(preset.size));
-    const queue = [...eligible].sort((left, right) =>
-      (preset.mode === "weak" ? priority(left) - priority(right) : 0) ||
-      hash(`${sessionKey}:${left.id}`) - hash(`${sessionKey}:${right.id}`))
-      .slice(0, size).map((question) => question.id);
+    const queue = REFORM_2026_QUEUE.buildQueue(eligible, {
+      mode: preset.mode, size: preset.size, history: state.practicalDrill.history, sessionKey
+    });
     if (!queue.length) return;
     state.practicalDrill = {
       ...state.practicalDrill,

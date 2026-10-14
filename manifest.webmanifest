@@ -8,7 +8,7 @@
   "background_color": "#0b1020",
   "theme_color": "#0b1020",
   "icons": [
-    { "src": "./assets/pwa-icon-192.svg?v=20261014-reform-knock-3239009f7990", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any" },
-    { "src": "./assets/pwa-icon-512.svg?v=20261014-reform-knock-3239009f7990", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any" }
+    { "src": "./assets/pwa-icon-192.svg?v=20261014-reform-reading-7c0d4b13a868", "sizes": "192x192", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "./assets/pwa-icon-512.svg?v=20261014-reform-reading-7c0d4b13a868", "sizes": "512x512", "type": "image/svg+xml", "purpose": "any" }
   ]
 }

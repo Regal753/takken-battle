@@ -6,7 +6,7 @@ const path = require("node:path");
 const { chromium } = require("playwright");
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20261014-reform-knock-3239009f7990";
+const expectedVersion = process.argv[3] || "20261014-reform-reading-7c0d4b13a868";
 const chromePath = process.env.TAKKEN_CHROME_PATH || undefined;
 const canonicalIndex = fs.readFileSync(path.join(__dirname, "..", "index.html"), "utf8");
 const expectedScriptCount = [...canonicalIndex.matchAll(/<script\b[^>]*\bsrc=/gi)].length;
@@ -42,6 +42,8 @@ assert.ok(expectedScriptCount > 0, "canonical index has no runtime scripts");
       window.TAKKEN_RESTRICTIONS_AUTHORED_BANK?.QUESTIONS?.length === 72 &&
       window.TAKKEN_TAX_AUTHORED_BANK?.QUESTIONS?.length === 24 &&
       window.TAKKEN_SUBJECT_SPRINT_BANK?.QUESTIONS?.length === 198 &&
+      window.TAKKEN_REFORM_2026_BANK?.QUESTIONS?.length === 40 &&
+      window.TAKKEN_REFORM_2026_BANK?.TOPICS?.length === 5 &&
       document.querySelector("#passReadinessCard")
     ));
     await page.waitForFunction(() => navigator.serviceWorker?.ready, null, { timeout: 30000 });
@@ -110,9 +112,35 @@ assert.ok(expectedScriptCount > 0, "canonical index has no runtime scripts");
     assert.ok(tax.sessionIds.every(id => /^sprint-tax-tc59-/.test(id)), "new tax entry must exclude legacy questions");
     await page.reload({ waitUntil: "networkidle" });
     assert.deepEqual((await readDrill()).sessionIds, tax.sessionIds, "new tax session must survive reload");
+    page.once("dialog", dialog => dialog.accept());
+    await page.locator("#practicalDrillDiscardButton").click();
+    await page.locator("#reformPanel details").evaluate(node => { node.open = true; });
+    await page.locator("#reformMode").selectOption("all");
+    await page.locator("#reformSize").selectOption("20");
+    await page.locator("#reformCustomStart").click();
+    await page.locator("#practicalDrillSession").waitFor({ state: "visible" });
+    const reform = await readDrill();
+    assert.equal(reform.bankId, "reform2026");
+    assert.equal(reform.sessionIds.length, 20);
+    assert.equal(new Set(reform.sessionIds).size, 20);
+    const reformTopics = await page.evaluate(ids => new Set(ids.map(id => window.TAKKEN_REFORM_2026_BANK.QUESTIONS_BY_ID[id].unitId)).size, reform.sessionIds);
+    assert.equal(reformTopics, 5, "published mixed set must reach all five reform themes");
+    const shownAnswer = await page.evaluate(drill => {
+      const question = window.TAKKEN_REFORM_2026_BANK.QUESTIONS_BY_ID[drill.queue[drill.position]];
+      const order = window.TAKKEN_BUSINESS_MASTERY.choiceOrder(question.id, drill.presentationKey, 4);
+      return order.indexOf(question.answer);
+    }, reform);
+    await page.locator('[data-practical-forecast="confident"]').click();
+    await page.locator(".practical-drill-choice").nth(shownAnswer).click();
+    await page.locator("#practicalDrillFeedback").waitFor({ state: "visible" });
+    const reformAnswered = await readDrill();
+    await page.reload({ waitUntil: "networkidle" });
+    assert.deepEqual(await readDrill(), reformAnswered, "published reform answer and history must survive reload");
+    const reformParagraphs = await page.locator("#practicalDrillPrompt.reform-question-prompt > p").allTextContents();
+    assert.ok(reformParagraphs.length >= 1 && reformParagraphs.length <= 2 && reformParagraphs.every(text => text.trim()), "published reform question must use short natural paragraphs");
     assert.deepEqual(consoleErrors, [], "deployed page emitted console errors");
     assert.deepEqual(pageErrors, [], "deployed page emitted page errors");
-    console.log(JSON.stringify({ status: "ok", expectedVersion, scripts: mobile320.scriptVersions.length, overflow390: mobile390.overflow, overflow320: mobile320.overflow, archiveClosed: true, newAndLegacyReload: true, newRestrictionReload: true, newTaxReload: true, authoredRestrictions: 72, authoredTax: 24, syntheticContextOnly: true, errors: 0 }));
+    console.log(JSON.stringify({ status: "ok", expectedVersion, scripts: mobile320.scriptVersions.length, overflow390: mobile390.overflow, overflow320: mobile320.overflow, archiveClosed: true, newAndLegacyReload: true, newRestrictionReload: true, newTaxReload: true, reformQuestions: 40, reformMixedTopics: reformTopics, reformAnswerReload: true, authoredRestrictions: 72, authoredTax: 24, syntheticContextOnly: true, errors: 0 }));
   } finally {
     await browser.close();
   }

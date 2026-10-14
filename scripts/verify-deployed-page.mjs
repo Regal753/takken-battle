@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { extname } from "node:path";
 
 const pageUrl = process.argv[2];
-const expectedVersion = process.argv[3] || "20261014-reform-knock-3239009f7990";
+const expectedVersion = process.argv[3] || "20261014-reform-reading-7c0d4b13a868";
 const attempts = Math.max(1, Number(process.env.TAKKEN_DEPLOY_VERIFY_ATTEMPTS) || 12);
 const intervalMs = Math.max(0, Number(process.env.TAKKEN_DEPLOY_VERIFY_INTERVAL_MS) || 10000);
 assert.ok(pageUrl, "usage: node scripts/verify-deployed-page.mjs <page-url> [expected-version]");
@@ -37,7 +37,7 @@ for (let attempt = 1; attempt <= attempts; attempt += 1) {
     const response = await fetch(url, { redirect: "follow", headers: { "cache-control": "no-cache", "user-agent": "takken-battle-deploy-verifier" } });
     const html = await response.text();
     assert.equal(response.status, 200, `HTTP ${response.status}`);
-    for (const id of ["mockAButton", "mockBButton", "mockCButton", "passPlanPanel", "passReadinessCard", "todayCommandPanel", "officialDrillOpenButton", "saveRestorePreviousButton", "businessMasteryPanel", "businessKnockPanel", "businessLegacyDrawer", "businessArchiveKnockStart", "restrictionAuthoredTwenty", "taxAuthoredTen", "taxRevisionGuide"]) {
+    for (const id of ["mockAButton", "mockBButton", "mockCButton", "passPlanPanel", "passReadinessCard", "todayCommandPanel", "officialDrillOpenButton", "saveRestorePreviousButton", "businessMasteryPanel", "businessKnockPanel", "businessLegacyDrawer", "businessArchiveKnockStart", "restrictionAuthoredTwenty", "taxAuthoredTen", "taxRevisionGuide", "reformPanel", "reformStart", "reformTopic", "reformCustomStart"]) {
       assert.match(html, new RegExp(`id="${id}"`), `${id} missing`);
     }
     assert.match(html, /name="takken-runtime" content="public-static"/, "public-static marker missing");

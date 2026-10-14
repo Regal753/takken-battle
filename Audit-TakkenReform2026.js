@@ -89,4 +89,60 @@ vm.createContext(sandbox);
 vm.runInContext(source, sandbox, { filename: "reform-2026-bank.js" });
 assert.ok(sandbox.window.TAKKEN_REFORM_2026_BANK, "standalone browser global");
 assert.deepEqual(JSON.parse(JSON.stringify(sandbox.window.TAKKEN_REFORM_2026_BANK.QUESTIONS)), bank.QUESTIONS);
+// Exercise the production selector directly: the former prefix polynomial
+// returned the same first ten IDs for every seed despite the mixed-mode label.
+const queue = require("./reform-2026-queue.js");
+assert.equal(queue.VERSION, 1);
+const now = new Date("2026-10-14T12:00:00+09:00");
+const seeds = Array.from({ length: 16 }, (_, i) => `2026-10-14:reform2026:cycle_fixed_${String(i).padStart(2, "0")}`);
+const questionBeforeSelection = JSON.stringify(bank.QUESTIONS);
+const selectedTopicIds = ids => new Set(ids.map(id => byId[id].unitId));
+const subsetKey = ids => [...ids].sort().join(",");
+const variations = {};
+for (const size of ["10", "20"]) {
+  const selections = seeds.map(sessionKey => queue.buildQueue(bank.QUESTIONS, { mode: "all", size, history: {}, sessionKey, now }));
+  for (const [index, ids] of selections.entries()) {
+    assert.equal(ids.length, Number(size)); assert.equal(new Set(ids).size, Number(size));
+    assert.ok(ids.every(id => byId[id]));
+    assert.equal(selectedTopicIds(ids).size, bank.TOPICS.length, `${size}: each mixed batch reaches every reform theme`);
+    const topicCounts = bank.TOPICS.map(topic => ids.filter(id => byId[id].unitId === topic.id).length);
+    assert.ok(Math.max(...topicCounts) - Math.min(...topicCounts) <= 1, `${size}: mixed batches spread questions evenly across available themes`);
+    assert.deepEqual(queue.buildQueue(bank.QUESTIONS, { mode: "all", size, history: {}, sessionKey: seeds[index], now }), ids, "the same seed reproduces the saved queue");
+  }
+  const subsets = new Set(selections.map(subsetKey));
+  assert.ok(subsets.size >= 8, `${size}: changing sessions must change selected IDs, not only their order`);
+  variations[size] = subsets.size;
+}
+const [wrong, uncertain, due, recent] = bank.QUESTIONS;
+const history = {
+  [wrong.id]: { attempts: 3, correct: 0, wrong: 3, lastCorrect: false, lastConfidence: "wrong", lastAnsweredAt: "2026-09-20T09:00:00+09:00" },
+  [uncertain.id]: { attempts: 1, correct: 1, wrong: 0, lastCorrect: true, lastConfidence: "uncertain", lastPredictedConfidence: "guess", lastAnsweredAt: "2026-10-14T10:00:00+09:00" },
+  [due.id]: { attempts: 1, correct: 1, wrong: 0, lastCorrect: true, lastConfidence: "confident", lastAnsweredAt: "2026-09-20T09:00:00+09:00" },
+  [recent.id]: { attempts: 1, correct: 1, wrong: 0, lastCorrect: true, lastConfidence: "confident", lastAnsweredAt: now.toISOString() }
+};
+const historyBeforeSelection = JSON.stringify(history);
+for (const sessionKey of seeds) {
+  const ids = queue.buildQueue(bank.QUESTIONS, { mode: "weak", size: "10", history, sessionKey, now });
+  assert.deepEqual(new Set(ids.slice(0, 2)), new Set([wrong.id, uncertain.id]), "wrong and uncertain/guess answers precede overdue items");
+  assert.equal(ids[2], due.id, "overdue evidence precedes untouched items");
+  assert.ok(ids.slice(3).every(id => !history[id]), "untouched reforms precede recent grounded answers");
+  assert.deepEqual(queue.buildQueue(bank.QUESTIONS, { mode: "weak", size: "10", history, sessionKey, now }), ids);
+}
+for (const topic of bank.TOPICS) {
+  const eligible = bank.QUESTIONS.filter(q => q.unitId === topic.id);
+  const ids = queue.buildQueue(eligible, { mode: "topic", size: "all", history, sessionKey: seeds[0], now });
+  assert.deepEqual([...ids].sort(), eligible.map(q => q.id).sort(), "topic selection retains exactly its eligible pool");
+}
+const full = queue.buildQueue(bank.QUESTIONS, { mode: "all", size: "all", history, sessionKey: seeds[0], now });
+assert.deepEqual([...full].sort(), [...ids].sort(), "full selection includes every question exactly once");
+assert.equal(JSON.stringify(bank.QUESTIONS), questionBeforeSelection, "selection cannot mutate question data or source facts");
+assert.equal(JSON.stringify(history), historyBeforeSelection, "selection cannot grant attempts or mastery");
+const queueMastery = require("./business-mastery.js");
+const queueSandbox = { TAKKEN_BUSINESS_MASTERY: queueMastery };
+queueSandbox.window = queueSandbox;
+vm.createContext(queueSandbox);
+vm.runInContext(fs.readFileSync(path.join(__dirname, "reform-2026-queue.js"), "utf8"), queueSandbox, { filename: "reform-2026-queue.js" });
+assert.ok(queueSandbox.window.TAKKEN_REFORM_2026_QUEUE);
+assert.deepEqual(JSON.parse(JSON.stringify(queueSandbox.window.TAKKEN_REFORM_2026_QUEUE.buildQueue(bank.QUESTIONS, { mode: "all", size: "10", history: {}, sessionKey: seeds[0], now }))), queue.buildQueue(bank.QUESTIONS, { mode: "all", size: "10", history: {}, sessionKey: seeds[0], now }), "browser and Node selectors agree");
 console.log(JSON.stringify({ status: "ok", questions: bank.QUESTIONS.length, choicesReviewed: bank.QUESTIONS.length * 4, legalBaseline: bank.LEGAL_BASELINE, topics: counts, correctSlots: slots, longestCorrect, primarySourceHosts: [...sourceHosts] }));
+console.log(JSON.stringify({ queue: "ok", fixedSeeds: seeds.length, distinctMixedSubsets: variations, themesPerBatch: bank.TOPICS.length, weakPriorityPreserved: true, sameSeedDeterministic: true, inputDataUnchanged: true }));

@@ -10,9 +10,9 @@ const releaseIntegrity = require("./release-integrity.json");
 const ROOT = __dirname;
 const EXPECTED_CACHE_VERSION = releaseIntegrity.version;
 releaseIntegrityTools.assertVersionMatchesDigest(releaseIntegrity.version, releaseIntegrity.digest);
-// The 40-question reform bank and save-safe integration add 113,573 raw /
-// 20,809 level-9 gzip bytes over main ad6fba9 (2,700,342 / 704,810).
-// Round only this measured addition to 1 KB and preserve the prior headroom.
+// The 40-question reform bank, save-safe integration and dispersed selection
+// add 115,278 raw / 22,478 level-9 gzip bytes over main ad6fba9
+// (2,700,342 / 704,810). The reading revision stays inside the staged ceilings.
 const MAX_PUBLIC_JS_BYTES = 2863000;
 const MAX_PUBLIC_JS_GZIP_BYTES = 731000;
 const RELEASE_CONTRACT_PATHS = [

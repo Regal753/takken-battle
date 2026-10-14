@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "version": "20261014-reform-knock-3239009f7990",
-  "digest": "sha256:3239009f799082fbc5ef38cb9195aba24abfe516aa6cc5ce585a14af40d3a385",
-  "assetCount": 71,
+  "version": "20261014-reform-reading-7c0d4b13a868",
+  "digest": "sha256:7c0d4b13a8680cebbb3007417c83f18da825bfe7f95b83c045131498f288d0a4",
+  "assetCount": 72,
   "assets": [
     {
       "path": "app.js",
-      "sha256": "38dc8723a00ddbbed87cb6198a2422c46156188e3e0e7562e21e5b68227c019f"
+      "sha256": "6de1b6cbda53c7e792b8b5edf2d835c1a35d14ee07c25e163f1bfd63851ab1db"
     },
     {
       "path": "assets/battle/grassland-route.webp",
@@ -166,7 +166,7 @@
     },
     {
       "path": "index.html",
-      "sha256": "40b0e8a85983f36e35b33e03b66ca070aa249bcdbebf9b3f0b95e9863074f7fa"
+      "sha256": "9e9f6796061aa197303132c118d9fc913dfbcdfb47feb09e428382f92119e3b0"
     },
     {
       "path": "manifest.webmanifest",
@@ -206,7 +206,11 @@
     },
     {
       "path": "reform-2026-bank.js",
-      "sha256": "a7c0ff750a1466620eb69d0d1427d4dd982630839e29a39656997bdfd75662f3"
+      "sha256": "bc6b2e1969493ff64e842394bed2818af3f5cc2d5c6b96c38f2d52fd087c7475"
+    },
+    {
+      "path": "reform-2026-queue.js",
+      "sha256": "3cb4adbc139c552d1d09749281d1b90cc0fec7bb0aeaf432c1bfe8f5a0d322d5"
     },
     {
       "path": "reiwa-exam-bank.js",
@@ -258,7 +262,7 @@
     },
     {
       "path": "service-worker.js",
-      "sha256": "8c23990324eb82818f6d6b905ac1fec732d3684ed8d459991226405fb050d0b2"
+      "sha256": "3cf4e91d26bfec02175dbd03643e67c729f00f8db6e01b3b1486cccfa929fc2c"
     },
     {
       "path": "state-sync.js",
@@ -266,7 +270,7 @@
     },
     {
       "path": "styles.css",
-      "sha256": "b9801126f6608a79018c1bb368979fd03ae0af49e7bb39065835be3f78051afb"
+      "sha256": "594becba68f28e29c491f0db13e3bfdecb3d3f518acabff6f3190cfa6f9f75f6"
     },
     {
       "path": "subject-sprint-bank.js",

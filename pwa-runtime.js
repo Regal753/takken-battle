@@ -1,7 +1,7 @@
 "use strict";
 
 (() => {
-  const VERSION = "20261014-reform-knock-3239009f7990";
+  const VERSION = "20261014-reform-reading-7c0d4b13a868";
   const BANNER_ID = "pwaUpdateNotice";
   const UPDATE_CHECK_INTERVAL_MS = 60_000;
   let reloadRequested = false;

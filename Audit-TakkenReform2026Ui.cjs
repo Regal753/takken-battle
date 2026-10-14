@@ -43,6 +43,10 @@ async function shown(page, key) {
 async function answer(page, key, confidence = "confident", wrong = false) {
   const question = await shown(page, key);
   assert.equal(await page.locator("#practicalDrillPrompt").textContent(), question.text);
+  const paragraphs = await page.locator("#practicalDrillPrompt > p").allTextContents();
+  assert.ok(paragraphs.length >= 1 && paragraphs.length <= 2 && paragraphs.every(text => text.trim()), `${question.id}: natural paragraphs, no empty cards`);
+  assert.equal(paragraphs.join(""), question.text, `${question.id}: every condition appears exactly once`);
+  assert.equal(await page.locator("#practicalDrillPrompt article, #practicalDrillPrompt aside, #practicalDrillPrompt details").count(), 0, "no repeated or collapsed premise card");
   await page.locator(`[data-practical-forecast="${confidence}"]`).click();
   const selected = wrong ? (question.answer + 1) % 4 : question.answer;
   await page.locator(".practical-drill-choice").nth(selected).click();
@@ -103,6 +107,38 @@ async function main() {
       assert.ok(layout.targets.every(height => height >= 44), `${width}px tap targets`);
       await page.locator("#reformPanel").screenshot({ path: path.join(output, `launcher-${width}.png`) }); checks++;
     }
+    const reading = await fixture("reading");
+    await reveal(reading.page, "#reformMode");
+    await reading.page.locator("#reformMode").selectOption("all");
+    await reading.page.locator("#reformSize").selectOption("all");
+    await reading.page.locator("#reformCustomStart").click();
+    const samples = await reading.page.evaluate(() => {
+      const questions = window.TAKKEN_REFORM_2026_BANK.QUESTIONS;
+      return [{ kind: "longest", id: [...questions].sort((a, b) => b.text.length - a.text.length)[0].id },
+        { kind: "standard", id: "reform-001" }, { kind: "conditions", id: "reform-020" }];
+    });
+    for (const sample of samples) {
+      await reading.page.evaluate(({ key, id }) => {
+        const state = JSON.parse(localStorage.getItem(key));
+        state.practicalDrill.position = state.practicalDrill.queue.indexOf(id);
+        localStorage.setItem(key, JSON.stringify(state));
+      }, { key: reading.key, id: sample.id });
+      await reading.page.reload({ waitUntil: "networkidle" });
+      const untouched = (await saved(reading.page, reading.key)).practicalDrill;
+      const original = await reading.page.evaluate(id => window.TAKKEN_REFORM_2026_BANK.QUESTIONS_BY_ID[id].text, sample.id);
+      for (const width of [1280, 390, 320]) {
+        await reading.page.setViewportSize({ width, height: 900 });
+        assert.equal(await reading.page.evaluate(() => document.documentElement.scrollWidth - innerWidth), 0);
+        assert.equal(await reading.page.locator("#practicalDrillPrompt").textContent(), original);
+        const paragraphs = await reading.page.locator("#practicalDrillPrompt > p").evaluateAll(nodes => nodes.map(node => ({ text: node.textContent, height: node.getBoundingClientRect().height })));
+        assert.ok(paragraphs.length >= 1 && paragraphs.length <= 2 && paragraphs.every(p => p.text.trim() && p.height > 0));
+        assert.equal(paragraphs.map(p => p.text).join(""), original);
+        assert.equal(await reading.page.locator("#practicalDrillPrompt article, #practicalDrillPrompt aside, #practicalDrillPrompt details").count(), 0);
+        await reading.page.locator("#practicalDrillSession").screenshot({ path: path.join(output, `reading-${sample.kind}-${width}.png`) });
+        assert.deepEqual((await saved(reading.page, reading.key)).practicalDrill, untouched, "reading and viewport changes do not mutate answers or history");
+      }
+    }
+    await reading.context.close(); checks++;
     const priority = await page.evaluate(storageKey => {
       const state = JSON.parse(localStorage.getItem(storageKey));
       const [wrong, due, safe] = window.TAKKEN_REFORM_2026_BANK.QUESTIONS;

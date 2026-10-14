@@ -7970,6 +7970,11 @@ button.mission-step:disabled {
   white-space: normal;
 }
 
+.reform-question-prompt > p { margin: 0; }
+.reform-question-prompt > p + p { margin-top: 0.65em; }
+.reform-question-prompt .reform-question-scene { font-weight: 500; }
+.reform-question-prompt .reform-question-ask { font-weight: 700; }
+
 .practical-prompt-intro {
   margin: 0;
   white-space: pre-line;
